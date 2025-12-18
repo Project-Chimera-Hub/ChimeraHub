@@ -6,7 +6,6 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
         host: '0.0.0.0',
           allowedHosts: [
               'precision-n-back-production.up.railway.app'
