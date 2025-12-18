@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+        server:{
+            allowedHosts: [
+                'precision-n-back-production.up.railway.app'
+            ]
+        }
     };
 });
