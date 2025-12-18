@@ -66,6 +66,18 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
           <label htmlFor="nLevel">{localSettings.variableN ? 'Max N-Back Level' : 'N-Back Level'}</label>
           <input type="number" name="nLevel" id="nLevel" min="1" value={localSettings.nLevel} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
         </div>
+
+        {/* Grid Size */}
+        {localSettings.spatialEnabled && (
+          <div className="flex justify-between items-center">
+            <label htmlFor="gridRows">Grid Size</label>
+            <div className='flex items-center gap-2'>
+              <input type="number" name="gridRows" id="gridRows" min="2" max="20" value={localSettings.gridRows} onChange={handleChange} className="w-20 p-2 bg-gray-700 rounded" />
+              <span>x</span>
+              <input type="number" name="gridCols" id="gridCols" min="2" max="20" value={localSettings.gridCols} onChange={handleChange} className="w-20 p-2 bg-gray-700 rounded" />
+            </div>
+          </div>
+        )}
         
         {/* Shape Vertices */}
         {localSettings.shapeEnabled && (
@@ -125,10 +137,6 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
             {localSettings.audioEnabled && <div className="flex justify-between items-center mt-2">
               <label htmlFor="audioThreshold">Audio Delta (Cents)</label>
               <input type="number" name="audioThreshold" id="audioThreshold" step="1" min="1" value={localSettings.audioThreshold} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
-            </div>}
-            {localSettings.spatialEnabled && <div className="flex justify-between items-center mt-2">
-              <label htmlFor="spatialThreshold">Spatial Delta (% screen)</label>
-              <input type="number" name="spatialThreshold" id="spatialThreshold" step="0.001" min="0.001" value={localSettings.spatialThreshold} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
             </div>}
              {localSettings.colorEnabled && <div className="flex justify-between items-center mt-2">
               <label htmlFor="colorThreshold">Color Delta (Hue °)</label>

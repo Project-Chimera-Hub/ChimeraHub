@@ -9,20 +9,19 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 
 const DEFAULT_SETTINGS: Settings = {
   nLevel: 2,
-  matchRate: 0.25,
-  lureRate: 0.25,
+  matchRate: 0.20,
+  lureRate: 0.30,
   isi: 2500,
-  gridRows: 10,
-  gridCols: 10,
-  audioThreshold: 25,
-  spatialThreshold: 0.05,
-  colorThreshold: 20,
-  shapeThreshold: 0.1,
-  calibrationEnabled: true,
-  totalTrials: 40,
+  gridRows: 7,
+  gridCols: 7,
+  audioThreshold: 290,
+  colorThreshold: 28,
+  shapeThreshold: 0.20,
+  calibrationEnabled: false,
+  totalTrials: 25,
   theme: 'cyan',
   devMode: false,
-  ballSize: 0.8,
+  ballSize: 0.5,
   variableN: false,
   spatialEnabled: true,
   audioEnabled: true,
@@ -41,13 +40,10 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', settings.theme);
   }, [settings.theme]);
 
-  const handleCalibrationComplete = useCallback((result: CalibrationResult) => {
+  const handleCalibrationComplete = useCallback((result: Partial<CalibrationResult>) => {
     setSettings(prev => ({
       ...prev,
-      audioThreshold: result.audioThreshold,
-      spatialThreshold: result.spatialThreshold,
-      colorThreshold: result.colorThreshold,
-      shapeThreshold: result.shapeThreshold,
+      ...result,
     }));
     if (isCalibratingForGame) {
       setGameState(GameState.Playing);
@@ -71,9 +67,10 @@ const App: React.FC = () => {
         settings: {
           nLevel: settings.nLevel,
           audioThreshold: settings.audioThreshold,
-          spatialThreshold: settings.spatialThreshold,
           colorThreshold: settings.colorThreshold,
           shapeThreshold: settings.shapeThreshold,
+          gridRows: settings.gridRows,
+          gridCols: settings.gridCols,
         },
         score: finalScore,
         accuracy: accuracy,
@@ -85,7 +82,6 @@ const App: React.FC = () => {
         setSettings(prev => ({
           ...prev,
           audioThreshold: Math.max(5, prev.audioThreshold * 0.95),
-          spatialThreshold: Math.max(0.005, prev.spatialThreshold * 0.95),
           colorThreshold: Math.max(2, prev.colorThreshold * 0.95),
           shapeThreshold: Math.max(0.01, prev.shapeThreshold * 0.95),
         }));

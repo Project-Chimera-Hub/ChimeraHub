@@ -24,7 +24,6 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
         const labels = history.map((_, index) => `Session ${index + 1}`);
         const accuracyData = history.map(r => (r.accuracy !== undefined ? r.accuracy * 100 : null));
         const audioData = history.map(r => r.settings.audioThreshold);
-        const spatialData = history.map(r => r.settings.spatialThreshold);
         const colorData = history.map(r => r.settings.colorThreshold);
         const shapeData = history.map(r => r.settings.shapeThreshold);
 
@@ -45,13 +44,6 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
                 label: 'Audio Δ',
                 data: audioData,
                 borderColor: 'var(--color-button-audio)',
-                yAxisID: 'yThresholds',
-                hidden: true,
-              },
-              {
-                label: 'Spatial Δ',
-                data: spatialData,
-                borderColor: 'var(--color-button-spatial)',
                 yAxisID: 'yThresholds',
                 hidden: true,
               },
@@ -134,8 +126,8 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
               <tr className="bg-gray-700 text-gray-300">
                 <th className="p-3">Date</th>
                 <th className="p-3">N-Level</th>
+                <th className="p-3">Grid Size</th>
                 <th className="p-3">Audio Δ</th>
-                <th className="p-3">Spatial Δ</th>
                 <th className="p-3">Color Δ</th>
                 <th className="p-3">Shape Δ</th>
                 <th className="p-3">Accuracy</th>
@@ -152,8 +144,8 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
                 <tr key={index} className="border-b border-gray-700 hover:bg-gray-700/50">
                   <td className="p-3 text-sm">{new Date(record.date).toLocaleString()}</td>
                   <td className="p-3 text-center">{record.settings.nLevel}</td>
+                  <td className="p-3 text-center">{`${record.settings.gridRows}x${record.settings.gridCols}`}</td>
                   <td className="p-3 text-center">{record.settings.audioThreshold.toFixed(2)}</td>
-                  <td className="p-3 text-center">{record.settings.spatialThreshold.toFixed(3)}</td>
                    <td className="p-3 text-center">{record.settings.colorThreshold.toFixed(2)}</td>
                   <td className="p-3 text-center">{record.settings.shapeThreshold.toFixed(3)}</td>
                   <td className={`p-3 text-center font-bold ${record.accuracy && record.accuracy > 0.75 ? 'text-accent-success' : 'text-gray-300'}`}>

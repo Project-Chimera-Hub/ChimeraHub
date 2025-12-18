@@ -19,7 +19,6 @@ export enum CalibrationState {
 
 export type CalibrationResult = {
   audioThreshold: number; // in cents
-  spatialThreshold: number; // in normalized screen distance
   colorThreshold: number; // in hue degrees
   shapeThreshold: number; // in vertex displacement %
 };
@@ -30,7 +29,7 @@ export type Shape = {
 
 export type NBackEvent = {
   id: number;
-  spatial: { x: number; y: number };
+  spatial: { row: number; col: number };
   audio: number; // frequency in Hz
   color: number; // hue in degrees
   shape: Shape;
@@ -56,7 +55,6 @@ export type Settings = {
   gridRows: number;
   gridCols: number;
   audioThreshold: number;
-  spatialThreshold: number;
   colorThreshold: number;
   shapeThreshold: number;
   calibrationEnabled: boolean;
@@ -77,9 +75,10 @@ export type PerformanceRecord = {
   settings: {
     nLevel: number;
     audioThreshold: number;
-    spatialThreshold: number;
     colorThreshold: number;
     shapeThreshold: number;
+    gridRows: number;
+    gridCols: number;
   };
   score: Score;
   accuracy?: number; // Optional accuracy field

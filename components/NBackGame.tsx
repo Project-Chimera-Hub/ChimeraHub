@@ -34,8 +34,8 @@ const generateBaseShape = (numVertices: number): Shape => ({
 });
 
 const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
-  const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode } = settings;
-  const { audioThreshold, spatialThreshold, colorThreshold, shapeThreshold } = settings;
+  const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols } = settings;
+  const { audioThreshold, colorThreshold, shapeThreshold } = settings;
 
   const [history, setHistory] = useState<NBackEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<NBackEvent | null>(null);
@@ -142,7 +142,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     
     const newEvent: NBackEvent = {
         id: trialNumber, n,
-        spatial: { x: 0.1 + Math.random() * 0.8, y: 0.1 + Math.random() * 0.8 },
+        spatial: { row: Math.floor(Math.random() * gridRows), col: Math.floor(Math.random() * gridCols) },
         audio: 200 + Math.random() * 600,
         color: Math.random() * 360,
         shape: generateBaseShape(settings.shapeVertices),
@@ -171,9 +171,14 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
           devInfoParts.push(`${mod.charAt(0).toUpperCase()}:LURE`);
           switch (mod) {
             case 'spatial':
-              const angle = Math.random() * 2 * Math.PI;
-              newEvent.spatial.x = Math.max(0.1, Math.min(0.9, targetEvent.spatial.x + spatialThreshold * Math.cos(angle)));
-              newEvent.spatial.y = Math.max(0.1, Math.min(0.9, targetEvent.spatial.y + spatialThreshold * Math.sin(angle)));
+              const { row, col } = targetEvent.spatial;
+              const possibleLures = [
+                  { row: row - 1, col }, { row: row + 1, col },
+                  { row, col: col - 1 }, { row, col: col + 1 }
+              ].filter(p => p.row >= 0 && p.row < gridRows && p.col >= 0 && p.col < gridCols);
+              if (possibleLures.length > 0) {
+                  newEvent.spatial = possibleLures[Math.floor(Math.random() * possibleLures.length)];
+              }
               break;
             case 'audio':
               newEvent.audio = targetEvent.audio * Math.pow(2, ((Math.random() < 0.5 ? 1 : -1) * audioThreshold) / 1200);
@@ -275,6 +280,14 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     }
   };
   
+  const gridStyle = {
+      backgroundImage: `
+          linear-gradient(to right, rgba(128, 128, 128, 0.15) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(128, 128, 128, 0.15) 1px, transparent 1px)
+      `,
+      backgroundSize: `${100 / gridCols}% ${100 / gridRows}%`
+  };
+
   return (
     <div className="flex flex-col items-center justify-center p-4 sm:p-8 bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl">
       <div className="w-full flex justify-between items-center mb-4">
@@ -282,7 +295,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         <div className="text-lg font-mono">Trial: {trialNumber} / {totalTrials}</div>
       </div>
       
-      <div className="relative w-full aspect-video bg-gray-900 rounded-lg mb-6 shadow-inner overflow-hidden">
+      <div className="relative w-full aspect-video bg-gray-900 rounded-lg mb-6 shadow-inner overflow-hidden" style={gridStyle}>
         {devMode && (
           <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-mono rounded z-10">
             {devLureInfo}
@@ -296,8 +309,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
 
         {isStimulusVisible && currentEvent && (
           <div className="absolute" style={{
-                left: `${currentEvent.spatial.x * 100}%`,
-                top: `${currentEvent.spatial.y * 100}%`,
+                left: `${(currentEvent.spatial.col + 0.5) / gridCols * 100}%`,
+                top: `${(currentEvent.spatial.row + 0.5) / gridRows * 100}%`,
                 transform: 'translate(-50%, -50%)',
                 width: `${ballSize * 100}px`, height: `${ballSize * 100}px`
               }}>
