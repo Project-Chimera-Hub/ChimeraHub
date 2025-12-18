@@ -146,7 +146,7 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
               <label htmlFor="shapeThreshold">Shape Delta (% radius)</label>
               <input type="number" name="shapeThreshold" id="shapeThreshold" step="0.01" min="0.01" value={localSettings.shapeThreshold} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
             </div>}
-          </>
+          </div>
         )}
       </div>
 
