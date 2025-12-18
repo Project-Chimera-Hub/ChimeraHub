@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="en" data-theme="cyan">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>High-Resolution Dual N-Back</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      :root, :root[data-theme='cyan'] {
+        --color-primary: #22d3ee;
+        --color-secondary: #0891b2;
+        --color-secondary-hover: #0e7490;
+        --color-bg-base: #1f2937;
+        --color-bg-surface: #374151;
+        --color-text-base: #f3f4f6;
+        --color-text-muted: #9ca3af;
+        --color-accent-success: #22c55e;
+        --color-accent-error: #ef4444;
+        --color-accent-error-bg: #b91c1c;
+        --color-button-spatial: #2563eb;
+        --color-button-spatial-hover: #1d4ed8;
+        --color-button-audio: #7c3aed;
+        --color-button-audio-hover: #6d28d9;
+        --color-button-color: #16a34a;
+        --color-button-color-hover: #15803d;
+        --color-button-shape: #d97706;
+        --color-button-shape-hover: #b45309;
+      }
+      :root[data-theme='bw'] {
+        --color-primary: #ffffff;
+        --color-secondary: #e5e7eb;
+        --color-secondary-hover: #d1d5db;
+        --color-bg-base: #111827;
+        --color-bg-surface: #1f2937;
+        --color-text-base: #f9fafb;
+        --color-text-muted: #d1d5db;
+        --color-accent-success: #f9fafb;
+        --color-accent-error: #f9fafb;
+        --color-accent-error-bg: #991b1b;
+        --color-button-spatial: #4b5563;
+        --color-button-spatial-hover: #374151;
+        --color-button-audio: #4b5563;
+        --color-button-audio-hover: #374151;
+        --color-button-color: #4b5563;
+        --color-button-color-hover: #374151;
+        --color-button-shape: #4b5563;
+        --color-button-shape-hover: #374151;
+      }
+      :root[data-theme='green'] {
+        --color-primary: #34d399;
+        --color-secondary: #059669;
+        --color-secondary-hover: #047857;
+        --color-bg-base: #111827;
+        --color-bg-surface: #1f2937;
+        --color-text-base: #ecfdf5;
+        --color-text-muted: #a1a1aa;
+        --color-accent-success: #34d399;
+        --color-accent-error: #f43f5e;
+        --color-accent-error-bg: #be123c;
+        --color-button-spatial: #166534;
+        --color-button-spatial-hover: #15803d;
+        --color-button-audio: #166534;
+        --color-button-audio-hover: #15803d;
+        --color-button-color: #166534;
+        --color-button-color-hover: #15803d;
+        --color-button-shape: #166534;
+        --color-button-shape-hover: #15803d;
+      }
+      .bg-primary { background-color: var(--color-primary); }
+      .bg-secondary { background-color: var(--color-secondary); }
+      .hover\:bg-secondary-hover:hover { background-color: var(--color-secondary-hover); }
+      .text-primary { color: var(--color-primary); }
+      .border-accent-success { border-color: var(--color-accent-success); }
+      .border-accent-error { border-color: var(--color-accent-error); }
+      .text-accent-success { color: var(--color-accent-success); }
+      .text-accent-error { color: var(--color-accent-error); }
+      .bg-accent-success { background-color: var(--color-accent-success); }
+      .bg-accent-error-heavy { background-color: var(--color-accent-error-bg); }
+      .bg-button-spatial { background-color: var(--color-button-spatial); }
+      .hover\:bg-button-spatial-hover:hover { background-color: var(--color-button-spatial-hover); }
+      .bg-button-audio { background-color: var(--color-button-audio); }
+      .hover\:bg-button-audio-hover:hover { background-color: var(--color-button-audio-hover); }
+      .bg-button-color { background-color: var(--color-button-color); }
+      .hover\:bg-button-color-hover:hover { background-color: var(--color-button-color-hover); }
+      .bg-button-shape { background-color: var(--color-button-shape); }
+      .hover\:bg-button-shape-hover:hover { background-color: var(--color-button-shape-hover); }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-900 text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
