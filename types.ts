@@ -82,4 +82,6 @@ export type PerformanceRecord = {
   };
   score: Score;
   accuracy?: number; // Optional accuracy field
+  duration?: number; // in milliseconds
+  totalMatches?: number;
 };

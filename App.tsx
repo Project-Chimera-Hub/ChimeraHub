@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useLocalStorage<Settings>('nback-settings', DEFAULT_SETTINGS);
   const [performanceHistory, setPerformanceHistory] = useLocalStorage<PerformanceRecord[]>('nback-performance', []);
   const [isCalibratingForGame, setIsCalibratingForGame] = useState(false);
+  const [lastSessionStats, setLastSessionStats] = useState<PerformanceRecord | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
@@ -58,9 +59,17 @@ const App: React.FC = () => {
     setGameState(GameState.Start);
   }, []);
 
-  const handleGameEnd = useCallback((finalScore: Score, totalMatches: number, completed: boolean) => {
+  const handleGameEnd = useCallback((finalScore: Score, totalMatches: number, completed: boolean, duration: number) => {
     if (completed) {
-      const accuracy = totalMatches > 0 ? (finalScore.hits / totalMatches) : 1;
+      // New accuracy calculation: (Hits + Correct Rejections) / Total Trials
+      // This penalizes false alarms.
+      const totalFalseAlarms = finalScore.spatialFalseAlarms + finalScore.audioFalseAlarms + finalScore.colorFalseAlarms + finalScore.shapeFalseAlarms;
+      const totalNonMatches = settings.totalTrials - totalMatches;
+      const correctRejections = Math.max(0, totalNonMatches - totalFalseAlarms);
+      
+      const accuracy = settings.totalTrials > 0 
+        ? (finalScore.hits + correctRejections) / settings.totalTrials 
+        : 1;
       
       const record: PerformanceRecord = {
         date: new Date().toISOString(),
@@ -74,8 +83,11 @@ const App: React.FC = () => {
         },
         score: finalScore,
         accuracy: accuracy,
+        duration: duration,
+        totalMatches: totalMatches,
       };
       setPerformanceHistory(prev => [...prev, record]);
+      setLastSessionStats(record);
 
       // Dynamic difficulty adjustment
       if (accuracy > 0.75) {
@@ -110,7 +122,7 @@ const App: React.FC = () => {
       case GameState.Start:
         return (
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4 text-primary">Precision N-Back</h1>
+            <h1 className="text-4xl font-bold mb-4 text-primary">High-Resolution Dual N-Back</h1>
             <p className="max-w-2xl mx-auto mb-8 text-lg text-gray-300">
               A cognitive training tool for high-fidelity sensory buffering and working memory.
             </p>
@@ -152,9 +164,44 @@ const App: React.FC = () => {
         return <NBackGame settings={settings} onGameEnd={handleGameEnd} />;
       case GameState.Finished:
         return (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Training Complete</h2>
-            <p className="mb-8 text-gray-300">You've completed the session. Great work!</p>
+          <div className="text-center w-full max-w-lg">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Session Complete</h2>
+            {lastSessionStats ? (
+                <div className="p-6 bg-gray-800 rounded-lg mx-auto mb-8 text-left shadow-lg">
+                    <h3 className="text-xl font-bold mb-4 text-center">Round Summary</h3>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-lg">
+                        <span className="font-semibold text-gray-400">Accuracy:</span>
+                        <span className="font-bold text-primary">{`${(lastSessionStats.accuracy! * 100).toFixed(0)}%`}</span>
+                        
+                        <span className="font-semibold text-gray-400">Hits / Matches:</span>
+                        <span><span className="text-accent-success">{lastSessionStats.score.hits}</span> / {lastSessionStats.totalMatches}</span>
+
+                        <span className="font-semibold text-gray-400">Misses:</span>
+                        <span className="text-accent-error">{lastSessionStats.score.misses}</span>
+                        
+                        <span className="font-semibold text-gray-400 col-span-2 text-center mt-3 border-b border-gray-700 pb-1 mb-1">False Alarms</span>
+                        
+                        {settings.spatialEnabled && <>
+                            <span className="font-semibold text-gray-400">Spatial:</span>
+                            <span className="text-accent-error">{lastSessionStats.score.spatialFalseAlarms}</span>
+                        </>}
+                        {settings.audioEnabled && <>
+                            <span className="font-semibold text-gray-400">Audio:</span>
+                            <span className="text-accent-error">{lastSessionStats.score.audioFalseAlarms}</span>
+                        </>}
+                        {settings.colorEnabled && <>
+                            <span className="font-semibold text-gray-400">Color:</span>
+                            <span className="text-accent-error">{lastSessionStats.score.colorFalseAlarms}</span>
+                        </>}
+                        {settings.shapeEnabled && <>
+                             <span className="font-semibold text-gray-400">Shape:</span>
+                            <span className="text-accent-error">{lastSessionStats.score.shapeFalseAlarms}</span>
+                        </>}
+                    </div>
+                </div>
+            ) : (
+                <p className="mb-8 text-gray-300">You've completed the session. Great work!</p>
+            )}
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleStartTraining}

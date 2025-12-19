@@ -23,7 +23,7 @@ declare namespace Tone {
 
 interface NBackGameProps {
   settings: Settings;
-  onGameEnd: (score: Score, totalMatches: number, completed: boolean) => void;
+  onGameEnd: (score: Score, totalMatches: number, completed: boolean, duration: number) => void;
 }
 
 const STIMULUS_DURATION_MS = 500;
@@ -49,6 +49,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const synthRef = useRef<Tone.Synth | null>(null);
   const transportEventIdRef = useRef<number | null>(null);
   const totalMatchesRef = useRef(0);
+  const startTimeRef = useRef<number>(Date.now());
   
   const historyRef = useRef(history);
   const trialNumberRef = useRef(trialNumber);
@@ -120,7 +121,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const endSession = useCallback((completed: boolean) => {
       Tone.Transport.stop();
       Tone.Transport.cancel();
-      onGameEnd(scoreRef.current, totalMatchesRef.current, completed);
+      const duration = Date.now() - startTimeRef.current;
+      onGameEnd(scoreRef.current, totalMatchesRef.current, completed, duration);
   }, [onGameEnd]);
 
   const quitSession = useCallback(() => {
@@ -263,12 +265,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
 
   const getButtonClass = (modality: Modality) => {
     const baseClasses = 'py-4 px-6 text-xl font-bold text-white rounded-lg transition-all duration-150';
-    const themeClasses: Record<Modality, string> = {
-        spatial: 'bg-button-spatial hover:bg-button-spatial-hover',
-        audio: 'bg-button-audio hover:bg-button-audio-hover',
-        color: 'bg-button-color hover:bg-button-color-hover',
-        shape: 'bg-button-shape hover:bg-button-shape-hover',
-    };
+    const defaultClasses = 'bg-gray-600 hover:bg-gray-500';
 
     switch (buttonHighlights[modality]) {
         case 'hit':
@@ -276,7 +273,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         case 'miss':
             return `${baseClasses} bg-accent-error-heavy`;
         default:
-            return `${baseClasses} ${themeClasses[modality]}`;
+            return `${baseClasses} ${defaultClasses}`;
     }
   };
   

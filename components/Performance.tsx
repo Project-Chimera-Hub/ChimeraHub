@@ -107,9 +107,41 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
     };
   }, [history]);
 
+  const formatDuration = (ms: number) => {
+    if (ms < 0) ms = 0;
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const parts: string[] = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+    return parts.join(' ');
+  };
+
+  const totalTimeTodayMs = history.reduce((acc, record) => {
+    const recordDate = new Date(record.date);
+    const today = new Date();
+    const isToday = recordDate.getFullYear() === today.getFullYear() &&
+                    recordDate.getMonth() === today.getMonth() &&
+                    recordDate.getDate() === today.getDate();
+
+    if (isToday && typeof record.duration === 'number') {
+      return acc + record.duration;
+    }
+    return acc;
+  }, 0);
+
   return (
     <div className="p-4 sm:p-8 bg-gray-800 rounded-xl shadow-2xl w-full max-w-7xl text-gray-200">
-      <h2 className="text-3xl font-bold mb-6 text-primary text-center">Performance History</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-primary text-center">Performance History</h2>
+        <div className="p-3 bg-gray-900/50 rounded-lg text-right">
+            <span className="text-gray-400">Time Today: </span>
+            <span className="text-xl font-bold text-primary">{formatDuration(totalTimeTodayMs)}</span>
+        </div>
+      </div>
       
       {history.length > 1 ? (
         <div className="mb-8 h-96 bg-gray-900/50 p-4 rounded-lg">
