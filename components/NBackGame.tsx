@@ -46,6 +46,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const [buttonHighlights, setButtonHighlights] = useState<Record<Modality, 'none' | 'hit' | 'miss'>>({ spatial: 'none', audio: 'none', color: 'none', shape: 'none' });
   const [devLureInfo, setDevLureInfo] = useState<string>('');
   
+  const [stimulusSize, setStimulusSize] = useState(settings.ballSize * 100);
+  const gameBoardRef = useRef<HTMLDivElement>(null);
   const synthRef = useRef<Tone.Synth | null>(null);
   const transportEventIdRef = useRef<number | null>(null);
   const totalMatchesRef = useRef(0);
@@ -69,6 +71,25 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   useEffect(() => { historyRef.current = history; }, [history]);
   useEffect(() => { trialNumberRef.current = trialNumber; }, [trialNumber]);
   useEffect(() => { scoreRef.current = score; }, [score]);
+
+  useEffect(() => {
+    const board = gameBoardRef.current;
+    if (!board) return;
+
+    const calculateSize = () => {
+        const boardWidth = board.offsetWidth;
+        const cellWidth = boardWidth / gridCols;
+        setStimulusSize(cellWidth * ballSize);
+    };
+
+    const resizeObserver = new ResizeObserver(calculateSize);
+    resizeObserver.observe(board);
+
+    // Initial calculation for first render
+    calculateSize();
+
+    return () => resizeObserver.disconnect();
+  }, [gridCols, gridRows, ballSize]);
 
   const showFeedback = (type: string) => { setFeedback({ type, key: Date.now() }); };
 
@@ -292,7 +313,14 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         <div className="text-lg font-mono">Trial: {trialNumber} / {totalTrials}</div>
       </div>
       
-      <div className="relative w-full aspect-video bg-gray-900 rounded-lg mb-6 shadow-inner overflow-hidden" style={gridStyle}>
+      <div
+        ref={gameBoardRef}
+        className="relative w-full bg-gray-900 rounded-lg mb-6 shadow-inner overflow-hidden"
+        style={{
+          ...gridStyle,
+          aspectRatio: `${gridCols} / ${gridRows}`,
+        }}
+      >
         {devMode && (
           <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-mono rounded z-10">
             {devLureInfo}
@@ -309,12 +337,13 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
                 left: `${(currentEvent.spatial.col + 0.5) / gridCols * 100}%`,
                 top: `${(currentEvent.spatial.row + 0.5) / gridRows * 100}%`,
                 transform: 'translate(-50%, -50%)',
-                width: `${ballSize * 100}px`, height: `${ballSize * 100}px`
+                width: `${stimulusSize}px`,
+                height: `${stimulusSize}px`
               }}>
             <ShapeDisplay
                 shape={currentEvent.shape}
                 colorHue={currentEvent.color}
-                size={ballSize * 100}
+                size={stimulusSize}
                 isCircle={!settings.shapeEnabled}
                 useThemeColor={!settings.colorEnabled}
             />
