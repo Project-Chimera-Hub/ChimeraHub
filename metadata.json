@@ -1,5 +1,5 @@
 {
-  "name": "High-Resolution Dual N-Back",
+  "name": "Precision N-Back",
   "description": "A cognitive training application that moves beyond simple grid-based N-Back to a continuous, high-resolution sensory discrimination task. It uses a psychophysics staircase algorithm to calibrate difficulty to the user's perceptual threshold for both audio and spatial stimuli, training working memory with parametric lures and precisely synchronized audio-visual events.",
   "requestFramePermissions": []
 }

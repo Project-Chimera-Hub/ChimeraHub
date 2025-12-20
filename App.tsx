@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { GameState, CalibrationResult, Settings, PerformanceRecord, Score } from './types';
 import Calibration from './components/Calibration';
@@ -128,7 +127,7 @@ const App: React.FC = () => {
       case GameState.Start:
         return (
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4 text-primary">High-Resolution Dual N-Back</h1>
+            <h1 className="text-4xl font-bold mb-4 text-primary">Precision N-Back</h1>
             <p className="max-w-2xl mx-auto mb-8 text-lg text-gray-300">
               A cognitive training tool for high-fidelity sensory buffering and working memory.
             </p>
