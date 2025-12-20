@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   colorEnabled: false,
   shapeEnabled: false,
   shapeVertices: 6,
+  colorPattern: 'vertical',
 };
 
 const App: React.FC = () => {

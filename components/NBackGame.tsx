@@ -56,6 +56,18 @@ const generateBaseShape = (numVertices: number): Shape => ({
   vertices: Array.from({ length: numVertices }, () => ({ radius: 0.6 + Math.random() * 0.4 }))
 });
 
+const generateRandomHues = (): [number, number, number] => {
+  const baseHue = Math.random() * 360;
+  const interval = 15 + Math.random() * 20; // Interval between 15 and 35
+  const hues: [number, number, number] = [
+    (baseHue - interval + 360) % 360,
+    baseHue,
+    (baseHue + interval) % 360,
+  ];
+  hues.sort((a, b) => a - b);
+  return hues;
+};
+
 const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols } = settings;
   const { audioThreshold, colorThreshold, shapeThreshold } = settings;
@@ -220,7 +232,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         id: trialNumber, n,
         spatial: { row: Math.floor(Math.random() * gridRows), col: Math.floor(Math.random() * gridCols) },
         audio: 200 + Math.random() * 600,
-        color: Math.random() * 360,
+        hues: generateRandomHues(),
         shape: generateBaseShape(settings.shapeVertices),
         isMatch: { audio: false, spatial: false, color: false, shape: false },
         lureType: 'none',
@@ -234,7 +246,11 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         const rand = Math.random();
         if (rand < matchRate) {
           // This modality is a MATCH
-          (newEvent[mod] as any) = targetEvent[mod];
+          if (mod === 'color') {
+            newEvent.hues = targetEvent.hues;
+          } else {
+            (newEvent[mod] as any) = targetEvent[mod];
+          }
           newEvent.isMatch[mod] = true;
           totalMatchesRef.current += 1;
           devInfoParts.push(`${mod.charAt(0).toUpperCase()}:MATCH`);
@@ -260,7 +276,14 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
               newEvent.audio = targetEvent.audio * Math.pow(2, ((Math.random() < 0.5 ? 1 : -1) * audioThreshold) / 1200);
               break;
             case 'color':
-              newEvent.color = (targetEvent.color + (Math.random() < 0.5 ? 1 : -1) * colorThreshold + 360) % 360;
+              const targetHues = [...targetEvent.hues] as [number, number, number];
+              const indices = [0, 1, 2];
+              const idx1 = indices.splice(Math.floor(Math.random() * indices.length), 1)[0];
+              const idx2 = indices.splice(Math.floor(Math.random() * indices.length), 1)[0];
+              const shiftAmount = colorThreshold * (Math.random() < 0.5 ? 1 : -1);
+              targetHues[idx1] = (targetHues[idx1] + shiftAmount + 360) % 360;
+              targetHues[idx2] = (targetHues[idx2] - shiftAmount + 360) % 360;
+              newEvent.hues = targetHues;
               break;
             case 'shape':
               const newVertices = targetEvent.shape.vertices.map(v => ({...v}));
@@ -395,10 +418,11 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
               }}>
             <ShapeDisplay
                 shape={currentEvent.shape}
-                colorHue={currentEvent.color}
+                hues={currentEvent.hues}
                 size={stimulusSize}
-                isCircle={!settings.shapeEnabled}
-                useThemeColor={!settings.colorEnabled}
+                colorEnabled={settings.colorEnabled}
+                shapeEnabled={settings.shapeEnabled}
+                colorPattern={settings.colorPattern}
             />
           </div>
         )}

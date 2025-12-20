@@ -50,11 +50,30 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
           <div className="grid grid-cols-2 gap-4 mt-2 p-4 bg-gray-900/50 rounded-lg">
             <div className="flex items-center gap-3"><input type="checkbox" name="spatialEnabled" id="spatialEnabled" checked={localSettings.spatialEnabled} onChange={handleChange} className="w-6 h-6" /><label htmlFor="spatialEnabled">Spatial (Position)</label></div>
             <div className="flex items-center gap-3"><input type="checkbox" name="audioEnabled" id="audioEnabled" checked={localSettings.audioEnabled} onChange={handleChange} className="w-6 h-6" /><label htmlFor="audioEnabled">Audio (Tone)</label></div>
-            <div className="flex items-center gap-3"><input type="checkbox" name="colorEnabled" id="colorEnabled" checked={localSettings.colorEnabled} onChange={handleChange} className="w-6 h-6" /><label htmlFor="colorEnabled">Color (Hue)</label></div>
+            <div className="flex items-center gap-3"><input type="checkbox" name="colorEnabled" id="colorEnabled" checked={localSettings.colorEnabled} onChange={handleChange} className="w-6 h-6" /><label htmlFor="colorEnabled">Color (Hues)</label></div>
             <div className="flex items-center gap-3"><input type="checkbox" name="shapeEnabled" id="shapeEnabled" checked={localSettings.shapeEnabled} onChange={handleChange} className="w-6 h-6" /><label htmlFor="shapeEnabled">Shape (Contour)</label></div>
           </div>
+          <p className="text-xs text-gray-400 mt-2 px-1">Note: When Color and Shape are enabled, the shape's contour masks the color pattern.</p>
         </div>
         
+        {/* Color Pattern */}
+        {localSettings.colorEnabled && (
+          <div className="flex justify-between items-center">
+            <label htmlFor="colorPattern">Color Pattern</label>
+            <select
+              name="colorPattern"
+              id="colorPattern"
+              value={localSettings.colorPattern}
+              onChange={handleChange}
+              className="p-2 bg-gray-700 rounded"
+            >
+              <option value="vertical">Vertical Stripes</option>
+              <option value="horizontal">Horizontal Stripes</option>
+              <option value="triangles">Triangles</option>
+            </select>
+          </div>
+        )}
+
         {/* Variable N Toggle */}
         <div className="flex justify-between items-center pt-4 border-t border-gray-700">
           <label htmlFor="variableN">Enable Variable N</label>
@@ -140,7 +159,7 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
               <input type="number" name="audioThreshold" id="audioThreshold" step="1" min="1" value={localSettings.audioThreshold} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
             </div>}
              {localSettings.colorEnabled && <div className="flex justify-between items-center mt-2">
-              <label htmlFor="colorThreshold">Color Delta (Hue °)</label>
+              <label htmlFor="colorThreshold">Color Interval Delta (Hue °)</label>
               <input type="number" name="colorThreshold" id="colorThreshold" step="1" min="1" value={localSettings.colorThreshold} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
             </div>}
              {localSettings.shapeEnabled && <div className="flex justify-between items-center mt-2">

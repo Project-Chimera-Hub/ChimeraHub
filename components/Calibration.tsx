@@ -41,7 +41,19 @@ const generateBaseShape = (numVertices: number): Shape => {
   return { vertices };
 };
 
-type Stimulus = { audio: number; spatial: { row: number; col: number }; color: number; shape: Shape; };
+const generateRandomHues = (): [number, number, number] => {
+  const baseHue = Math.random() * 360;
+  const interval = 15 + Math.random() * 20;
+  const hues: [number, number, number] = [
+    (baseHue - interval + 360) % 360,
+    baseHue,
+    (baseHue + interval) % 360,
+  ];
+  hues.sort((a, b) => a - b);
+  return hues;
+};
+
+type Stimulus = { audio: number; spatial: { row: number; col: number }; hues: [number, number, number]; shape: Shape; };
 
 const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings }) => {
   const [mode, setMode] = useState<CalibrationMode>('selection');
@@ -90,8 +102,12 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
                 lure.audio = base.audio * Math.pow(2, (directionA * thresholdsRef.current.audioThreshold) / 1200);
                 break;
             case 'color':
-                const directionC = Math.random() < 0.5 ? 1 : -1;
-                lure.color = (base.color + directionC * thresholdsRef.current.colorThreshold + 360) % 360;
+                const targetHues = [...base.hues] as [number, number, number];
+                const shiftAmount = thresholdsRef.current.colorThreshold;
+                // Shift middle hue and compensate with the last hue to preserve average
+                targetHues[1] = (targetHues[1] + shiftAmount + 360) % 360;
+                targetHues[2] = (targetHues[2] - shiftAmount + 360) % 360;
+                lure.hues = targetHues;
                 break;
             case 'shape':
                 const vIndex = Math.floor(Math.random() * lure.shape.vertices.length);
@@ -105,7 +121,7 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
     const generateRandomStimulus = (): Stimulus => ({
         audio: 200 + Math.random() * 600,
         spatial: { row: Math.floor(settings.gridRows / 2), col: Math.floor(settings.gridCols / 2) },
-        color: Math.random() * 360,
+        hues: generateRandomHues(),
         shape: generateBaseShape(settings.shapeVertices),
     });
 
@@ -254,12 +270,14 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
               width: `${settings.ballSize * 100}px`,
               height: `${settings.ballSize * 100}px`,
             }}>
-              <ShapeDisplay 
-                shape={currentStimulus.shape} 
-                colorHue={currentStimulus.color} 
-                size={settings.ballSize * 100} 
-                isCircle={mode !== 'shape'} 
-                useThemeColor={mode !== 'color'} />
+              <ShapeDisplay
+                shape={currentStimulus.shape}
+                hues={currentStimulus.hues}
+                size={settings.ballSize * 100}
+                colorEnabled={mode === 'color'}
+                shapeEnabled={mode === 'shape'}
+                colorPattern={settings.colorPattern}
+              />
             </div>
           )}
           {feedback && <span className={`text-5xl font-bold ${feedback === 'correct' ? 'text-accent-success' : 'text-accent-error'}`}>{feedback === 'correct' ? 'Correct' : 'Incorrect'}</span>}

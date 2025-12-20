@@ -27,11 +27,13 @@ export type Shape = {
   vertices: { radius: number }[]; // radius is 0-1
 };
 
+export type ColorPattern = 'vertical' | 'horizontal' | 'triangles';
+
 export type NBackEvent = {
   id: number;
   spatial: { row: number; col: number };
   audio: number; // frequency in Hz
-  color: number; // hue in degrees
+  hues: [number, number, number]; // hue in degrees for 3-part stimulus
   shape: Shape;
   isMatch: { audio: boolean, spatial: boolean, color: boolean, shape: boolean };
   lureType: 'none' | 'audio' | 'spatial' | 'color' | 'shape';
@@ -68,6 +70,7 @@ export type Settings = {
   colorEnabled: boolean;
   shapeEnabled: boolean;
   shapeVertices: number;
+  colorPattern: ColorPattern;
 };
 
 export type PerformanceRecord = {
