@@ -84,4 +84,6 @@ export type PerformanceRecord = {
   accuracy?: number; // Optional accuracy field
   duration?: number; // in milliseconds
   totalMatches?: number;
+  correctRejections?: number;
+  totalNonMatches?: number;
 };

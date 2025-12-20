@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { NBackEvent, Score, Settings, Shape } from '../types';
 import ShapeDisplay from './ShapeDisplay';
 
@@ -28,6 +28,30 @@ interface NBackGameProps {
 
 type Modality = 'spatial' | 'audio' | 'color' | 'shape';
 
+const getValidNValues = (maxN: number): number[] => {
+    if (maxN <= 2) {
+        // For N=1 or N=2, no non-trivial divisors to filter.
+        return Array.from({ length: maxN }, (_, i) => i + 1);
+    }
+    
+    const divisors = new Set<number>();
+    // Find all non-trivial divisors of maxN.
+    for (let i = 2; i <= Math.sqrt(maxN); i++) {
+        if (maxN % i === 0) {
+            divisors.add(i);
+            divisors.add(maxN / i);
+        }
+    }
+
+    const validNs: number[] = [];
+    for (let i = 1; i <= maxN; i++) {
+        if (!divisors.has(i)) {
+            validNs.push(i);
+        }
+    }
+    return validNs;
+};
+
 const generateBaseShape = (numVertices: number): Shape => ({
   vertices: Array.from({ length: numVertices }, () => ({ radius: 0.6 + Math.random() * 0.4 }))
 });
@@ -36,8 +60,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols } = settings;
   const { audioThreshold, colorThreshold, shapeThreshold } = settings;
   
-  // Stimulus duration scales with ISI, with a minimum of 100ms.
-  const stimulusDuration = Math.max(100, isi * 0.2);
+  // Stimulus duration scales with ISI, with a minimum of 350ms.
+  const stimulusDuration = Math.max(350, isi * 0.2);
 
   const [history, setHistory] = useState<NBackEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<NBackEvent | null>(null);
@@ -60,6 +84,11 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const scoreRef = useRef(score);
   const respondedToRef = useRef(new Set<string>());
   const activeModalitiesRef = useRef<Modality[]>([]);
+
+  const validNValues = useMemo(() => {
+    if (!settings.variableN) return [];
+    return getValidNValues(settings.nLevel);
+  }, [settings.variableN, settings.nLevel]);
 
   useEffect(() => {
     const active: Modality[] = [];
@@ -157,9 +186,31 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     const trialNumber = trialNumberRef.current;
     const activeModalities = activeModalitiesRef.current;
 
-    let n = variableN ? 1 + Math.floor(Math.random() * nLevel) : nLevel;
-    if (variableN && trialNumber > 0 && n === history[trialNumber - 1].n && nLevel > 1) {
-        n = (n % nLevel) + 1;
+    let n: number;
+    if (variableN) {
+        if (validNValues.length === 0) {
+            n = 1; // Fallback for N=1 or other edge cases
+        } else if (validNValues.length === 1) {
+            n = validNValues[0];
+        } else {
+            // Exponentially weight towards higher N values for a "fat tail" distribution.
+            const weights = validNValues.map((_, i) => Math.exp(i));
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            const random = Math.random() * totalWeight;
+
+            let cumulativeWeight = 0;
+            let selectedIndex = validNValues.length - 1; // Default to last
+            for (let i = 0; i < weights.length; i++) {
+                cumulativeWeight += weights[i];
+                if (random < cumulativeWeight) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+            n = validNValues[selectedIndex];
+        }
+    } else {
+        n = nLevel;
     }
     
     const isReadyForMatch = trialNumber >= n;
@@ -229,7 +280,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     
     setDevLureInfo(devInfoParts.join(' '));
     return newEvent;
-  }, [nLevel, variableN, matchRate, lureRate, settings]);
+  }, [nLevel, variableN, matchRate, lureRate, settings, validNValues]);
   
   const runTrial = useCallback(() => {
     setFeedback(null);

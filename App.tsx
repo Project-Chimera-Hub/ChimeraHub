@@ -61,15 +61,18 @@ const App: React.FC = () => {
 
   const handleGameEnd = useCallback((finalScore: Score, totalMatches: number, completed: boolean, duration: number) => {
     if (completed) {
-      // New accuracy calculation: (Hits + Correct Rejections) / Total Trials
-      // This penalizes false alarms.
       const totalFalseAlarms = finalScore.spatialFalseAlarms + finalScore.audioFalseAlarms + finalScore.colorFalseAlarms + finalScore.shapeFalseAlarms;
       const totalNonMatches = settings.totalTrials - totalMatches;
       const correctRejections = Math.max(0, totalNonMatches - totalFalseAlarms);
       
-      const accuracy = settings.totalTrials > 0 
-        ? (finalScore.hits + correctRejections) / settings.totalTrials 
-        : 1;
+      // New accuracy calculation:
+      // Accuracy is the ratio of hits to "relevant" events, which are
+      // all match trials (hits + misses) and any trials with a false alarm.
+      // This penalizes both misses and false alarms, and does not reward correct rejections.
+      const accuracyDenominator = totalMatches + totalFalseAlarms;
+      const accuracy = accuracyDenominator > 0 
+        ? finalScore.hits / accuracyDenominator
+        : 1; // If no matches and no false alarms occurred, accuracy is 100%.
       
       const record: PerformanceRecord = {
         date: new Date().toISOString(),
@@ -85,6 +88,8 @@ const App: React.FC = () => {
         accuracy: accuracy,
         duration: duration,
         totalMatches: totalMatches,
+        correctRejections: correctRejections,
+        totalNonMatches: totalNonMatches,
       };
       setPerformanceHistory(prev => [...prev, record]);
       setLastSessionStats(record);
@@ -179,6 +184,11 @@ const App: React.FC = () => {
                         <span className="font-semibold text-gray-400">Misses:</span>
                         <span className="text-accent-error">{lastSessionStats.score.misses}</span>
                         
+                        {(lastSessionStats.correctRejections !== undefined && lastSessionStats.totalNonMatches !== undefined) && <>
+                            <span className="font-semibold text-gray-400">Correct Rejections:</span>
+                            <span>{lastSessionStats.correctRejections} / {lastSessionStats.totalNonMatches}</span>
+                        </>}
+
                         <span className="font-semibold text-gray-400 col-span-2 text-center mt-3 border-b border-gray-700 pb-1 mb-1">False Alarms</span>
                         
                         {settings.spatialEnabled && <>

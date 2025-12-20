@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PerformanceRecord } from '../types';
 
 declare const Chart: any; // Using Chart.js from CDN
@@ -12,20 +12,48 @@ interface PerformanceProps {
 const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<any>(null);
+  const [timeFilter, setTimeFilter] = useState<'24h' | 'all'>('24h');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Data for the chart is always the complete set for the selected filter
+  const chartHistory = history.filter(record => {
+    if (timeFilter === 'all') return true;
+    const recordDate = new Date(record.date);
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+    return recordDate > yesterday;
+  });
+
+  // Data for the table is paginated for the 'all' filter
+  const sourceHistoryForTable = timeFilter === '24h' ? chartHistory : history;
+  const totalPages = timeFilter === 'all' ? Math.ceil(sourceHistoryForTable.length / ITEMS_PER_PAGE) : 1;
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  
+  const tableHistory = timeFilter === 'all'
+    ? sourceHistoryForTable.slice(startIndex, endIndex)
+    : sourceHistoryForTable;
+
+  const handleFilterChange = (filter: '24h' | 'all') => {
+    setTimeFilter(filter);
+    setCurrentPage(1); // Reset page when changing filters
+  };
 
   useEffect(() => {
-    if (history.length > 1 && chartRef.current) {
+    const data = chartHistory;
+    if (data.length > 1 && chartRef.current) {
       const ctx = chartRef.current.getContext('2d');
       if (ctx) {
         if (chartInstanceRef.current) {
           chartInstanceRef.current.destroy();
         }
 
-        const labels = history.map((_, index) => `Session ${index + 1}`);
-        const accuracyData = history.map(r => (r.accuracy !== undefined ? r.accuracy * 100 : null));
-        const audioData = history.map(r => r.settings.audioThreshold);
-        const colorData = history.map(r => r.settings.colorThreshold);
-        const shapeData = history.map(r => r.settings.shapeThreshold);
+        const labels = data.map((_, index) => `Session ${index + 1}`);
+        const accuracyData = data.map(r => (r.accuracy !== undefined ? r.accuracy * 100 : null));
+        const audioData = data.map(r => r.settings.audioThreshold);
+        const colorData = data.map(r => r.settings.colorThreshold);
+        const shapeData = data.map(r => r.settings.shapeThreshold);
 
         chartInstanceRef.current = new Chart(ctx, {
           type: 'line',
@@ -105,7 +133,7 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
         chartInstanceRef.current.destroy();
       }
     };
-  }, [history]);
+  }, [chartHistory]);
 
   const formatDuration = (ms: number) => {
     if (ms < 0) ms = 0;
@@ -143,58 +171,98 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
         </div>
       </div>
       
-      {history.length > 1 ? (
+      {chartHistory.length > 1 ? (
         <div className="mb-8 h-96 bg-gray-900/50 p-4 rounded-lg">
           <canvas ref={chartRef}></canvas>
         </div>
       ) : (
         history.length > 0 && <p className="text-center text-gray-400 py-4">Complete another session to see a performance graph.</p>
       )}
+      
+      <div className="flex justify-center mb-4 border-b border-gray-700">
+        <button 
+          onClick={() => handleFilterChange('24h')} 
+          className={`px-6 py-2 text-lg font-semibold transition-colors ${timeFilter === '24h' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-200'}`}
+        >
+          Last 24 Hours
+        </button>
+        <button 
+          onClick={() => handleFilterChange('all')} 
+          className={`px-6 py-2 text-lg font-semibold transition-colors ${timeFilter === 'all' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-200'}`}
+        >
+          All Time
+        </button>
+      </div>
 
       <div className="overflow-x-auto">
-        {history.length > 0 ? (
-          <table className="w-full text-left table-auto">
-            <thead>
-              <tr className="bg-gray-700 text-gray-300">
-                <th className="p-3">Date</th>
-                <th className="p-3">N-Level</th>
-                <th className="p-3">Grid Size</th>
-                <th className="p-3">Audio Δ</th>
-                <th className="p-3">Color Δ</th>
-                <th className="p-3">Shape Δ</th>
-                <th className="p-3">Accuracy</th>
-                <th className="p-3">Hits</th>
-                <th className="p-3">Misses</th>
-                <th className="p-3">Audio FA</th>
-                <th className="p-3">Spatial FA</th>
-                <th className="p-3">Color FA</th>
-                <th className="p-3">Shape FA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...history].reverse().map((record, index) => (
-                <tr key={index} className="border-b border-gray-700 hover:bg-gray-700/50">
-                  <td className="p-3 text-sm">{new Date(record.date).toLocaleString()}</td>
-                  <td className="p-3 text-center">{record.settings.nLevel}</td>
-                  <td className="p-3 text-center">{`${record.settings.gridRows}x${record.settings.gridCols}`}</td>
-                  <td className="p-3 text-center">{record.settings.audioThreshold.toFixed(2)}</td>
-                   <td className="p-3 text-center">{record.settings.colorThreshold.toFixed(2)}</td>
-                  <td className="p-3 text-center">{record.settings.shapeThreshold.toFixed(3)}</td>
-                  <td className={`p-3 text-center font-bold ${record.accuracy && record.accuracy > 0.75 ? 'text-accent-success' : 'text-gray-300'}`}>
-                    {record.accuracy !== undefined ? `${(record.accuracy * 100).toFixed(0)}%` : 'N/A'}
-                  </td>
-                  <td className="p-3 text-center text-accent-success">{record.score.hits}</td>
-                  <td className="p-3 text-center text-accent-error">{record.score.misses}</td>
-                  <td className="p-3 text-center text-accent-error">{record.score.audioFalseAlarms}</td>
-                  <td className="p-3 text-center text-accent-error">{record.score.spatialFalseAlarms}</td>
-                  <td className="p-3 text-center text-accent-error">{record.score.colorFalseAlarms}</td>
-                  <td className="p-3 text-center text-accent-error">{record.score.shapeFalseAlarms}</td>
+        {tableHistory.length > 0 ? (
+          <>
+            <table className="w-full text-left table-auto">
+              <thead>
+                <tr className="bg-gray-700 text-gray-300">
+                  <th className="p-3">Date</th>
+                  <th className="p-3">N-Level</th>
+                  <th className="p-3">Grid Size</th>
+                  <th className="p-3">Audio Δ</th>
+                  <th className="p-3">Color Δ</th>
+                  <th className="p-3">Shape Δ</th>
+                  <th className="p-3">Accuracy</th>
+                  <th className="p-3">Hits</th>
+                  <th className="p-3">Misses</th>
+                  <th className="p-3">Audio FA</th>
+                  <th className="p-3">Spatial FA</th>
+                  <th className="p-3">Color FA</th>
+                  <th className="p-3">Shape FA</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[...tableHistory].reverse().map((record, index) => (
+                  <tr key={index} className="border-b border-gray-700 hover:bg-gray-700/50">
+                    <td className="p-3 text-sm">{new Date(record.date).toLocaleString()}</td>
+                    <td className="p-3 text-center">{record.settings.nLevel}</td>
+                    <td className="p-3 text-center">{`${record.settings.gridRows}x${record.settings.gridCols}`}</td>
+                    <td className="p-3 text-center">{record.settings.audioThreshold.toFixed(2)}</td>
+                    <td className="p-3 text-center">{record.settings.colorThreshold.toFixed(2)}</td>
+                    <td className="p-3 text-center">{record.settings.shapeThreshold.toFixed(3)}</td>
+                    <td className={`p-3 text-center font-bold ${record.accuracy && record.accuracy > 0.75 ? 'text-accent-success' : 'text-gray-300'}`}>
+                      {record.accuracy !== undefined ? `${(record.accuracy * 100).toFixed(0)}%` : 'N/A'}
+                    </td>
+                    <td className="p-3 text-center text-accent-success">{record.score.hits}</td>
+                    <td className="p-3 text-center text-accent-error">{record.score.misses}</td>
+                    <td className="p-3 text-center text-accent-error">{record.score.audioFalseAlarms}</td>
+                    <td className="p-3 text-center text-accent-error">{record.score.spatialFalseAlarms}</td>
+                    <td className="p-3 text-center text-accent-error">{record.score.colorFalseAlarms}</td>
+                    <td className="p-3 text-center text-accent-error">{record.score.shapeFalseAlarms}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {timeFilter === 'all' && totalPages > 1 && (
+              <div className="flex justify-center items-center mt-4 gap-4">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         ) : (
-          <p className="text-center text-gray-400 py-8">No performance data yet. Complete a session to see your results here.</p>
+          <p className="text-center text-gray-400 py-8">
+            {timeFilter === '24h' ? 'No sessions in the last 24 hours.' : 'No performance data yet. Complete a session to see your results here.'}
+          </p>
         )}
       </div>
 
