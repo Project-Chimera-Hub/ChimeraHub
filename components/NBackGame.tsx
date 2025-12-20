@@ -26,7 +26,6 @@ interface NBackGameProps {
   onGameEnd: (score: Score, totalMatches: number, completed: boolean, duration: number) => void;
 }
 
-const STIMULUS_DURATION_MS = 500;
 type Modality = 'spatial' | 'audio' | 'color' | 'shape';
 
 const generateBaseShape = (numVertices: number): Shape => ({
@@ -36,6 +35,9 @@ const generateBaseShape = (numVertices: number): Shape => ({
 const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols } = settings;
   const { audioThreshold, colorThreshold, shapeThreshold } = settings;
+  
+  // Stimulus duration scales with ISI, with a minimum of 100ms.
+  const stimulusDuration = Math.max(100, isi * 0.2);
 
   const [history, setHistory] = useState<NBackEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<NBackEvent | null>(null);
@@ -255,17 +257,17 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     setIsStimulusVisible(true);
 
     if (settings.audioEnabled && synthRef.current) {
-        synthRef.current.triggerAttackRelease(newEvent.audio, `${STIMULUS_DURATION_MS / 1000}s`);
+        synthRef.current.triggerAttackRelease(newEvent.audio, `${stimulusDuration / 1000}s`);
     }
 
-    setTimeout(() => { setIsStimulusVisible(false); }, STIMULUS_DURATION_MS);
-  }, [generateNextEvent, endSession, totalTrials, settings.audioEnabled]);
+    setTimeout(() => { setIsStimulusVisible(false); }, stimulusDuration);
+  }, [generateNextEvent, endSession, totalTrials, settings.audioEnabled, stimulusDuration]);
 
   useEffect(() => {
     synthRef.current = new Tone.Synth().toDestination();
     const startAudio = async () => {
       await Tone.start();
-      transportEventIdRef.current = Tone.Transport.scheduleRepeat(runTrial, (STIMULUS_DURATION_MS + isi) / 1000);
+      transportEventIdRef.current = Tone.Transport.scheduleRepeat(runTrial, isi / 1000);
       Tone.Transport.start();
     };
     startAudio();
