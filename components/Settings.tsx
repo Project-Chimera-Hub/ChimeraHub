@@ -24,11 +24,22 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const isCheckbox = type === 'checkbox';
+    const numValue = (type === 'number' || type === 'range') ? Number(value) : value;
     
-    setLocalSettings(prev => ({
-      ...prev,
-      [name]: isCheckbox ? (e.target as HTMLInputElement).checked : (type === 'number' || type === 'range' ? Number(value) : value),
-    }));
+    setLocalSettings(prev => {
+      const newSettings = {
+        ...prev,
+        [name]: isCheckbox ? (e.target as HTMLInputElement).checked : numValue,
+      };
+
+      if (name === 'variableIsiRange' && typeof numValue === 'number') {
+        if (newSettings.variableIsiMinRange > numValue) {
+          newSettings.variableIsiMinRange = numValue;
+        }
+      }
+      
+      return newSettings;
+    });
   };
   
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,9 +145,27 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
         
         {/* ISI */}
         <div className="flex justify-between items-center">
-          <label htmlFor="isi">Inter-Stimulus Interval (ms)</label>
+          <label htmlFor="isi">Base Inter-Stimulus Interval (ms)</label>
           <input type="number" name="isi" id="isi" step="100" min="500" value={localSettings.isi} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
         </div>
+
+        {/* Variable ISI Toggle */}
+        <div className="flex justify-between items-center pt-4 border-t border-gray-700">
+          <label htmlFor="variableIsiEnabled">Enable Variable ISI</label>
+          <input type="checkbox" name="variableIsiEnabled" id="variableIsiEnabled" checked={localSettings.variableIsiEnabled} onChange={handleChange} className="w-6 h-6" />
+        </div>
+        {localSettings.variableIsiEnabled && (
+            <>
+              <div className="flex justify-between items-center">
+                  <label htmlFor="variableIsiRange">Max ISI Variation (± ms)</label>
+                  <input type="number" name="variableIsiRange" id="variableIsiRange" step="50" min="0" value={localSettings.variableIsiRange} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
+              </div>
+              <div className="flex justify-between items-center">
+                  <label htmlFor="variableIsiMinRange">Min ISI Variation (± ms)</label>
+                  <input type="number" name="variableIsiMinRange" id="variableIsiMinRange" step="50" min="0" max={localSettings.variableIsiRange} value={localSettings.variableIsiMinRange} onChange={handleChange} className="w-24 p-2 bg-gray-700 rounded" />
+              </div>
+            </>
+        )}
 
         {/* Calibration Toggle */}
         <div className="flex justify-between items-center pt-4 border-t border-gray-700">
@@ -144,6 +173,12 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
           <input type="checkbox" name="calibrationEnabled" id="calibrationEnabled" checked={localSettings.calibrationEnabled} onChange={handleChange} className="w-6 h-6" />
         </div>
         
+        {/* Feedback Toggle */}
+        <div className="flex justify-between items-center pt-4 border-t border-gray-700">
+          <label htmlFor="feedbackEnabled">Enable In-game Feedback</label>
+          <input type="checkbox" name="feedbackEnabled" id="feedbackEnabled" checked={localSettings.feedbackEnabled} onChange={handleChange} className="w-6 h-6" />
+        </div>
+
         {/* Dev Mode Toggle */}
         <div className="flex justify-between items-center pt-4 border-t border-gray-700">
           <label htmlFor="devMode">Enable Dev Mode (Show Lure Info)</label>

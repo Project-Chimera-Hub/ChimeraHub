@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
-import { GameState, CalibrationResult, Settings, PerformanceRecord, Score } from './types';
+import { GameState, CalibrationResult, Settings, PerformanceRecord, Score, Modality } from './types';
 import Calibration from './components/Calibration';
 import NBackGame from './components/NBackGame';
 import SettingsComponent from './components/Settings';
@@ -10,7 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   nLevel: 2,
   matchRate: 0.20,
   lureRate: 0.30,
-  isi: 2500,
+  isi: 2800,
   gridRows: 7,
   gridCols: 7,
   audioThreshold: 290,
@@ -28,6 +29,10 @@ const DEFAULT_SETTINGS: Settings = {
   shapeEnabled: false,
   shapeVertices: 6,
   colorPattern: 'vertical',
+  feedbackEnabled: true,
+  variableIsiEnabled: false,
+  variableIsiRange: 700,
+  variableIsiMinRange: 350,
 };
 
 const App: React.FC = () => {
@@ -59,20 +64,16 @@ const App: React.FC = () => {
     setGameState(GameState.Start);
   }, []);
 
-  const handleGameEnd = useCallback((finalScore: Score, totalMatches: number, completed: boolean, duration: number) => {
+  const handleGameEnd = useCallback((finalScore: Score, totalMatchesByModality: Record<Modality, number>, completed: boolean, duration: number) => {
     if (completed) {
+      const totalHits = Object.values(finalScore.hits).reduce((sum, h) => sum + h, 0);
+      const totalMatches = Object.values(totalMatchesByModality).reduce((sum, m) => sum + m, 0);
       const totalFalseAlarms = finalScore.spatialFalseAlarms + finalScore.audioFalseAlarms + finalScore.colorFalseAlarms + finalScore.shapeFalseAlarms;
       const totalNonMatches = settings.totalTrials - totalMatches;
       const correctRejections = Math.max(0, totalNonMatches - totalFalseAlarms);
       
-      // New accuracy calculation:
-      // Accuracy is the ratio of hits to "relevant" events, which are
-      // all match trials (hits + misses) and any trials with a false alarm.
-      // This penalizes both misses and false alarms, and does not reward correct rejections.
       const accuracyDenominator = totalMatches + totalFalseAlarms;
-      const accuracy = accuracyDenominator > 0 
-        ? finalScore.hits / accuracyDenominator
-        : 1; // If no matches and no false alarms occurred, accuracy is 100%.
+      const accuracy = accuracyDenominator > 0 ? totalHits / accuracyDenominator : 1;
       
       const record: PerformanceRecord = {
         date: new Date().toISOString(),
@@ -88,21 +89,47 @@ const App: React.FC = () => {
         accuracy: accuracy,
         duration: duration,
         totalMatches: totalMatches,
+        totalMatchesByModality: totalMatchesByModality,
         correctRejections: correctRejections,
         totalNonMatches: totalNonMatches,
       };
       setPerformanceHistory(prev => [...prev, record]);
       setLastSessionStats(record);
 
-      // Dynamic difficulty adjustment
-      if (accuracy > 0.75) {
-        setSettings(prev => ({
-          ...prev,
-          audioThreshold: Math.max(5, prev.audioThreshold * 0.95),
-          colorThreshold: Math.max(2, prev.colorThreshold * 0.95),
-          shapeThreshold: Math.max(0.01, prev.shapeThreshold * 0.95),
-        }));
-      }
+      // Per-modality dynamic difficulty adjustment
+      const newSettings = { ...settings };
+      const adjustableModalities = (['audio', 'color', 'shape'] as const).filter(m => settings[`${m}Enabled`]);
+
+      adjustableModalities.forEach(mod => {
+          const hits = finalScore.hits[mod];
+          const matches = totalMatchesByModality[mod];
+          const falseAlarms = finalScore[`${mod}FalseAlarms`];
+          
+          const denominator = matches + falseAlarms;
+          const modAccuracy = denominator > 2 ? hits / denominator : -1; // -1 to skip adjustment if not enough data
+          
+          const thresholdKey = `${mod}Threshold` as 'audioThreshold' | 'colorThreshold' | 'shapeThreshold';
+          let currentThreshold = newSettings[thresholdKey];
+
+          if (modAccuracy !== -1) {
+            if (modAccuracy < 0.5) {
+              // Decrease difficulty -> increase threshold
+              currentThreshold *= 1.1;
+            } else if (modAccuracy > 0.8) {
+              // Increase difficulty -> decrease threshold
+              currentThreshold *= 0.9;
+            }
+          }
+
+          // Apply caps to prevent extreme values
+          if (mod === 'audio') currentThreshold = Math.max(5, currentThreshold);
+          if (mod === 'color') currentThreshold = Math.max(2, currentThreshold);
+          if (mod === 'shape') currentThreshold = Math.max(0.01, currentThreshold);
+          
+          newSettings[thresholdKey] = currentThreshold;
+      });
+
+      setSettings(newSettings);
     }
 
     setGameState(GameState.Finished);
@@ -168,6 +195,8 @@ const App: React.FC = () => {
       case GameState.Playing:
         return <NBackGame settings={settings} onGameEnd={handleGameEnd} />;
       case GameState.Finished:
+        // Fix: Explicitly type accumulator and value in reduce to prevent type inference issues with Object.values.
+        const totalHits = lastSessionStats ? Object.values(lastSessionStats.score.hits).reduce((s: number, h: number) => s + h, 0) : 0;
         return (
           <div className="text-center w-full max-w-lg">
             <h2 className="text-3xl font-bold mb-4 text-primary">Session Complete</h2>
@@ -179,7 +208,7 @@ const App: React.FC = () => {
                         <span className="font-bold text-primary">{`${(lastSessionStats.accuracy! * 100).toFixed(0)}%`}</span>
                         
                         <span className="font-semibold text-gray-400">Hits / Matches:</span>
-                        <span><span className="text-accent-success">{lastSessionStats.score.hits}</span> / {lastSessionStats.totalMatches}</span>
+                        <span><span className="text-accent-success">{totalHits}</span> / {lastSessionStats.totalMatches}</span>
 
                         <span className="font-semibold text-gray-400">Misses:</span>
                         <span className="text-accent-error">{lastSessionStats.score.misses}</span>

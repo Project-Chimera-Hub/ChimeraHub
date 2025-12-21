@@ -40,8 +40,10 @@ export type NBackEvent = {
   n: number; // The n-level for this specific trial
 };
 
+export type Modality = 'spatial' | 'audio' | 'color' | 'shape';
+
 export type Score = {
-  hits: number;
+  hits: Record<Modality, number>;
   misses: number;
   audioFalseAlarms: number;
   spatialFalseAlarms: number;
@@ -71,6 +73,10 @@ export type Settings = {
   shapeEnabled: boolean;
   shapeVertices: number;
   colorPattern: ColorPattern;
+  feedbackEnabled: boolean;
+  variableIsiEnabled: boolean;
+  variableIsiRange: number;
+  variableIsiMinRange: number;
 };
 
 export type PerformanceRecord = {
@@ -87,6 +93,7 @@ export type PerformanceRecord = {
   accuracy?: number; // Optional accuracy field
   duration?: number; // in milliseconds
   totalMatches?: number;
+  totalMatchesByModality?: Record<Modality, number>;
   correctRejections?: number;
   totalNonMatches?: number;
 };

@@ -161,6 +161,13 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
     return acc;
   }, 0);
 
+  const getTotalHits = (score: PerformanceRecord['score']) => {
+    if (typeof score.hits === 'number') {
+      return score.hits;
+    }
+    return Object.values(score.hits).reduce((sum, h) => sum + h, 0);
+  }
+
   return (
     <div className="p-4 sm:p-8 bg-gray-800 rounded-xl shadow-2xl w-full max-w-7xl text-gray-200">
       <div className="flex justify-between items-center mb-6">
@@ -227,7 +234,7 @@ const Performance: React.FC<PerformanceProps> = ({ history, onBack }) => {
                     <td className={`p-3 text-center font-bold ${record.accuracy && record.accuracy > 0.75 ? 'text-accent-success' : 'text-gray-300'}`}>
                       {record.accuracy !== undefined ? `${(record.accuracy * 100).toFixed(0)}%` : 'N/A'}
                     </td>
-                    <td className="p-3 text-center text-accent-success">{record.score.hits}</td>
+                    <td className="p-3 text-center text-accent-success">{getTotalHits(record.score)}</td>
                     <td className="p-3 text-center text-accent-error">{record.score.misses}</td>
                     <td className="p-3 text-center text-accent-error">{record.score.audioFalseAlarms}</td>
                     <td className="p-3 text-center text-accent-error">{record.score.spatialFalseAlarms}</td>

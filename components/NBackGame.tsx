@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { NBackEvent, Score, Settings, Shape } from '../types';
+import { NBackEvent, Score, Settings, Shape, Modality } from '../types';
 import ShapeDisplay from './ShapeDisplay';
 
 declare namespace Tone {
@@ -12,7 +12,7 @@ declare namespace Tone {
   const Synth: new () => Synth;
 
   const Transport: {
-    scheduleRepeat(callback: (time: number) => void, interval: number | string): number;
+    schedule(callback: (time: number) => void, time: number | string): number;
     start(): void;
     stop(): void;
     cancel(): void;
@@ -23,10 +23,8 @@ declare namespace Tone {
 
 interface NBackGameProps {
   settings: Settings;
-  onGameEnd: (score: Score, totalMatches: number, completed: boolean, duration: number) => void;
+  onGameEnd: (score: Score, totalMatchesByModality: Record<Modality, number>, completed: boolean, duration: number) => void;
 }
-
-type Modality = 'spatial' | 'audio' | 'color' | 'shape';
 
 const getValidNValues = (maxN: number): number[] => {
     if (maxN <= 2) {
@@ -69,7 +67,7 @@ const generateRandomHues = (): [number, number, number] => {
 };
 
 const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
-  const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols } = settings;
+  const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols, feedbackEnabled } = settings;
   const { audioThreshold, colorThreshold, shapeThreshold } = settings;
   
   // Stimulus duration scales with ISI, with a minimum of 350ms.
@@ -79,16 +77,15 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const [currentEvent, setCurrentEvent] = useState<NBackEvent | null>(null);
   const [trialNumber, setTrialNumber] = useState(0);
   const [isStimulusVisible, setIsStimulusVisible] = useState(false);
-  const [score, setScore] = useState<Score>({ hits: 0, misses: 0, audioFalseAlarms: 0, spatialFalseAlarms: 0, colorFalseAlarms: 0, shapeFalseAlarms: 0 });
-  const [feedback, setFeedback] = useState<{ type: string, key: number } | null>(null);
-  const [buttonHighlights, setButtonHighlights] = useState<Record<Modality, 'none' | 'hit' | 'miss'>>({ spatial: 'none', audio: 'none', color: 'none', shape: 'none' });
+  const [score, setScore] = useState<Score>({ hits: { spatial: 0, audio: 0, color: 0, shape: 0 }, misses: 0, audioFalseAlarms: 0, spatialFalseAlarms: 0, colorFalseAlarms: 0, shapeFalseAlarms: 0 });
+  const [buttonHighlights, setButtonHighlights] = useState<Record<Modality, 'none' | 'hit' | 'miss' | 'false_alarm'>>({ spatial: 'none', audio: 'none', color: 'none', shape: 'none' });
   const [devLureInfo, setDevLureInfo] = useState<string>('');
   
   const [stimulusSize, setStimulusSize] = useState(settings.ballSize * 100);
   const gameBoardRef = useRef<HTMLDivElement>(null);
   const synthRef = useRef<Tone.Synth | null>(null);
   const transportEventIdRef = useRef<number | null>(null);
-  const totalMatchesRef = useRef(0);
+  const totalMatchesRef = useRef<Record<Modality, number>>({ spatial: 0, audio: 0, color: 0, shape: 0 });
   const startTimeRef = useRef<number>(Date.now());
   
   const historyRef = useRef(history);
@@ -134,8 +131,6 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     return () => resizeObserver.disconnect();
   }, [gridCols, gridRows, ballSize]);
 
-  const showFeedback = (type: string) => { setFeedback({ type, key: Date.now() }); };
-
   const handleUserResponse = useCallback((type: Modality) => {
     if (trialNumberRef.current === 0) return;
     const current = historyRef.current[historyRef.current.length - 1];
@@ -147,15 +142,14 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     if(respondedToRef.current.has(responseKey)) return;
     
     if (isMatch) {
-      setScore(s => ({ ...s, hits: s.hits + 1 }));
-      showFeedback('hit');
-      setButtonHighlights(prev => ({...prev, [type]: 'hit'}));
+      setScore(s => ({ ...s, hits: { ...s.hits, [type]: s.hits[type] + 1 } }));
+      if (feedbackEnabled) setButtonHighlights(prev => ({...prev, [type]: 'hit'}));
     } else {
       setScore(s => ({ ...s, [`${type}FalseAlarms`]: s[`${type}FalseAlarms`] + 1 }));
-      showFeedback('false_alarm');
+      if (feedbackEnabled) setButtonHighlights(prev => ({...prev, [type]: 'false_alarm' }));
     }
     respondedToRef.current.add(responseKey);
-  }, []);
+  }, [feedbackEnabled]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -252,7 +246,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
             (newEvent[mod] as any) = targetEvent[mod];
           }
           newEvent.isMatch[mod] = true;
-          totalMatchesRef.current += 1;
+          totalMatchesRef.current[mod] += 1;
           devInfoParts.push(`${mod.charAt(0).toUpperCase()}:MATCH`);
         } else if (rand < matchRate + lureRate) {
           // This modality is a LURE
@@ -306,23 +300,27 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   }, [nLevel, variableN, matchRate, lureRate, settings, validNValues]);
   
   const runTrial = useCallback(() => {
-    setFeedback(null);
-    setButtonHighlights({ spatial: 'none', audio: 'none', color: 'none', shape: 'none' });
-    const activeModalities = activeModalitiesRef.current;
-
-    if (trialNumberRef.current > 0) {
+    const nextButtonHighlights: Record<Modality, 'none' | 'hit' | 'miss' | 'false_alarm'> = { spatial: 'none', audio: 'none', color: 'none', shape: 'none' };
+    if (feedbackEnabled) {
+      const activeModalities = activeModalitiesRef.current;
+      if (trialNumberRef.current > 0) {
         const lastEvent = historyRef.current[historyRef.current.length - 1];
         if (trialNumberRef.current > lastEvent.n) {
-            activeModalities.forEach(mod => {
-                if (lastEvent.isMatch[mod] && !respondedToRef.current.has(`${lastEvent.id}_${mod}`)) {
-                    setScore(s => ({...s, misses: s.misses + 1}));
-                    setButtonHighlights(prev => ({...prev, [mod]: 'miss'}));
-                }
-            });
+          activeModalities.forEach(mod => {
+            if (lastEvent.isMatch[mod] && !respondedToRef.current.has(`${lastEvent.id}_${mod}`)) {
+              setScore(s => ({ ...s, misses: s.misses + 1 }));
+              nextButtonHighlights[mod] = 'miss';
+            }
+          });
         }
+      }
     }
+    setButtonHighlights(nextButtonHighlights);
 
-    if (trialNumberRef.current >= totalTrials) { endSession(true); return; }
+    if (trialNumberRef.current >= totalTrials) {
+      endSession(true);
+      return;
+    }
 
     const newEvent = generateNextEvent();
     setCurrentEvent(newEvent);
@@ -331,26 +329,49 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
     setIsStimulusVisible(true);
 
     if (settings.audioEnabled && synthRef.current) {
-        synthRef.current.triggerAttackRelease(newEvent.audio, `${stimulusDuration / 1000}s`);
+      synthRef.current.triggerAttackRelease(newEvent.audio, `${stimulusDuration / 1000}s`);
     }
 
     setTimeout(() => { setIsStimulusVisible(false); }, stimulusDuration);
-  }, [generateNextEvent, endSession, totalTrials, settings.audioEnabled, stimulusDuration]);
+
+    // Schedule the next trial
+    let nextIsi = settings.isi;
+    if (settings.variableIsiEnabled) {
+        const maxRange = settings.variableIsiRange;
+        const minRange = settings.variableIsiMinRange;
+        
+        if (minRange < maxRange) {
+            const range = maxRange - minRange;
+            const deltaMagnitude = minRange + (Math.random() * range);
+            const sign = Math.random() < 0.5 ? -1 : 1;
+            nextIsi += deltaMagnitude * sign;
+        } else {
+            // Fallback for invalid settings: simple randomization within max range
+            const delta = (Math.random() - 0.5) * 2 * maxRange;
+            nextIsi += delta;
+        }
+    }
+    // Sanity check for minimum ISI
+    nextIsi = Math.max(stimulusDuration + 100, nextIsi);
+    
+    transportEventIdRef.current = Tone.Transport.schedule(runTrial, `+${nextIsi / 1000}`);
+  }, [generateNextEvent, endSession, totalTrials, settings, stimulusDuration, feedbackEnabled]);
 
   useEffect(() => {
     synthRef.current = new Tone.Synth().toDestination();
     const startAudio = async () => {
       await Tone.start();
-      transportEventIdRef.current = Tone.Transport.scheduleRepeat(runTrial, isi / 1000);
       Tone.Transport.start();
+      runTrial(); // Kicks off the self-scheduling loop
     };
     startAudio();
     return () => {
       if (transportEventIdRef.current !== null) { Tone.Transport.clear(transportEventIdRef.current); }
-      Tone.Transport.stop(); Tone.Transport.cancel();
+      Tone.Transport.stop();
+      Tone.Transport.cancel();
       synthRef.current?.dispose();
     };
-  }, [isi, runTrial]);
+  }, [runTrial]);
 
   const getGameTitle = () => {
     const count = activeModalitiesRef.current.length;
@@ -368,6 +389,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         case 'hit':
             return `${baseClasses} bg-accent-success scale-105`;
         case 'miss':
+            return `${baseClasses} bg-accent-warning`;
+        case 'false_alarm':
             return `${baseClasses} bg-accent-error-heavy`;
         default:
             return `${baseClasses} ${defaultClasses}`;
@@ -381,6 +404,9 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
       `,
       backgroundSize: `${100 / gridCols}% ${100 / gridRows}%`
   };
+
+  // Fix: Explicitly type accumulator and value in reduce to prevent type inference issues with Object.values.
+  const totalHits = Object.values(score.hits).reduce((sum: number, h: number) => sum + h, 0);
 
   return (
     <div className="flex flex-col items-center justify-center p-4 sm:p-8 bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl">
@@ -426,13 +452,6 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
             />
           </div>
         )}
-         {feedback && (
-          <div key={feedback.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className={`w-32 h-32 rounded-full border-8 animate-ping opacity-75 ${
-              feedback.type === 'hit' ? 'border-accent-success' : 'border-accent-error'
-            }`}></div>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 w-full max-w-lg mx-auto">
@@ -444,11 +463,13 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
 
       <div className="mt-6 w-full flex justify-between items-center text-gray-400 font-mono">
         <button onClick={quitSession} className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg text-sm">Quit</button>
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-            <p>Hits: <span className="text-accent-success">{score.hits}</span></p>
-            <p>Misses: <span className="text-accent-error">{score.misses}</span></p>
-            {activeModalitiesRef.current.map(m => <p key={m}>{m.charAt(0).toUpperCase()} FA: <span className="text-accent-error">{score[`${m}FalseAlarms`]}</span></p>)}
-        </div>
+        {feedbackEnabled && (
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+              <p>Hits: <span className="text-accent-success">{totalHits}</span></p>
+              <p>Misses: <span className="text-accent-error">{score.misses}</span></p>
+              {activeModalitiesRef.current.map(m => <p key={m}>{m.charAt(0).toUpperCase()} FA: <span className="text-accent-error">{score[`${m}FalseAlarms`]}</span></p>)}
+          </div>
+        )}
       </div>
     </div>
   );
