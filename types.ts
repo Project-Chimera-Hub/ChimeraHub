@@ -27,7 +27,7 @@ export type Shape = {
   vertices: { radius: number }[]; // radius is 0-1
 };
 
-export type ColorPattern = 'vertical' | 'horizontal' | 'triangles';
+export type ColorPattern = 'vertical' | 'horizontal' | 'triangles' | 'radial' | 'blocky' | 'aztec' | 'grid' | 'hexagons' | 'bubbles' | 'topo';
 
 export type NBackEvent = {
   id: number;
@@ -38,6 +38,8 @@ export type NBackEvent = {
   isMatch: { audio: boolean, spatial: boolean, color: boolean, shape: boolean };
   lureType: 'none' | 'audio' | 'spatial' | 'color' | 'shape';
   n: number; // The n-level for this specific trial
+  bubbleData?: { cx: number; cy: number; r: number; }[];
+  topoData?: { points: {x: number, y: number}[] }[];
 };
 
 export type Modality = 'spatial' | 'audio' | 'color' | 'shape';

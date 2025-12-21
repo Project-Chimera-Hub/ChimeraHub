@@ -81,6 +81,13 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, onSave, onBack }
               <option value="vertical">Vertical Stripes</option>
               <option value="horizontal">Horizontal Stripes</option>
               <option value="triangles">Triangles</option>
+              <option value="radial">Radial</option>
+              <option value="blocky">Blocky (Bricks)</option>
+              <option value="aztec">Aztec (Maze)</option>
+              <option value="grid">Grid</option>
+              <option value="hexagons">Hexagons</option>
+              <option value="bubbles">Bubbles</option>
+              <option value="topo">Topography</option>
             </select>
           </div>
         )}

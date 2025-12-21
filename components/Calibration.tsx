@@ -53,7 +53,14 @@ const generateRandomHues = (): [number, number, number] => {
   return hues;
 };
 
-type Stimulus = { audio: number; spatial: { row: number; col: number }; hues: [number, number, number]; shape: Shape; };
+type Stimulus = {
+    audio: number;
+    spatial: { row: number; col: number };
+    hues: [number, number, number];
+    shape: Shape;
+    bubbleData?: { cx: number; cy: number; r: number; }[];
+    topoData?: { points: {x: number, y: number}[] }[];
+};
 
 const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings }) => {
   const [mode, setMode] = useState<CalibrationMode>('selection');
@@ -95,7 +102,12 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
     setFeedback(null);
 
     const generateLure = (base: Stimulus, modality: Modality): Stimulus => {
-        let lure = { ...base, shape: { vertices: base.shape.vertices.map(v => ({...v})) } };
+        let lure = {
+            ...base,
+            shape: { vertices: base.shape.vertices.map(v => ({...v})) },
+            bubbleData: base.bubbleData,
+            topoData: base.topoData,
+        };
         switch (modality) {
             case 'audio':
                 const directionA = Math.random() < 0.5 ? 1 : -1;
@@ -118,12 +130,36 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
         return lure;
     };
 
-    const generateRandomStimulus = (): Stimulus => ({
-        audio: 200 + Math.random() * 600,
-        spatial: { row: Math.floor(settings.gridRows / 2), col: Math.floor(settings.gridCols / 2) },
-        hues: generateRandomHues(),
-        shape: generateBaseShape(settings.shapeVertices),
-    });
+    const generateRandomStimulus = (): Stimulus => {
+        const stimulus: Stimulus = {
+            audio: 200 + Math.random() * 600,
+            spatial: { row: Math.floor(settings.gridRows / 2), col: Math.floor(settings.gridCols / 2) },
+            hues: generateRandomHues(),
+            shape: generateBaseShape(settings.shapeVertices),
+        };
+
+        if (settings.colorPattern === 'bubbles') {
+            stimulus.bubbleData = Array.from({ length: 25 }, () => ({
+                cx: Math.random(),
+                cy: Math.random(),
+                r: Math.random() * 0.2 + 0.1,
+            }));
+        }
+
+        if (settings.colorPattern === 'topo') {
+            const numLines = 6;
+            stimulus.topoData = Array.from({ length: numLines }, (_, i) => {
+                const radius = (0.5) * (0.1 + (i / numLines) * 0.85);
+                const points = Array.from({length: 8}, (_, j) => {
+                    const angle = (j / 8) * 2 * Math.PI;
+                    const r = radius + (Math.random() - 0.5) * 0.1;
+                    return { x: 0.5 + r * Math.cos(angle), y: 0.5 + r * Math.sin(angle) };
+                });
+                return { points };
+            });
+        }
+        return stimulus;
+    };
 
     switch (trialStep) {
         case 'stimulus':
@@ -181,7 +217,7 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
             }, 1200);
             break;
     }
-  }, [trialStep, mode, playTone, settings.shapeVertices, onComplete, settings.gridCols, settings.gridRows, feedback, trialCount]);
+  }, [trialStep, mode, playTone, settings, onComplete, feedback, trialCount]);
   
   useEffect(() => {
       if (mode !== 'selection') {
@@ -277,6 +313,8 @@ const Calibration: React.FC<CalibrationProps> = ({ onComplete, onQuit, settings 
                 colorEnabled={mode === 'color'}
                 shapeEnabled={mode === 'shape'}
                 colorPattern={settings.colorPattern}
+                bubbleData={currentStimulus.bubbleData}
+                topoData={currentStimulus.topoData}
               />
             </div>
           )}

@@ -231,6 +231,27 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         isMatch: { audio: false, spatial: false, color: false, shape: false },
         lureType: 'none',
     };
+
+    if (settings.colorPattern === 'bubbles') {
+        newEvent.bubbleData = Array.from({ length: 25 }, () => ({
+            cx: Math.random(),
+            cy: Math.random(),
+            r: Math.random() * 0.2 + 0.1,
+        }));
+    }
+
+    if (settings.colorPattern === 'topo') {
+        const numLines = 6;
+        newEvent.topoData = Array.from({ length: numLines }, (_, i) => {
+            const radius = (0.5) * (0.1 + (i / numLines) * 0.85);
+            const points = Array.from({length: 8}, (_, j) => {
+                const angle = (j / 8) * 2 * Math.PI;
+                const r = radius + (Math.random() - 0.5) * 0.1;
+                return { x: 0.5 + r * Math.cos(angle), y: 0.5 + r * Math.sin(angle) };
+            });
+            return { points };
+        });
+    }
     
     let devInfoParts: string[] = [`N=${n}`];
     let lureFound = false;
@@ -242,6 +263,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
           // This modality is a MATCH
           if (mod === 'color') {
             newEvent.hues = targetEvent.hues;
+            newEvent.bubbleData = targetEvent.bubbleData;
+            newEvent.topoData = targetEvent.topoData;
           } else {
             (newEvent[mod] as any) = targetEvent[mod];
           }
@@ -278,6 +301,9 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
               targetHues[idx1] = (targetHues[idx1] + shiftAmount + 360) % 360;
               targetHues[idx2] = (targetHues[idx2] - shiftAmount + 360) % 360;
               newEvent.hues = targetHues;
+              // For lure, keep the pattern structure the same, only change colors
+              newEvent.bubbleData = targetEvent.bubbleData;
+              newEvent.topoData = targetEvent.topoData;
               break;
             case 'shape':
               const newVertices = targetEvent.shape.vertices.map(v => ({...v}));
@@ -449,6 +475,8 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
                 colorEnabled={settings.colorEnabled}
                 shapeEnabled={settings.shapeEnabled}
                 colorPattern={settings.colorPattern}
+                bubbleData={currentEvent.bubbleData}
+                topoData={currentEvent.topoData}
             />
           </div>
         )}
