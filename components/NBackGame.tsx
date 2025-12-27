@@ -70,8 +70,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const { nLevel, matchRate, lureRate, isi, totalTrials, ballSize, variableN, devMode, gridRows, gridCols, feedbackEnabled } = settings;
   const { audioThreshold, colorThreshold, shapeThreshold } = settings;
   
-  // Stimulus duration scales with ISI, with a minimum of 350ms.
-  const stimulusDuration = Math.max(350, isi * 0.2);
+  const stimulusDuration = 500;
 
   const [history, setHistory] = useState<NBackEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<NBackEvent | null>(null);
@@ -134,7 +133,7 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
   const handleUserResponse = useCallback((type: Modality) => {
     if (trialNumberRef.current === 0) return;
     const current = historyRef.current[historyRef.current.length - 1];
-    if (!current || trialNumberRef.current <= current.n) return;
+    if (!current || (current.id + 1) <= current.n) return;
     
     const isMatch = current.isMatch[type];
     const responseKey = `${current.id}_${type}`;
@@ -315,6 +314,22 @@ const NBackGame: React.FC<NBackGameProps> = ({ settings, onGameEnd }) => {
         } else {
           // This modality is RANDOM
           devInfoParts.push(`${mod.charAt(0).toUpperCase()}:RAND`);
+          // FIX: Ensure random event is not an accidental match, which would be confusing for the user.
+          if (targetEvent) {
+            if (mod === 'spatial') {
+              while (newEvent.spatial.row === targetEvent.spatial.row && newEvent.spatial.col === targetEvent.spatial.col) {
+                newEvent.spatial = { row: Math.floor(Math.random() * gridRows), col: Math.floor(Math.random() * gridCols) };
+              }
+            }
+            if (mod === 'audio') {
+              // Check for perceptible similarity (e.g., less than 1 Hz difference)
+              while (Math.abs(newEvent.audio - targetEvent.audio) < 1) {
+                 newEvent.audio = 200 + Math.random() * 600;
+              }
+            }
+            // Note: Accidental matches for color (3 hues) and shape (N vertices) are statistically insignificant
+            // and not worth the performance cost of checking and re-generating.
+          }
         }
       });
     } else {
