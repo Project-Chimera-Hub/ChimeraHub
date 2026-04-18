@@ -274,7 +274,31 @@
     .profiles-panel-body{padding:.5rem .9rem .7rem;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
     .profile-row{display:flex;align-items:center;gap:5px;padding:.3rem .4rem;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border)}
     .profile-row-name{flex:1;font-family:var(--mono);font-size:.72rem;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* Sticky start bar — fixed to viewport bottom, only visible on home screen */
+    .sticky-start-bar{
+      position:fixed;bottom:0;left:0;right:0;
+      background:var(--bg);border-top:1px solid var(--border);
+      padding:.75rem 1.5rem;display:flex;align-items:center;
+      justify-content:space-between;gap:.75rem;z-index:200;
+      backdrop-filter:blur(6px);
+    }
+    /* Add bottom padding to home page content so sticky bar doesn't cover it */
+    #pageHome .shell{ padding-bottom:5rem; }
+
+    /* Equation stream — live scroll below playing area */
+    .eq-stream{
+      max-height:120px;overflow-y:auto;display:flex;flex-direction:column-reverse;
+      gap:2px;font-family:var(--mono);font-size:.7rem;padding:.4rem .5rem;
+      background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);
+    }
+    .eq-stream::-webkit-scrollbar{width:3px}
+    .eq-stream::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    .eq-entry{display:flex;align-items:center;gap:.4rem;padding:1px 0}
+    .eq-entry.eq-ok{color:var(--accent)}
+    .eq-entry.eq-wrong{color:var(--danger)}
+    .eq-entry.eq-miss{color:var(--text-faint)}
     .anim-in{animation:fadeUp .3s ease both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
     @media(max-width:480px){h1{font-size:1.65rem}.timer-display{font-size:2rem}.stimulus-number{font-size:4rem}}
     ::-webkit-scrollbar{width:5px}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
@@ -314,13 +338,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
         Share
       </button>
-      <button class="btn btn-reset" id="resetAppBtn" title="Wipe all progress data">
+      <button class="btn btn-reset" id="resetAppBtn"
+        style="background:var(--danger-dim);border-color:var(--danger);color:var(--danger);font-weight:600"
+        title="Delete ALL data: progress history, streaks and settings — cannot be undone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-        Reset app
+        Wipe all data
       </button>
-      <button class="btn btn-reset" id="resetBtn">
+      <button class="btn btn-reset" id="resetBtn"
+        title="Reset settings to their factory defaults — your progress history is kept">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        Reset defaults
+        Default settings
       </button>
       <button class="icon-btn" id="themeBtn" title="Toggle Light/Dark mode" style="width:auto;padding:0 10px;gap:5px;font-size:0.72rem;font-family:var(--mono);letter-spacing:0.04em;color:var(--text-dim)">
         <svg id="themeBtnIcon" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -353,7 +380,7 @@
       </div>
       <div class="card-body">
         <div class="tab-panel active" id="tab-standard">
-          <p style="font-size:.85rem">20-minute session, starting at 1500 ms. Speeds up on correct streaks, slows down on errors.</p>
+          <p style="font-size:.85rem">15-minute session, starting at 1500 ms. After every 5 trials: if 4 or more were correct → interval −100 ms (faster); otherwise → +100 ms (slower). Never drops below the minimum interval setting.</p>
         </div>
         <div class="tab-panel" id="tab-custom">
           <div class="settings-grid">
@@ -361,7 +388,7 @@
               <label class="label">Duration</label>
               <div class="slider-row">
                 <div class="slider-wrap">
-                  <input type="range" class="slider" id="durationSlider" min="1" max="60" step="1" value="20">
+                  <input type="range" class="slider" id="durationSlider" min="1" max="60" step="1" value="15">
                   <div class="tick-row" id="durationTicks"></div>
                 </div>
                 <span class="slider-val" id="durationVal">20 min</span>
@@ -396,42 +423,7 @@
              highlight on the stimulus box. A colour swatch next to each
              operation lets the user choose its indicator colour.
         ── -->
-        <hr class="div" style="margin-top:1rem">
-        <div class="field" style="margin-top:1rem">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem">
-            <label class="label" style="margin-bottom:0">Arithmetic operation</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;color:var(--text-dim);font-family:var(--mono)">
-              <input type="checkbox" id="ruleSwitchToggle" style="accent-color:var(--accent)">
-              <strong style="color:var(--text)">Rule Switch Mode</strong> — randomly switch between selected operations each trial
-            </label>
-          </div>
-          <!-- Single-mode: radio buttons (shown when Rule Switch is OFF) -->
-          <div id="arithSingleRow" style="display:flex;gap:6px;flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
-              <input type="radio" name="arithMode" id="arithAdd" value="add" style="accent-color:var(--accent)" checked> + Addition
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
-              <input type="radio" name="arithMode" id="arithSub" value="sub" style="accent-color:var(--accent)"> − Subtraction
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
-              <input type="radio" name="arithMode" id="arithMul" value="mul" style="accent-color:var(--accent)"> × Multiplication
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
-              <input type="radio" name="arithMode" id="arithDiv" value="div" style="accent-color:var(--accent)"> ÷ Division
-            </label>
-          </div>
-          <!-- Multi-mode: checkboxes + colour pickers (shown when Rule Switch is ON) -->
-          <div id="arithSwitchRow" style="display:none;flex-direction:column;gap:.5rem">
-            <p class="hint" style="margin-top:0">Select at least 2 operations. Each trial one is chosen at random and its colour lights up the stimulus box.</p>
-            <div style="display:flex;flex-direction:column;gap:.4rem" id="switchOpList">
-              <!-- Generated by JS -->
-            </div>
-            <p class="hint" id="switchWarning" style="color:var(--danger);display:none">Select at least 2 operations to use Rule Switch Mode.</p>
-          </div>
-          <p class="hint" id="arithHint" style="margin-top:.4rem">Add current + previous number. The classic working-memory number task.</p>
-        </div>
-
-        <!-- ── Number Range ─────────────────────────────────────────────
+                <!-- ── Number Range ─────────────────────────────────────────────
              Controls the pool of integers the voice can say each trial.
              Default is 1–9. Lower the max or raise the min to constrain
              the range — useful when using multiplication or division to
@@ -445,7 +437,7 @@
           <div class="row" style="gap:1rem;align-items:center;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:6px">
               <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Min</label>
-              <input type="number" class="num-input" id="numRangeMin" min="0" max="20" value="2" style="width:64px">
+              <input type="number" class="num-input" id="numRangeMin" min="0" max="20" value="1" style="width:64px">
             </div>
             <div style="display:flex;align-items:center;gap:6px">
               <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Max</label>
@@ -454,6 +446,32 @@
             <span class="hint" id="numRangeHint" style="margin-top:0">Numbers spoken will be in the range [1, 9]</span>
           </div>
           <p class="hint" style="margin-top:.4rem">Tip: for multiplication use 1–5; for division use 1–9 (divisibility is enforced automatically).</p>
+        </div>
+
+        <!-- ── Answer Range ───────────────────────────────────────────────
+             Optionally constrain which computed answers are allowed.
+             Numbers are re-rolled until the answer falls within the range.
+        ── -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="answerRangeToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Limit answer range</strong> — only present trials where the answer falls within a set range</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Numbers will be re-rolled until the computed answer fits the window. Useful to keep answers manageable, e.g. 0–20 for addition.</p>
+          <div class="sub-opts" id="answerRangeOpts" style="margin-top:.75rem">
+            <div class="row" style="gap:1rem;align-items:center;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:6px">
+                <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Min</label>
+                <input type="number" class="num-input" id="answerRangeMin" min="-99" max="999" value="0" style="width:72px">
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Max</label>
+                <input type="number" class="num-input" id="answerRangeMax" min="-99" max="999" value="18" style="width:72px">
+              </div>
+              <span class="hint" id="answerRangeHint" style="margin-top:0">Answers will be in [0, 18]</span>
+            </div>
+          </div>
         </div>
 
         <!-- ── Smooth Adaption ────────────────────────────────────────
@@ -484,19 +502,60 @@
               <label class="label">Slow-down per wrong answer (ms)</label>
               <div class="slider-row">
                 <div class="slider-wrap">
-                  <input type="range" class="slider" id="adaptDownSlider" min="1" max="100" step="1" value="25">
+                  <input type="range" class="slider" id="adaptDownSlider" min="1" max="100" step="1" value="20">
                   <div class="tick-row" id="adaptDownTicks"></div>
                 </div>
-                <span class="slider-val" id="adaptDownVal">25 ms</span>
+                <span class="slider-val" id="adaptDownVal">20 ms</span>
               </div>
               <p class="hint">How many ms <em>slower</em> the interval gets after each wrong answer.</p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="section-label">Input &amp; Audio</div>
+        <!-- ── Target Accuracy Mode ───────────────────────────────────
+             Instead of fixed step sizes, the algorithm continuously
+             estimates your recent accuracy over a rolling window and
+             nudges the ISI to converge on the desired percentage.
+             Uses a proportional controller: the further you are from
+             the target, the bigger the nudge — but nudges are capped
+             so the interval never jumps suddenly.
+        ── -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="targetAccToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Target accuracy mode</strong> — algorithm gradually adjusts speed so your accuracy converges on a chosen percentage</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Based on the <em>85% rule</em>: research suggests learning is fastest when ~85% of responses are correct. The algorithm uses a rolling accuracy window and nudges the interval up or down to reach your target — slowly enough that it never feels abrupt. Overrides Smooth Adapt when active.</p>
+          <div class="sub-opts" id="targetAccOpts" style="margin-top:.75rem">
+            <div class="field">
+              <label class="label">Target accuracy</label>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <input type="range" class="slider" id="targetAccSlider" min="50" max="99" step="1" value="85">
+                  <div class="tick-row" id="targetAccTicks"></div>
+                </div>
+                <span class="slider-val" id="targetAccVal">85%</span>
+              </div>
+              <p class="hint">Default 85% — the sweet spot for working-memory training. Lower = harder (faster pace); higher = easier (slower pace).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ISI lower bound — interval never drops below this value -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <label class="label">Minimum interval (lower bound)</label>
+          <div class="slider-row">
+            <div class="slider-wrap">
+              <input type="range" class="slider" id="isiMinSlider" min="0" max="750" step="25" value="500">
+              <div class="tick-row" id="isiMinTicks"></div>
+            </div>
+            <span class="slider-val" id="isiMinVal">500 ms</span>
+          </div>
+          <p class="hint">The interval will never speed up past this floor. Default: 500 ms. Set to 0 to remove the limit.</p>
+        </div>
+        </div><!-- end tab-custom -->
     <div class="card">
       <div class="card-head">
         <span class="card-title">
@@ -508,12 +567,13 @@
         <div class="field">
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="numpadToggle"><div class="toggle-track"></div></label>
-            <span class="toggle-label">Use <strong>number pad</strong> (buttons 2–18) instead of text input</span>
+            <span class="toggle-label">Use <strong>on-screen pad</strong> — tap answer buttons on screen instead of typing</span>
           </div>
+          <p class="hint" style="margin-top:.5rem">Replaces the text input with a grid of tappable answer buttons — ideal for touchscreens or if you prefer clicking. The buttons are generated automatically based on your number range and operation. <em>This is not a keyboard numpad</em> — it lives on screen inside the training area.</p>
         </div>
         <div class="sub-opts" id="numpadOpts">
           <div class="field">
-            <label class="label">Button Size</label>
+            <label class="label">Button size</label>
             <div class="slider-row">
               <div class="slider-wrap">
                 <input type="range" class="slider" id="padSizeSlider" min="0.6" max="1.5" step="0.1" value="1">
@@ -521,6 +581,33 @@
               </div>
               <span class="slider-val" id="padSizeVal">1.0×</span>
             </div>
+            <p class="hint">Scale all buttons up or down. Bigger buttons are easier to tap on small screens.</p>
+          </div>
+          <div class="field" style="margin-top:.75rem">
+            <label class="label">Columns</label>
+            <div class="slider-row">
+              <div class="slider-wrap">
+                <input type="range" class="slider" id="padColsSlider" min="2" max="10" step="1" value="5">
+                <div class="tick-row" id="padColsTicks"></div>
+              </div>
+              <span class="slider-val" id="padColsVal">5</span>
+            </div>
+            <p class="hint">Number of columns in the button grid. Fewer columns = taller buttons; more columns = wider layout. Default: 5.</p>
+          </div>
+          <div class="field" style="margin-top:.75rem">
+            <label class="label">Button order</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+                <input type="radio" name="padOrder" id="padOrderAsc" value="asc" style="accent-color:var(--accent)" checked> Ascending (low → high)
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+                <input type="radio" name="padOrder" id="padOrderDesc" value="desc" style="accent-color:var(--accent)"> Descending (high → low)
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+                <input type="radio" name="padOrder" id="padOrderRand" value="random" style="accent-color:var(--accent)"> Shuffle each trial
+              </label>
+            </div>
+            <p class="hint" style="margin-top:.4rem">Shuffle randomises button positions every trial so you can't rely on muscle memory — good for extra challenge.</p>
           </div>
         </div>
       </div>
@@ -535,7 +622,7 @@
           <label class="label">Speech Speed</label>
           <div class="slider-row">
             <div class="slider-wrap">
-              <input type="range" class="slider" id="speechRateSlider" min="0.5" max="3" step="0.1" value="1.0">
+              <input type="range" class="slider" id="speechRateSlider" min="0.5" max="3" step="0.1" value="1.5">
               <div class="tick-row" id="speechRateTicks"></div>
             </div>
             <span class="slider-val" id="speechRateVal">1.0×</span>
@@ -608,13 +695,6 @@
         </div>
         <div class="field" style="margin-top:.75rem">
           <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="includeZeroToggle"><div class="toggle-track"></div></label>
-            <span class="toggle-label"><strong>Include 0</strong> — zero can be spoken as one of the numbers</span>
-          </div>
-          <p class="hint" style="margin-top:.5rem">Default off. When off, the minimum spoken number is 1 (or your custom range minimum). Enabling this allows 0 to be spoken. Note: for division mode, 0 as a divisor is avoided automatically.</p>
-        </div>
-        <div class="field" style="margin-top:.75rem">
-          <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="minimalInputToggle"><div class="toggle-track"></div></label>
             <span class="toggle-label"><strong>Minimal input</strong> — only type the ones digit of the answer</span>
           </div>
@@ -626,6 +706,13 @@
             <span class="toggle-label"><strong>Hide input</strong> — mask what you type so you can't see your own keystrokes</span>
           </div>
           <p class="hint" style="margin-top:.5rem">Removes visual interference from seeing your own input. The answer box stays visible and feedback (correct/wrong border colour) still shows — only the typed characters are hidden. Default: off.</p>
+        </div>
+        <div class="field" style="margin-top:.75rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="showStreamToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Show equation stream</strong> — display a live running list of equations below the playing area</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Shows each equation as it is answered, colour-coded green (correct) or red (wrong/missed). Newest at the top. Default: off.</p>
         </div>
       </div>
       <div class="card-head">
@@ -703,9 +790,9 @@
           <div class="field">
             <div class="toggle-row">
               <label class="toggle"><input type="checkbox" id="ictNoInputToggle"><div class="toggle-track"></div></label>
-              <span class="toggle-label"><strong>Accept no input</strong> as correct inhibition (in addition to ↑ Arrow Up)</span>
+              <span class="toggle-label"><strong>Silence only</strong> — only complete silence counts as a correct inhibition</span>
             </div>
-            <p class="hint" style="margin-top:.4rem">If enabled, simply not pressing anything and letting the trial time out also counts as a correct inhibition. Arrow Up still works too.</p>
+            <p class="hint" style="margin-top:.4rem">When ticked, <strong>any</strong> input on a no-go trial — including ↑ Arrow Up — is a false alarm. The only correct response is to do absolutely nothing and let the trial time out.</p>
           </div>
         </div>
       </div>
@@ -777,12 +864,48 @@
       </div>
     </div>
 
-    <div class="action-row">
-      <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
-      <button class="btn btn-primary" id="startBtn">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        Start Training
-      </button>
+
+    <div class="section-label" style="color:var(--danger);border-color:var(--danger)">⚠ Experimental</div>
+    <div style="border:2px solid var(--danger);border-radius:var(--radius-lg);padding:1rem;background:var(--danger-dim);margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem">
+        <span style="font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--danger)">⚠ BROKEN / UNDER CONSTRUCTION</span>
+      </div>
+      <p style="font-size:.8rem;color:var(--danger);margin-bottom:.75rem;line-height:1.5">These settings are partially implemented and may produce incorrect answers or unexpected behaviour. Use at your own risk.</p>
+
+      <!-- Arithmetic operation -->
+      <div class="field">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem">
+          <label class="label" style="margin-bottom:0">Arithmetic operation</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;color:var(--text-dim);font-family:var(--mono)">
+            <input type="checkbox" id="ruleSwitchToggle" style="accent-color:var(--accent)">
+            <strong style="color:var(--text)">Rule Switch Mode</strong> — randomly switch between selected operations each trial
+          </label>
+        </div>
+        <!-- Single-mode: radio buttons (shown when Rule Switch is OFF) -->
+        <div id="arithSingleRow" style="display:flex;gap:6px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+            <input type="radio" name="arithMode" id="arithAdd" value="add" style="accent-color:var(--accent)" checked> + Addition
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+            <input type="radio" name="arithMode" id="arithSub" value="sub" style="accent-color:var(--accent)"> − Subtraction
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+            <input type="radio" name="arithMode" id="arithMul" value="mul" style="accent-color:var(--accent)"> × Multiplication
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+            <input type="radio" name="arithMode" id="arithDiv" value="div" style="accent-color:var(--accent)"> ÷ Division
+          </label>
+        </div>
+        <!-- Multi-mode: checkboxes + colour pickers (shown when Rule Switch is ON) -->
+        <div id="arithSwitchRow" style="display:none;flex-direction:column;gap:.5rem">
+          <p class="hint" style="margin-top:0">Select at least 2 operations. Each trial one is chosen at random and its colour lights up the stimulus box.</p>
+          <div style="display:flex;flex-direction:column;gap:.4rem" id="switchOpList">
+            <!-- Generated by JS -->
+          </div>
+          <p class="hint" id="switchWarning" style="color:var(--danger);display:none">Select at least 2 operations to use Rule Switch Mode.</p>
+        </div>
+        <p class="hint" id="arithHint" style="margin-top:.4rem">Add current + previous number. The classic working-memory number task.</p>
+      </div>
     </div>
 
     <!-- Import banner shown when ?s= is in URL -->
@@ -793,7 +916,23 @@
         <button class="btn btn-ghost btn-sm" id="importDismissBtn">Dismiss</button>
       </div>
     </div>
+    </div>
+  </div><!-- end shell -->
+</div><!-- end pageHome -->
+
+<!-- Sticky Start bar — fixed to viewport bottom, only shown on home screen -->
+<div class="sticky-start-bar" id="stickyStartBar">
+  <div style="display:flex;align-items:center;gap:6px">
+    <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
+    <button class="btn btn-ghost btn-sm" id="soundTestBtn" title="Play 3 random numbers to test the voice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      Sound test
+    </button>
   </div>
+  <button class="btn btn-primary" id="startBtn">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    Start Training
+  </button>
 </div>
 
 
@@ -815,7 +954,7 @@
       </button>
     </div>
   </nav>
-  <div class="train-layout anim-in">
+  <div class="train-layout">
     <div class="status-bar">
       <div class="stat-tile"><div class="stat-tile-label">Correct</div><div class="stat-tile-val accent" id="tCorrect">0</div></div>
       <div class="stat-tile"><div class="stat-tile-label">Total</div><div class="stat-tile-val" id="tTotal">0</div></div>
@@ -852,6 +991,7 @@
       <span class="pill pill-warn" id="arithBadge">+</span>
       <span class="pill" id="ruleSwitchBadge" style="display:none">Rule Switch</span>
       <span class="pill" id="adaptPill" style="opacity:.55">Adaptive</span>
+      <span class="pill" id="targetAccPill" style="display:none;background:rgba(255,179,71,0.12);color:var(--warn);border-color:rgba(255,179,71,0.25)">🎯 –%</span>
       <span class="pill pill-warn" id="singleDigitBadge" style="display:none">1-digit</span>
       <span class="pill pill-danger" id="ictBadge" style="display:none">ICT</span>
       <span class="pill pill-info" id="minimalInputBadge" style="display:none">min-input</span>
@@ -859,9 +999,13 @@
       <span class="pill pill-info" id="ndmBadge" style="display:none">NDM</span>
     </div>
     <!-- RRT arrow prompt shown when RRT mode active and answer window open -->
-    <div id="rrtPrompt" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.7rem 1rem;font-family:var(--mono);font-size:.78rem;color:var(--text-dim);display:none">
+    <div id="rrtPrompt" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.7rem 1rem;font-family:var(--mono);font-size:.78rem;color:var(--text-dim)">
       <span id="rrtPromptText">RRT: press ◀ / ▶ / ▼</span>
       <span id="rrtArrowGiven" style="margin-left:.75rem;font-size:.9rem"></span>
+    </div>
+    <!-- Equation stream — live running list of equations, shown when showStream is on -->
+    <div id="eqStreamWrap" style="display:none">
+      <div class="eq-stream" id="eqStream"></div>
     </div>
   </div>
 </div>
@@ -875,15 +1019,22 @@
       <div><div class="brand-name">Results</div><div class="brand-tag">Session Summary</div></div>
     </div>
     <div class="topbar-actions">
-      <button class="btn btn-ghost btn-sm" id="backToSettingsBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="15 18 9 12 15 6"/></svg>
-        Settings
-      </button>
       <button class="btn btn-primary btn-sm" id="restartBtn">New Session</button>
     </div>
   </nav>
-  <div class="results-layout anim-in">
-    <h2 style="padding-top:.5rem">Your Performance</h2>
+  <div class="results-layout">
+    <!-- Navigation buttons — centred so they're easy to find -->
+    <div style="display:flex;gap:.75rem;justify-content:center;padding-top:.5rem">
+      <button class="btn btn-ghost" id="backToSettingsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Settings
+      </button>
+      <button class="btn btn-primary" id="restartBtn2">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        New Session
+      </button>
+    </div>
+    <h2>Your Performance</h2>
     <div class="stat-grid stat-grid-3" id="resultMainStats"></div>
     <div class="card">
       <div class="card-head"><span class="card-title">Accuracy</span></div>
@@ -936,7 +1087,11 @@
 <script>
 /* ── Utilities ── */
 const $ = id => document.getElementById(id);
-const setPage = n => ['pageHome','pageTrain','pageResults'].forEach(p=>$(p).classList.toggle('active',p===n));
+const setPage = n => {
+  ['pageHome','pageTrain','pageResults'].forEach(p=>$(p).classList.toggle('active',p===n));
+  const bar=$('stickyStartBar');
+  if(bar) bar.style.display = n==='pageHome' ? 'flex' : 'none';
+};
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const rand  = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const fmtTime = s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
@@ -1012,24 +1167,25 @@ const loadProgress = ()=>{ try{return JSON.parse(localStorage.getItem('mp_prog')
 const saveProgress = d=>{ try{localStorage.setItem('mp_prog',JSON.stringify(d));}catch{} };
 
 const DEFAULTS = {
-  mode:'standard', duration:20, startISI:1500, nback:1,
-  arithMode:'add',     /* Active operation when Rule Switch is OFF: 'add'|'sub'|'mul'|'div' */
-  ruleSwitch:false,    /* Rule Switch Mode: randomly change operation each trial */
-  switchOps:{          /* Which operations are active in Rule Switch Mode */
-    add:true, sub:false, mul:false, div:false
-  },
-  switchColors:{       /* Indicator colours for each operation in Rule Switch Mode */
-    add:'#4fffb0', sub:'#5ba4ff', mul:'#ffb347', div:'#c084fc'
-  },
-  numRangeMin:2,
+  mode:'standard', duration:15, startISI:1500, nback:1,
+  arithMode:'add',
+  ruleSwitch:false,
+  switchOps:{ add:true, sub:true, mul:false, div:false },   /* addition+subtraction on by default in Rule Switch */
+  switchColors:{ add:'#4fffb0', sub:'#5ba4ff', mul:'#ffb347', div:'#c084fc' },
+  subMaleVoice:false,   /* use a male voice for subtraction trials in Rule Switch mode */
+  subMaleVoiceName:'',  /* voiceURI of the chosen male voice; empty = auto */
+  numRangeMin:1,
   numRangeMax:9,
-  useNumpad:false, padScale:1.0,
-  beepEnabled:false, beepVol:0.5, beepType:'sine', flashEnabled:false,
-  speechRate:1.0,
+  answerRangeEnabled:false, answerRangeMin:0, answerRangeMax:18,
+  useNumpad:false, padScale:1.0, padCols:5, padOrder:'asc',
+  beepEnabled:true, beepVol:0.5, beepType:'sine', flashEnabled:false,
+  speechRate:1.5,
   fumble:false, fatFinger:false,
-  smoothAdapt:false, adaptUp:20, adaptDown:25,
-  coyote:false, coyoteMs:500,
-  singleDigit:false, includeZero:false, minimalInput:false, hideInput:false,
+  smoothAdapt:false, adaptUp:20, adaptDown:20,
+  targetAcc:false, targetAccPct:85,
+  isiMin:500,           /* lower bound for ISI (ms) — interval never goes below this */
+  coyote:false, coyoteMs:150,
+  singleDigit:false, minimalInput:false, hideInput:false, showStream:false,
   ict:false, ictNoInput:false,
   ndm:false,
   rrt:false,
@@ -1037,8 +1193,17 @@ const DEFAULTS = {
 };
 
 function loadSettings(){
-  try{ const s=JSON.parse(localStorage.getItem('mp_sett_v2')); return s?Object.assign({},DEFAULTS,s):Object.assign({},DEFAULTS); }
-  catch{ return Object.assign({},DEFAULTS); }
+  try{
+    const s=JSON.parse(localStorage.getItem('mp_sett_v2'));
+    if(!s) return Object.assign({},DEFAULTS,{switchOps:Object.assign({},DEFAULTS.switchOps),switchColors:Object.assign({},DEFAULTS.switchColors)});
+    // Deep-merge object-valued keys so old saves don't lose new sub-keys
+    const merged=Object.assign({},DEFAULTS,s);
+    merged.switchOps   = Object.assign({},DEFAULTS.switchOps,   s.switchOps   ||{});
+    merged.switchColors= Object.assign({},DEFAULTS.switchColors, s.switchColors||{});
+    return merged;
+  }catch{
+    return Object.assign({},DEFAULTS,{switchOps:Object.assign({},DEFAULTS.switchOps),switchColors:Object.assign({},DEFAULTS.switchColors)});
+  }
 }
 function saveSettings(){ try{localStorage.setItem('mp_sett_v2',JSON.stringify(settings));}catch{} }
 let settings = loadSettings();
@@ -1073,13 +1238,14 @@ function buildTicks(containerId, min, max, tickVals, labelFn){
 }
 
 buildTicks('durationTicks',  1,  60, [1,10,20,30,45,60], v=>v+'m');
-buildTicks('startISITicks', 100,6000, [100,500,1000,1500,2000,3000,4500,6000], v=>v<1000?v+'ms':(v/1000)+'s');
+buildTicks('startISITicks', 100,6000, [100,1000,2000,3000,4500,6000], v=>v<1000?v+'ms':(v/1000)+'s');
 buildTicks('padSizeTicks',  0.6,1.5, [0.6,0.8,1.0,1.2,1.5], v=>v+'×');
 buildTicks('speechRateTicks',0.5,3, [0.5,1.0,1.5,2.0,2.5,3.0], v=>v+'×');
 buildTicks('beepVolTicks',   0,  1,  [0,0.25,0.5,0.75,1], v=>Math.round(v*100)+'%');
 buildTicks('coyoteTicks',  100,2000, [100,500,1000,1500,2000], v=>v+'ms');
 buildTicks('adaptUpTicks',   1,100, [1,25,50,75,100], v=>v+'ms');
 buildTicks('adaptDownTicks', 1,100, [1,25,50,75,100], v=>v+'ms');
+buildTicks('isiMinTicks',    0,750, [0,100,250,500,750], v=>v+'ms');
 
 /* ══ WIRE CONTROLS ══ */
 /* Tabs */
@@ -1103,11 +1269,18 @@ function wireSlider(id,valId,init,min,max,step,fmt,cb){
 wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       v=>{settings.duration=v;saveSettings();});
 wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         v=>{settings.startISI=v;saveSettings();});
 wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', v=>{settings.padScale=v;applyPadScale();saveSettings();});
+buildTicks('padColsTicks', 2, 10, [2,3,4,5,6,7,8,9,10], v=>String(v));
+wireSlider('padColsSlider','padColsVal', settings.padCols, 2, 10, 1, v=>String(v), v=>{settings.padCols=v;if(sessionActive)buildNumpad();saveSettings();});
+document.querySelectorAll('input[name="padOrder"]').forEach(r=>{
+  r.checked = r.value===(settings.padOrder||'asc');
+  r.addEventListener('change',()=>{ settings.padOrder=r.value; if(sessionActive)buildNumpad(); saveSettings(); });
+});
 wireSlider('speechRateSlider','speechRateVal',settings.speechRate,0.5,3,    0.1, v=>v.toFixed(1)+'×', v=>{settings.speechRate=v;saveSettings();});
 wireSlider('beepVolSlider', 'beepVolVal',   settings.beepVol,    0,   1,    0.05,v=>Math.round(v*100)+'%', v=>{settings.beepVol=v;saveSettings();});
 wireSlider('coyoteSlider',  'coyoteVal',    settings.coyoteMs,   100, 2000, 50,  v=>v+' ms',       v=>{settings.coyoteMs=v;saveSettings();});
 wireSlider('adaptUpSlider', 'adaptUpVal',   settings.adaptUp,    1,   100,  1,   v=>v+' ms',       v=>{settings.adaptUp=v;saveSettings();});
 wireSlider('adaptDownSlider','adaptDownVal',settings.adaptDown,  1,   100,  1,   v=>v+' ms',       v=>{settings.adaptDown=v;saveSettings();});
+wireSlider('isiMinSlider',  'isiMinVal',   settings.isiMin,      0,   750,  25,  v=>v+' ms',       v=>{settings.isiMin=v;saveSettings();});
 
 /* N-back */
 $('nbackInput').value=settings.nback;
@@ -1169,11 +1342,14 @@ wireToggle('flashToggle',  null,          settings.flashEnabled, v=>{settings.fl
 wireToggle('fumbleToggle', null,          settings.fumble,       v=>{settings.fumble=v;saveSettings();});
 wireToggle('fatFingerToggle',null,        settings.fatFinger,    v=>{settings.fatFinger=v;saveSettings();});
 wireToggle('smoothAdaptToggle','smoothAdaptOpts',settings.smoothAdapt,v=>{settings.smoothAdapt=v;saveSettings();});
+wireToggle('targetAccToggle','targetAccOpts',settings.targetAcc,v=>{settings.targetAcc=v;saveSettings();});
+buildTicks('targetAccTicks',50,99,[50,60,70,75,80,85,90,95,99],v=>v+'%');
+wireSlider('targetAccSlider','targetAccVal',settings.targetAccPct,50,99,1,v=>v+'%',v=>{settings.targetAccPct=v;saveSettings();});
 wireToggle('coyoteToggle','coyoteOpts',  settings.coyote,       v=>{settings.coyote=v;saveSettings();});
 wireToggle('singleDigitToggle',null,     settings.singleDigit,  v=>{settings.singleDigit=v;saveSettings();});
-wireToggle('includeZeroToggle', null,    settings.includeZero,  v=>{settings.includeZero=v;saveSettings();});
 wireToggle('minimalInputToggle',null,    settings.minimalInput, v=>{settings.minimalInput=v;saveSettings();});
 wireToggle('hideInputToggle',   null,    settings.hideInput,    v=>{settings.hideInput=v;saveSettings();});
+wireToggle('showStreamToggle',  null,    settings.showStream,   v=>{settings.showStream=v;saveSettings();});
 wireToggle('ictToggle',        'ictOpts',settings.ict,           v=>{settings.ict=v;saveSettings();});
 wireToggle('ictNoInputToggle',  null,    settings.ictNoInput,   v=>{settings.ictNoInput=v;saveSettings();});
 wireToggle('ndmToggle', null, settings.ndm, v=>{
@@ -1208,11 +1384,14 @@ function applySettingsToUI(){
   wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       ()=>{});
   wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         ()=>{});
   wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', ()=>{});
+  wireSlider('padColsSlider','padColsVal', settings.padCols, 2, 10, 1, v=>String(v), ()=>{});
+  document.querySelectorAll('input[name="padOrder"]').forEach(r=>{ r.checked=r.value===(settings.padOrder||'asc'); });
   wireSlider('speechRateSlider','speechRateVal',settings.speechRate,0.5,3,    0.1, v=>v.toFixed(1)+'×', ()=>{});
   wireSlider('beepVolSlider', 'beepVolVal',   settings.beepVol,    0,   1,    0.05,v=>Math.round(v*100)+'%', ()=>{});
   wireSlider('coyoteSlider',  'coyoteVal',    settings.coyoteMs,   100, 2000, 50,  v=>v+' ms',       ()=>{});
   wireSlider('adaptUpSlider', 'adaptUpVal',   settings.adaptUp,    1,   100,  1,   v=>v+' ms',       ()=>{});
   wireSlider('adaptDownSlider','adaptDownVal',settings.adaptDown,  1,   100,  1,   v=>v+' ms',       ()=>{});
+  wireSlider('isiMinSlider',  'isiMinVal',   settings.isiMin,      0,   750,  25,  v=>v+' ms',       ()=>{});
   $('nbackInput').value=settings.nback; updateNbackUI(settings.nback);
   $('numRangeMin').value=settings.numRangeMin;
   $('numRangeMax').value=settings.numRangeMax;
@@ -1225,11 +1404,15 @@ function applySettingsToUI(){
   $('fumbleToggle').checked=settings.fumble;
   $('fatFingerToggle').checked=settings.fatFinger;
   $('smoothAdaptToggle').checked=settings.smoothAdapt; $('smoothAdaptOpts').classList.toggle('open',settings.smoothAdapt);
+  $('targetAccToggle').checked=settings.targetAcc; $('targetAccOpts').classList.toggle('open',settings.targetAcc);
+  wireSlider('targetAccSlider','targetAccVal',settings.targetAccPct,50,99,1,v=>v+'%',()=>{});
   $('coyoteToggle').checked=settings.coyote;     $('coyoteOpts').classList.toggle('open',settings.coyote);
+  initAnswerRangeUI();
   $('singleDigitToggle').checked=settings.singleDigit;
-  $('includeZeroToggle').checked=settings.includeZero;
   $('minimalInputToggle').checked=settings.minimalInput;
   $('hideInputToggle').checked=settings.hideInput;
+  $('showStreamToggle').checked=settings.showStream;
+  // subMaleVoice is rebuilt inside buildSwitchOpList when Rule Switch panel is opened
   $('ictToggle').checked=settings.ict;         $('ictOpts').classList.toggle('open',settings.ict);
   $('ictNoInputToggle').checked=settings.ictNoInput;
   $('ndmToggle').checked=settings.ndm;
@@ -1299,6 +1482,35 @@ $('numRangeMax').addEventListener('change',()=>{
   settings.numRangeMax=v; $('numRangeMax').value=v; updateNumRangeHint(); saveSettings();
 });
 
+/* Answer range wiring */
+function updateAnswerRangeHint(){
+  const h=$('answerRangeHint');
+  if(h) h.textContent=`Answers will be in [${settings.answerRangeMin}, ${settings.answerRangeMax}]`;
+}
+function initAnswerRangeUI(){
+  const tog=$('answerRangeToggle');
+  if(!tog) return;
+  tog.checked=!!settings.answerRangeEnabled;
+  $('answerRangeOpts').classList.toggle('open', !!settings.answerRangeEnabled);
+  $('answerRangeMin').value=settings.answerRangeMin;
+  $('answerRangeMax').value=settings.answerRangeMax;
+  updateAnswerRangeHint();
+}
+initAnswerRangeUI();
+$('answerRangeToggle').addEventListener('change',()=>{
+  settings.answerRangeEnabled=$('answerRangeToggle').checked;
+  $('answerRangeOpts').classList.toggle('open', settings.answerRangeEnabled);
+  saveSettings();
+});
+$('answerRangeMin').addEventListener('change',()=>{
+  let v=clamp(+$('answerRangeMin').value||-99, -99, settings.answerRangeMax);
+  settings.answerRangeMin=v; $('answerRangeMin').value=v; updateAnswerRangeHint(); saveSettings();
+});
+$('answerRangeMax').addEventListener('change',()=>{
+  let v=clamp(+$('answerRangeMax').value||0, settings.answerRangeMin, 999);
+  settings.answerRangeMax=v; $('answerRangeMax').value=v; updateAnswerRangeHint(); saveSettings();
+});
+
 /* ════════════════════════════════════════════════════════════════════
    RULE SWITCH MODE
    ─────────────────────────────────────────────────────────────────
@@ -1318,6 +1530,9 @@ function buildSwitchOpList(){
   const list=$('switchOpList'); if(!list) return;
   list.innerHTML='';
   OP_KEYS.forEach(op=>{
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:3px';
+
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:10px';
     const cb=document.createElement('input');
@@ -1331,7 +1546,6 @@ function buildSwitchOpList(){
     lbl.htmlFor='sw_'+op;
     lbl.style.cssText='font-size:.875rem;color:var(--text-dim);cursor:pointer;flex:1';
     lbl.textContent=OP_LABELS[op];
-    // Colour picker
     const colWrap=document.createElement('div');
     colWrap.style.cssText='display:flex;align-items:center;gap:4px';
     const colInput=document.createElement('input');
@@ -1342,12 +1556,81 @@ function buildSwitchOpList(){
       settings.switchColors[op]=colInput.value;
       cb.style.accentColor=colInput.value; saveSettings();
     });
-    const colLabel=document.createElement('span');
-    colLabel.style.cssText='font-size:.62rem;font-family:var(--mono);color:var(--text-faint)';
-    colLabel.textContent='colour';
-    colWrap.appendChild(colInput); colWrap.appendChild(colLabel);
+    const colLbl=document.createElement('span');
+    colLbl.style.cssText='font-size:.62rem;font-family:var(--mono);color:var(--text-faint)';
+    colLbl.textContent='colour';
+    colWrap.appendChild(colInput); colWrap.appendChild(colLbl);
     row.appendChild(cb); row.appendChild(lbl); row.appendChild(colWrap);
-    list.appendChild(row);
+    wrap.appendChild(row);
+
+    /* Male voice option — only for subtraction */
+    if(op==='sub'){
+      const maleWrap=document.createElement('div');
+      maleWrap.style.cssText='display:flex;flex-direction:column;gap:4px;padding-left:24px;margin-top:2px';
+
+      // Checkbox row
+      const maleRow=document.createElement('label');
+      maleRow.style.cssText='display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:var(--text-faint)';
+      const maleCb=document.createElement('input');
+      maleCb.type='checkbox'; maleCb.id='subMaleVoiceToggle';
+      maleCb.style.accentColor='#5ba4ff';
+      maleCb.checked=!!settings.subMaleVoice;
+      maleCb.addEventListener('change',()=>{
+        settings.subMaleVoice=maleCb.checked;
+        voiceSelectRow.style.display=maleCb.checked?'flex':'none';
+        saveSettings();
+      });
+      maleRow.appendChild(maleCb);
+      maleRow.appendChild(document.createTextNode('Use different voice for subtraction trials'));
+      maleWrap.appendChild(maleRow);
+
+      // Voice picker row
+      const voiceSelectRow=document.createElement('div');
+      voiceSelectRow.style.cssText='display:'+(settings.subMaleVoice?'flex':'none')+';align-items:center;gap:6px';
+      const voiceLbl=document.createElement('span');
+      voiceLbl.style.cssText='font-size:.72rem;font-family:var(--mono);color:var(--text-faint)';
+      voiceLbl.textContent='Voice:';
+      const voiceSel=document.createElement('select');
+      voiceSel.id='subMaleVoiceSelect';
+      voiceSel.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.72rem;padding:3px 6px;cursor:pointer;flex:1';
+      function populateVoiceSelect(){
+        const voices=synth.getVoices();
+        voiceSel.innerHTML='<option value="">— auto (browser default) —</option>';
+        voices.forEach(v=>{
+          const opt=document.createElement('option');
+          opt.value=v.voiceURI||v.name;
+          opt.textContent=v.name+(v.lang?' ('+v.lang+')':'');
+          if((v.voiceURI||v.name)===settings.subMaleVoiceName) opt.selected=true;
+          voiceSel.appendChild(opt);
+        });
+      }
+      populateVoiceSelect();
+      // Voices may load after the panel opens
+      synth.addEventListener('voiceschanged',populateVoiceSelect);
+      voiceSel.addEventListener('change',()=>{ settings.subMaleVoiceName=voiceSel.value; saveSettings(); });
+      // Test button
+      const testBtn=document.createElement('button');
+      testBtn.className='btn btn-ghost btn-sm';
+      testBtn.style.cssText='font-size:.65rem;padding:2px 8px;flex-shrink:0';
+      testBtn.textContent='▶ Test';
+      testBtn.addEventListener('click',()=>{
+        const prev=settings.subMaleVoiceName;
+        settings.subMaleVoiceName=voiceSel.value;
+        const voices=synth.getVoices();
+        const u=new SpeechSynthesisUtterance('five');
+        u.lang='en-US'; u.rate=clamp(settings.speechRate,0.1,3); u.volume=1;
+        const v=_getVoice(true); if(v) u.voice=v;
+        synth.cancel(); synth.speak(u);
+        settings.subMaleVoiceName=prev;
+      });
+      voiceSelectRow.appendChild(voiceLbl);
+      voiceSelectRow.appendChild(voiceSel);
+      voiceSelectRow.appendChild(testBtn);
+      maleWrap.appendChild(voiceSelectRow);
+      wrap.appendChild(maleWrap);
+    }
+
+    list.appendChild(wrap);
   });
 }
 
@@ -1567,33 +1850,64 @@ $('resetBtn').addEventListener('click',()=>{
    we always say the most recent number if we fall behind.
 ═══════════════════════════════════════════════════════════════════════ */
 const synth = window.speechSynthesis;
-(function(){ const v=synth.getVoices(); if(!v.length) synth.addEventListener('voiceschanged',()=>{},{ once:true }); })();
+let cachedVoices = [];
+function _refreshVoices(){ cachedVoices = synth.getVoices(); }
+_refreshVoices();
+synth.addEventListener('voiceschanged', _refreshVoices);
 
 let speechQueue  = null;   // the number waiting to be spoken (only 1 slot)
 let speechBusy   = false;  // true while synth is actively speaking
 
 function _doSpeak(){
   if(speechQueue===null || !sessionActive){ speechBusy=false; return; }
-  const num = speechQueue;
+  const item = typeof speechQueue==='object' ? speechQueue : { num:speechQueue, male:false };
   speechQueue = null;
   speechBusy  = true;
+  // Always re-fetch voices — on many browsers the list only becomes non-empty
+  // after the first user gesture; calling getVoices() here ensures we get them.
+  cachedVoices = synth.getVoices();
   try{
-    const u = new SpeechSynthesisUtterance(String(num));
+    const u = new SpeechSynthesisUtterance(String(item.num));
     u.lang   = 'en-US';
     u.rate   = clamp(settings.speechRate, 0.1, 3);
     u.volume = 1;
+    if(item.male){
+      const v = _getVoice(true);
+      if(v){ u.voice = v; console.log('[CCT] male voice →', v.name); }
+      else { console.log('[CCT] male voice requested but none found; available:', synth.getVoices().map(x=>x.name)); }
+    }
     u.onend   = ()=>{ speechBusy=false; _doSpeak(); };
     u.onerror = ()=>{ speechBusy=false; _doSpeak(); };
     synth.speak(u);
   }catch(e){
-    speechBusy=false; // if speak() itself throws, reset and try next
+    speechBusy=false;
   }
 }
 
-function speakNumber(n){
+function speakNumber(n, useMaleVoice){
   if(!sessionActive) return;
-  speechQueue = n;          // overwrite any older queued number
-  if(!speechBusy) _doSpeak(); // if idle, speak immediately; else onend will trigger
+  speechQueue = { num:n, male: !!useMaleVoice };
+  if(!speechBusy) _doSpeak();
+}
+
+function _getVoice(male){
+  const voices = synth.getVoices();
+  if(!male || !voices.length) return null;
+  /* If the user explicitly picked a voice, use it */
+  if(settings.subMaleVoiceName){
+    const picked = voices.find(v=>v.voiceURI===settings.subMaleVoiceName || v.name===settings.subMaleVoiceName);
+    if(picked) return picked;
+  }
+  /* Auto-fallback: try known male voice name fragments */
+  const maleNames = ['David','Mark','James','Guy','Daniel','Fred','Ralph','Aaron',
+    'Google UK English Male','Alex','Junior','Albert','Bruce','Victor','Rishi','Thomas'];
+  for(const name of maleNames){
+    const v = voices.find(vx=>vx.name.toLowerCase().includes(name.toLowerCase()));
+    if(v) return v;
+  }
+  /* Last resort: any non-default English voice */
+  const en = voices.filter(v=>v.lang.startsWith('en'));
+  return en[1] || en[0] || voices[1] || null;
 }
 
 function playErrorFlash(){
@@ -1713,61 +2027,77 @@ function isMinimalMatch(userVal, expected){
    For SUBTRACTION the result can be negative — that is fine and expected.
 ════════════════════════════════════════════════════════════════════ */
 function pickNextNumber(refNum){
-  const lo = Math.max(settings.includeZero ? 0 : 1, settings.numRangeMin);
+  /* numRangeMin controls the lower bound directly — set it to 0 to include zero.
+     The old "includeZero" toggle is removed; just use the number range. */
+  const lo = settings.numRangeMin;
   const hi = settings.numRangeMax;
-  const safeHi = Math.max(lo, hi);
+  const safeHi = Math.max(lo+1, hi);
+  /* In Rule Switch mode use the operation picked for THIS trial */
+  const op = settings.ruleSwitch ? activeRuleOp : settings.arithMode;
 
-  /* Division mode: pick a divisor that divides refNum exactly */
-  if(settings.arithMode==='div' && refNum!==null && refNum!==0){
-    // Build list of valid divisors in [lo..safeHi] that divide refNum
-    const divisors=[];
-    for(let d=Math.max(1,lo);d<=safeHi;d++){
-      if(refNum % d === 0) divisors.push(d);
+  /* Answer range: re-roll up to 40 times until the computed answer fits */
+  const useAR = settings.answerRangeEnabled && refNum!==null;
+  const arLo  = settings.answerRangeMin;
+  const arHi  = settings.answerRangeMax;
+
+  function _pick(){
+    if(op==='div' && refNum!==null && refNum!==0){
+      const divisors=[];
+      for(let d=Math.max(1,lo);d<=safeHi;d++) if(refNum%d===0) divisors.push(d);
+      if(divisors.length>0) return divisors[rand(0,divisors.length-1)];
+      return rand(Math.max(1,lo), safeHi);
     }
-    if(divisors.length>0) return divisors[rand(0,divisors.length-1)];
-    // Fallback: just avoid 0
-    return rand(Math.max(1,lo), safeHi);
+    if(settings.singleDigit && op==='add' && refNum!==null){
+      return rand(lo, Math.max(lo, Math.min(safeHi, 9-(refNum??0))));
+    }
+    if(settings.singleDigit && op==='mul' && refNum!==null && refNum>0){
+      return rand(lo, Math.max(lo, Math.min(safeHi, Math.floor(9/refNum))));
+    }
+    return rand(lo, safeHi);
   }
 
-  /* 1-digit answer mode for addition: keep sum ≤ 9 */
-  if(settings.singleDigit && settings.arithMode==='add' && refNum!==null){
-    const maxAllowed = 9-(refNum??0);
-    const cap = Math.max(lo, Math.min(safeHi, maxAllowed));
-    return rand(lo, cap);
+  if(!useAR) return _pick();
+  for(let i=0;i<40;i++){
+    const n=_pick();
+    const ans=computeAnswer(n, refNum);
+    if(ans>=arLo && ans<=arHi) return n;
   }
-
-  /* 1-digit answer mode for multiplication: keep product ≤ 9 */
-  if(settings.singleDigit && settings.arithMode==='mul' && refNum!==null && refNum>0){
-    const maxAllowed = Math.floor(9/refNum);
-    const cap = Math.max(lo, Math.min(safeHi, maxAllowed));
-    return rand(lo, cap);
-  }
-
-  /* Default: any number in [lo, safeHi] */
-  return rand(lo, safeHi);
+  return _pick(); // give up and return anything after 40 tries
 }
 
-/* Compute the correct answer given the two n-back numbers and the active operation */
+/* computeAnswer: use activeRuleOp when Rule Switch is on */
 function computeAnswer(current, previous){
-  switch(settings.arithMode){
+  const op = settings.ruleSwitch ? activeRuleOp : settings.arithMode;
+  switch(op){
     case 'sub': return previous - current;
     case 'mul': return previous * current;
     case 'div': return previous===0 ? 0 : Math.round(previous / current);
-    default:    return current + previous; // 'add'
+    default:    return current + previous;
   }
 }
 
 function numpadRange(){
-  /* Returns [min, max] for the answer numpad buttons.
-     Covers the realistic output range of the selected operation.
-     For subtraction results can be negative; for multiplication they can be large. */
   if(settings.singleDigit) return [0, 9];
   const lo=settings.numRangeMin, hi=settings.numRangeMax;
+  /* In Rule Switch mode the range must cover all active operations */
+  if(settings.ruleSwitch){
+    const ops=Object.keys(settings.switchOps).filter(k=>settings.switchOps[k]);
+    let rlo=Infinity, rhi=-Infinity;
+    ops.forEach(op=>{
+      switch(op){
+        case 'sub': rlo=Math.min(rlo,lo-hi); rhi=Math.max(rhi,hi-lo); break;
+        case 'mul': rlo=Math.min(rlo,lo*lo); rhi=Math.max(rhi,hi*hi); break;
+        case 'div': rlo=Math.min(rlo,1);     rhi=Math.max(rhi,hi);    break;
+        default:    rlo=Math.min(rlo,lo+lo); rhi=Math.max(rhi,hi+hi); break;
+      }
+    });
+    return [isFinite(rlo)?rlo:0, isFinite(rhi)?rhi:18];
+  }
   switch(settings.arithMode){
-    case 'sub': return [lo-hi, hi-lo];         // widest subtraction range
-    case 'mul': return [lo*lo, hi*hi];          // widest multiplication range
-    case 'div': return [1, hi];                 // division always ≥1
-    default:    return [lo+lo, hi+hi];          // addition
+    case 'sub': return [lo-hi, hi-lo];
+    case 'mul': return [lo*lo, hi*hi];
+    case 'div': return [1, hi];
+    default:    return [lo+lo, hi+hi];
   }
 }
 
@@ -1794,7 +2124,6 @@ let ictTrial = false; // is the current trial an ICT no-go trial?
 
 /* ══ TRAINING ENGINE STATE ══ */
 let sessionActive=false, currentISI=3000, lowestISI=3000;
-let consecutiveOk=0, consecutiveErr=0;
 let totalCorrect=0, totalAttempts=0, currentStreak=0;
 let trialHistory=[], numberSequence=[];
 let correctAnswer=null, prevCorrectAnswer=null;
@@ -1803,18 +2132,60 @@ let timerSec=0;
 let timerInterval=null, trialTimeout=null, coyoteTimeout=null;
 let coyoteActive=false, sessionDuration=0;
 
+/* ── adaptISI ──────────────────────────────────────────────────────
+   Standard mode (new rule):
+     Keep a rolling window of the last 5 scored trials.
+     After every 5th trial: if ≥4 were correct → −100 ms (speed up),
+     otherwise → +100 ms (slow down).
+   Smooth mode: every trial shifts by the configured step size.
+   isiMin: the lower bound — interval never goes below this value.
+── */
+let recentResults = []; // rolling window of booleans for standard mode
+/* Target accuracy controller state */
+let taWindow = [];      // rolling window of booleans (last 20 trials)
+const TA_WIN  = 20;     // window size
+const TA_MAX_NUDGE = 80; // ms — cap per-trial nudge so changes feel gradual
+
 function adaptISI(ok){
-  if(settings.smoothAdapt){
-    // Smooth mode: every trial moves the ISI by the configured step
-    if(ok){ currentISI=clamp(currentISI-settings.adaptUp,  1,6000); consecutiveOk++;  consecutiveErr=0; }
-    else  { currentISI=clamp(currentISI+settings.adaptDown, 1,6000); consecutiveErr++; consecutiveOk=0; }
+  const lo = Math.max(50, settings.isiMin||0);
+
+  if(settings.targetAcc){
+    /* ── Target Accuracy controller ─────────────────────────────────
+       Maintains a rolling window of recent trial outcomes.
+       Each trial, it compares the rolling accuracy to the target and
+       applies a proportional nudge — bigger when far from target,
+       smaller when close. The nudge is capped at TA_MAX_NUDGE ms so
+       the pace never lurches suddenly.
+       Target > current accuracy  → slow down (interval up)
+       Target < current accuracy  → speed up (interval down)
+    ── */
+    taWindow.push(ok);
+    if(taWindow.length > TA_WIN) taWindow.shift();
+    if(taWindow.length >= 5){                    // need at least 5 data points
+      const recentAcc = taWindow.filter(Boolean).length / taWindow.length; // 0–1
+      const target    = settings.targetAccPct / 100;                        // 0–1
+      const error     = recentAcc - target;      // positive = too easy, negative = too hard
+      // Proportional gain: full window error of 1.0 → nudge of TA_MAX_NUDGE ms
+      const nudge = clamp(Math.round(error * TA_MAX_NUDGE * 2), -TA_MAX_NUDGE, TA_MAX_NUDGE);
+      // Positive error (doing too well) → speed up (subtract from ISI)
+      currentISI = clamp(currentISI - nudge, lo, 6000);
+    }
+  } else if(settings.smoothAdapt){
+    if(ok){ currentISI=clamp(currentISI-settings.adaptUp,   lo, 6000); }
+    else  { currentISI=clamp(currentISI+settings.adaptDown,  lo, 6000); }
   } else {
-    // Default stepped mode: change ISI after streaks
-    if(ok){ consecutiveOk++; consecutiveErr=0; if(consecutiveOk>=3){ currentISI=clamp(currentISI-200,1,6000); consecutiveOk=0; } }
-    else  { consecutiveErr++; consecutiveOk=0; if(consecutiveErr>=2){ currentISI=clamp(currentISI+250,1,6000); consecutiveErr=0; } }
+    // Rolling 5-trial window
+    recentResults.push(ok);
+    if(recentResults.length > 5) recentResults.shift();
+    if(recentResults.length === 5){
+      const correct = recentResults.filter(Boolean).length;
+      if(correct >= 4) currentISI = clamp(currentISI - 100, lo, 6000);
+      else             currentISI = clamp(currentISI + 100, lo, 6000);
+      recentResults = []; // reset window after each decision
+    }
   }
-  if(currentISI<lowestISI) lowestISI=currentISI;
-  $('isiDisplay').textContent=currentISI+' ms';
+  if(currentISI < lowestISI) lowestISI = currentISI;
+  $('isiDisplay').textContent = currentISI + ' ms';
 }
 
 function runTrial(){
@@ -1829,6 +2200,16 @@ function runTrial(){
   $('stimulusBox').classList.remove('flash-correct','flash-wrong');
   // Reset per-trial arrow state for distinction modes
   rrtArrowGiven=null; ndmArrowGiven=null;
+
+  // Rule Switch: choose this trial's operation randomly from enabled ops
+  if(settings.ruleSwitch){
+    activeRuleOp = pickRuleOp();
+    applyRuleSwitchColor(activeRuleOp);
+    // Update the operation badge live
+    $('arithBadge').textContent={add:'+',sub:'−',mul:'×',div:'÷'}[activeRuleOp]||'+';
+  } else {
+    applyRuleSwitchColor(null);
+  }
 
   const n=settings.nback;
   const refNum = numberSequence.length >= n ? numberSequence[numberSequence.length - n] : null;
@@ -1873,7 +2254,8 @@ function runTrial(){
   }
   $('stimulusBox').classList.add('pulse');
 
-  const opSymbol = {add:'+', sub:'−', mul:'×', div:'÷'}[settings.arithMode]||'+';
+  const effectiveOp = settings.ruleSwitch ? activeRuleOp : settings.arithMode;
+  const opSymbol = {add:'+', sub:'−', mul:'×', div:'÷'}[effectiveOp]||'+';
   if(ictTrial){
     $('stimInstruction').textContent='⚠ INHIBIT — press ↑ Arrow Up';
     $('stimulusBox').classList.add('ict-active');
@@ -1886,9 +2268,10 @@ function runTrial(){
   // Previous number is intentionally NOT shown — the player must recall it from memory.
   $('lastSeenLabel').textContent='';
 
-  // ── Audio presentation (non-blocking — fires and forgets) ──
+  // Audio presentation — fires and forgets (queued, non-blocking)
   if(settings.numberPresentation!=='visual'){
-    speakNumber(newNum); // intentionally NOT awaited
+    const useMale = settings.ruleSwitch && settings.subMaleVoice && activeRuleOp==='sub';
+    speakNumber(newNum, useMale);
   }
 
   // Flash removal after short delay
@@ -1911,7 +2294,7 @@ function runTrial(){
     $('answerInput').className='answer-input';
     $('feedbackBand').className='feedback-band';
     $('inputHint').textContent=settings.ictNoInput
-      ? 'INHIBIT: do NOT press anything — silence is the correct response'
+      ? 'INHIBIT: do NOT press anything — silence is the only correct response'
       : 'INHIBIT: press ↑ Arrow Up — do NOT type a number';
     deselect();
   } else {
@@ -1941,7 +2324,7 @@ function runTrial(){
           $('feedbackBand').className='feedback-band inhibit';
           $('inputHint').textContent='✓ Inhibited (silence)';
           adaptISI(true);
-          trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
+          pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
         } else {
           // Arrow Up mode — timeout without pressing ↑ = missed inhibition (wrong)
           totalAttempts++; currentStreak=0;
@@ -1949,7 +2332,7 @@ function runTrial(){
           $('stimulusBox').classList.add('flash-wrong');
           triggerError();
           adaptISI(false);
-          trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
+          pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
         }
       } else {
         // Normal trial — timeout = missed
@@ -1958,7 +2341,7 @@ function runTrial(){
         $('stimulusBox').classList.add('flash-wrong');
         triggerError();
         adaptISI(false);
-        trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
+        pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
       }
       answerProcessed=true;
       updateTrainStats();
@@ -1998,7 +2381,7 @@ function processInhibit(){
   $('feedbackBand').className='feedback-band inhibit';
   $('inputHint').textContent='✓ Inhibited ↑';
   adaptISI(true);
-  trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:'↑',ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
+  pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:'↑',ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
   updateTrainStats();
   return true;
 }
@@ -2033,7 +2416,7 @@ function processAnswer(userVal){
     $('stimulusBox').classList.add('flash-wrong');
     $('inputHint').textContent='✗ Any input is wrong here — silence only';
     triggerError(); adaptISI(false);
-    trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
+    pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
     updateTrainStats();
     return true;
   }
@@ -2048,7 +2431,7 @@ function processAnswer(userVal){
     $('stimulusBox').classList.add('flash-wrong');
     $('inputHint').textContent='✗ False alarm — press ↑ to inhibit, don\'t type';
     triggerError(); adaptISI(false);
-    trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
+    pushTrial({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
     updateTrainStats();
     return true;
   }
@@ -2103,7 +2486,7 @@ function processAnswer(userVal){
     if(sdmFail) $('inputHint').textContent='✗ Wrong SDM arrow — check ◀ / ▶ / ▼';
   }
 
-  trialHistory.push({
+  pushTrial({
     num:numberSequence.at(-1), correct:correctAnswer, given:userVal,
     ok:isCorrect, fumble:wasFumble, fatFinger:wasFatFinger, minimal:wasMinimal,
     ndmFail, sdmFail,
@@ -2114,17 +2497,81 @@ function processAnswer(userVal){
   return true;
 }
 
+/* ── pushTrial: central helper for recording trial history ──────────
+   Automatically adds prevNum (the n-back reference number) and op
+   (the active arithmetic operation) so the equation stream can
+   reconstruct the full equation string without extra bookkeeping.
+── */
+function pushTrial(fields){
+  const n=settings.nback;
+  const prevNum = numberSequence.length>n ? numberSequence[numberSequence.length-1-n] : null;
+  const op = settings.ruleSwitch ? activeRuleOp : settings.arithMode;
+  trialHistory.push(Object.assign({prevNum, op}, fields));
+}
+
 function updateTrainStats(){
   $('tCorrect').textContent=totalCorrect; $('tTotal').textContent=totalAttempts;
   $('tAccuracy').textContent=totalAttempts?Math.round(totalCorrect/totalAttempts*100)+'%':'–';
   $('streakPill').textContent=`🔥 Streak: ${currentStreak}`;
+  // Target accuracy pill — shows rolling window accuracy vs target
+  const tap=$('targetAccPill');
+  if(tap){
+    if(settings.targetAcc && taWindow.length>=5){
+      const ra=Math.round(taWindow.filter(Boolean).length/taWindow.length*100);
+      tap.style.display='';
+      tap.textContent=`🎯 ${ra}% → ${settings.targetAccPct}%`;
+    } else {
+      tap.style.display='none';
+    }
+  }
+  updateEqStream();
+}
+
+/* ── Equation Stream ────────────────────────────────────────────────
+   Shows the last 30 equations below the stimulus box when showStream
+   is enabled. Most recent equation is always at the top.
+   Called from updateTrainStats (triggered after every resolved trial).
+── */
+function updateEqStream(){
+  const wrap=$('eqStreamWrap');
+  if(!wrap) return;
+  if(!settings.showStream){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const el=$('eqStream');
+  el.innerHTML='';
+  // trialHistory newest-first, max 30
+  const slice=[...trialHistory].reverse().slice(0,30);
+  const opSym={add:'+',sub:'−',mul:'×',div:'÷'};
+  slice.forEach(t=>{
+    if(t.correct===null) return; // warm-up trial, no equation
+    const div=document.createElement('div');
+    const sym=opSym[t.op||'add']||'+';
+    // Build equation string: prevNum OP num = expected
+    const eqStr=`${t.prevNum!==undefined?t.prevNum+'?':' '}  ${sym}  ${t.num}  =  ${t.correct}`;
+    const givenStr=t.given!==null&&t.given!==undefined?` (you: ${t.given})`:'';
+    const label=t.inhibit?'↑ inhibit':t.falseAlarm?'⚡ false alarm':givenStr;
+    div.className='eq-entry '+(t.ok?'eq-ok':'eq-wrong');
+    div.textContent=eqStr+label;
+    el.appendChild(div);
+  });
 }
 
 /* Numpad */
 function buildNumpad(){
   const pad=$('numpad'); pad.innerHTML='';
   const [nlo,nhi]=numpadRange();
-  for(let v=nlo;v<=nhi;v++){
+  let vals=[];
+  for(let v=nlo;v<=nhi;v++) vals.push(v);
+  /* Apply order setting */
+  const order=settings.padOrder||'asc';
+  if(order==='desc') vals.reverse();
+  else if(order==='random'){
+    for(let i=vals.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [vals[i],vals[j]]=[vals[j],vals[i]];
+    }
+  }
+  vals.forEach(v=>{
     const btn=document.createElement('button');
     btn.className='numpad-btn'; btn.textContent=v; btn.dataset.val=v;
     btn.addEventListener('pointerdown',e=>{
@@ -2137,10 +2584,10 @@ function buildNumpad(){
       else{ btn.classList.add('wrong-sel'); setTimeout(()=>btn.classList.remove('wrong-sel'),320); processAnswer(val); }
     });
     pad.appendChild(btn);
-  }
+  });
   applyPadScale();
-  const count=nhi-nlo+1;
-  $('numpad').style.gridTemplateColumns=`repeat(${count<=10?5:6},1fr)`;
+  const cols=clamp(settings.padCols||5, 2, 10);
+  $('numpad').style.gridTemplateColumns=`repeat(${cols},1fr)`;
 }
 function applyPadScale(){
   document.querySelectorAll('.numpad-btn').forEach(b=>{ b.style.fontSize=(0.92*settings.padScale)+'rem'; b.style.minHeight=(2.2*settings.padScale)+'rem'; });
@@ -2165,13 +2612,14 @@ function startSession(){
   // Standard mode starts at 1500ms; custom uses the configured value
   currentISI = settings.mode==='custom' ? settings.startISI : 1500;
   lowestISI=currentISI;
-  consecutiveOk=consecutiveErr=totalCorrect=totalAttempts=currentStreak=0;
+  totalCorrect=totalAttempts=currentStreak=0;
+  recentResults=[];
+  taWindow=[];
   trialHistory=[]; numberSequence=[]; correctAnswer=prevCorrectAnswer=null;
   prevAnswerMissed=false; answerProcessed=true; coyoteActive=false; ictTrial=false;
-  // Reset distinction mode state
   rrtArrowGiven=null; ndmArrowGiven=null;
   prevCorrectAnswerVal=null; prevSpokenNum=null;
-  sessionDuration=(settings.mode==='custom'?settings.duration:20)*60;
+  sessionDuration=(settings.mode==='custom'?settings.duration:15)*60;
 
   const np=$('numpad');
   if(settings.useNumpad){ buildNumpad(); np.classList.add('visible'); $('answerInput').style.display='none'; }
@@ -2186,6 +2634,7 @@ function startSession(){
   $('minimalInputBadge').style.display=settings.minimalInput?'':'none';
   $('rrtBadge').style.display=settings.rrt?'':'none';
   $('ndmBadge').style.display=settings.ndm?'':'none';
+  $('ruleSwitchBadge').style.display=settings.ruleSwitch?'inline-flex':'none';
   // Show number presentation mode in the topbar subtitle
   const presLabel={'both':'audio+visual','visual':'visual only','audio':'audio only'};
   $('trainSubStatus').textContent='adaptive · '+(presLabel[settings.numberPresentation]||'audio');
@@ -2195,6 +2644,9 @@ function startSession(){
   $('stimNumber').textContent='·'; $('stimNumber').className='stimulus-number hidden-num';
   updateTrainStats();
   updateDistinctionPrompt();
+  // Show or hide equation stream based on setting
+  const esw=$('eqStreamWrap');
+  if(esw){ esw.style.display=settings.showStream?'block':'none'; if($('eqStream')) $('eqStream').innerHTML=''; }
   setPage('pageTrain'); startTimer();
   $('answerInput').addEventListener('input',handleTypedInput);
   $('answerInput').addEventListener('keydown',handleKeydown);
@@ -2267,17 +2719,51 @@ function endSession(){
 $('stopBtn').addEventListener('click',()=>{ openModal('End training session?','Progress for this session will still be saved.',endSession,'Exit',true); });
 $('startBtn').addEventListener('click',startSession);
 $('restartBtn').addEventListener('click',()=>setPage('pageHome'));
+$('restartBtn2').addEventListener('click',()=>setPage('pageHome'));
 $('backToSettingsBtn').addEventListener('click',()=>setPage('pageHome'));
+
+/* Sound test — plays 3 random numbers with default voice, then 3 with
+   male voice if Rule Switch + subMaleVoice is active. Uses a simple
+   interval-based queue separate from the game speech queue. */
+$('soundTestBtn').addEventListener('click',()=>{
+  const btn=$('soundTestBtn');
+  btn.disabled=true; btn.textContent='Playing…';
+  const nums=[rand(1,9),rand(1,9),rand(1,9)];
+  const maleNums=(settings.ruleSwitch&&settings.subMaleVoice)?[rand(1,9),rand(1,9),rand(1,9)]:[];
+  const all=[...nums.map(n=>({n,male:false})),...maleNums.map(n=>({n,male:true}))];
+  let idx=0;
+  function playNext(){
+    if(idx>=all.length){
+      btn.disabled=false;
+      btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> Sound test';
+      return;
+    }
+    const {n,male}=all[idx++];
+    try{
+      synth.cancel();
+      const u=new SpeechSynthesisUtterance(String(n));
+      u.lang='en-US'; u.rate=clamp(settings.speechRate,0.1,3); u.volume=1;
+      if(male){ const v=_getVoice(true); if(v) u.voice=v; }
+      u.onend=()=>setTimeout(playNext, 400);
+      u.onerror=()=>setTimeout(playNext, 400);
+      synth.speak(u);
+    }catch(e){ setTimeout(playNext,400); }
+  }
+  playNext();
+});
 
 /* ══ SETTINGS SHARE (import / export) ══ */
 // Keys to include in the shareable payload (exclude progress-only stuff)
 const SHARE_KEYS = ['mode','duration','startISI','nback',
-  'arithMode','ruleSwitch','switchOps','switchColors',
+  'arithMode','ruleSwitch','switchOps','switchColors','subMaleVoice',
   'numRangeMin','numRangeMax',
   'useNumpad','padScale',
-  'beepEnabled','beepVol','beepType','flashEnabled','speechRate','fumble','fatFinger','smoothAdapt','adaptUp','adaptDown',
-  'coyote','coyoteMs','singleDigit','includeZero','minimalInput',
-  'ict','ictNoInput','ndm','rrt','numberPresentation'];
+  'beepEnabled','beepVol','beepType','flashEnabled','speechRate','fumble','fatFinger','smoothAdapt','adaptUp','adaptDown','isiMin',
+  'coyote','coyoteMs','singleDigit','minimalInput','hideInput','showStream',
+  'ict','ictNoInput','ndm','rrt','numberPresentation',
+  'answerRangeEnabled','answerRangeMin','answerRangeMax',
+  'subMaleVoiceName','targetAcc','targetAccPct',
+  'padCols','padOrder'];
 
 function encodeSettings(){
   const payload={};
