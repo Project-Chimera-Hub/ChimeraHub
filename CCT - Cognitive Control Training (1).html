@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCT – Cognitive Control Training</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0d0e11;--surface:#161820;--surface2:#1e2029;--surface3:#252836;
+      --border:#2a2d3a;--border2:#363a4d;
+      --text:#e8eaf0;--text-dim:#7a7f96;--text-faint:#42465a;
+      --accent:#4fffb0;--accent-dim:rgba(79,255,176,0.10);--accent-glow:rgba(79,255,176,0.22);
+      --danger:#ff4d6d;--danger-dim:rgba(255,77,109,0.12);
+      --warn:#ffb347;--warn-dim:rgba(255,179,71,0.13);
+      --info:#5ba4ff;--info-dim:rgba(91,164,255,0.12);
+      --radius-sm:6px;--radius-md:12px;--radius-lg:18px;
+      --mono:'DM Mono',monospace;--sans:'Outfit',sans-serif;
+      --t:200ms cubic-bezier(0.4,0,0.2,1);
+    }
+    [data-theme="light"]{
+      --bg:#f0f2f8;--surface:#fff;--surface2:#eceef5;--surface3:#e4e7f2;
+      --border:#dde0ec;--border2:#c8cce0;
+      --text:#1a1c28;--text-dim:#5a5f78;--text-faint:#a0a5be;
+      --accent:#008f58;--accent-dim:rgba(0,143,88,0.08);--accent-glow:rgba(0,143,88,0.18);
+      --danger:#d62048;--danger-dim:rgba(214,32,72,0.10);
+      --warn:#b05500;--warn-dim:rgba(176,85,0,0.10);
+      --info:#1a6fe0;--info-dim:rgba(26,111,224,0.10);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+    .page{display:none;flex-direction:column;min-height:100vh}
+    .page.active{display:flex}
+    .shell{max-width:740px;width:calc(100% - 2rem);margin:0 auto;padding:2rem 0 5rem;flex:1}
+
+    /* Topbar */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:50}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent-glow);flex-shrink:0}
+    .brand-name{font-family:var(--mono);font-size:0.95rem;font-weight:500;letter-spacing:0.04em}
+    .brand-tag{font-family:var(--mono);font-size:0.62rem;color:var(--text-faint);letter-spacing:0.06em}
+    .topbar-actions{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--t)}
+    .icon-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .icon-btn svg{width:15px;height:15px}
+
+    /* Section labels */
+    .section-label{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint);padding:1.4rem 0 0.5rem;display:flex;align-items:center;gap:0.75rem}
+    .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* Cards */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:0.75rem;transition:border-color var(--t)}
+    .card:hover{border-color:var(--border2)}
+    .card-head{padding:0.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2)}
+    .card-title{font-size:0.7rem;font-family:var(--mono);color:var(--text-dim);letter-spacing:0.09em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+    .card-icon{width:18px;height:18px;background:var(--accent-dim);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+    .card-icon svg{width:10px;height:10px}
+    .card-body{padding:1.25rem}
+
+    /* Typography */
+    h1{font-size:2rem;font-weight:700;line-height:1.15}
+    h2{font-size:1.35rem;font-weight:600}
+    p{line-height:1.7;color:var(--text-dim);font-size:0.9rem}
+    strong{color:var(--text)}
+
+    /* Pills */
+    .pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:0.67rem;padding:2px 9px;border-radius:99px;background:var(--accent-dim);color:var(--accent);letter-spacing:0.05em;border:1px solid rgba(79,255,176,0.18)}
+    [data-theme="light"] .pill{border-color:rgba(0,143,88,0.2)}
+    .pill-danger{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,77,109,0.2)}
+    .pill-info{background:var(--info-dim);color:var(--info);border-color:rgba(91,164,255,0.2)}
+    .pill-warn{background:var(--warn-dim);color:var(--warn);border-color:rgba(255,179,71,0.2)}
+
+    /* Callouts */
+    .callout{border-left:2px solid var(--accent);background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:0.85rem 1.1rem;margin:0.75rem 0}
+    .callout p{color:var(--text);font-size:0.875rem}
+    .callout-warn{border-left-color:var(--warn);background:var(--warn-dim)}
+
+    /* Form */
+    .field{margin-bottom:1.1rem}
+    .field:last-child{margin-bottom:0}
+    .label{display:block;font-size:0.7rem;font-family:var(--mono);color:var(--text-dim);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.45rem}
+    .hint{font-size:0.72rem;color:var(--text-faint);margin-top:0.3rem;line-height:1.5}
+    .row{display:flex;align-items:center;gap:0.875rem;flex-wrap:wrap}
+    .num-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:1rem;padding:0.45rem 0.7rem;width:80px;outline:none;transition:all var(--t)}
+    .num-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+
+    /* Sliders */
+    .slider-row{display:flex;align-items:center;gap:0.75rem}
+    .slider{-webkit-appearance:none;appearance:none;background:var(--surface3);height:5px;border-radius:99px;outline:none;width:100%;cursor:pointer;border:1px solid var(--border)}
+    .slider::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 0 2px var(--accent-dim),0 2px 5px rgba(0,0,0,.3);transition:transform var(--t),box-shadow var(--t);cursor:grab}
+    .slider::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 0 0 4px var(--accent-dim),0 2px 8px rgba(0,0,0,.35)}
+    .slider::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.05)}
+    .slider::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:grab}
+    .slider-val{font-family:var(--mono);font-size:0.85rem;color:var(--accent);min-width:60px;text-align:right;flex-shrink:0}
+    /* Ticks */
+    .tick-row{position:absolute;bottom:0;left:0;right:0;pointer-events:none;height:18px}
+    .tick{display:flex;flex-direction:column;align-items:center;gap:2px;position:absolute;transform:translateX(-50%)}
+    .tick:first-child{transform:translateX(0)}
+    .tick:last-child{transform:translateX(-100%)}
+    .tick-mark{width:1px;height:5px;background:var(--border2);border-radius:1px;flex-shrink:0}
+    .tick-label{font-family:var(--mono);font-size:0.48rem;color:var(--text-faint);white-space:nowrap;line-height:1}
+    .slider-wrap{flex:1;position:relative;padding-bottom:24px;overflow:visible}
+
+    /* Toggle */
+    .toggle-row{display:flex;align-items:flex-start;gap:10px}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;margin-top:2px}
+    .toggle input{opacity:0;width:0;height:0}
+    .toggle-track{position:absolute;inset:0;background:var(--surface3);border:1px solid var(--border2);border-radius:99px;cursor:pointer;transition:background var(--t),border-color var(--t)}
+    .toggle input:checked+.toggle-track{background:var(--accent);border-color:var(--accent)}
+    .toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform var(--t);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle input:checked+.toggle-track::after{transform:translateX(17px)}
+    .toggle-label{font-size:0.875rem;color:var(--text-dim);cursor:pointer;line-height:1.45}
+    .sub-opts{display:none;margin-top:0.75rem;padding:0.9rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md)}
+    .sub-opts.open{display:block}
+
+    /* Tabs */
+    .tab-bar{display:flex;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px}
+    .tab-btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.05em;padding:5px 14px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--text-faint);cursor:pointer;transition:all var(--t)}
+    .tab-btn.active{background:var(--surface);color:var(--accent);border-color:var(--border)}
+    .tab-panel{display:none;padding-top:0.875rem}
+    .tab-panel.active{display:block}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-weight:500;font-size:0.875rem;padding:0.62rem 1.35rem;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;transition:all var(--t);white-space:nowrap}
+    .btn-primary{background:var(--accent);color:#000;border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow);font-weight:600}
+    .btn-primary:hover{filter:brightness(1.08);box-shadow:0 0 26px var(--accent-glow);transform:translateY(-1px)}
+    .btn-ghost{background:transparent;color:var(--text-dim);border-color:var(--border)}
+    .btn-ghost:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .btn-reset{background:transparent;color:var(--danger);border-color:var(--danger-dim);font-size:0.72rem;font-family:var(--mono);letter-spacing:0.05em;padding:0 10px;height:34px;gap:5px}
+    .btn-reset:hover{background:var(--danger-dim);border-color:var(--danger)}
+    .btn-sm{font-size:0.8rem;padding:0.45rem 0.9rem}
+    .btn svg{width:14px;height:14px;flex-shrink:0}
+
+    /* Home hero */
+    .home-hero{padding:2.5rem 0 1.5rem;display:flex;flex-direction:column;gap:0.6rem}
+    .home-kicker{font-family:var(--mono);font-size:0.67rem;letter-spacing:0.14em;color:var(--accent);text-transform:uppercase}
+    .home-title span{color:var(--accent)}
+    .home-subtitle{font-size:0.95rem;color:var(--text-dim);max-width:540px}
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    @media(max-width:540px){.settings-grid{grid-template-columns:1fr}}
+    .action-row{display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem;flex-wrap:wrap;gap:0.75rem}
+
+    /* Training */
+    .train-layout{flex:1;display:flex;flex-direction:column;max-width:640px;width:calc(100% - 2rem);margin:0 auto;padding:1.25rem 0 3rem;gap:1rem}
+    .status-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.8rem 0.9rem;display:flex;flex-direction:column;gap:3px}
+    .stat-tile-label{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase}
+    .stat-tile-val{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--text)}
+    .stat-tile-val.accent{color:var(--accent)}
+    .timer-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .timer-display{font-family:var(--mono);font-size:2.4rem;font-weight:300;letter-spacing:0.03em}
+    .timer-label{font-family:var(--mono);font-size:0.6rem;color:var(--text-faint);letter-spacing:0.08em;text-transform:uppercase}
+    .speed-badge{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+    .speed-val{font-family:var(--mono);font-size:1.05rem;color:var(--accent)}
+    .progress-track{height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px}
+    .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .6s ease;box-shadow:0 0 8px var(--accent-glow)}
+
+    .stimulus-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.25rem 1rem;gap:1rem;position:relative;overflow:hidden;min-height:170px}
+    .stimulus-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--accent-dim) 0%,transparent 65%);opacity:0;transition:opacity .35s}
+    .stimulus-box.pulse .stimulus-bg{opacity:1}
+    .coyote-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--warn-dim) 0%,transparent 65%);opacity:0;transition:opacity .3s}
+    .stimulus-box.coyote-active .coyote-bg{opacity:1}
+    .stimulus-instruction{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;color:var(--text-faint);text-transform:uppercase}
+    .stimulus-number{font-family:var(--mono);font-size:5rem;font-weight:300;color:var(--accent);line-height:1;letter-spacing:-0.02em;text-shadow:0 0 40px var(--accent-glow);transition:transform .12s,color .15s}
+    .stimulus-number.flash{transform:scale(1.08)}
+    .stimulus-number.hidden-num{color:var(--text-faint);text-shadow:none;font-size:2.75rem}
+    .last-seen{font-family:var(--mono);font-size:0.78rem;color:var(--text-faint)}
+    .last-seen span{color:var(--text-dim)}
+
+    .feedback-band{height:6px;border-radius:99px;background:var(--border);transition:background .15s,box-shadow .15s}
+    .feedback-band.correct{background:var(--accent);box-shadow:0 0 14px var(--accent-glow),0 0 30px var(--accent-dim)}
+    .feedback-band.wrong{background:var(--danger);box-shadow:0 0 14px rgba(255,77,109,.35)}
+    .feedback-band.coyote{background:var(--warn);box-shadow:0 0 14px rgba(255,179,71,.35)}
+
+    .answer-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+    .answer-input.correct{border-color:var(--accent);border-width:2px;box-shadow:0 0 0 4px var(--accent-dim),0 0 18px var(--accent-glow)}
+    .answer-input.wrong{border-color:var(--danger);border-width:2px;box-shadow:0 0 0 4px var(--danger-dim),0 0 18px rgba(255,77,109,.2)}
+    .answer-input.coyote{border-color:var(--warn);border-width:2px;box-shadow:0 0 0 4px var(--warn-dim)}
+
+    /* Stimulus box flash on answer */
+    .stimulus-box.flash-correct{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent-dim)}
+    .stimulus-box.flash-wrong{border-color:var(--danger)!important;box-shadow:0 0 0 2px var(--danger-dim)}
+
+    .answer-section{display:flex;flex-direction:column;gap:0.6rem}
+    .answer-input{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text);font-family:var(--mono);font-size:1.5rem;font-weight:300;text-align:center;padding:0.85rem;width:100%;outline:none;transition:border-color var(--t),box-shadow var(--t),border-width var(--t)}
+    .input-hint{text-align:center;font-family:var(--mono);font-size:0.63rem;color:var(--text-faint);letter-spacing:0.04em}
+
+    .numpad{display:none;grid-template-columns:repeat(6,1fr);gap:5px}
+    .numpad.visible{display:grid}
+    .numpad-btn{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:.92rem;cursor:pointer;transition:all var(--t)}
+    .numpad-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+    .numpad-btn.selected{background:var(--accent);color:#000;border-color:var(--accent)}
+    .numpad-btn.wrong-sel{background:var(--danger-dim);border-color:var(--danger);color:var(--danger)}
+    .badges-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+    /* Results */
+    .results-layout{max-width:740px;width:calc(100% - 2rem);margin:0 auto;padding:1.5rem 0 4rem;display:flex;flex-direction:column;gap:0.75rem}
+    .stat-grid{display:grid;gap:6px}
+    .stat-grid-3{grid-template-columns:repeat(3,1fr)}
+    .stat-grid-4{grid-template-columns:repeat(4,1fr)}
+    @media(max-width:540px){.stat-grid-3,.stat-grid-4{grid-template-columns:repeat(2,1fr)}}
+    .stat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.1rem}
+    .stat-block-label{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase;margin-bottom:.4rem}
+    .stat-block-val{font-family:var(--mono);font-size:1.65rem;font-weight:400;color:var(--text)}
+    .stat-block-val.accent-val{color:var(--accent)}
+    .acc-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+    .acc-bar-fill{height:100%;border-radius:99px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);transition:width 1s cubic-bezier(.4,0,.2,1)}
+    .trial-log{display:flex;flex-direction:column;gap:2px;max-height:230px;overflow-y:auto}
+    .trial-log::-webkit-scrollbar{width:4px}
+    .trial-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    .trial-entry{display:flex;align-items:center;justify-content:space-between;padding:.45rem .7rem;border-radius:var(--radius-sm);background:var(--surface2);font-family:var(--mono);font-size:.76rem;color:var(--text-dim);gap:.5rem}
+    .trial-entry .t-correct{color:var(--accent)}
+    .trial-entry .t-wrong{color:var(--danger)}
+    .trial-entry .t-coyote{color:var(--warn)}
+    .trial-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .trial-dot.ok{background:var(--accent);box-shadow:0 0 4px var(--accent-glow)}
+    .trial-dot.err{background:var(--danger)}
+    .trial-dot.coyote{background:var(--warn)}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--t)}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;max-width:400px;width:calc(100% - 2rem);transform:scale(.95);transition:transform var(--t)}
+    .modal-overlay.open .modal-box{transform:scale(1)}
+    .modal-title{font-size:1rem;font-weight:600;margin-bottom:.5rem}
+    .modal-body{font-size:.875rem;color:var(--text-dim);margin-bottom:1.25rem;line-height:1.6}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+    /* ICT inhibit state */
+    .ict-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(192,132,252,0.12) 0%,transparent 65%);opacity:0;transition:opacity .3s}
+    .stimulus-box.ict-active .ict-bg{opacity:1}
+    .stimulus-box.ict-active{border-color:#c084fc!important}
+    [data-theme="light"] .stimulus-box.ict-active{border-color:#7c3aed!important}
+    .feedback-band.inhibit{background:#c084fc;box-shadow:0 0 6px rgba(192,132,252,0.3)}
+    [data-theme="light"] .feedback-band.inhibit{background:#7c3aed}
+    .answer-input.input-hidden{color:transparent;caret-color:var(--text-faint)}
+    .answer-input.input-hidden::placeholder{color:transparent}
+    .answer-input.inhibit{border-color:#c084fc;box-shadow:0 0 0 3px rgba(192,132,252,0.12)}
+    [data-theme="light"] .answer-input.inhibit{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.12)}
+    .trial-dot.inhibit{background:#c084fc;box-shadow:0 0 4px rgba(192,132,252,0.3)}
+    .trial-entry .t-inhibit{color:#c084fc}
+    [data-theme="light"] .trial-entry .t-inhibit{color:#7c3aed}
+    .pill-ict{background:rgba(192,132,252,0.12);color:#c084fc;border-color:rgba(192,132,252,0.25)}
+    [data-theme="light"] .pill-ict{background:rgba(124,58,237,0.10);color:#7c3aed;border-color:rgba(124,58,237,0.25)}
+    /* ── Error feedback flash ──────────────────────────────────────
+       When "Error flash" is enabled and the player gives a wrong answer
+       or times out, the stimulus box background flashes red briefly.
+       This is a div layered inside .stimulus-box using position:absolute.
+    ── */
+    .stimulus-error-flash{
+      position:absolute;inset:0;z-index:5;
+      background:rgba(255,60,80,0.45);
+      border-radius:inherit;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .06s;
+    }
+    .stimulus-error-flash.active{opacity:1}
+    /* Settings profiles dropdown */
+    .profiles-wrap{position:relative}
+    .profiles-panel{
+      display:none;position:absolute;top:calc(100% + 6px);right:0;
+      background:var(--surface);border:1px solid var(--border2);
+      border-radius:var(--radius-md);min-width:280px;max-width:340px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:200;overflow:hidden
+    }
+    .profiles-panel.open{display:block}
+    .profiles-panel-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:.6rem .9rem;background:var(--surface2);border-bottom:1px solid var(--border)
+    }
+    .profiles-panel-title{font-family:var(--mono);font-size:.68rem;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+    .profiles-panel-body{padding:.5rem .9rem .7rem;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
+    .profile-row{display:flex;align-items:center;gap:5px;padding:.3rem .4rem;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border)}
+    .profile-row-name{flex:1;font-family:var(--mono);font-size:.72rem;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .anim-in{animation:fadeUp .3s ease both}
+    @media(max-width:480px){h1{font-size:1.65rem}.timer-display{font-size:2rem}.stimulus-number{font-size:4rem}}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
+  </style>
+</head>
+<body>
+
+<!-- HOME SCREEN -->
+<div class="page active" id="pageHome">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">CCT</div>
+        <div class="brand-tag">Cognitive Control Training</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <!-- Profiles dropdown — sits next to Share -->
+      <div class="profiles-wrap" id="profilesWrap">
+        <button class="icon-btn" id="profilesBtn" title="Settings profiles" style="width:auto;padding:0 10px;gap:5px;font-size:0.72rem;font-family:var(--mono);letter-spacing:0.04em;color:var(--text-dim)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;flex-shrink:0"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Profiles
+        </button>
+        <div class="profiles-panel" id="profilesPanel">
+          <div class="profiles-panel-head">
+            <span class="profiles-panel-title">Settings profiles</span>
+            <button class="btn btn-primary btn-sm" id="saveProfileBtn" style="font-size:.68rem;padding:2px 9px">+ Save current</button>
+          </div>
+          <div class="profiles-panel-body" id="profileList">
+            <p class="hint" id="profileEmpty" style="padding:.3rem 0">No profiles yet — click "+ Save current" to snapshot settings.</p>
+          </div>
+        </div>
+      </div>
+      <button class="icon-btn" id="exportSettingsBtn" style="width:auto;padding:0 10px;gap:5px;font-size:0.72rem;font-family:var(--mono);letter-spacing:0.04em;color:var(--text-dim)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share
+      </button>
+      <button class="btn btn-reset" id="resetAppBtn" title="Wipe all progress data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Reset app
+      </button>
+      <button class="btn btn-reset" id="resetBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset defaults
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle Light/Dark mode" style="width:auto;padding:0 10px;gap:5px;font-size:0.72rem;font-family:var(--mono);letter-spacing:0.04em;color:var(--text-dim)">
+        <svg id="themeBtnIcon" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <span id="themeBtnLabel">Dark</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="shell anim-in">
+    <div class="home-hero">
+      <h1 class="home-title">CCT<br><span>Cognitive Control Training</span></h1>
+      <p class="home-subtitle" style="margin-top:.5rem">A stream of numbers is spoken aloud. Apply the selected arithmetic operation to consecutive numbers and enter your answer before the next one arrives. Speed adapts to your performance.</p>
+    </div>
+
+    <div class="callout" id="exampleCallout">
+      <p id="exampleText"><strong>Addition example:</strong> You hear <strong>3</strong>, then <strong>7</strong> → type <strong>10</strong>. Next you hear <strong>2</strong> → 7+2 → type <strong>9</strong>.</p>
+    </div>
+
+    <div class="section-label">Mode &amp; Difficulty</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg></span>
+          Session mode
+        </span>
+        <div class="tab-bar" id="modeTabBar">
+          <button class="tab-btn active" data-tab="standard">Standard</button>
+          <button class="tab-btn" data-tab="custom">Custom</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="tab-panel active" id="tab-standard">
+          <p style="font-size:.85rem">20-minute session, starting at 1500 ms. Speeds up on correct streaks, slows down on errors.</p>
+        </div>
+        <div class="tab-panel" id="tab-custom">
+          <div class="settings-grid">
+            <div class="field">
+              <label class="label">Duration</label>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <input type="range" class="slider" id="durationSlider" min="1" max="60" step="1" value="20">
+                  <div class="tick-row" id="durationTicks"></div>
+                </div>
+                <span class="slider-val" id="durationVal">20 min</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Starting Interval</label>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <input type="range" class="slider" id="startISISlider" min="100" max="6000" step="100" value="1500">
+                  <div class="tick-row" id="startISITicks"></div>
+                </div>
+                <span class="slider-val" id="startISIVal">1500 ms</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr class="div">
+        <div class="field">
+          <label class="label">N-Back Depth</label>
+          <div class="row">
+            <input type="number" class="num-input" id="nbackInput" min="1" max="5" value="1">
+            <span style="font-size:.85rem;color:var(--text-dim)" id="nbackDesc">Add to the immediately preceding number</span>
+          </div>
+          <div class="hint" id="nbackHint">1-back: current + n–1</div>
+        </div>
+
+        <!-- ── Arithmetic Mode + Rule Switch ─────────────────────────
+             Standard: one operation applies for the entire session.
+             Rule Switch Mode: select 2–4 operations; each trial the
+             active operation is chosen randomly and shown via a colour
+             highlight on the stimulus box. A colour swatch next to each
+             operation lets the user choose its indicator colour.
+        ── -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem">
+            <label class="label" style="margin-bottom:0">Arithmetic operation</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.8rem;color:var(--text-dim);font-family:var(--mono)">
+              <input type="checkbox" id="ruleSwitchToggle" style="accent-color:var(--accent)">
+              <strong style="color:var(--text)">Rule Switch Mode</strong> — randomly switch between selected operations each trial
+            </label>
+          </div>
+          <!-- Single-mode: radio buttons (shown when Rule Switch is OFF) -->
+          <div id="arithSingleRow" style="display:flex;gap:6px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="arithMode" id="arithAdd" value="add" style="accent-color:var(--accent)" checked> + Addition
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="arithMode" id="arithSub" value="sub" style="accent-color:var(--accent)"> − Subtraction
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="arithMode" id="arithMul" value="mul" style="accent-color:var(--accent)"> × Multiplication
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="arithMode" id="arithDiv" value="div" style="accent-color:var(--accent)"> ÷ Division
+            </label>
+          </div>
+          <!-- Multi-mode: checkboxes + colour pickers (shown when Rule Switch is ON) -->
+          <div id="arithSwitchRow" style="display:none;flex-direction:column;gap:.5rem">
+            <p class="hint" style="margin-top:0">Select at least 2 operations. Each trial one is chosen at random and its colour lights up the stimulus box.</p>
+            <div style="display:flex;flex-direction:column;gap:.4rem" id="switchOpList">
+              <!-- Generated by JS -->
+            </div>
+            <p class="hint" id="switchWarning" style="color:var(--danger);display:none">Select at least 2 operations to use Rule Switch Mode.</p>
+          </div>
+          <p class="hint" id="arithHint" style="margin-top:.4rem">Add current + previous number. The classic working-memory number task.</p>
+        </div>
+
+        <!-- ── Number Range ─────────────────────────────────────────────
+             Controls the pool of integers the voice can say each trial.
+             Default is 1–9. Lower the max or raise the min to constrain
+             the range — useful when using multiplication or division to
+             keep answers manageable (e.g. 1–5 for multiplication).
+             In division mode numbers are picked so the result is always
+             a whole number (the generator ensures divisibility).
+        ── -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <label class="label">Number range (spoken numbers)</label>
+          <div class="row" style="gap:1rem;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Min</label>
+              <input type="number" class="num-input" id="numRangeMin" min="0" max="20" value="2" style="width:64px">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label style="font-size:.75rem;font-family:var(--mono);color:var(--text-dim)">Max</label>
+              <input type="number" class="num-input" id="numRangeMax" min="1" max="99" value="9" style="width:64px">
+            </div>
+            <span class="hint" id="numRangeHint" style="margin-top:0">Numbers spoken will be in the range [1, 9]</span>
+          </div>
+          <p class="hint" style="margin-top:.4rem">Tip: for multiplication use 1–5; for division use 1–9 (divisibility is enforced automatically).</p>
+        </div>
+
+        <!-- ── Smooth Adaption ────────────────────────────────────────
+             When enabled, the interval changes by a fixed number of ms
+             on every single trial rather than only after a streak.
+             The two sliders control how aggressively the interval speeds
+             up on correct answers and slows down on wrong ones.
+        ── -->
+        <hr class="div" style="margin-top:1rem">
+        <div class="field" style="margin-top:1rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="smoothAdaptToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Smooth adaption</strong> — interval adjusts by a fixed amount on every single trial instead of only after streaks</span>
+          </div>
+          <div class="sub-opts" id="smoothAdaptOpts" style="margin-top:.75rem">
+            <div class="field">
+              <label class="label">Speed-up per correct answer (ms)</label>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <input type="range" class="slider" id="adaptUpSlider" min="1" max="100" step="1" value="20">
+                  <div class="tick-row" id="adaptUpTicks"></div>
+                </div>
+                <span class="slider-val" id="adaptUpVal">20 ms</span>
+              </div>
+              <p class="hint">How many ms <em>faster</em> the interval gets after each correct answer.</p>
+            </div>
+            <div class="field" style="margin-top:.75rem">
+              <label class="label">Slow-down per wrong answer (ms)</label>
+              <div class="slider-row">
+                <div class="slider-wrap">
+                  <input type="range" class="slider" id="adaptDownSlider" min="1" max="100" step="1" value="25">
+                  <div class="tick-row" id="adaptDownTicks"></div>
+                </div>
+                <span class="slider-val" id="adaptDownVal">25 ms</span>
+              </div>
+              <p class="hint">How many ms <em>slower</em> the interval gets after each wrong answer.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Input &amp; Audio</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+          Number pad
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="numpadToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label">Use <strong>number pad</strong> (buttons 2–18) instead of text input</span>
+          </div>
+        </div>
+        <div class="sub-opts" id="numpadOpts">
+          <div class="field">
+            <label class="label">Button Size</label>
+            <div class="slider-row">
+              <div class="slider-wrap">
+                <input type="range" class="slider" id="padSizeSlider" min="0.6" max="1.5" step="0.1" value="1">
+                <div class="tick-row" id="padSizeTicks"></div>
+              </div>
+              <span class="slider-val" id="padSizeVal">1.0×</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
+          Audio
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Speech Speed</label>
+          <div class="slider-row">
+            <div class="slider-wrap">
+              <input type="range" class="slider" id="speechRateSlider" min="0.5" max="3" step="0.1" value="1.0">
+              <div class="tick-row" id="speechRateTicks"></div>
+            </div>
+            <span class="slider-val" id="speechRateVal">1.0×</span>
+          </div>
+          <p class="hint">Uses Web Speech API — capped at 3× for reliability. Default: 1×.</p>
+        </div>
+        <div class="field" style="margin-top:.875rem">
+          <label class="label">Number presentation</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="presMode" id="presBoth" value="both" style="accent-color:var(--accent)"> Both (visual + audio)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="presMode" id="presVisual" value="visual" style="accent-color:var(--accent)"> Visual only
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)">
+              <input type="radio" name="presMode" id="presAudio" value="audio" style="accent-color:var(--accent)"> Audio only
+            </label>
+          </div>
+          <p class="hint" style="margin-top:.4rem">Visual only hides the number on screen. Audio only shows the number but skips speech. Both is default.</p>
+        </div>
+        <div class="field" style="margin-top:.875rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="beepToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Error beep</strong> — plays an audio tone on wrong answers &amp; timeouts</span>
+          </div>
+        </div>
+        <div class="sub-opts" id="beepOpts">
+          <div class="field">
+            <label class="label">Volume</label>
+            <div class="slider-row">
+              <div class="slider-wrap">
+                <input type="range" class="slider" id="beepVolSlider" min="0" max="1" step="0.05" value="0.5">
+                <div class="tick-row" id="beepVolTicks"></div>
+              </div>
+              <span class="slider-val" id="beepVolVal">50%</span>
+            </div>
+          </div>
+          <div class="field" style="margin-top:.75rem">
+            <label class="label">Beep sound</label>
+            <div id="beepTypeList" style="display:flex;flex-direction:column;gap:5px;margin-top:.3rem">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:.875rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="flashToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Error flash</strong> — flashes the screen red on wrong answers &amp; timeouts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Assist &amp; Forgiveness</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+          Number pool
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="singleDigitToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>1-digit mode</strong> — answers are always a single digit (0–9)</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">The number generator constrains each spoken number so that the computed answer never exceeds 9. Mainly useful for addition. For multiplication or division you may want to keep numbers small using the Number Range setting instead. Default: off.</p>
+        </div>
+        <div class="field" style="margin-top:.75rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="includeZeroToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Include 0</strong> — zero can be spoken as one of the numbers</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Default off. When off, the minimum spoken number is 1 (or your custom range minimum). Enabling this allows 0 to be spoken. Note: for division mode, 0 as a divisor is avoided automatically.</p>
+        </div>
+        <div class="field" style="margin-top:.75rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="minimalInputToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Minimal input</strong> — only type the ones digit of the answer</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">E.g. if the answer is 13, typing <strong>3</strong> is accepted. If the answer is 9, typing <strong>9</strong> works as usual. Default: off.</p>
+        </div>
+        <div class="field" style="margin-top:.75rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="hideInputToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Hide input</strong> — mask what you type so you can't see your own keystrokes</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Removes visual interference from seeing your own input. The answer box stays visible and feedback (correct/wrong border colour) still shows — only the typed characters are hidden. Default: off.</p>
+        </div>
+      </div>
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+          Fumble correction
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="fumbleToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Fumble mode</strong> — accept digit-reversed inputs as correct (e.g. typing 41 when answer is 14)</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Only triggers when the reversed number equals the correct answer and the typed value is not itself reachable.</p>
+        </div>
+      </div>
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          Fat finger mode
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="fatFingerToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Fat finger mode</strong> — if the correct answer is among multiple inputs entered at once, it still counts</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">E.g. if you fat-finger <strong>154</strong> when the answer is <strong>14</strong>, it counts as correct. Limited to a maximum of <strong>4 digits</strong> submitted at once — pushing all buttons won't give a free pass. Default: off.</p>
+        </div>
+      </div>
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+          Coyote time
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="coyoteToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Coyote time</strong> — a late-but-correct answer retroactively fixes the previous missed trial</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">Named after the video-game concept. If you knew the answer but typed it just after the timeout, the miss is reversed. The current trial is never affected.</p>
+          <div class="sub-opts" id="coyoteOpts" style="margin-top:.75rem">
+            <label class="label">Grace window (into next trial)</label>
+            <div class="slider-row">
+              <div class="slider-wrap">
+                <input type="range" class="slider" id="coyoteSlider" min="100" max="2000" step="50" value="500">
+                <div class="tick-row" id="coyoteTicks"></div>
+              </div>
+              <span class="slider-val" id="coyoteVal">500 ms</span>
+            </div>
+            <p class="hint" style="margin-top:.4rem">How far into the next trial a late answer still counts for the <em>previous</em> one.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></span>
+          ICT mode
+        </span>
+        <span class="pill pill-info" style="font-size:.6rem">Inhibitory Control</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="ictToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>ICT mode</strong> — inhibitory control training (go/no-go style)</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">When the expected answer and the <em>previous</em> expected answer together equal the theoretical maximum result for the current number range, that trial becomes a <strong>no-go stimulus</strong>. Instead of typing the answer, press <strong>↑ Arrow Up</strong> to inhibit your response. Typing a number instead counts as a false alarm (wrong). Works best in addition mode. Default: off.</p>
+        </div>
+        <div class="sub-opts" id="ictOpts" style="margin-top:.75rem">
+          <div class="field">
+            <div class="toggle-row">
+              <label class="toggle"><input type="checkbox" id="ictNoInputToggle"><div class="toggle-track"></div></label>
+              <span class="toggle-label"><strong>Accept no input</strong> as correct inhibition (in addition to ↑ Arrow Up)</span>
+            </div>
+            <p class="hint" style="margin-top:.4rem">If enabled, simply not pressing anything and letting the trial time out also counts as a correct inhibition. Arrow Up still works too.</p>
+          </div>
+        </div>
+      </div>
+      <!-- ── Number Distinction Mode ──────────────────────────────────
+           Simpler than Sum Distinction: the player compares the RAW NUMBER
+           just spoken against the previous raw number (not the sums).
+           Arrow key meaning:
+             ◀ Left  = current number is SMALLER than previous
+             ▼ Down  = current number is THE SAME as previous
+             ▶ Right = current number is LARGER than previous
+           The arrow can be pressed at any time within the trial window.
+           Getting the number right but using the wrong arrow = fail.
+      ── -->
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6l4-4 4 4"/><path d="M12 2v10"/><path d="M8 18l4 4 4-4"/><path d="M12 12v10"/></svg></span>
+          Number Distinction Mode
+        </span>
+        <span class="pill pill-info" style="font-size:.6rem">NDM</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="ndmToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Number Distinction Mode (NDM)</strong> — press an arrow key to indicate whether the <em>spoken number</em> is smaller, equal, or larger than the previous one</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">After hearing the number, press the matching arrow key — based on how it compares to the <em>previous spoken number</em> (not the sum):</p>
+          <div style="margin:.6rem 0 0 .5rem;display:flex;flex-direction:column;gap:4px">
+            <span class="hint">◀ <strong>Left</strong> — current number is <em>smaller</em> than the previous one</span>
+            <span class="hint">▶ <strong>Right</strong> — current number is <em>larger</em> than the previous one</span>
+            <span class="hint">▼ <strong>Down</strong> — current number is <em>the same</em> as the previous one</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">The arrow key can be pressed any time during the trial window alongside your number input. Correct number + wrong arrow = trial fails. The "previous number" follows the same n-back depth as the rest of the task. Cannot be active simultaneously with Sum Distinction Mode. Default: off.</p>
+        </div>
+      </div>
+
+      <!-- ── Sum Distinction Mode ───────────────────────────────────────
+           Like Number Distinction but the player compares the COMPUTED
+           SUMS (current answer vs previous correct answer), not the raw
+           spoken numbers. This is harder because the player must both
+           calculate the sum AND keep the previous sum in working memory.
+           Arrow key meaning (same keys, different comparison):
+             ◀ Left  = current SUM is SMALLER than previous sum
+             ▼ Down  = current SUM EQUALS the previous sum
+             ▶ Right = current SUM is LARGER than previous sum
+           Compatible with ICT mode.
+      ── -->
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          Sum Distinction Mode
+        </span>
+        <span class="pill pill-warn" style="font-size:.6rem">SDM</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="rrtToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Sum Distinction Mode (SDM)</strong> — press an arrow key to indicate whether the <em>current sum</em> is smaller, equal, or larger than the previous correct sum</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">After entering your number answer, press the matching arrow key — based on how the current sum compares to the <em>previous correct sum</em>:</p>
+          <div style="margin:.6rem 0 0 .5rem;display:flex;flex-direction:column;gap:4px">
+            <span class="hint">◀ <strong>Left</strong> — current sum is <em>smaller</em> than the previous sum</span>
+            <span class="hint">▶ <strong>Right</strong> — current sum is <em>larger</em> than the previous sum</span>
+            <span class="hint">▼ <strong>Down</strong> — current sum <em>equals</em> the previous sum</span>
+          </div>
+          <p class="hint" style="margin-top:.5rem">The arrow can be pressed any time during the trial window. Correct number + wrong/missing arrow = trial fails. Compatible with ICT mode. The "previous sum" is the last correctly answered sum. Cannot be active simultaneously with Number Distinction Mode. Default: off.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
+      <button class="btn btn-primary" id="startBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Start Training
+      </button>
+    </div>
+
+    <!-- Import banner shown when ?s= is in URL -->
+    <div id="importBanner" style="display:none;margin-top:.75rem" class="callout">
+      <p id="importBannerText" style="color:var(--text);font-size:.875rem"></p>
+      <div style="display:flex;gap:8px;margin-top:.6rem">
+        <button class="btn btn-primary btn-sm" id="importApplyBtn">Apply imported settings</button>
+        <button class="btn btn-ghost btn-sm" id="importDismissBtn">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TRAINING SCREEN -->
+<div class="page" id="pageTrain">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot" id="trainDot"></div>
+      <div>
+        <div class="brand-name" id="trainStatus">Ready</div>
+        <div class="brand-tag" id="trainSubStatus">adaptive</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint);letter-spacing:.05em">ESC to exit</span>
+      <button class="btn btn-sm" id="stopBtn" title="End session (Esc)" style="background:var(--danger-dim);color:var(--danger);border-color:var(--danger);gap:6px">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+        Exit
+      </button>
+    </div>
+  </nav>
+  <div class="train-layout anim-in">
+    <div class="status-bar">
+      <div class="stat-tile"><div class="stat-tile-label">Correct</div><div class="stat-tile-val accent" id="tCorrect">0</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Total</div><div class="stat-tile-val" id="tTotal">0</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Accuracy</div><div class="stat-tile-val" id="tAccuracy">–</div></div>
+    </div>
+    <div>
+      <div class="timer-row">
+        <div><div class="timer-label">Time remaining</div><div class="timer-display" id="timerDisplay">20:00</div></div>
+        <div class="speed-badge"><div class="timer-label">Interval</div><div class="speed-val" id="isiDisplay">3000 ms</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:100%"></div></div>
+    </div>
+    <div class="stimulus-box" id="stimulusBox">
+      <div class="stimulus-bg"></div>
+      <div class="coyote-bg"></div>
+      <div class="ict-bg"></div>
+      <!-- Red flash layer — lights up on wrong answers when Error Flash is enabled -->
+      <div class="stimulus-error-flash" id="errorFlash"></div>
+      <!-- Rule Switch colour layer — tints the box with the active operation's colour -->
+      <div id="ruleSwitchColor" style="position:absolute;inset:0;border-radius:inherit;opacity:0;transition:background .15s,opacity .15s;pointer-events:none;z-index:4"></div>
+      <div class="stimulus-instruction" id="stimInstruction">Waiting for first number…</div>
+      <div class="stimulus-number hidden-num" id="stimNumber">·</div>
+      <div class="last-seen" id="lastSeenLabel"></div>
+    </div>
+    <div class="feedback-band" id="feedbackBand"></div>
+    <div class="answer-section">
+      <input type="number" class="answer-input" id="answerInput" placeholder="Your answer" inputmode="numeric" autocomplete="off">
+      <div class="input-hint" id="inputHint">Type your answer · Enter to confirm</div>
+      <div class="numpad" id="numpad"></div>
+    </div>
+    <div class="badges-row">
+      <span class="pill" id="streakPill">🔥 Streak: 0</span>
+      <span class="pill pill-info" id="nbackBadge">1-back</span>
+      <span class="pill pill-warn" id="arithBadge">+</span>
+      <span class="pill" id="ruleSwitchBadge" style="display:none">Rule Switch</span>
+      <span class="pill" id="adaptPill" style="opacity:.55">Adaptive</span>
+      <span class="pill pill-warn" id="singleDigitBadge" style="display:none">1-digit</span>
+      <span class="pill pill-danger" id="ictBadge" style="display:none">ICT</span>
+      <span class="pill pill-info" id="minimalInputBadge" style="display:none">min-input</span>
+      <span class="pill pill-warn" id="rrtBadge" style="display:none">SDM</span>
+      <span class="pill pill-info" id="ndmBadge" style="display:none">NDM</span>
+    </div>
+    <!-- RRT arrow prompt shown when RRT mode active and answer window open -->
+    <div id="rrtPrompt" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.7rem 1rem;font-family:var(--mono);font-size:.78rem;color:var(--text-dim);display:none">
+      <span id="rrtPromptText">RRT: press ◀ / ▶ / ▼</span>
+      <span id="rrtArrowGiven" style="margin-left:.75rem;font-size:.9rem"></span>
+    </div>
+  </div>
+</div>
+
+
+<!-- RESULTS SCREEN -->
+<div class="page" id="pageResults">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><div class="brand-name">Results</div><div class="brand-tag">Session Summary</div></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" id="backToSettingsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="15 18 9 12 15 6"/></svg>
+        Settings
+      </button>
+      <button class="btn btn-primary btn-sm" id="restartBtn">New Session</button>
+    </div>
+  </nav>
+  <div class="results-layout anim-in">
+    <h2 style="padding-top:.5rem">Your Performance</h2>
+    <div class="stat-grid stat-grid-3" id="resultMainStats"></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Accuracy</span></div>
+      <div class="card-body">
+        <div class="acc-bar"><div class="acc-bar-fill" id="accBarFill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint)">0%</span>
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--accent)" id="accBarPct">0%</span>
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint)">100%</span>
+        </div>
+      </div>
+    </div>
+    <div id="assistNote"></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Overall Progress (all sessions)</span></div>
+      <div class="card-body"><div class="stat-grid stat-grid-4" id="resultCumStats"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Session History</span>
+        <span class="pill" id="sessionHistCount"></span>
+      </div>
+      <div class="card-body">
+        <div class="trial-log" id="sessionHistLog" style="max-height:280px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Trial Log</span>
+        <span class="pill" id="logCount"></span>
+      </div>
+      <div class="card-body"><div class="trial-log" id="trialLog"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body"  id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="modalCancel">Cancel</button>
+      <button class="btn btn-sm" id="modalConfirm" style="background:var(--danger);color:#fff;border-color:var(--danger)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ── Utilities ── */
+const $ = id => document.getElementById(id);
+const setPage = n => ['pageHome','pageTrain','pageResults'].forEach(p=>$(p).classList.toggle('active',p===n));
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const rand  = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const fmtTime = s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+
+/* ══ BEEP SOUNDS ═══════════════════════════════════════════════════════
+   Defined first (before any wiring) so buildBeepTypeList() can safely
+   reference BEEP_TYPES and playBeepType() regardless of call order.
+   Five WebAudio-synthesised error sounds; previewed via button in settings.
+═══════════════════════════════════════════════════════════════════════ */
+const BEEP_TYPES = [
+  { id:'sine',   label:'Sine (soft)'    },
+  { id:'square', label:'Square (harsh)' },
+  { id:'buzz',   label:'Buzz (low)'     },
+  { id:'blip',   label:'Blip (short)'   },
+  { id:'drop',   label:'Drop (falling)' },
+];
+
+function playBeepType(type, vol){
+  try{
+    const ctx = new(window.AudioContext||window.webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    const v = (vol !== undefined && vol !== null) ? vol : 0.5;
+    switch(type){
+      case 'square':{
+        const o=ctx.createOscillator(); o.connect(gain);
+        o.type='square'; o.frequency.setValueAtTime(440,ctx.currentTime);
+        gain.gain.setValueAtTime(v*0.3,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.25);
+        o.start(); o.stop(ctx.currentTime+0.25); o.onended=()=>ctx.close(); break;
+      }
+      case 'buzz':{
+        const o=ctx.createOscillator(); o.connect(gain);
+        o.type='sawtooth'; o.frequency.setValueAtTime(120,ctx.currentTime);
+        gain.gain.setValueAtTime(v*0.4,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+        o.start(); o.stop(ctx.currentTime+0.3); o.onended=()=>ctx.close(); break;
+      }
+      case 'blip':{
+        const o=ctx.createOscillator(); o.connect(gain);
+        o.type='sine'; o.frequency.setValueAtTime(880,ctx.currentTime);
+        gain.gain.setValueAtTime(v*0.5,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.07);
+        o.start(); o.stop(ctx.currentTime+0.07); o.onended=()=>ctx.close(); break;
+      }
+      case 'drop':{
+        const o=ctx.createOscillator(); o.connect(gain);
+        o.type='sine';
+        o.frequency.setValueAtTime(600,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(150,ctx.currentTime+0.3);
+        gain.gain.setValueAtTime(v*0.5,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.35);
+        o.start(); o.stop(ctx.currentTime+0.35); o.onended=()=>ctx.close(); break;
+      }
+      default:{ // 'sine'
+        const o=ctx.createOscillator(); o.connect(gain);
+        o.type='sine'; o.frequency.setValueAtTime(480,ctx.currentTime);
+        gain.gain.setValueAtTime(v*0.45,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.22);
+        o.start(); o.stop(ctx.currentTime+0.22); o.onended=()=>ctx.close(); break;
+      }
+    }
+  }catch(e){}
+}
+
+function playBeep(){
+  if(typeof settings!=='undefined' && settings.beepEnabled)
+    playBeepType(settings.beepType||'sine', settings.beepVol);
+}
+
+/* ── Storage ── */
+const loadProgress = ()=>{ try{return JSON.parse(localStorage.getItem('mp_prog'))||{};}catch{return {};} };
+const saveProgress = d=>{ try{localStorage.setItem('mp_prog',JSON.stringify(d));}catch{} };
+
+const DEFAULTS = {
+  mode:'standard', duration:20, startISI:1500, nback:1,
+  arithMode:'add',     /* Active operation when Rule Switch is OFF: 'add'|'sub'|'mul'|'div' */
+  ruleSwitch:false,    /* Rule Switch Mode: randomly change operation each trial */
+  switchOps:{          /* Which operations are active in Rule Switch Mode */
+    add:true, sub:false, mul:false, div:false
+  },
+  switchColors:{       /* Indicator colours for each operation in Rule Switch Mode */
+    add:'#4fffb0', sub:'#5ba4ff', mul:'#ffb347', div:'#c084fc'
+  },
+  numRangeMin:2,
+  numRangeMax:9,
+  useNumpad:false, padScale:1.0,
+  beepEnabled:false, beepVol:0.5, beepType:'sine', flashEnabled:false,
+  speechRate:1.0,
+  fumble:false, fatFinger:false,
+  smoothAdapt:false, adaptUp:20, adaptDown:25,
+  coyote:false, coyoteMs:500,
+  singleDigit:false, includeZero:false, minimalInput:false, hideInput:false,
+  ict:false, ictNoInput:false,
+  ndm:false,
+  rrt:false,
+  numberPresentation:'audio',
+};
+
+function loadSettings(){
+  try{ const s=JSON.parse(localStorage.getItem('mp_sett_v2')); return s?Object.assign({},DEFAULTS,s):Object.assign({},DEFAULTS); }
+  catch{ return Object.assign({},DEFAULTS); }
+}
+function saveSettings(){ try{localStorage.setItem('mp_sett_v2',JSON.stringify(settings));}catch{} }
+let settings = loadSettings();
+
+/* ── Theme ── */
+let theme = localStorage.getItem('mp_theme')||'dark';
+const sunIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z"/>`;
+const moonIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>`;
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('mp_theme',t);
+  const icon=$('themeBtnIcon'); const label=$('themeBtnLabel');
+  if(icon){ icon.innerHTML = t==='dark' ? moonIcon : sunIcon; }
+  if(label){ label.textContent = t==='dark' ? 'Dark' : 'Light'; }
+}
+applyTheme(theme);
+$('themeBtn').addEventListener('click',()=>{ theme=theme==='dark'?'light':'dark'; applyTheme(theme); });
+
+/* ══ TICK BUILDER ══ */
+function buildTicks(containerId, min, max, tickVals, labelFn){
+  const c = $(containerId);
+  c.innerHTML='';
+  const range = max-min;
+  tickVals.forEach(v=>{
+    const pct=(v-min)/range*100;
+    const d=document.createElement('div');
+    d.className='tick';
+    d.style.left=pct+'%';
+    d.innerHTML=`<div class="tick-mark"></div><div class="tick-label">${labelFn(v)}</div>`;
+    c.appendChild(d);
+  });
+}
+
+buildTicks('durationTicks',  1,  60, [1,10,20,30,45,60], v=>v+'m');
+buildTicks('startISITicks', 100,6000, [100,500,1000,1500,2000,3000,4500,6000], v=>v<1000?v+'ms':(v/1000)+'s');
+buildTicks('padSizeTicks',  0.6,1.5, [0.6,0.8,1.0,1.2,1.5], v=>v+'×');
+buildTicks('speechRateTicks',0.5,3, [0.5,1.0,1.5,2.0,2.5,3.0], v=>v+'×');
+buildTicks('beepVolTicks',   0,  1,  [0,0.25,0.5,0.75,1], v=>Math.round(v*100)+'%');
+buildTicks('coyoteTicks',  100,2000, [100,500,1000,1500,2000], v=>v+'ms');
+buildTicks('adaptUpTicks',   1,100, [1,25,50,75,100], v=>v+'ms');
+buildTicks('adaptDownTicks', 1,100, [1,25,50,75,100], v=>v+'ms');
+
+/* ══ WIRE CONTROLS ══ */
+/* Tabs */
+const modeTabBtns = document.querySelectorAll('#modeTabBar .tab-btn');
+modeTabBtns.forEach(btn=>btn.addEventListener('click',()=>{
+  modeTabBtns.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  settings.mode=btn.dataset.tab;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  $('tab-'+settings.mode).classList.add('active'); saveSettings();
+}));
+if(settings.mode==='custom'){
+  modeTabBtns.forEach(b=>b.classList.toggle('active',b.dataset.tab==='custom'));
+  $('tab-standard').classList.remove('active'); $('tab-custom').classList.add('active');
+}
+
+function wireSlider(id,valId,init,min,max,step,fmt,cb){
+  const sl=$(id),vEl=$(valId);
+  sl.min=min;sl.max=max;sl.step=step;sl.value=init;vEl.textContent=fmt(+init);
+  sl.addEventListener('input',()=>{ const v=+sl.value; vEl.textContent=fmt(v); cb(v); });
+}
+wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       v=>{settings.duration=v;saveSettings();});
+wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         v=>{settings.startISI=v;saveSettings();});
+wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', v=>{settings.padScale=v;applyPadScale();saveSettings();});
+wireSlider('speechRateSlider','speechRateVal',settings.speechRate,0.5,3,    0.1, v=>v.toFixed(1)+'×', v=>{settings.speechRate=v;saveSettings();});
+wireSlider('beepVolSlider', 'beepVolVal',   settings.beepVol,    0,   1,    0.05,v=>Math.round(v*100)+'%', v=>{settings.beepVol=v;saveSettings();});
+wireSlider('coyoteSlider',  'coyoteVal',    settings.coyoteMs,   100, 2000, 50,  v=>v+' ms',       v=>{settings.coyoteMs=v;saveSettings();});
+wireSlider('adaptUpSlider', 'adaptUpVal',   settings.adaptUp,    1,   100,  1,   v=>v+' ms',       v=>{settings.adaptUp=v;saveSettings();});
+wireSlider('adaptDownSlider','adaptDownVal',settings.adaptDown,  1,   100,  1,   v=>v+' ms',       v=>{settings.adaptDown=v;saveSettings();});
+
+/* N-back */
+$('nbackInput').value=settings.nback;
+const nbackDescs={
+  1:['Apply operation to the immediately preceding number','1-back: current op n–1'],
+  2:['Apply operation to the second-to-last number','2-back: current op n–2'],
+  3:['Apply operation to the third-to-last number','3-back: current op n–3'],
+};
+function updateNbackUI(n){
+  const opName = {add:'add to',sub:'subtract from',mul:'multiply by',div:'divide into'}[settings.arithMode]||'add to';
+  const d = n<=3
+    ? [nbackDescs[n][0].replace('Apply operation',`Apply: ${opName}`), nbackDescs[n][1]]
+    : [`Apply: ${opName} the ${n}th preceding number`, `${n}-back`];
+  $('nbackDesc').textContent=d[0]; $('nbackHint').textContent=d[1];
+}
+updateNbackUI(settings.nback);
+$('nbackInput').addEventListener('input',()=>{ settings.nback=clamp(+$('nbackInput').value||1,1,5); updateNbackUI(settings.nback); saveSettings(); });
+
+/* Toggles */
+function wireToggle(id,subId,init,cb){
+  const el=$(id); el.checked=init;
+  if(subId) $(subId).classList.toggle('open',init);
+  el.addEventListener('change',()=>{ const v=el.checked; if(subId)$(subId).classList.toggle('open',v); cb(v); });
+}
+wireToggle('numpadToggle','numpadOpts',  settings.useNumpad,    v=>{settings.useNumpad=v;saveSettings();});
+wireToggle('beepToggle',  'beepOpts',    settings.beepEnabled,  v=>{settings.beepEnabled=v;saveSettings(); buildBeepTypeList();});
+
+/* ── Beep type selector with preview ── */
+function buildBeepTypeList(){
+  const list=$('beepTypeList'); if(!list) return;
+  list.innerHTML='';
+  BEEP_TYPES.forEach(bt=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px';
+    // Radio
+    const rb=document.createElement('input');
+    rb.type='radio'; rb.name='beepType'; rb.value=bt.id;
+    rb.id='beep_'+bt.id;
+    rb.style.accentColor='var(--accent)';
+    rb.checked=(settings.beepType||'sine')===bt.id;
+    rb.addEventListener('change',()=>{ settings.beepType=bt.id; saveSettings(); });
+    // Label
+    const lbl=document.createElement('label');
+    lbl.htmlFor='beep_'+bt.id;
+    lbl.style.cssText='font-size:.85rem;color:var(--text-dim);flex:1;cursor:pointer';
+    lbl.textContent=bt.label;
+    // Preview button
+    const prev=document.createElement('button');
+    prev.className='btn btn-ghost btn-sm';
+    prev.style.cssText='font-size:.68rem;padding:2px 9px';
+    prev.textContent='▶ Preview';
+    prev.addEventListener('click',()=>{ playBeepType(bt.id, settings.beepVol); });
+    row.appendChild(rb); row.appendChild(lbl); row.appendChild(prev);
+    list.appendChild(row);
+  });
+}
+buildBeepTypeList();
+wireToggle('flashToggle',  null,          settings.flashEnabled, v=>{settings.flashEnabled=v;saveSettings();});
+wireToggle('fumbleToggle', null,          settings.fumble,       v=>{settings.fumble=v;saveSettings();});
+wireToggle('fatFingerToggle',null,        settings.fatFinger,    v=>{settings.fatFinger=v;saveSettings();});
+wireToggle('smoothAdaptToggle','smoothAdaptOpts',settings.smoothAdapt,v=>{settings.smoothAdapt=v;saveSettings();});
+wireToggle('coyoteToggle','coyoteOpts',  settings.coyote,       v=>{settings.coyote=v;saveSettings();});
+wireToggle('singleDigitToggle',null,     settings.singleDigit,  v=>{settings.singleDigit=v;saveSettings();});
+wireToggle('includeZeroToggle', null,    settings.includeZero,  v=>{settings.includeZero=v;saveSettings();});
+wireToggle('minimalInputToggle',null,    settings.minimalInput, v=>{settings.minimalInput=v;saveSettings();});
+wireToggle('hideInputToggle',   null,    settings.hideInput,    v=>{settings.hideInput=v;saveSettings();});
+wireToggle('ictToggle',        'ictOpts',settings.ict,           v=>{settings.ict=v;saveSettings();});
+wireToggle('ictNoInputToggle',  null,    settings.ictNoInput,   v=>{settings.ictNoInput=v;saveSettings();});
+wireToggle('ndmToggle', null, settings.ndm, v=>{
+  settings.ndm=v;
+  // NDM and SDM are mutually exclusive — only one can be active
+  if(v){ settings.rrt=false; $('rrtToggle').checked=false; }
+  saveSettings();
+});
+wireToggle('rrtToggle', null, settings.rrt, v=>{
+  settings.rrt=v;
+  // NDM and SDM are mutually exclusive — only one can be active
+  if(v){ settings.ndm=false; $('ndmToggle').checked=false; }
+  saveSettings();
+});
+
+/* ── Modal ── */
+function openModal(title,body,onConfirm,confirmLabel='Confirm',danger=true){
+  $('modalTitle').textContent=title; $('modalBody').textContent=body;
+  $('modalConfirm').textContent=confirmLabel;
+  $('modalConfirm').style.background=danger?'var(--danger)':'var(--accent)';
+  $('modalConfirm').style.borderColor=danger?'var(--danger)':'var(--accent)';
+  $('modalConfirm').style.color=danger?'#fff':'#000';
+  $('confirmModal').classList.add('open');
+  $('modalConfirm').onclick=()=>{ closeModal(); onConfirm(); };
+}
+function closeModal(){ $('confirmModal').classList.remove('open'); }
+$('modalCancel').addEventListener('click',closeModal);
+$('confirmModal').addEventListener('click',e=>{ if(e.target===$('confirmModal'))closeModal(); });
+
+/* ── Reset ── */
+function applySettingsToUI(){
+  wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       ()=>{});
+  wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         ()=>{});
+  wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', ()=>{});
+  wireSlider('speechRateSlider','speechRateVal',settings.speechRate,0.5,3,    0.1, v=>v.toFixed(1)+'×', ()=>{});
+  wireSlider('beepVolSlider', 'beepVolVal',   settings.beepVol,    0,   1,    0.05,v=>Math.round(v*100)+'%', ()=>{});
+  wireSlider('coyoteSlider',  'coyoteVal',    settings.coyoteMs,   100, 2000, 50,  v=>v+' ms',       ()=>{});
+  wireSlider('adaptUpSlider', 'adaptUpVal',   settings.adaptUp,    1,   100,  1,   v=>v+' ms',       ()=>{});
+  wireSlider('adaptDownSlider','adaptDownVal',settings.adaptDown,  1,   100,  1,   v=>v+' ms',       ()=>{});
+  $('nbackInput').value=settings.nback; updateNbackUI(settings.nback);
+  $('numRangeMin').value=settings.numRangeMin;
+  $('numRangeMax').value=settings.numRangeMax;
+  updateNumRangeHint();
+  applyArithUI();
+  $('numpadToggle').checked=settings.useNumpad;  $('numpadOpts').classList.toggle('open',settings.useNumpad);
+  $('beepToggle').checked=settings.beepEnabled;  $('beepOpts').classList.toggle('open',settings.beepEnabled);
+  buildBeepTypeList();
+  $('flashToggle').checked=settings.flashEnabled;
+  $('fumbleToggle').checked=settings.fumble;
+  $('fatFingerToggle').checked=settings.fatFinger;
+  $('smoothAdaptToggle').checked=settings.smoothAdapt; $('smoothAdaptOpts').classList.toggle('open',settings.smoothAdapt);
+  $('coyoteToggle').checked=settings.coyote;     $('coyoteOpts').classList.toggle('open',settings.coyote);
+  $('singleDigitToggle').checked=settings.singleDigit;
+  $('includeZeroToggle').checked=settings.includeZero;
+  $('minimalInputToggle').checked=settings.minimalInput;
+  $('hideInputToggle').checked=settings.hideInput;
+  $('ictToggle').checked=settings.ict;         $('ictOpts').classList.toggle('open',settings.ict);
+  $('ictNoInputToggle').checked=settings.ictNoInput;
+  $('ndmToggle').checked=settings.ndm;
+  $('rrtToggle').checked=settings.rrt;
+  wirePresRadios();
+  modeTabBtns.forEach(b=>b.classList.toggle('active',b.dataset.tab===settings.mode));
+  $('tab-standard').classList.toggle('active',settings.mode==='standard');
+  $('tab-custom').classList.toggle('active',settings.mode==='custom');
+}
+/* Presentation mode radios */
+function wirePresRadios(){
+  // Set checked state based on current settings; listener added once on each radio
+  document.querySelectorAll('input[name="presMode"]').forEach(r=>{
+    r.checked = r.value===settings.numberPresentation;
+  });
+}
+// Add the change listener once at init (not inside wirePresRadios to avoid duplicates)
+document.querySelectorAll('input[name="presMode"]').forEach(r=>{
+  r.addEventListener('change',()=>{ settings.numberPresentation=r.value; saveSettings(); });
+});
+wirePresRadios();
+
+/* ── Arithmetic mode radios ─────────────────────────────────────────
+   Four modes: add, sub, mul, div.
+   Updates the hint text and the callout example on every change.
+── */
+const arithHints = {
+  add: 'Add current + previous. The classic working-memory number task.',
+  sub: 'Subtract: previous − current. E.g. 7, 5 → type 2 (7−5), then 4 → 5−4 → type 1.',
+  mul: 'Multiply: previous × current. E.g. 3, 4 → type 12 (3×4), then 2 → 4×2 → type 8.',
+  div: 'Divide: previous ÷ current (rounds to nearest whole). Numbers are picked so the result is always exact.',
+};
+const arithExamples = {
+  add: '<strong>Addition:</strong> You hear <strong>3</strong>, then <strong>7</strong> → 3+7 → type <strong>10</strong>. Next <strong>2</strong> → 7+2 → type <strong>9</strong>.',
+  sub: '<strong>Subtraction:</strong> You hear <strong>7</strong>, then <strong>5</strong> → 7−5 → type <strong>2</strong>. Next <strong>4</strong> → 5−4 → type <strong>1</strong>.',
+  mul: '<strong>Multiplication:</strong> You hear <strong>3</strong>, then <strong>4</strong> → 3×4 → type <strong>12</strong>. Next <strong>2</strong> → 4×2 → type <strong>8</strong>.',
+  div: '<strong>Division:</strong> You hear <strong>8</strong>, then <strong>4</strong> → 8÷4 → type <strong>2</strong>. Next <strong>2</strong> → 4÷2 → type <strong>2</strong>.',
+};
+function applyArithUI(){
+  document.querySelectorAll('input[name="arithMode"]').forEach(r=>{ r.checked=r.value===settings.arithMode; });
+  const hint=$('arithHint'); if(hint) hint.textContent=arithHints[settings.arithMode]||arithHints.add;
+  const ex=$('exampleText'); if(ex) ex.innerHTML=arithExamples[settings.arithMode]||arithExamples.add;
+  updateNbackUI(settings.nback); // refresh n-back description (includes operation name)
+}
+document.querySelectorAll('input[name="arithMode"]').forEach(r=>{
+  r.addEventListener('change',()=>{ settings.arithMode=r.value; saveSettings(); applyArithUI(); });
+});
+applyArithUI();
+
+/* ── Number Range inputs ─────────────────────────────────────────────
+   numRangeMin/numRangeMax define the pool of integers the voice says.
+   Division mode ignores these and generates its own valid pairs.
+── */
+function updateNumRangeHint(){
+  const lo=settings.numRangeMin, hi=settings.numRangeMax;
+  const h=$('numRangeHint'); if(h) h.textContent=`Numbers spoken will be in the range [${lo}, ${hi}]`;
+}
+$('numRangeMin').value=settings.numRangeMin;
+$('numRangeMax').value=settings.numRangeMax;
+updateNumRangeHint();
+$('numRangeMin').addEventListener('change',()=>{
+  let v=clamp(+$('numRangeMin').value||0,0,settings.numRangeMax-1);
+  settings.numRangeMin=v; $('numRangeMin').value=v; updateNumRangeHint(); saveSettings();
+});
+$('numRangeMax').addEventListener('change',()=>{
+  let v=clamp(+$('numRangeMax').value||2, settings.numRangeMin+1, 99);
+  settings.numRangeMax=v; $('numRangeMax').value=v; updateNumRangeHint(); saveSettings();
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   RULE SWITCH MODE
+   ─────────────────────────────────────────────────────────────────
+   When active, at the start of each trial one of the enabled
+   operations is chosen at random. The stimulus box gets a translucent
+   colour tint to show which operation is currently active.
+   switchOps  = { add:bool, sub:bool, mul:bool, div:bool }
+   switchColors = { add:hex, sub:hex, mul:hex, div:hex }
+   activeRuleOp = the operation chosen for the current trial
+════════════════════════════════════════════════════════════════════ */
+let activeRuleOp = 'add'; // current trial's operation when Rule Switch is on
+
+const OP_LABELS = {add:'+ Addition', sub:'− Subtraction', mul:'× Multiplication', div:'÷ Division'};
+const OP_KEYS   = ['add','sub','mul','div'];
+
+function buildSwitchOpList(){
+  const list=$('switchOpList'); if(!list) return;
+  list.innerHTML='';
+  OP_KEYS.forEach(op=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px';
+    const cb=document.createElement('input');
+    cb.type='checkbox'; cb.id='sw_'+op;
+    cb.style.accentColor=settings.switchColors[op]||'#4fffb0';
+    cb.checked=!!settings.switchOps[op];
+    cb.addEventListener('change',()=>{
+      settings.switchOps[op]=cb.checked; validateSwitchOps(); saveSettings();
+    });
+    const lbl=document.createElement('label');
+    lbl.htmlFor='sw_'+op;
+    lbl.style.cssText='font-size:.875rem;color:var(--text-dim);cursor:pointer;flex:1';
+    lbl.textContent=OP_LABELS[op];
+    // Colour picker
+    const colWrap=document.createElement('div');
+    colWrap.style.cssText='display:flex;align-items:center;gap:4px';
+    const colInput=document.createElement('input');
+    colInput.type='color'; colInput.value=settings.switchColors[op]||'#4fffb0';
+    colInput.style.cssText='width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0';
+    colInput.title='Indicator colour for '+OP_LABELS[op];
+    colInput.addEventListener('input',()=>{
+      settings.switchColors[op]=colInput.value;
+      cb.style.accentColor=colInput.value; saveSettings();
+    });
+    const colLabel=document.createElement('span');
+    colLabel.style.cssText='font-size:.62rem;font-family:var(--mono);color:var(--text-faint)';
+    colLabel.textContent='colour';
+    colWrap.appendChild(colInput); colWrap.appendChild(colLabel);
+    row.appendChild(cb); row.appendChild(lbl); row.appendChild(colWrap);
+    list.appendChild(row);
+  });
+}
+
+function validateSwitchOps(){
+  const active=OP_KEYS.filter(k=>settings.switchOps[k]);
+  const warn=$('switchWarning');
+  if(warn) warn.style.display = active.length<2 ? 'block' : 'none';
+  return active.length>=2;
+}
+
+function applyRuleSwitchUI(){
+  const on=settings.ruleSwitch;
+  $('ruleSwitchToggle').checked=on;
+  $('arithSingleRow').style.display=on?'none':'flex';
+  $('arithSwitchRow').style.display=on?'flex':'none';
+  if(on) buildSwitchOpList();
+  validateSwitchOps();
+}
+
+$('ruleSwitchToggle').addEventListener('change',()=>{
+  settings.ruleSwitch=$('ruleSwitchToggle').checked;
+  saveSettings(); applyRuleSwitchUI();
+});
+applyRuleSwitchUI();
+
+/* Pick a random active operation for the current trial (Rule Switch only) */
+function pickRuleOp(){
+  const active=OP_KEYS.filter(k=>settings.switchOps[k]);
+  if(active.length===0) return 'add';
+  return active[Math.floor(Math.random()*active.length)];
+}
+
+/* Apply the rule switch colour overlay in the stimulus box */
+function applyRuleSwitchColor(op){
+  const el=$('ruleSwitchColor'); if(!el) return;
+  if(!settings.ruleSwitch || !op){ el.style.opacity='0'; return; }
+  const hex=settings.switchColors[op]||'#4fffb0';
+  // Convert hex to rgba with low opacity so it's a tint not a solid fill
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  el.style.background=`rgba(${r},${g},${b},0.18)`;
+  el.style.borderColor=hex;
+  el.style.opacity='1';
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SETTINGS PROFILES
+   ─────────────────────────────────────────────────────────────────
+   Stored in localStorage under 'cct_profiles' as an array of:
+     { id, name, settings, createdAt }
+   The Share button can export all current settings OR a single
+   profile as a URL param.
+════════════════════════════════════════════════════════════════════ */
+const PROFILES_KEY='cct_profiles';
+function loadProfiles(){ try{return JSON.parse(localStorage.getItem(PROFILES_KEY))||[];}catch{return[];} }
+function saveProfiles(p){ try{localStorage.setItem(PROFILES_KEY,JSON.stringify(p));}catch{} }
+
+/* ── Profiles panel open/close ── */
+$('profilesBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  $('profilesPanel').classList.toggle('open');
+});
+document.addEventListener('click', e=>{
+  if(!$('profilesWrap').contains(e.target)) $('profilesPanel').classList.remove('open');
+});
+
+function renderProfiles(){
+  const profiles=loadProfiles();
+  const list=$('profileList');
+  const empty=$('profileEmpty');
+  if(!list) return;
+  Array.from(list.children).forEach(c=>{ if(c!==empty) c.remove(); });
+  if(profiles.length===0){ if(empty) empty.style.display=''; return; }
+  if(empty) empty.style.display='none';
+  profiles.forEach(p=>{
+    const row=document.createElement('div');
+    row.className='profile-row';
+    const info=document.createElement('span');
+    info.className='profile-row-name';
+    const date=new Date(p.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'});
+    info.textContent=`${p.name}  ·  ${date}`;
+    info.title=p.name;
+    const loadBtn=document.createElement('button');
+    loadBtn.className='btn btn-ghost btn-sm'; loadBtn.style.cssText='font-size:.65rem;padding:1px 7px';
+    loadBtn.textContent='Load';
+    loadBtn.addEventListener('click',()=>{
+      openModal(`Load "${p.name}"?`,'Overwrites your current settings.',()=>{
+        Object.assign(settings,p.settings); saveSettings(); applySettingsToUI();
+        applyArithUI(); applyRuleSwitchUI(); updateNumRangeHint();
+        $('profilesPanel').classList.remove('open');
+      },'Load',false);
+    });
+    const shareBtn=document.createElement('button');
+    shareBtn.className='btn btn-ghost btn-sm'; shareBtn.style.cssText='font-size:.65rem;padding:1px 7px';
+    shareBtn.textContent='Share';
+    shareBtn.addEventListener('click',()=>{
+      const payload=btoa(JSON.stringify({profileName:p.name,settings:p.settings}));
+      const url=location.href.split('?')[0]+'?p='+payload;
+      navigator.clipboard.writeText(url).then(()=>{
+        shareBtn.textContent='✓';
+        setTimeout(()=>shareBtn.textContent='Share',2000);
+      }).catch(()=>prompt('Copy link:',url));
+    });
+    const delBtn=document.createElement('button');
+    delBtn.className='btn btn-sm'; delBtn.style.cssText='font-size:.65rem;padding:1px 7px;background:var(--danger-dim);color:var(--danger);border-color:var(--danger-dim)';
+    delBtn.textContent='✕';
+    delBtn.addEventListener('click',()=>{
+      openModal(`Delete "${p.name}"?`,'Profile will be removed.',()=>{
+        saveProfiles(loadProfiles().filter(x=>x.id!==p.id)); renderProfiles();
+      },'Delete',true);
+    });
+    row.appendChild(info); row.appendChild(loadBtn); row.appendChild(shareBtn); row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+renderProfiles();
+
+$('saveProfileBtn').addEventListener('click',()=>{
+  const name=prompt('Name for this profile:','Profile '+(loadProfiles().length+1));
+  if(!name||!name.trim()) return;
+  const profiles=loadProfiles();
+  profiles.unshift({ id:Date.now(), name:name.trim(), settings:Object.assign({},settings), createdAt:Date.now() });
+  if(profiles.length>20) profiles.pop(); // keep max 20
+  saveProfiles(profiles); renderProfiles();
+});
+
+// Check URL for imported profile (?p=) or imported settings (?s=)
+(function checkImport(){
+  const params=new URLSearchParams(location.search);
+  const s=params.get('s'), p=params.get('p');
+  if(!s && !p) return;
+  if(p){
+    // Profile import
+    try{
+      const data=JSON.parse(atob(p));
+      if(data.settings){
+        const name=data.profileName||'Imported profile';
+        $('importBannerText').textContent=`Incoming shared profile: "${name}". Save it to your profiles or apply it directly?`;
+        $('importBanner').style.display='block';
+        // Swap button labels
+        $('importApplyBtn').textContent='Apply now';
+        $('importApplyBtn').addEventListener('click',()=>{
+          Object.assign(settings, data.settings); saveSettings(); applySettingsToUI();
+          applyArithUI(); applyRuleSwitchUI(); $('importBanner').style.display='none';
+          history.replaceState(null,'',location.pathname);
+        });
+        // Add a Save button
+        const saveBtn=document.createElement('button');
+        saveBtn.className='btn btn-ghost btn-sm'; saveBtn.textContent='Save as profile';
+        saveBtn.addEventListener('click',()=>{
+          const profiles=loadProfiles();
+          profiles.unshift({id:Date.now(),name,settings:data.settings,createdAt:Date.now()});
+          saveProfiles(profiles); renderProfiles();
+          $('importBanner').style.display='none';
+          history.replaceState(null,'',location.pathname);
+        });
+        $('importBanner').querySelector('div').appendChild(saveBtn);
+        $('importDismissBtn').addEventListener('click',()=>{
+          $('importBanner').style.display='none'; history.replaceState(null,'',location.pathname);
+        });
+      }
+    }catch{}
+    return;
+  }
+  // Settings import (original ?s= path)
+  const imported=decodeSettings(s);
+  if(!imported) return;
+  const keys=Object.keys(imported).filter(k=>SHARE_KEYS.includes(k));
+  $('importBannerText').textContent=`Incoming shared settings (${keys.length} options). Apply them now?`;
+  $('importBanner').style.display='block';
+  $('importApplyBtn').addEventListener('click',()=>{
+    Object.assign(settings,imported); saveSettings(); applySettingsToUI();
+    applyArithUI(); applyRuleSwitchUI(); $('importBanner').style.display='none';
+    history.replaceState(null,'',location.pathname);
+  });
+  $('importDismissBtn').addEventListener('click',()=>{
+    $('importBanner').style.display='none'; history.replaceState(null,'',location.pathname);
+  });
+})();
+
+/* ESC key → exit session (global keydown listener) */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && sessionActive){
+    e.preventDefault();
+    openModal('End training session?','Progress for this session will still be saved.',endSession,'Exit',true);
+  }
+});
+
+/* Reset app (wipe all data) */
+$('resetAppBtn').addEventListener('click',()=>{
+  openModal(
+    'Reset entire app?',
+    'This will delete ALL session history, progress data, streaks, and settings. This cannot be undone.',
+    ()=>{
+      localStorage.clear();
+      location.reload();
+    },
+    'Wipe everything', true
+  );
+});
+
+$('backToSettingsBtn').addEventListener('click',()=>setPage('pageHome'));
+
+$('resetBtn').addEventListener('click',()=>{
+  openModal('Reset all settings to defaults?','Every setting will be restored to its original value. Your session history and progress data are not affected.', ()=>{
+    settings=Object.assign({},DEFAULTS); saveSettings(); applySettingsToUI();
+  },'Reset',true);
+});
+
+/* ══ SPEECH ════════════════════════════════════════════════════════════
+   Firefox's speechSynthesis crashes with "too much recursion" when
+   speak() is called while the engine is still processing a previous
+   utterance — even from a setTimeout. The fix: only ever call speak()
+   from the utterance's own onend/onerror callback (i.e. when the engine
+   is known to be idle). We queue the number and speak it when safe.
+
+   Queue holds at most 1 pending number — older ones are discarded so
+   we always say the most recent number if we fall behind.
+═══════════════════════════════════════════════════════════════════════ */
+const synth = window.speechSynthesis;
+(function(){ const v=synth.getVoices(); if(!v.length) synth.addEventListener('voiceschanged',()=>{},{ once:true }); })();
+
+let speechQueue  = null;   // the number waiting to be spoken (only 1 slot)
+let speechBusy   = false;  // true while synth is actively speaking
+
+function _doSpeak(){
+  if(speechQueue===null || !sessionActive){ speechBusy=false; return; }
+  const num = speechQueue;
+  speechQueue = null;
+  speechBusy  = true;
+  try{
+    const u = new SpeechSynthesisUtterance(String(num));
+    u.lang   = 'en-US';
+    u.rate   = clamp(settings.speechRate, 0.1, 3);
+    u.volume = 1;
+    u.onend   = ()=>{ speechBusy=false; _doSpeak(); };
+    u.onerror = ()=>{ speechBusy=false; _doSpeak(); };
+    synth.speak(u);
+  }catch(e){
+    speechBusy=false; // if speak() itself throws, reset and try next
+  }
+}
+
+function speakNumber(n){
+  if(!sessionActive) return;
+  speechQueue = n;          // overwrite any older queued number
+  if(!speechBusy) _doSpeak(); // if idle, speak immediately; else onend will trigger
+}
+
+function playErrorFlash(){
+  /* Flash the stimulus box red for ~200ms when Error Flash is enabled */
+  if(!settings.flashEnabled) return;
+  const el=$('errorFlash');
+  el.classList.add('active');
+  setTimeout(()=>el.classList.remove('active'),200);
+}
+
+function triggerError(){
+  playBeep();
+  playErrorFlash();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DISTINCTION MODE STATE
+   Both NDM (Number Distinction Mode) and SDM (Sum Distinction Mode)
+   require the player to press an arrow key each trial indicating
+   whether the current value is smaller (◀), larger (▶), or equal (▼)
+   compared to the previous value.
+
+   NDM compares: current SPOKEN NUMBER vs previous spoken number
+   SDM compares: current computed SUM vs previous correct sum
+
+   rrtArrowGiven / ndmArrowGiven track what arrow was pressed this trial.
+   prevCorrectAnswerVal tracks the previous correct SUM (for SDM).
+   prevSpokenNum tracks the previous spoken number (for NDM).
+════════════════════════════════════════════════════════════════════ */
+let rrtArrowGiven  = null; // 'left'|'right'|'down'|null — SDM arrow this trial
+let ndmArrowGiven  = null; // 'left'|'right'|'down'|null — NDM arrow this trial
+let prevCorrectAnswerVal = null; // last correct SUM value (for SDM comparison)
+let prevSpokenNum  = null; // last spoken number (for NDM comparison)
+
+/* Return the required arrow direction for SDM given current and previous sum */
+function requiredSdmArrow(currentSum, prevSum){
+  if(prevSum===null) return null; // first trial — no comparison possible
+  if(currentSum < prevSum)  return 'left';
+  if(currentSum > prevSum)  return 'right';
+  return 'down'; // equal
+}
+
+/* Return the required arrow direction for NDM given current and previous number */
+function requiredNdmArrow(currentNum, prevNum){
+  if(prevNum===null) return null; // first trial — no comparison possible
+  if(currentNum < prevNum)  return 'left';
+  if(currentNum > prevNum)  return 'right';
+  return 'down'; // equal
+}
+
+/* Update the RRT/NDM prompt UI visible during a trial */
+function updateDistinctionPrompt(){
+  const promptEl = $('rrtPrompt');
+  if(!settings.rrt && !settings.ndm){ promptEl.style.display='none'; return; }
+  promptEl.style.display='block';
+  let parts=[];
+  if(settings.ndm) parts.push('NDM: ◀ smaller · ▶ larger · ▼ same (vs prev number)');
+  if(settings.rrt) parts.push('SDM: ◀ smaller · ▶ larger · ▼ same (vs prev sum)');
+  $('rrtPromptText').textContent=parts.join('   |   ');
+
+  // Show what was already pressed this trial
+  let given=[];
+  if(settings.ndm && ndmArrowGiven) given.push('NDM:'+({left:'◀',right:'▶',down:'▼'}[ndmArrowGiven]||'?'));
+  if(settings.rrt && rrtArrowGiven) given.push('SDM:'+({left:'◀',right:'▶',down:'▼'}[rrtArrowGiven]||'?'));
+  $('rrtArrowGiven').textContent = given.length ? '  '+given.join('  ') : '';
+}
+
+/* ══ FUMBLE ══ */
+function isFumble(userVal,expected){
+  if(!settings.fumble) return false;
+  const s=String(userVal);
+  if(s.length<2) return false;
+  const rev=+s.split('').reverse().join('');
+  return rev===expected && rev!==userVal;
+}
+
+/* ══ FAT FINGER ══
+   The player may have fat-fingered several digits at once.
+   We check: among all substrings of the typed string that match
+   the expected answer, is there one? Max 4 total digits typed.
+*/
+function isFatFinger(userVal, expected){
+  if(!settings.fatFinger) return false;
+  if(expected===null) return false;
+  const s=String(userVal);
+  if(s.length<2 || s.length>4) return false; // ≤4 digit cap
+  const expStr=String(expected);
+  // Check if expected is a substring of what was typed
+  return s.includes(expStr);
+}
+
+/* ══ MINIMAL INPUT ══
+   User only types the ones digit (0–9).
+   A single-digit input matches if it equals correctAnswer % 10.
+   Full numbers still accepted too (so you can still type 13 if you want).
+   Not active on ICT trials (those require no input or ArrowUp).
+*/
+function isMinimalMatch(userVal, expected){
+  if(!settings.minimalInput) return false;
+  if(expected===null) return false;
+  // Only treat as minimal if input is a single digit and expected is two digits
+  const inputStr = String(userVal);
+  if(inputStr.length !== 1) return false; // let full-number path handle multi-digit
+  return userVal === expected % 10;
+}
+
+/* ══ NUMBER GENERATION ══════════════════════════════════════════════
+   Picks the next number to be spoken, respecting:
+   - numRangeMin / numRangeMax (user-defined range of spoken numbers)
+   - arithMode (addition, subtraction, multiplication, division)
+   - singleDigit mode (answer must stay in 0–9)
+   - includeZero (whether 0 is a valid spoken number)
+
+   For DIVISION the generator ensures the previous number is exactly
+   divisible by the new number (whole-number result every time).
+   For MULTIPLICATION with singleDigit it keeps prev×new ≤ 9.
+   For SUBTRACTION the result can be negative — that is fine and expected.
+════════════════════════════════════════════════════════════════════ */
+function pickNextNumber(refNum){
+  const lo = Math.max(settings.includeZero ? 0 : 1, settings.numRangeMin);
+  const hi = settings.numRangeMax;
+  const safeHi = Math.max(lo, hi);
+
+  /* Division mode: pick a divisor that divides refNum exactly */
+  if(settings.arithMode==='div' && refNum!==null && refNum!==0){
+    // Build list of valid divisors in [lo..safeHi] that divide refNum
+    const divisors=[];
+    for(let d=Math.max(1,lo);d<=safeHi;d++){
+      if(refNum % d === 0) divisors.push(d);
+    }
+    if(divisors.length>0) return divisors[rand(0,divisors.length-1)];
+    // Fallback: just avoid 0
+    return rand(Math.max(1,lo), safeHi);
+  }
+
+  /* 1-digit answer mode for addition: keep sum ≤ 9 */
+  if(settings.singleDigit && settings.arithMode==='add' && refNum!==null){
+    const maxAllowed = 9-(refNum??0);
+    const cap = Math.max(lo, Math.min(safeHi, maxAllowed));
+    return rand(lo, cap);
+  }
+
+  /* 1-digit answer mode for multiplication: keep product ≤ 9 */
+  if(settings.singleDigit && settings.arithMode==='mul' && refNum!==null && refNum>0){
+    const maxAllowed = Math.floor(9/refNum);
+    const cap = Math.max(lo, Math.min(safeHi, maxAllowed));
+    return rand(lo, cap);
+  }
+
+  /* Default: any number in [lo, safeHi] */
+  return rand(lo, safeHi);
+}
+
+/* Compute the correct answer given the two n-back numbers and the active operation */
+function computeAnswer(current, previous){
+  switch(settings.arithMode){
+    case 'sub': return previous - current;
+    case 'mul': return previous * current;
+    case 'div': return previous===0 ? 0 : Math.round(previous / current);
+    default:    return current + previous; // 'add'
+  }
+}
+
+function numpadRange(){
+  /* Returns [min, max] for the answer numpad buttons.
+     Covers the realistic output range of the selected operation.
+     For subtraction results can be negative; for multiplication they can be large. */
+  if(settings.singleDigit) return [0, 9];
+  const lo=settings.numRangeMin, hi=settings.numRangeMax;
+  switch(settings.arithMode){
+    case 'sub': return [lo-hi, hi-lo];         // widest subtraction range
+    case 'mul': return [lo*lo, hi*hi];          // widest multiplication range
+    case 'div': return [1, hi];                 // division always ≥1
+    default:    return [lo+lo, hi+hi];          // addition
+  }
+}
+
+/* ══ ICT HELPERS ══ */
+/* ictMaxSum: the "no-go" threshold for ICT mode.
+   A trial is no-go when current answer + previous answer equals this value.
+   For addition this is 2 × numRangeMax (the highest possible sum).
+   For other operations we use the same logic adapted to the range. */
+function ictMaxSum(){
+  if(settings.singleDigit) return 9;
+  return settings.numRangeMax * 2; // works naturally for addition; reasonable proxy for other modes
+}
+
+// Returns true if this trial is a no-go (inhibitory) stimulus.
+// Condition: correctAnswer + prevCorrectAnswer === maxSum
+// (i.e. the two consecutive expected sums are inverses of each other)
+function isIctTrial(correct, prevCorrect){
+  if(!settings.ict) return false;
+  if(correct===null || prevCorrect===null) return false;
+  return correct + prevCorrect === ictMaxSum();
+}
+
+let ictTrial = false; // is the current trial an ICT no-go trial?
+
+/* ══ TRAINING ENGINE STATE ══ */
+let sessionActive=false, currentISI=3000, lowestISI=3000;
+let consecutiveOk=0, consecutiveErr=0;
+let totalCorrect=0, totalAttempts=0, currentStreak=0;
+let trialHistory=[], numberSequence=[];
+let correctAnswer=null, prevCorrectAnswer=null;
+let answerProcessed=false, prevAnswerMissed=false;
+let timerSec=0;
+let timerInterval=null, trialTimeout=null, coyoteTimeout=null;
+let coyoteActive=false, sessionDuration=0;
+
+function adaptISI(ok){
+  if(settings.smoothAdapt){
+    // Smooth mode: every trial moves the ISI by the configured step
+    if(ok){ currentISI=clamp(currentISI-settings.adaptUp,  1,6000); consecutiveOk++;  consecutiveErr=0; }
+    else  { currentISI=clamp(currentISI+settings.adaptDown, 1,6000); consecutiveErr++; consecutiveOk=0; }
+  } else {
+    // Default stepped mode: change ISI after streaks
+    if(ok){ consecutiveOk++; consecutiveErr=0; if(consecutiveOk>=3){ currentISI=clamp(currentISI-200,1,6000); consecutiveOk=0; } }
+    else  { consecutiveErr++; consecutiveOk=0; if(consecutiveErr>=2){ currentISI=clamp(currentISI+250,1,6000); consecutiveErr=0; } }
+  }
+  if(currentISI<lowestISI) lowestISI=currentISI;
+  $('isiDisplay').textContent=currentISI+' ms';
+}
+
+function runTrial(){
+  if(!sessionActive) return;
+  closeCoyoteWindow();
+  closeIctState();
+
+  // Clean up from previous trial's visual feedback
+  $('answerInput').classList.remove('correct','wrong','coyote','inhibit');
+  $('answerInput').value='';
+  $('feedbackBand').className='feedback-band';
+  $('stimulusBox').classList.remove('flash-correct','flash-wrong');
+  // Reset per-trial arrow state for distinction modes
+  rrtArrowGiven=null; ndmArrowGiven=null;
+
+  const n=settings.nback;
+  const refNum = numberSequence.length >= n ? numberSequence[numberSequence.length - n] : null;
+  const newNum = pickNextNumber(refNum);
+  // For NDM: the "previous" spoken number is the one that is n positions back
+  // (i.e. the same number the player is adding to — consistent with n-back depth)
+  const prevNumForNdm = numberSequence.length >= n ? numberSequence[numberSequence.length - n] : null;
+  numberSequence.push(newNum);
+
+  // Settle previous trial as missed if unanswered
+  if(!answerProcessed && correctAnswer!==null && !ictTrial){
+    prevAnswerMissed=true;
+  } else {
+    prevAnswerMissed=false;
+  }
+  prevCorrectAnswer=correctAnswer;
+  // Update distinction mode "previous" references
+  // prevCorrectAnswerVal = the numeric value of the last CORRECT sum (for SDM)
+  // prevSpokenNum = the number spoken last trial (for NDM)
+  if(correctAnswer!==null) prevCorrectAnswerVal=correctAnswer; // updated when a trial had a valid answer
+  prevSpokenNum = prevNumForNdm; // the number spoken in the previous trial
+
+  if(numberSequence.length<=n){ correctAnswer=null; answerProcessed=true; ictTrial=false; }
+  else{
+    // Compute the expected answer using the active arithmetic operation
+    correctAnswer = computeAnswer(newNum, numberSequence[numberSequence.length-1-n]);
+    ictTrial = isIctTrial(correctAnswer, prevCorrectAnswer);
+    answerProcessed=false;
+  }
+
+  // ── Visual presentation ──
+  const stimEl=$('stimNumber');
+  const showVisual = settings.numberPresentation!=='audio';
+  if(showVisual){
+    stimEl.textContent=newNum;
+    stimEl.classList.remove('hidden-num');
+    stimEl.classList.add('flash');
+  } else {
+    stimEl.textContent='·';
+    stimEl.classList.add('hidden-num');
+    stimEl.classList.remove('flash');
+  }
+  $('stimulusBox').classList.add('pulse');
+
+  const opSymbol = {add:'+', sub:'−', mul:'×', div:'÷'}[settings.arithMode]||'+';
+  if(ictTrial){
+    $('stimInstruction').textContent='⚠ INHIBIT — press ↑ Arrow Up';
+    $('stimulusBox').classList.add('ict-active');
+  } else {
+    $('stimInstruction').textContent=correctAnswer!==null
+      ? `Apply ${opSymbol} to previous`
+      : 'Remember…';
+  }
+
+  // Previous number is intentionally NOT shown — the player must recall it from memory.
+  $('lastSeenLabel').textContent='';
+
+  // ── Audio presentation (non-blocking — fires and forgets) ──
+  if(settings.numberPresentation!=='visual'){
+    speakNumber(newNum); // intentionally NOT awaited
+  }
+
+  // Flash removal after short delay
+  setTimeout(()=>{
+    stimEl.classList.remove('flash');
+    $('stimulusBox').classList.remove('pulse');
+  },180);
+
+  if(correctAnswer===null){
+    // No answer needed for warm-up trials (building up n-back buffer).
+    // Minimum 50ms prevents recursion stack overflow at very low ISI values.
+    trialTimeout=setTimeout(runTrial, Math.max(50, currentISI));
+    return;
+  }
+
+  // ── Input setup ──
+  if(ictTrial){
+    $('answerInput').disabled=true;
+    $('answerInput').value='';
+    $('answerInput').className='answer-input';
+    $('feedbackBand').className='feedback-band';
+    $('inputHint').textContent=settings.ictNoInput
+      ? 'INHIBIT: do NOT press anything — silence is the correct response'
+      : 'INHIBIT: press ↑ Arrow Up — do NOT type a number';
+    deselect();
+  } else {
+    $('answerInput').disabled=false;
+    $('answerInput').value='';
+    $('feedbackBand').className='feedback-band';
+    $('answerInput').className='answer-input' + (settings.hideInput ? ' input-hidden' : '');
+    $('inputHint').textContent=settings.minimalInput
+      ? 'Type just the ones digit (e.g. 3 for 13) · or full number'
+      : 'Type your answer · Enter to confirm';
+    if(settings.useNumpad) deselect(); else $('answerInput').focus();
+  }
+
+  if(settings.coyote && prevAnswerMissed && prevCorrectAnswer!==null) openCoyoteWindow();
+  updateDistinctionPrompt();
+
+  // Schedule next trial unconditionally after ISI — pace never changes.
+  // Math.max(50,...) prevents stack overflow at very low ISI settings.
+  trialTimeout=setTimeout(()=>{
+    if(!sessionActive) return;
+
+    if(!answerProcessed && correctAnswer!==null){
+      if(ictTrial){
+        if(settings.ictNoInput){
+          // Silence was the only valid answer — timeout = correct inhibition
+          totalAttempts++; totalCorrect++; currentStreak++;
+          $('feedbackBand').className='feedback-band inhibit';
+          $('inputHint').textContent='✓ Inhibited (silence)';
+          adaptISI(true);
+          trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
+        } else {
+          // Arrow Up mode — timeout without pressing ↑ = missed inhibition (wrong)
+          totalAttempts++; currentStreak=0;
+          $('feedbackBand').className='feedback-band wrong';
+          $('stimulusBox').classList.add('flash-wrong');
+          triggerError();
+          adaptISI(false);
+          trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
+        }
+      } else {
+        // Normal trial — timeout = missed
+        totalAttempts++; currentStreak=0;
+        $('feedbackBand').className='feedback-band wrong';
+        $('stimulusBox').classList.add('flash-wrong');
+        triggerError();
+        adaptISI(false);
+        trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:null,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:false,isi:currentISI});
+      }
+      answerProcessed=true;
+      updateTrainStats();
+    }
+
+    runTrial();
+  }, Math.max(50, currentISI));
+}
+
+function openCoyoteWindow(){
+  coyoteActive=true;
+  $('stimulusBox').classList.add('coyote-active');
+  $('inputHint').textContent='⏱ Coyote window — late answer still counts for previous trial';
+  coyoteTimeout=setTimeout(closeCoyoteWindow,settings.coyoteMs);
+}
+function closeCoyoteWindow(){
+  if(!coyoteActive) return;
+  coyoteActive=false; clearTimeout(coyoteTimeout);
+  $('stimulusBox').classList.remove('coyote-active');
+  $('inputHint').textContent='Type your answer · Enter to confirm';
+}
+
+function closeIctState(){
+  ictTrial=false;
+  $('stimulusBox').classList.remove('ict-active');
+}
+
+/* Process Arrow-Up inhibition — only valid when ictNoInput is OFF */
+function processInhibit(){
+  if(answerProcessed||!sessionActive||correctAnswer===null||!ictTrial) return false;
+  if(settings.ictNoInput) return false; // in no-input mode, Arrow Up is NOT valid
+  answerProcessed=true;
+  // Do NOT cancel trialTimeout — stream continues at its own pace
+  closeIctState(); closeCoyoteWindow();
+  $('answerInput').disabled=true;
+  totalAttempts++; totalCorrect++; currentStreak++;
+  $('feedbackBand').className='feedback-band inhibit';
+  $('inputHint').textContent='✓ Inhibited ↑';
+  adaptISI(true);
+  trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:'↑',ok:true,fumble:false,minimal:false,coyote:false,inhibit:true,falseAlarm:false,isi:currentISI});
+  updateTrainStats();
+  return true;
+}
+
+function processAnswer(userVal){
+  /* Coyote path — retroactive correction, never disrupts the stream */
+  if(coyoteActive && userVal!==null && prevCorrectAnswer!==null && !answerProcessed){
+    const ok=userVal===prevCorrectAnswer||isFumble(userVal,prevCorrectAnswer)||isMinimalMatch(userVal,prevCorrectAnswer);
+    if(ok){
+      if(trialHistory.length>0){
+        const prev=trialHistory[trialHistory.length-1];
+        if(!prev.ok){ prev.ok=true; prev.given=userVal; prev.coyote=true; totalCorrect++; currentStreak++; updateTrainStats(); }
+      }
+      closeCoyoteWindow();
+      $('feedbackBand').className='feedback-band coyote';
+      $('answerInput').classList.add('coyote');
+      $('inputHint').textContent='✓ Coyote catch!';
+      setTimeout(()=>{ $('answerInput').classList.remove('coyote'); $('feedbackBand').className='feedback-band'; $('answerInput').value=''; },500);
+      return true;
+    }
+  }
+
+  if(answerProcessed||!sessionActive||correctAnswer===null) return false;
+
+  /* ICT false alarm: any input when the correct response is silence */
+  if(ictTrial && settings.ictNoInput && userVal!==null){
+    answerProcessed=true;
+    closeIctState(); closeCoyoteWindow();
+    $('answerInput').disabled=true;
+    totalAttempts++; currentStreak=0;
+    $('feedbackBand').className='feedback-band wrong';
+    $('stimulusBox').classList.add('flash-wrong');
+    $('inputHint').textContent='✗ Any input is wrong here — silence only';
+    triggerError(); adaptISI(false);
+    trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
+    updateTrainStats();
+    return true;
+  }
+
+  /* ICT false alarm: typing a number when Arrow Up is the correct response */
+  if(ictTrial && !settings.ictNoInput && userVal!==null && userVal!=='key'){
+    answerProcessed=true;
+    closeIctState(); closeCoyoteWindow();
+    $('answerInput').disabled=true;
+    totalAttempts++; currentStreak=0;
+    $('feedbackBand').className='feedback-band wrong';
+    $('stimulusBox').classList.add('flash-wrong');
+    $('inputHint').textContent='✗ False alarm — press ↑ to inhibit, don\'t type';
+    triggerError(); adaptISI(false);
+    trialHistory.push({num:numberSequence.at(-1),correct:correctAnswer,given:userVal,ok:false,fumble:false,minimal:false,coyote:false,inhibit:false,falseAlarm:true,isi:currentISI});
+    updateTrainStats();
+    return true;
+  }
+
+  /* Normal answer */
+  answerProcessed=true;
+  $('answerInput').disabled=true;
+
+  const wasFumble   = userVal!==null && isFumble(userVal,correctAnswer);
+  const wasFatFinger= userVal!==null && !wasFumble && isFatFinger(userVal,correctAnswer);
+  const wasMinimal  = userVal!==null && !wasFumble && !wasFatFinger && isMinimalMatch(userVal,correctAnswer);
+  let   isCorrect   = userVal!==null && (userVal===correctAnswer||wasFumble||wasFatFinger||wasMinimal);
+
+  /* ── NDM arrow check ────────────────────────────────────────────
+     If Number Distinction Mode is on, the player must also have pressed
+     the correct arrow for the spoken number vs the previous spoken number.
+     A wrong or missing arrow overrides an otherwise correct number answer.
+  ── */
+  let ndmFail=false, sdmFail=false;
+  if(isCorrect && settings.ndm && prevSpokenNum!==null){
+    const needed = requiredNdmArrow(numberSequence.at(-1), prevSpokenNum);
+    if(needed!==null && ndmArrowGiven!==needed){ isCorrect=false; ndmFail=true; }
+  }
+
+  /* ── SDM arrow check ────────────────────────────────────────────
+     If Sum Distinction Mode is on, the player must also have pressed
+     the correct arrow for the current sum vs the previous correct sum.
+     A wrong or missing arrow overrides an otherwise correct number answer.
+  ── */
+  if(isCorrect && settings.rrt && prevCorrectAnswerVal!==null){
+    const needed = requiredSdmArrow(correctAnswer, prevCorrectAnswerVal);
+    if(needed!==null && rrtArrowGiven!==needed){ isCorrect=false; sdmFail=true; }
+  }
+
+  totalAttempts++;
+
+  if(isCorrect){
+    totalCorrect++; currentStreak++;
+    prevCorrectAnswerVal = correctAnswer;
+    $('feedbackBand').className='feedback-band correct';
+    $('answerInput').classList.add('correct');
+    $('stimulusBox').classList.add('flash-correct');
+    adaptISI(true);
+  } else {
+    currentStreak=0;
+    $('feedbackBand').className='feedback-band wrong';
+    $('answerInput').classList.add('wrong');
+    $('stimulusBox').classList.add('flash-wrong');
+    if(userVal!==null) triggerError();
+    adaptISI(false);
+    if(ndmFail) $('inputHint').textContent='✗ Wrong NDM arrow — check ◀ / ▶ / ▼';
+    if(sdmFail) $('inputHint').textContent='✗ Wrong SDM arrow — check ◀ / ▶ / ▼';
+  }
+
+  trialHistory.push({
+    num:numberSequence.at(-1), correct:correctAnswer, given:userVal,
+    ok:isCorrect, fumble:wasFumble, fatFinger:wasFatFinger, minimal:wasMinimal,
+    ndmFail, sdmFail,
+    ndmArrow:ndmArrowGiven, sdmArrow:rrtArrowGiven,
+    coyote:false, inhibit:false, falseAlarm:false, isi:currentISI
+  });
+  updateTrainStats(); deselect();
+  return true;
+}
+
+function updateTrainStats(){
+  $('tCorrect').textContent=totalCorrect; $('tTotal').textContent=totalAttempts;
+  $('tAccuracy').textContent=totalAttempts?Math.round(totalCorrect/totalAttempts*100)+'%':'–';
+  $('streakPill').textContent=`🔥 Streak: ${currentStreak}`;
+}
+
+/* Numpad */
+function buildNumpad(){
+  const pad=$('numpad'); pad.innerHTML='';
+  const [nlo,nhi]=numpadRange();
+  for(let v=nlo;v<=nhi;v++){
+    const btn=document.createElement('button');
+    btn.className='numpad-btn'; btn.textContent=v; btn.dataset.val=v;
+    btn.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const val=+btn.dataset.val;
+      if(coyoteActive){ processAnswer(val); return; }
+      if($('answerInput').disabled) return;
+      deselect();
+      if(val===correctAnswer||isFumble(val,correctAnswer)){ btn.classList.add('selected'); processAnswer(val); }
+      else{ btn.classList.add('wrong-sel'); setTimeout(()=>btn.classList.remove('wrong-sel'),320); processAnswer(val); }
+    });
+    pad.appendChild(btn);
+  }
+  applyPadScale();
+  const count=nhi-nlo+1;
+  $('numpad').style.gridTemplateColumns=`repeat(${count<=10?5:6},1fr)`;
+}
+function applyPadScale(){
+  document.querySelectorAll('.numpad-btn').forEach(b=>{ b.style.fontSize=(0.92*settings.padScale)+'rem'; b.style.minHeight=(2.2*settings.padScale)+'rem'; });
+}
+function deselect(){ $('numpad').querySelectorAll('.numpad-btn').forEach(b=>b.classList.remove('selected','wrong-sel')); }
+
+/* Timer */
+function startTimer(){
+  timerSec=sessionDuration; const total=sessionDuration;
+  $('timerDisplay').textContent=fmtTime(timerSec); $('progressFill').style.width='100%';
+  timerInterval=setInterval(()=>{
+    if(!sessionActive) return;
+    timerSec--; $('timerDisplay').textContent=fmtTime(Math.max(0,timerSec));
+    $('progressFill').style.width=(timerSec/total*100)+'%';
+    if(timerSec<=0) endSession();
+  },1000);
+}
+
+/* Start */
+function startSession(){
+  sessionActive=true;
+  // Standard mode starts at 1500ms; custom uses the configured value
+  currentISI = settings.mode==='custom' ? settings.startISI : 1500;
+  lowestISI=currentISI;
+  consecutiveOk=consecutiveErr=totalCorrect=totalAttempts=currentStreak=0;
+  trialHistory=[]; numberSequence=[]; correctAnswer=prevCorrectAnswer=null;
+  prevAnswerMissed=false; answerProcessed=true; coyoteActive=false; ictTrial=false;
+  // Reset distinction mode state
+  rrtArrowGiven=null; ndmArrowGiven=null;
+  prevCorrectAnswerVal=null; prevSpokenNum=null;
+  sessionDuration=(settings.mode==='custom'?settings.duration:20)*60;
+
+  const np=$('numpad');
+  if(settings.useNumpad){ buildNumpad(); np.classList.add('visible'); $('answerInput').style.display='none'; }
+  else{ np.classList.remove('visible'); $('answerInput').style.display=''; $('answerInput').disabled=false; }
+
+  $('nbackBadge').textContent=settings.nback+'-back';
+  $('arithBadge').textContent={add:'+',sub:'−',mul:'×',div:'÷'}[settings.arithMode]||'+';
+  $('isiDisplay').textContent=currentISI+' ms';
+  $('trainStatus').textContent='Running';
+  $('singleDigitBadge').style.display=settings.singleDigit?'':'none';
+  $('ictBadge').style.display=settings.ict?'':'none';
+  $('minimalInputBadge').style.display=settings.minimalInput?'':'none';
+  $('rrtBadge').style.display=settings.rrt?'':'none';
+  $('ndmBadge').style.display=settings.ndm?'':'none';
+  // Show number presentation mode in the topbar subtitle
+  const presLabel={'both':'audio+visual','visual':'visual only','audio':'audio only'};
+  $('trainSubStatus').textContent='adaptive · '+(presLabel[settings.numberPresentation]||'audio');
+  $('inputHint').textContent='Type your answer · Enter to confirm';
+  $('feedbackBand').className='feedback-band';
+  $('stimInstruction').textContent='Waiting for first number…';
+  $('stimNumber').textContent='·'; $('stimNumber').className='stimulus-number hidden-num';
+  updateTrainStats();
+  updateDistinctionPrompt();
+  setPage('pageTrain'); startTimer();
+  $('answerInput').addEventListener('input',handleTypedInput);
+  $('answerInput').addEventListener('keydown',handleKeydown);
+  setTimeout(runTrial,900);
+}
+
+function handleTypedInput(){
+  if($('answerInput').disabled&&!coyoteActive) return;
+  const raw=$('answerInput').value.trim();
+  if(raw.length===0) return;
+  const val=+raw;
+  if(isNaN(val)) return;
+  if(coyoteActive) return;
+  if(ictTrial){ processAnswer(val); return; }
+  if(settings.minimalInput && raw.length===1 && isMinimalMatch(val, correctAnswer)){
+    processAnswer(val); return;
+  }
+  if(val===correctAnswer||isFumble(val,correctAnswer)) processAnswer(val);
+}
+
+function handleKeydown(e){
+  /* ── Arrow Up: ICT inhibition ── */
+  if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(!sessionActive || answerProcessed) return;
+    if(ictTrial && settings.ictNoInput){
+      // In no-input mode any key press = false alarm
+      processAnswer('key');
+    } else if(ictTrial && !settings.ictNoInput){
+      processInhibit();
+    }
+    return;
+  }
+
+  /* ── Arrow Left/Right/Down ── */
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowDown'){
+    e.preventDefault();
+    if(!sessionActive || answerProcessed) return;
+    // On an ictNoInput trial any key = false alarm
+    if(ictTrial && settings.ictNoInput){ processAnswer('key'); return; }
+    const dir = e.key==='ArrowLeft'?'left': e.key==='ArrowRight'?'right':'down';
+    if(settings.ndm && ndmArrowGiven===null) ndmArrowGiven=dir;
+    if(settings.rrt && rrtArrowGiven===null) rrtArrowGiven=dir;
+    updateDistinctionPrompt();
+    return;
+  }
+
+  /* ── Enter: submit typed answer ── */
+  if(e.key!=='Enter') return;
+  if(ictTrial && settings.ictNoInput && !answerProcessed && sessionActive){
+    // Any deliberate key press during ictNoInput = false alarm
+    processAnswer('key');
+    return;
+  }
+  const val=+$('answerInput').value;
+  if(!isNaN(val)&&$('answerInput').value.trim().length>0) processAnswer(val);
+}
+
+function endSession(){
+  sessionActive=false;
+  clearInterval(timerInterval); clearTimeout(trialTimeout); clearTimeout(coyoteTimeout);
+  coyoteActive=false; ictTrial=false;
+  speechQueue=null; speechBusy=false;
+  try{ synth.cancel(); }catch(e){}
+  $('answerInput').removeEventListener('input',handleTypedInput);
+  $('answerInput').removeEventListener('keydown',handleKeydown);
+  showResults();
+}
+
+$('stopBtn').addEventListener('click',()=>{ openModal('End training session?','Progress for this session will still be saved.',endSession,'Exit',true); });
+$('startBtn').addEventListener('click',startSession);
+$('restartBtn').addEventListener('click',()=>setPage('pageHome'));
+$('backToSettingsBtn').addEventListener('click',()=>setPage('pageHome'));
+
+/* ══ SETTINGS SHARE (import / export) ══ */
+// Keys to include in the shareable payload (exclude progress-only stuff)
+const SHARE_KEYS = ['mode','duration','startISI','nback',
+  'arithMode','ruleSwitch','switchOps','switchColors',
+  'numRangeMin','numRangeMax',
+  'useNumpad','padScale',
+  'beepEnabled','beepVol','beepType','flashEnabled','speechRate','fumble','fatFinger','smoothAdapt','adaptUp','adaptDown',
+  'coyote','coyoteMs','singleDigit','includeZero','minimalInput',
+  'ict','ictNoInput','ndm','rrt','numberPresentation'];
+
+function encodeSettings(){
+  const payload={};
+  SHARE_KEYS.forEach(k=>{ if(settings[k]!==undefined) payload[k]=settings[k]; });
+  return btoa(JSON.stringify(payload));
+}
+
+function decodeSettings(str){
+  try{ return JSON.parse(atob(str)); } catch{ return null; }
+}
+
+$('exportSettingsBtn').addEventListener('click',()=>{
+  const code = encodeSettings();
+  const url  = location.href.split('?')[0]+'?s='+code;
+  navigator.clipboard.writeText(url).then(()=>{
+    $('exportSettingsBtn').textContent='✓ Link copied!';
+    setTimeout(()=>{ $('exportSettingsBtn').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Share settings`; },2000);
+  }).catch(()=>{
+    prompt('Copy this link to share your settings:', url);
+  });
+});
+
+/* ══ RESULTS ══ */
+function showResults(){
+  const acc=totalAttempts?Math.round(totalCorrect/totalAttempts*100):0;
+  const durationSec=sessionDuration-(timerSec>0?timerSec:0);
+  const prog=loadProgress();
+  prog.sessions    =(prog.sessions    ||0)+1;
+  prog.totalQ      =(prog.totalQ      ||0)+totalAttempts;
+  prog.totalCorrect=(prog.totalCorrect||0)+totalCorrect;
+  prog.bestAcc     =Math.max(prog.bestAcc   ||0,acc);
+  prog.lowestISI   =Math.min(prog.lowestISI ||9999,lowestISI);
+  const today=new Date().toDateString();
+  if(prog.lastDate!==today){
+    const yesterday=new Date(Date.now()-86400000).toDateString();
+    prog.streak=prog.lastDate===yesterday?(prog.streak||0)+1:1;
+  }
+  prog.longestStreak=Math.max(prog.longestStreak||0,prog.streak||1);
+  prog.lastDate=today;
+
+  // Store individual session record
+  if(!prog.history) prog.history=[];
+  prog.history.unshift({
+    ts: Date.now(),
+    acc,
+    correct: totalCorrect,
+    total:   totalAttempts,
+    lowestISI,
+    durationSec,
+    nback: settings.nback,
+    ict: settings.ict,
+  });
+  if(prog.history.length>100) prog.history=prog.history.slice(0,100); // keep last 100
+  saveProgress(prog);
+
+  const lifetimeAcc=prog.totalQ?Math.round(prog.totalCorrect/prog.totalQ*100):0;
+  $('resultMainStats').innerHTML=
+    mkStat('Correct Answers',`${totalCorrect} / ${totalAttempts}`)+
+    mkStat('Accuracy',acc+'%','accent-val')+
+    mkStat('Lowest Interval',lowestISI+' ms');
+  $('resultCumStats').innerHTML=
+    mkStat('Sessions',prog.sessions)+
+    mkStat('Total Questions',prog.totalQ.toLocaleString('en'))+
+    mkStat('Avg. Accuracy',lifetimeAcc+'%','accent-val')+
+    mkStat('Best Session',prog.bestAcc+'%');
+
+  $('accBarFill').style.width='0%'; $('accBarPct').textContent=acc+'%';
+  setTimeout(()=>$('accBarFill').style.width=acc+'%',120);
+
+  // Session history list
+  const histLog=$('sessionHistLog');
+  histLog.innerHTML='';
+  $('sessionHistCount').textContent=(prog.history.length)+' sessions';
+  prog.history.forEach((s,i)=>{
+    const d=new Date(s.ts);
+    const dateStr=d.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'});
+    const timeStr=d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'});
+    const mins=Math.round((s.durationSec||0)/60);
+    const tag=i===0?` <span style="color:var(--accent);font-size:.6rem">← this session</span>`:'';
+    const el=document.createElement('div');
+    el.className='trial-entry';
+    el.innerHTML=`
+      <span style="color:var(--text-faint);min-width:22px;font-size:.65rem">#${prog.history.length-i}</span>
+      <span style="flex:1;font-size:.72rem">${dateStr} ${timeStr}${tag}</span>
+      <span style="color:var(--text-dim);font-size:.7rem">${mins>0?mins+'min ':''}</span>
+      <span style="color:${s.acc>=60?'var(--accent)':s.acc>=40?'var(--warn)':'var(--danger)'};min-width:34px;text-align:right">${s.acc}%</span>
+      <span style="color:var(--text-faint);font-size:.65rem;min-width:52px;text-align:right">${s.correct}/${s.total}</span>
+    `;
+    histLog.appendChild(el);
+  });
+
+  // Assist notes
+  const coyotes=trialHistory.filter(t=>t.coyote).length;
+  const fumbles=trialHistory.filter(t=>t.fumble).length;
+  const minimals=trialHistory.filter(t=>t.minimal).length;
+  const inhibits=trialHistory.filter(t=>t.inhibit).length;
+  const falseAlarms=trialHistory.filter(t=>t.falseAlarm).length;
+  const noteEl=$('assistNote'); noteEl.innerHTML='';
+  const bits=[];
+  if(coyotes)    bits.push(`${coyotes} coyote catch${coyotes>1?'es':''}`);
+  if(fumbles)    bits.push(`${fumbles} fumble correction${fumbles>1?'s':''}`);
+  if(minimals)   bits.push(`${minimals} minimal-input match${minimals>1?'es':''}`);
+  if(inhibits)   bits.push(`${inhibits} successful inhibition${inhibits>1?'s':''}`);
+  if(falseAlarms)bits.push(`${falseAlarms} false alarm${falseAlarms>1?'s':''}`);
+  if(bits.length){
+    noteEl.innerHTML=`<div class="callout callout-warn"><p>Session notes: ${bits.join(', ')}.</p></div>`;
+  }
+
+  // Trial log
+  const log=$('trialLog'); log.innerHTML='';
+  $('logCount').textContent=trialHistory.length+' trials';
+  trialHistory.forEach((t,i)=>{
+    let cls, dot, tag, givenTxt;
+    if(t.inhibit){
+      cls='t-inhibit'; dot='inhibit'; tag=' ↑'; givenTxt='↑';
+    } else if(t.falseAlarm){
+      cls='t-wrong'; dot='err'; tag=' ⚡'; givenTxt=t.given!==null?t.given:'–';
+    } else if(t.coyote){
+      cls='t-coyote'; dot='coyote'; tag=' 🕐'; givenTxt=t.given!==null?t.given:'–';
+    } else if(t.fumble){
+      cls=t.ok?'t-correct':'t-wrong'; dot=t.ok?'ok':'err'; tag=' 🔀'; givenTxt=t.given!==null?t.given:'–';
+    } else if(t.minimal){
+      cls='t-correct'; dot='ok'; tag=' 🔢'; givenTxt=t.given!==null?t.given:'–';
+    } else {
+      cls=t.ok?'t-correct':'t-wrong'; dot=t.ok?'ok':'err';
+      if(t.ndmFail) tag=' ⬛NDM';
+      else if(t.sdmFail) tag=' ⬛SDM';
+      else tag='';
+      givenTxt=t.given!==null?t.given:'–';
+    }
+    const inhibitNote=t.inhibit?' <span style="color:var(--text-faint);font-size:.65rem">[no-go]</span>':(t.falseAlarm?' <span style="color:var(--text-faint);font-size:.65rem">[false alarm]</span>':'');
+    const el=document.createElement('div');
+    el.className='trial-entry';
+    el.innerHTML=`<span style="color:var(--text-faint);min-width:28px">#${i+1}</span><span style="flex:1">Heard <strong>${t.num}</strong> → Expected <strong>${t.correct}</strong>${inhibitNote}</span><span class="${cls}">${givenTxt}${tag}</span><div class="trial-dot ${dot}"></div>`;
+    log.appendChild(el);
+  });
+  setPage('pageResults');
+}
+
+function mkStat(label,val,cls=''){
+  return `<div class="stat-block"><div class="stat-block-label">${label}</div><div class="stat-block-val ${cls}">${val}</div></div>`;
+}
+</script>
+</body>
+</html>
