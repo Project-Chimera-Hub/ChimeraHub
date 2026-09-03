@@ -388,10 +388,10 @@
               <label class="label">Duration</label>
               <div class="slider-row">
                 <div class="slider-wrap">
-                  <input type="range" class="slider" id="durationSlider" min="1" max="60" step="1" value="15">
+                  <input type="range" class="slider" id="durationSlider" min="1" max="300" step="1" value="15">
                   <div class="tick-row" id="durationTicks"></div>
                 </div>
-                <span class="slider-val" id="durationVal">20 min</span>
+                <span class="slider-val" id="durationVal">15 min</span>
               </div>
             </div>
             <div class="field">
@@ -1094,7 +1094,30 @@ const setPage = n => {
 };
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const rand  = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-const fmtTime = s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+/* Longest session the Duration slider offers, in minutes.
+
+   Named because the bound was written out four times: the input's own `max`
+   attribute, two wireSlider calls (one for first paint, one for the reset path)
+   and the tick row. wireSlider assigns sl.max, so the JS copies silently
+   override the HTML one -- and the tick row is drawn against its own idea of
+   the range, so missing that one alone would have crammed every label into the
+   first fifth of the track and mislabelled them. */
+const MAX_DURATION_MIN = 300;
+
+/* Countdown clock. Hours only once there are any: a 20-minute session should not
+   read "00:20:00", and a five-hour one must not read "300:00". */
+const fmtTime = s=>{
+  const h=Math.floor(s/3600), m=Math.floor(s/60)%60, sec=s%60;
+  const mm=String(m).padStart(2,'0'), ss=String(sec).padStart(2,'0');
+  return h ? `${h}:${mm}:${ss}` : `${String(Math.floor(s/60)).padStart(2,'0')}:${ss}`;
+};
+
+/* The slider's own read-out. "300 min" is arithmetic the reader has to do. */
+const fmtDuration = v=>{
+  if(v<60) return v+' min';
+  const h=Math.floor(v/60), m=v%60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+};
 
 /* ══ BEEP SOUNDS ═══════════════════════════════════════════════════════
    Defined first (before any wiring) so buildBeepTypeList() can safely
@@ -1237,7 +1260,7 @@ function buildTicks(containerId, min, max, tickVals, labelFn){
   });
 }
 
-buildTicks('durationTicks',  1,  60, [1,10,20,30,45,60], v=>v+'m');
+buildTicks('durationTicks',  1, MAX_DURATION_MIN, [1,30,60,120,180,240,300], v=>v<60?v+'m':(v/60)+'h');
 buildTicks('startISITicks', 100,6000, [100,1000,2000,3000,4500,6000], v=>v<1000?v+'ms':(v/1000)+'s');
 buildTicks('padSizeTicks',  0.6,1.5, [0.6,0.8,1.0,1.2,1.5], v=>v+'×');
 buildTicks('speechRateTicks',0.5,3, [0.5,1.0,1.5,2.0,2.5,3.0], v=>v+'×');
@@ -1266,7 +1289,7 @@ function wireSlider(id,valId,init,min,max,step,fmt,cb){
   sl.min=min;sl.max=max;sl.step=step;sl.value=init;vEl.textContent=fmt(+init);
   sl.addEventListener('input',()=>{ const v=+sl.value; vEl.textContent=fmt(v); cb(v); });
 }
-wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       v=>{settings.duration=v;saveSettings();});
+wireSlider('durationSlider','durationVal',  settings.duration,   1, MAX_DURATION_MIN, 1, fmtDuration,       v=>{settings.duration=v;saveSettings();});
 wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         v=>{settings.startISI=v;saveSettings();});
 wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', v=>{settings.padScale=v;applyPadScale();saveSettings();});
 buildTicks('padColsTicks', 2, 10, [2,3,4,5,6,7,8,9,10], v=>String(v));
@@ -1381,7 +1404,7 @@ $('confirmModal').addEventListener('click',e=>{ if(e.target===$('confirmModal'))
 
 /* ── Reset ── */
 function applySettingsToUI(){
-  wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       ()=>{});
+  wireSlider('durationSlider','durationVal',  settings.duration,   1, MAX_DURATION_MIN, 1, fmtDuration,       ()=>{});
   wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         ()=>{});
   wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', ()=>{});
   wireSlider('padColsSlider','padColsVal', settings.padCols, 2, 10, 1, v=>String(v), ()=>{});
