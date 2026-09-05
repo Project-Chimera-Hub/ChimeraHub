@@ -652,6 +652,10 @@ body.no-motion *{animation:none !important; transition:none !important}
         <div class="card-title">🌡️ Automaticity check</div>
         <div id="stroop-report"></div>
       </div>
+      <div class="card">
+        <div class="card-title">🔎 Search slope</div>
+        <div id="search-report"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -797,6 +801,26 @@ body.no-motion *{animation:none !important; transition:none !important}
 
   <h3>🎮 Modes</h3>
   <ul id="guide-modes"></ul>
+
+  <h3>🔎 Pop-out search — the second automaticity measure</h3>
+  <p>The Stroop asks whether the colour intrudes when you want to ignore it. Pop-out asks the
+  opposite question: whether the colour <i>helps</i> when you want to use it. A target is hidden in a
+  field of 6, 12 or 20 symbols, and the app records how long you take at each size.</p>
+  <p>If the association has become automatic, the target pops out and your time barely changes as the
+  field grows — <b>parallel search</b>. If you are still decoding one symbol at a time, time climbs
+  with set size. The fitted <b>slope in milliseconds per item</b> is the measurement, and it is
+  reported in Progress. A slope near zero is the result worth chasing.</p>
+
+  <h3>🎧 Tone ID</h3>
+  <p>Every symbol has had its own pitch since the beginning — played on every question, in every
+  mode — and nothing ever asked you to name one. This mode tests that channel alone: you hear a
+  pitch and pick the symbol. It needs sound on.</p>
+
+  <h3>⚖️ Match check</h3>
+  <p>Symbols on top, a spelling underneath: same or different? Two keys, no typing, so it isolates
+  reading speed from motor speed. When the two differ, the substituted letter is drawn from
+  <i>your own</i> confusion pairs wherever there is data — so the decision is hard for exactly the
+  reason the training cares about.</p>
 
   <h3>🎯 How the scheduler picks symbols</h3>
   <p>Symbols are not drawn uniformly. Each one carries a priority built from four things:</p>
@@ -1497,7 +1521,16 @@ const MODES = {
   'game-stroop':         {t:'Automaticity',  i:'🌡️', g:'diag', kind:'stroop', base:400, unit:2700, unitMin:250, unitMax:9000,
                           d:'Name the ink, ignore the letter. Measures if it has gone automatic.'},
   'game-confusion':      {t:'Confusions',    i:'🔀', g:'diag', kind:'confusion',
-                          d:'Drill only the pairs you actually mix up.'}
+                          d:'Drill only the pairs you actually mix up.'},
+  'game-tone':           {t:'Tone ID',       i:'🎧', g:'core', kind:'tone',
+                          base:600, unit:4200, unitMin:300, unitMax:12000,
+                          d:'Hear a pitch, name the symbol. Trains the channel nothing else tests.'},
+  'game-match':          {t:'Match check',   i:'⚖️', g:'read', kind:'match',
+                          base:1500, unit:900, unitMin:200, unitMax:4000,
+                          d:'Symbols against a spelling — same or different? Fast, low-effort reading.'},
+  'game-search':         {t:'Pop-out',       i:'🔎', g:'diag', kind:'search',
+                          base:900, unit:2600, unitMin:200, unitMax:9000,
+                          d:'Find one symbol in a field of others. Measures whether colour pops out.'}
 };
 
 /* ============================================================
@@ -1524,6 +1557,8 @@ const DEFAULT_DATA = () => ({
   confusions:{}, symbolStats:{}, activityHistory:{}, sessions:[],
   records:{}, challenge:null, chalDate:null, chalProg:0, chalDone:false,
   stroop:{ congruent:[], incongruent:[] },
+  search:{},                                   // set size -> reaction times
+
   timing:{},                                   // calibrated window per mode, persisted
   prefs:{ sound:true, volume:50, timer:true, motion:true, teach:true, sessionLen:20,
           accTarget:0.85, outlineDark:true },
@@ -1547,6 +1582,7 @@ function migrate(){
   const d = DEFAULT_DATA();
   data.prefs   = Object.assign(d.prefs, data.prefs || {});
   data.stroop  = Object.assign(d.stroop, data.stroop || {});
+  data.search  = data.search || {};
   data.records = data.records || {};
   data.records.memory = Object.assign({level:1, streak:0}, data.records.memory || {});
   data.sessions = data.sessions || [];
@@ -1935,7 +1971,7 @@ function showPanel(id){
   $$('#tab-train .panel').forEach(p => p.classList.toggle('active', p.id === id));
 }
 function exitToModes(){
-  stopTimer(); drillLive = false; session = null; focusPool = null;
+  stopTimer(); logSession(); drillLive = false; session = null; focusPool = null;
   showPanel('mode-picker'); buildModePicker();
 }
 function openMode(id, opts){
@@ -2109,6 +2145,9 @@ function nextQ(){
   else if(mode === 'game-flash')          qFlash();
   else if(mode === 'game-logic')          qLogic();
   else if(mode === 'game-stroop')         qStroop();
+  else if(mode === 'game-tone')           qTone();
+  else if(mode === 'game-match')          qMatch();
+  else if(mode === 'game-search')         qSearch();
 }
 
 /* ---------- Question builders ---------- */
@@ -2263,6 +2302,148 @@ function qStroop(){
   });
   startTimer();
 }
+/* ---------- Tone ID ---------------------------------------------------
+   Every symbol already has a pitch, played on every question in every mode —
+   and until now nothing ever asked you to name one. This is the only mode that
+   tests the audio channel on its own. ------------------------------------ */
+function qTone(){
+  const c = pickSymbol(focusPool ? focusPool.map(x => x.toUpperCase()) : KEYS).toUpperCase();
+  cur = { answer:c, meta:{ char:c } };
+  const q = $('question-container');
+  const wrap = document.createElement('div');
+  wrap.style.textAlign = 'center';
+  if(!data.prefs.sound){
+    wrap.innerHTML = '<p class="wrong">Sound is off — this mode needs it.</p>' +
+      '<p class="small muted">Turn it on with the speaker button, or press M.</p>';
+  } else {
+    wrap.innerHTML = '<div style="font-size:3.4rem;line-height:1">🎧</div>' +
+      '<p class="small muted">Which symbol has this pitch?</p>';
+    const again = document.createElement('button');
+    again.className = 'btn btn-sm';
+    again.textContent = '↻ Play again';
+    again.onclick = e => { e.stopPropagation(); audio.tone(c); };
+    wrap.appendChild(again);
+  }
+  q.appendChild(wrap);
+  audio.tone(c);
+  buildOptions(c, KEYS, 'colored');
+  startTimer();
+}
+
+/* ---------- Match check ----------------------------------------------
+   Two-alternative forced choice: symbols against a spelling. Far less motor
+   cost than typing, so it isolates reading speed — and the mismatches are built
+   from YOUR confusion pairs, so the foil is the letter you actually confuse. */
+function qMatch(){
+  const w = drawWord(3, Math.min(6, wordCeiling()));
+  const same = Math.random() < 0.5;
+  let shown = w;
+  if(!same){
+    /* Prefer a substitution drawn from a recorded confusion, so the decision is
+       hard for the reason the training cares about. */
+    const pairs = topConfusions(12).map(([p]) => p.split('-'));
+    const idxs = w.split('').map((ch, i) => [ch, i]).sort(() => Math.random() - 0.5);
+    for(const [ch, i] of idxs){
+      const hit = pairs.find(pr => pr[0] === ch.toUpperCase() || pr[1] === ch.toUpperCase());
+      if(hit){
+        const other = (hit[0] === ch.toUpperCase() ? hit[1] : hit[0]).toLowerCase();
+        if(other !== ch){ shown = w.slice(0, i) + other + w.slice(i + 1); break; }
+      }
+    }
+    if(shown === w){                                  // no confusion data yet — any swap
+      const i = Math.floor(Math.random() * w.length);
+      let r = LETTERS[Math.floor(Math.random() * 26)].toLowerCase();
+      while(r === w[i]) r = LETTERS[Math.floor(Math.random() * 26)].toLowerCase();
+      shown = w.slice(0, i) + r + w.slice(i + 1);
+    }
+  }
+  cur = { answer: same ? 'same' : 'differ', meta:{ shown:w, word:w, candidate:shown } };
+
+  const q = $('question-container');
+  const box = document.createElement('div');
+  box.style.textAlign = 'center';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:16px';
+  for(const ch of w) row.appendChild(makeShape(ch, 42));
+  const cand = document.createElement('div');
+  cand.style.cssText = 'font-size:2rem;font-weight:750;letter-spacing:.14em';
+  cand.textContent = shown;
+  box.append(row, cand);
+  q.appendChild(box);
+  [...w].forEach((ch, i) => audio.tone(ch, i * 0.09));
+
+  const oc = $('options-container');
+  [['same', '✓ Same'], ['differ', '✗ Different']].forEach((o, i) => {
+    const b = document.createElement('button');
+    b.className = 'option-btn';
+    b.dataset.val = o[0];
+    b.style.fontSize = '1.1rem';
+    b.innerHTML = '<span class="kbd">' + (i + 1) + '</span><span>' + o[1] + '</span>';
+    b.onclick = () => {
+      if(!qActive) return;
+      if(o[0] === cur.answer) onCorrect(); else onWrong(o[0], false);
+    };
+    oc.appendChild(b);
+  });
+  startTimer();
+}
+
+/* ---------- Pop-out search -------------------------------------------
+   The other automaticity signature, and the one the Stroop cannot show. If the
+   colours have become automatic, a target should pop out of a field regardless
+   of how big the field is, so reaction time stays flat as the set grows. If you
+   are still decoding one symbol at a time, time climbs with set size. The slope
+   in ms-per-item is the measurement; it is reported in Progress. ---------- */
+const SEARCH_SIZES = [6, 12, 20];
+function qSearch(){
+  const size = SEARCH_SIZES[Math.floor(Math.random() * SEARCH_SIZES.length)];
+  const target = pickSymbol(focusPool);
+  const pool = ALL_SYMBOLS.filter(x => x.toUpperCase() !== target.toUpperCase());
+  cur = { answer:target, meta:{ char:target, size:size, kind:'search' } };
+
+  const q = $('question-container');
+  const wrap = document.createElement('div');
+  wrap.style.textAlign = 'center';
+  const prompt = document.createElement('div');
+  prompt.style.cssText = 'margin-bottom:14px;font-size:1rem';
+  prompt.innerHTML = 'Find <b style="font-size:1.7rem;' + colStyle(target) + '">' + target + '</b>' +
+    ' <span class="small muted">· ' + size + ' items</span>';
+  wrap.appendChild(prompt);
+
+  const grid = document.createElement('div');
+  const cols = size <= 6 ? 3 : size <= 12 ? 4 : 5;
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:10px;' +
+    'max-width:' + (cols * 62) + 'px;margin:0 auto';
+
+  const cells = [];
+  for(let i = 0; i < size - 1; i++) cells.push(pool[Math.floor(Math.random() * pool.length)]);
+  cells.push(target);
+  cells.sort(() => Math.random() - 0.5);
+
+  cells.forEach(ch => {
+    const b = document.createElement('button');
+    b.className = 'option-btn';
+    b.style.cssText = 'padding:8px;min-width:0;font-size:1rem';
+    b.dataset.val = ch;
+    b.appendChild(makeShape(ch, 38));
+    b.onclick = () => {
+      if(!qActive) return;
+      if(ch.toUpperCase() === target.toUpperCase()){
+        const rt = performance.now() - qStart;
+        if(!data.search[size]) data.search[size] = [];
+        data.search[size].push(Math.round(rt));
+        if(data.search[size].length > 200) data.search[size].shift();
+        onCorrect();
+      } else onWrong(ch, false);
+    };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+  q.appendChild(wrap);
+  audio.tone(target);
+  startTimer();
+}
+
 function buildOptions(correct, allPool, type){
   const opts = [correct];
   let guard = 0;
@@ -2305,6 +2486,7 @@ function onCorrect(){
 
   const isStroop = cur.meta && cur.meta.kind === 'stroop';
   const isTyping = modeCfg.kind === 'typing';
+  const isMatch  = modeCfg.kind === 'match';
 
   if(isStroop){
     const bucket = cur.meta.congruent ? 'congruent' : 'incongruent';
@@ -2312,6 +2494,9 @@ function onCorrect(){
     if(data.stroop[bucket].length > 300) data.stroop[bucket].shift();
   } else if(isTyping){
     creditWord(cur.answer);
+  } else if(isMatch){
+    /* The answer is a verdict, not a symbol — credit the letters you read. */
+    creditWord(cur.meta.word);
   } else {
     recordAnswer(cur.answer, true, rt);
   }
@@ -2335,7 +2520,9 @@ function onCorrect(){
     if(data.correct > 5) toast('speed', '⚡ Fastest yet — ' + (rt/1000).toFixed(2) + 's');
   }
 
-  const col = isStroop ? cur.answer : (colors[String(cur.answer)[0].toUpperCase()] || '255,255,255');
+  const col = isStroop ? cur.answer
+    : isMatch ? (colors[cur.meta.word[0].toUpperCase()] || '255,255,255')
+    : (colors[String(cur.answer)[0].toUpperCase()] || '255,255,255');
   particles(innerWidth/2, innerHeight/2, col);
   $('feedback').innerHTML = '<span class="correct">' + (isTyping ? 'Exactly right' : 'Correct') + '</span>';
 
@@ -2349,8 +2536,9 @@ function onWrong(chosen, timedOut){
   stopTimer();
   const isStroop = cur.meta && cur.meta.kind === 'stroop';
   const isTyping = modeCfg.kind === 'typing';
+  const isMatch  = modeCfg.kind === 'match';
 
-  if(!isStroop && !isTyping){
+  if(!isStroop && !isTyping && !isMatch){
     recordAnswer(cur.answer, false, null);
     if(chosen) recordConfusion(cur.answer, chosen);
   }
@@ -2369,6 +2557,20 @@ function onWrong(chosen, timedOut){
       '<b style="color:rgb(' + colors[cur.meta.char] + ')">' + colorLabel(cur.meta.char) + '</b>. ' +
       (cur.meta.congruent ? 'This trial <b>matched</b>.' : 'This trial <b>clashed</b> — that pull is the effect we are measuring.') + '</div>';
     $('teach-slot').appendChild(sw);
+  } else if(isMatch){
+    const w = cur.meta.word, cand = cur.meta.candidate;
+    let diff = '';
+    for(let i = 0; i < Math.max(w.length, cand.length); i++){
+      if(w[i] !== cand[i]) diff += '<b style="' + colStyle(w[i] || '?') + '">' + (w[i] || '') + '</b>'
+        + ' <span class="muted">not</span> <b>' + (cand[i] || '') + '</b>';
+    }
+    $('feedback').innerHTML = '<span class="wrong">' + (timedOut ? '⏱ ' : '') +
+      (cur.answer === 'same' ? 'They matched' : 'They differed') + '</span>';
+    const card = document.createElement('div');
+    card.className = 'teach';
+    card.innerHTML = '<div class="tinfo">The symbols spell <b style="letter-spacing:.1em">' + w +
+      '</b>' + (diff ? ' — ' + diff : ', which is exactly what was written') + '.</div>';
+    $('teach-slot').appendChild(card);
   } else if(isTyping){
     $('feedback').innerHTML = '<span class="wrong">' + (timedOut ? '⏱ ' : '') + 'It was: </span>' +
       '<span style="font-weight:750">' + cur.answer + '</span>';
@@ -2391,7 +2593,8 @@ function onWrong(chosen, timedOut){
   $('next-btn').focus();
 }
 function teachCard(ch){
-  const u = ch.toUpperCase();
+  const u = String(ch).toUpperCase();
+  if(u.length !== 1 || !MNEMONIC[u]) return document.createElement('span');
   const col = colors[u] || '255,255,255';
   const custom = colors[u] !== DEFAULT_COLORS[u];
   const card = document.createElement('div');
@@ -2413,7 +2616,8 @@ function teachCard(ch){
   return card;
 }
 function highlightCorrect(val){
-  $$('#options-container .option-btn').forEach(b => {
+  /* Pop-out builds its grid inside the question container, so scan both. */
+  $$('#options-container .option-btn, #question-container .option-btn').forEach(b => {
     if(b.dataset.val === val){
       b.classList.add('is-right');
       b.onclick = advance;
@@ -2438,15 +2642,37 @@ function checkTyped(){
 }
 
 /* ---------- Session summary ---------- */
+/* Written both when a session completes and when you walk away from one, so an
+   "Endless" run is not invisible to the archive. Guarded so it happens once. */
+function logSession(){
+  const s = session;
+  if(!s || s.logged || !s.n) return;
+  s.logged = true;
+  const rt = s.rtN ? s.rtSum / s.rtN : null;
+  const secs = Math.round((Date.now() - s.started) / 1000);
+  data.dailySessions = (data.dailySessions || 0) + 1;
+  data.sessions.unshift({
+    d:today(), m:mode, n:s.n, c:s.correct, rt:rt ? Math.round(rt) : null, xp:s.xp,
+    t:s.started,                       // ms epoch — a day string cannot be merged across trainers
+    secs:Math.min(secs, s.n * 120),    // cap: a tab left open is not time spent training
+    /* The controller holds accuracy at the target and moves SPEED to get there,
+       so the thing that improves is decoding rate, not accuracy. Symbols per
+       minute rises as `unit` falls, which is the direction a progress line
+       should point. */
+    spm:maxTime > 0 ? Math.round(60000 / maxTime) : null,
+    unit:Math.round(maxTime)
+  });
+  if(data.sessions.length > 60) data.sessions.length = 60;
+  save();
+}
+
 function endSession(){
   stopTimer(); drillLive = false;
   const s = session;
   const acc = s.n ? Math.round(s.correct / s.n * 100) : 0;
   const rt = s.rtN ? s.rtSum / s.rtN : null;
 
-  data.dailySessions = (data.dailySessions || 0) + 1;
-  data.sessions.unshift({ d:today(), m:mode, n:s.n, c:s.correct, rt:rt ? Math.round(rt) : null, xp:s.xp });
-  if(data.sessions.length > 40) data.sessions.length = 40;
+  logSession();
   updateChallengeProgress(); save();
 
   const missed = Object.entries(s.missed).sort((a,b) => b[1]-a[1]).map(x => x[0]);
@@ -2825,7 +3051,8 @@ function renderProgress(){
   $('s-rt').textContent = fmtMs(globalMedianRt());
   $('s-streak').textContent = data.bestStreak;
   $('s-mastered').innerHTML = masteredCount() + '<span class="muted" style="font-size:.6em">/36</span>';
-  buildHeatmap(); buildChart(); renderStroopReport(); renderTopConfusions(); renderSessionLog();
+  buildHeatmap(); buildChart(); renderStroopReport(); renderSearchReport();
+  renderTopConfusions(); renderSessionLog();
 }
 function buildHeatmap(){
   const c = $('heatmap');
@@ -2916,6 +3143,42 @@ function renderStroopReport(){
       (n < 30 ? 'Still noisy — ' + n + ' of ~30 trials.'
         : diff > 40 ? 'A positive gap means the letter’s colour is intruding even when you try to ignore it. That is the effect you are training for.'
         : 'No clear gap yet. Keep training the associations and re-measure in a week.') +
+    '</p>';
+}
+/* Search slope: median RT against set size, fitted by least squares.
+   A flat line means the target pops out — parallel search, the signature of an
+   automatic colour. A climbing line means you are still checking symbols one at
+   a time. This is the measurement the mode exists for. */
+function renderSearchReport(){
+  const box = $('search-report');
+  const sizes = SEARCH_SIZES.filter(n => (data.search[n] || []).length >= 3);
+  const total = SEARCH_SIZES.reduce((a, n) => a + (data.search[n] || []).length, 0);
+  if(sizes.length < 2){
+    box.innerHTML = '<p class="muted small">Run <b>🔎 Pop-out</b> to measure whether a colour is found ' +
+      'in parallel or one symbol at a time. <b>' + total + '</b> trials so far; it needs a few at each ' +
+      'of the three set sizes.</p><button class="btn btn-sm" id="go-search">Measure now</button>';
+    $('go-search').onclick = () => openMode('game-search');
+    return;
+  }
+  const pts = sizes.map(n => ({ n:n, rt:median(data.search[n]) }));
+  const mx = pts.reduce((a, p) => a + p.n, 0) / pts.length;
+  const my = pts.reduce((a, p) => a + p.rt, 0) / pts.length;
+  let num = 0, den = 0;
+  pts.forEach(p => { num += (p.n - mx) * (p.rt - my); den += (p.n - mx) * (p.n - mx); });
+  const slope = den ? num / den : 0;
+  const max = Math.max(...pts.map(p => p.rt)) || 1;
+
+  box.innerHTML = '<div class="bar-cmp">' + pts.map(p =>
+      '<div><div class="lbl">' + p.n + ' items — ' + data.search[p.n].length + ' trials</div>' +
+      '<div class="track"><div class="fill" style="width:' + (p.rt / max * 100) + '%;background:var(--accent)">' +
+      Math.round(p.rt) + 'ms</div></div></div>').join('') + '</div>' +
+    '<div class="kv" style="margin-top:14px"><div class="k">Slope</div><div class="v" style="color:' +
+      (Math.abs(slope) < 25 ? 'var(--ok)' : 'var(--text)') + '">' +
+      (slope > 0 ? '+' : '') + Math.round(slope) + ' ms/item</div></div>' +
+    '<p class="tiny muted" style="margin-top:10px">' +
+      (total < 30 ? 'Only ' + total + ' trials — too few to read yet.'
+        : Math.abs(slope) < 25 ? 'Near flat: the target is found regardless of how many symbols surround it. That is parallel search — what an automatic colour looks like.'
+        : 'Climbing with set size: still a symbol-by-symbol scan. Expect this to flatten as the associations bed in.') +
     '</p>';
 }
 function renderTopConfusions(){
