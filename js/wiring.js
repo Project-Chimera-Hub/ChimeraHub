@@ -288,6 +288,14 @@ $('buzzer').onchange = e => {
   saveProgress();
 };
 
+$('haptics').onchange = e => {
+  cfg.haptics = e.target.checked;
+  /* Audition both patterns, for the same reason the buzzer auditions its two
+     sounds: the time to learn which is which is not mid-block. */
+  if (cfg.haptics) { buzzPhone('fa'); setTimeout(() => buzzPhone('miss'), 420); }
+  saveProgress();
+};
+
 $('cubeSize').oninput = e => {
   cfg.cubeScale = +e.target.value / 100;
   $('cubeSizeVal').textContent = e.target.value;
@@ -434,8 +442,51 @@ function resumeFromPause() {
   state.timer = setInterval(tick, cfg.interval);
 }
 
+/* ---- Keeping the screen on ----
+   A block is minutes of watching with no touches in between, which is exactly the
+   input a phone reads as "nobody is here" before it dims and locks. The lock is
+   held only while a block runs, and the browser drops it whenever the tab is
+   hidden — so returning to a running block has to ask again. */
+
+let wakeLock = null;
+
+async function keepAwake() {
+  if (wakeLock || !navigator.wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) {
+    /* Denied, or the tab was already hidden by the time this resolved. The block
+       runs regardless; the screen just behaves the way it did before. */
+    wakeLock = null;
+  }
+}
+
+function letSleep() {
+  if (!wakeLock) return;
+  const held = wakeLock;
+  wakeLock = null;
+  held.release().catch(() => { /* already gone */ });
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) pauseBlock(PAUSE_WHY.hidden);
+  else if (state.running && !state.paused) keepAwake();
+});
+
+/*
+ * A block in progress is minutes of work that no reload can bring back: the
+ * trials are generated as they go and the record is only written at the end.
+ *
+ * Only a running block asks. Unexported progress deliberately does not — the
+ * settings panel already says how long it has been, and a prompt on every reload
+ * for someone who exports weekly is a prompt that gets clicked through without
+ * being read, including the one time it mattered.
+ */
+window.addEventListener('beforeunload', e => {
+  if (!state.running) return;
+  e.preventDefault();
+  e.returnValue = '';
 });
 $('pauseResume').onclick = resumeFromPause;
 

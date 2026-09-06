@@ -27,7 +27,7 @@ function tick() {
     const snap = state.lastSnap;
     state.buzzTimer = setTimeout(() => {
       if (!snapMissed(snap)) return;
-      playBuzz('miss');
+      signalWrong('miss');
       /* A meta target nobody answered leaves you exactly as lost as a wrong press
          does, so it earns the same trace. Held until the grace window shuts along
          with the buzz — a press landing a few tens of ms late is about to turn this
@@ -133,6 +133,7 @@ function startBlock() {
 
   if (cfg.streams.glyph === 'relational' && !state.glyphMap) ensureGlyphMap();
 
+  keepAwake();
   updateHUD();
   tick();
   state.timer = setInterval(tick, cfg.interval);
@@ -145,6 +146,7 @@ function stopBlock(silent) {
      writes its own record afterwards. */
   if (state.running && !state.ending) recordAbandoned();
 
+  letSleep();
   clearInterval(state.timer);
   clearTimeout(state.cueTimer);
   clearTimeout(state.buzzTimer);

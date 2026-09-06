@@ -23,6 +23,10 @@ const cfg = {
   cubeScale: 1,
   dailyGoal: 20,
   buzzer: false,
+  /* A pulse for a wrong answer on a phone. On by default: unlike the buzzer it
+     costs nothing to have on, works with the sound off, and on the desktop where
+     there is no vibrator it simply never fires. */
+  haptics: true,
   /* Meta-relations chains: this trial's answer depends on the move you made last
      trial, so one wrong answer costs you the anchor and every trial after it is a
      guess. On an error the two moves are spelled out so you can rejoin. */

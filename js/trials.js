@@ -294,6 +294,26 @@ function clearCells() {
   });
 }
 
+/*
+ * Everything that says "that was wrong", in one call.
+ *
+ * The two error kinds stay distinguishable in every channel they use: a wrong
+ * press and a miss are opposite mistakes needing opposite corrections, so the
+ * pulse pattern splits the way the sounds already do.
+ */
+function signalWrong(kind) {
+  playBuzz(kind);
+  buzzPhone(kind);
+}
+
+function buzzPhone(kind) {
+  if (!cfg.haptics || !navigator.vibrate) return;
+  /* Wrapped because a browser that exposes vibrate behind a user-gesture rule
+     throws rather than returning false, and a failed buzz must never take the
+     block down with it. */
+  try { navigator.vibrate(kind === 'miss' ? [40, 60, 40] : 90); } catch (e) { /* no vibrator */ }
+}
+
 /* Deliberately below the stimulus pitches (220–523 Hz) and harsher than any of them,
    so it can never be mistaken for a trial tone. */
 function playBuzz(kind) {

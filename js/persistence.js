@@ -149,6 +149,8 @@ function loadProgress() {
                      cfg.cubeScale = p.display.cubeScale || cfg.cubeScale;
                      if (p.display.dailyGoal != null) cfg.dailyGoal = p.display.dailyGoal;
                      cfg.buzzer = !!p.display.buzzer;
+                     if (p.display.haptics != null)
+                       cfg.haptics = !!p.display.haptics;
                      if (p.display.moveTrace != null)
                        cfg.moveTrace = !!p.display.moveTrace;
                      if (p.display.autoAdvance != null)
@@ -253,6 +255,7 @@ function saveProgress() {
                        letterVoice: cfg.letterVoice,
                        cubeScale: cfg.cubeScale,
                        dailyGoal: cfg.dailyGoal, buzzer: cfg.buzzer,
+                       haptics: cfg.haptics,
                        moveTrace: cfg.moveTrace, autoAdvance: cfg.autoAdvance };
   progress.stair = stairLog ? stairLog.map(v => +v.toFixed(4)) : null;
   progress.rcTier = rcTier;

@@ -159,7 +159,7 @@ function traceMove(trial) {
 function pressFeedback(channelId, ok, trial) {
   const btn = deckEl.querySelector(`[data-channel="${channelId}"]`);
   if (AXIS[channelId]) flashArm(channelId);
-  if (!ok) playBuzz('fa');
+  if (!ok) signalWrong('fa');
   if (cfg.feedback !== 'off' && btn) {
     btn.classList.add(ok ? 'hit' : 'miss');
     setTimeout(() => btn.classList.remove('hit', 'miss'), 260);

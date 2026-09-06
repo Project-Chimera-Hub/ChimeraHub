@@ -280,6 +280,7 @@ function syncSettingsUI() {
   $('layoutHint').textContent = LAYOUT_HINT[cfg.layout] || '';
   $('dailyGoal').value = cfg.dailyGoal || 0;
   $('buzzer').checked = !!cfg.buzzer;
+  $('haptics').checked = !!cfg.haptics;
   $('moveTraceOn').checked = !!cfg.moveTrace;
   $('autoAdvance').value = String(cfg.autoAdvance || 0);
   $('cubeSize').value = Math.round((cfg.cubeScale || 1) * 100);
