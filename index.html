@@ -811,10 +811,34 @@ body.no-motion *{animation:none !important; transition:none !important}
   with set size. The fitted <b>slope in milliseconds per item</b> is the measurement, and it is
   reported in Progress. A slope near zero is the result worth chasing.</p>
 
-  <h3>🎧 Tone ID</h3>
-  <p>Every symbol has had its own pitch since the beginning — played on every question, in every
-  mode — and nothing ever asked you to name one. This mode tests that channel alone: you hear a
-  pitch and pick the symbol. It needs sound on.</p>
+  <h3>🎧 Tone ID, and how a symbol sounds</h3>
+  <p>Until recently every symbol sat somewhere on one continuous pitch scale — 110&nbsp;Hz up to
+  6.2&nbsp;kHz, a whole tone apart, with nothing but frequency separating them. Naming a tone out of
+  that set is an <b>absolute pitch</b> task. Absolute pitch is rare, and without it people can label
+  only a handful of steps on a single continuous dimension; thirty-six was never learnable, and the
+  ten digits sat high enough to be shrill as well. If that mode felt impossible, it was.</p>
+  <p>The sound is now built the same way the picture is. A symbol's picture uses <b>shape</b> for the
+  family and <b>colour</b> for the identity; its sound uses <b>timbre</b> for the family and
+  <b>pitch</b> for the position inside it. Six timbres × six pitches covers all 36, and no single
+  dimension ever asks you to split more than six ways.</p>
+  <ul>
+    <li><b>Pure</b> — smooth and round, like a flute · A&ndash;F</li>
+    <li><b>Reed</b> — hollow and woody, like a clarinet · G&ndash;L</li>
+    <li><b>Bright</b> — buzzy and edged, like brass · M&ndash;R</li>
+    <li><b>Bell</b> — struck metal, ringing out · S&ndash;X</li>
+    <li><b>Pluck</b> — short and dry, a plucked string · Y, Z, 0&ndash;3</li>
+    <li><b>Air</b> — breathy and drifting, two tones beating · 4&ndash;9</li>
+  </ul>
+  <p>The six pitches are one octave of a major pentatonic — C, D, E, G, A, C — so the steps are wide,
+  musical, and in the range where pitch is easiest to hear. Every family uses the same six notes.
+  What changes between families is the <i>character</i> of the sound, which is a categorical
+  judgement rather than a fine measurement, and far easier to make.</p>
+  <div class="note">
+    <b>It starts small.</b> Tone ID opens at stage 1: one timbre, six pitches. Eight correct in a row
+    adds the next family, and three misses hands one back. A wrong answer plays the right sound and
+    then the one you picked, because what teaches you is the difference between them, not being told
+    which was correct.
+  </div>
 
   <h3>⚖️ Match check</h3>
   <p>Symbols on top, a spelling underneath: same or different? Two keys, no typing, so it isolates
@@ -954,9 +978,49 @@ const MNEMONIC = {
 };
 const SHAPE_NAME = { block:'Square', circle:'Circle', triangle:'Triangle', punctuation:'Glyph' };
 
-// Pitch per symbol — logarithmic spread so neighbours are clearly distinguishable
+/* ---- The sound of a symbol -------------------------------------------
+   Earlier versions gave all 36 symbols a place on ONE continuous pitch scale:
+   110 Hz to 6.2 kHz, a whole tone apart, nothing but frequency telling them
+   apart. Naming a tone from that set is an absolute-pitch task, and absolute
+   pitch is rare; without it people can reliably label only a handful of levels
+   on a single continuous dimension. Thirty-six was never learnable, and the top
+   ten symbols were shrill enough to be unpleasant besides.
+
+   So the code is now two-dimensional, exactly like the visual one — where shape
+   carries the type and colour carries the identity. Here TIMBRE carries the
+   family and PITCH carries the position inside it. Six of each makes 36, and no
+   single dimension ever asks you to split more than six ways.
+
+   The pitches are one octave of a major pentatonic, so the steps are wide,
+   musical and sit in the range where pitch is easiest to hear. Every family
+   uses the same six notes; what changes between families is the character of
+   the sound, which is a categorical judgement rather than a metric one. ----- */
+const TIMBRES = [
+  { id:'pure',   name:'Pure',   desc:'smooth and round, like a flute' },
+  { id:'reed',   name:'Reed',   desc:'hollow and woody, like a clarinet' },
+  { id:'bright', name:'Bright', desc:'buzzy and edged, like brass' },
+  { id:'bell',   name:'Bell',   desc:'struck metal, ringing out' },
+  { id:'pluck',  name:'Pluck',  desc:'short and dry, a plucked string' },
+  { id:'air',    name:'Air',    desc:'breathy and drifting, two tones beating' }
+];
+const DEGREES = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+const DEGREE_NAMES = ['C', 'D', 'E', 'G', 'A', 'C\u2191'];
+
+/** family + degree + fundamental for every symbol. */
+const VOICE = {};
+KEYS.forEach((c, i) => {
+  VOICE[c] = { family: Math.floor(i / 6), degree: i % 6, freq: DEGREES[i % 6] };
+});
+/* Kept because several screens still quote a frequency. */
 const FREQ = {};
-KEYS.forEach((c, i) => { FREQ[c] = 110 * Math.pow(1.08, i * 1.5); });
+KEYS.forEach(c => { FREQ[c] = VOICE[c].freq; });
+
+function voiceLabel(c){
+  const v = VOICE[String(c).toUpperCase()];
+  if(!v) return '';
+  return TIMBRES[v.family].name + ' ' + DEGREE_NAMES[v.degree];
+}
+function familyMembers(f){ return KEYS.slice(f * 6, f * 6 + 6); }
 
 /* ---- Lexicon: common English words verified against a system dictionary,
    bucketed by length. ~6,800 words replaces the old 70-word list. ---- */
@@ -1560,6 +1624,7 @@ const DEFAULT_DATA = () => ({
   search:{},                                   // set size -> reaction times
 
   timing:{},                                   // calibrated window per mode, persisted
+  toneTier:1, toneMiss:0,                      // how many timbre families Tone ID uses
   prefs:{ sound:true, volume:50, timer:true, motion:true, teach:true, sessionLen:20,
           accTarget:0.85, outlineDark:true },
   version:VERSION
@@ -1590,6 +1655,7 @@ function migrate(){
   data.activityHistory = data.activityHistory || {};
   if(data.timingScheme !== 'unit-v2'){ data.timing = {}; data.timingScheme = 'unit-v2'; }
   data.timing = data.timing || {};
+  data.toneTier = Math.max(1, Math.min(6, data.toneTier || 1));
 
   // Fold old lowercase / partial stat entries into canonical uppercase keys
   const next = {};
@@ -1745,27 +1811,77 @@ const audio = {
   tone(ch, delay){
     if(!data.prefs.sound) return;
     const ctx = this.ensure(); if(!ctx) return;
-    const u = String(ch).toUpperCase();
-    const f = FREQ[u]; if(!f) return;
+    const v = VOICE[String(ch).toUpperCase()]; if(!v) return;
+    this.voice(v, ctx.currentTime + (delay || 0));
+  },
+  /* One family = one synthesis recipe. These are deliberately different in
+     attack and spectrum, not just in level, because that is what makes them
+     tell apart as characters rather than as louder or softer versions. */
+  /* Levels are hand-balanced so the families sit at a similar loudness. That
+     matters: if one family were quieter it would become a loudness cue, which
+     is not the dimension the code is meant to use — and the quiet one would be
+     the hardest to hear besides. */
+  voice(v, t0){
+    const ctx = this.ensure(); if(!ctx) return;
     const vol = (data.prefs.volume / 100) * 0.16;
-    const t0 = ctx.currentTime + (delay || 0);
+    const f = v.freq;
+    const out = ctx.createGain();
+    out.connect(ctx.destination);
 
-    const o1 = ctx.createOscillator(), g1 = ctx.createGain();
-    o1.type = 'sine'; o1.frequency.value = f;
-    g1.gain.setValueAtTime(0.0001, t0);
-    g1.gain.linearRampToValueAtTime(vol, t0 + 0.02);
-    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+    const osc = (type, freq, gainVal, attack, release) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(Math.max(0.0002, gainVal), t0 + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + release);
+      o.connect(g); g.connect(out);
+      o.start(t0); o.stop(t0 + release + 0.02);
+      return o;
+    };
 
-    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-    o2.type = 'square'; o2.frequency.value = f * 2;
-    g2.gain.setValueAtTime(0.0001, t0);
-    g2.gain.linearRampToValueAtTime(vol * 0.2, t0 + 0.01);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
-
-    o1.connect(g1); g1.connect(ctx.destination);
-    o2.connect(g2); g2.connect(ctx.destination);
-    o1.start(t0); o1.stop(t0 + 0.42);
-    o2.start(t0); o2.stop(t0 + 0.42);
+    switch(TIMBRES[v.family].id){
+      case 'pure':
+        osc('sine', f, vol, 0.04, 0.55);
+        break;
+      case 'reed':
+        osc('square', f, vol * 0.5, 0.03, 0.5);
+        osc('sine', f, vol * 0.4, 0.03, 0.5);
+        break;
+      case 'bright':
+        osc('sawtooth', f, vol * 0.80, 0.02, 0.5);
+        break;
+      case 'bell':
+        /* An inharmonic partial is what makes metal sound like metal. */
+        osc('sine', f, vol * 0.72, 0.005, 0.9);
+        osc('sine', f * 2.76, vol * 0.24, 0.005, 0.45);
+        osc('sine', f * 5.4, vol * 0.1, 0.005, 0.25);
+        break;
+      case 'pluck': {
+        const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+        o.type = 'sawtooth'; o.frequency.value = f;
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(f * 8, t0);
+        lp.frequency.exponentialRampToValueAtTime(Math.max(200, f * 1.2), t0 + 0.22);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(vol * 0.8, t0 + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32);
+        o.connect(lp); lp.connect(g); g.connect(out);
+        o.start(t0); o.stop(t0 + 0.34);
+        break;
+      }
+      case 'air':
+        /* Two triangles a few cents apart beat against each other slowly. */
+        osc('triangle', f, vol * 0.55, 0.12, 0.7);
+        osc('triangle', f * 1.006, vol * 0.55, 0.12, 0.7);
+        break;
+    }
+  },
+  /* Correct then chosen, so a miss is heard as a contrast rather than a verdict. */
+  compare(a, b){
+    const ctx = this.ensure(); if(!ctx || !data.prefs.sound) return;
+    const va = VOICE[String(a).toUpperCase()], vb = VOICE[String(b).toUpperCase()];
+    if(va) this.voice(va, ctx.currentTime + 0.05);
+    if(vb) this.voice(vb, ctx.currentTime + 0.85);
   }
 };
 function toggleSound(){
@@ -2184,7 +2300,7 @@ function qSensory(){
   mn.textContent = MNEMONIC[u][0];
   const meta = document.createElement('div');
   meta.style.cssText = 'margin-top:10px;color:var(--muted-2);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.72rem';
-  meta.textContent = SHAPE_NAME[getShape(c)].toUpperCase() + ' · ' + Math.round(FREQ[u]) + ' Hz';
+  meta.textContent = SHAPE_NAME[getShape(c)].toUpperCase() + ' · ' + voiceLabel(u).toUpperCase();
   card.append(g, mn, meta);
   $('question-container').appendChild(card);
   buildOptions(c, ALL_SYMBOLS, 'text');
@@ -2307,8 +2423,16 @@ function qStroop(){
    and until now nothing ever asked you to name one. This is the only mode that
    tests the audio channel on its own. ------------------------------------ */
 function qTone(){
-  const c = pickSymbol(focusPool ? focusPool.map(x => x.toUpperCase()) : KEYS).toUpperCase();
+  /* Start with one family and earn the rest. Asking someone to name one of 36
+     sounds on their first go is the same mistake the old scale made in a
+     different form — the code being learnable does not make 36 of it learnable
+     at once. Six share a timbre and differ only by pitch, which is a tractable
+     first task; each new family adds a character rather than a finer split. */
+  const tier = Math.max(1, Math.min(6, data.toneTier || 1));
+  const pool = KEYS.slice(0, tier * 6);
+  const c = pickSymbol(focusPool ? focusPool.map(x => x.toUpperCase()) : pool).toUpperCase();
   cur = { answer:c, meta:{ char:c } };
+
   const q = $('question-container');
   const wrap = document.createElement('div');
   wrap.style.textAlign = 'center';
@@ -2317,7 +2441,10 @@ function qTone(){
       '<p class="small muted">Turn it on with the speaker button, or press M.</p>';
   } else {
     wrap.innerHTML = '<div style="font-size:3.4rem;line-height:1">🎧</div>' +
-      '<p class="small muted">Which symbol has this pitch?</p>';
+      '<p class="small muted">Which symbol has this sound?</p>' +
+      '<p class="tiny muted">Stage ' + tier + ' of 6 · ' + pool.length + ' symbols · ' +
+      (tier === 1 ? 'one timbre, six pitches'
+                  : tier + ' timbres × 6 pitches') + '</p>';
     const again = document.createElement('button');
     again.className = 'btn btn-sm';
     again.textContent = '↻ Play again';
@@ -2326,8 +2453,31 @@ function qTone(){
   }
   q.appendChild(wrap);
   audio.tone(c);
-  buildOptions(c, KEYS, 'colored');
+  buildOptions(c, pool, 'colored');
   startTimer();
+}
+
+/* Stages are earned on a run and given back on a bad patch, so the mode keeps
+   itself at the edge of what you can actually hear. */
+function toneProgress(ok){
+  if(mode !== 'game-tone') return;
+  const tier = Math.max(1, Math.min(6, data.toneTier || 1));
+  if(ok){
+    data.toneMiss = 0;
+    if(streak > 0 && streak % 8 === 0 && tier < 6){
+      data.toneTier = tier + 1;
+      toast('level', '🎧 Stage ' + (tier + 1) + ' — ' + TIMBRES[tier].name.toLowerCase() +
+        ' joins in (' + TIMBRES[tier].desc + ')');
+    }
+  } else {
+    data.toneMiss = (data.toneMiss || 0) + 1;
+    if(data.toneMiss >= 3 && tier > 1){
+      data.toneTier = tier - 1;
+      data.toneMiss = 0;
+      toast('info', '🎧 Back to stage ' + (tier - 1) + ' for a bit');
+    }
+  }
+  save();
 }
 
 /* ---------- Match check ----------------------------------------------
@@ -2526,6 +2676,7 @@ function onCorrect(){
   particles(innerWidth/2, innerHeight/2, col);
   $('feedback').innerHTML = '<span class="correct">' + (isTyping ? 'Exactly right' : 'Correct') + '</span>';
 
+  toneProgress(true);
   applyStaircase(true);
   recordDailyActivity();
   updateModeStats(); updateChallengeProgress(); save();
@@ -2581,7 +2732,10 @@ function onWrong(chosen, timedOut){
     $('feedback').innerHTML = '<span class="wrong">' + (timedOut ? '⏱ ' : '') + 'It was </span>' +
       '<span style="color:rgb(' + col + ');font-weight:750' + halo(col) + '">' + ans + '</span>';
     if(data.prefs.teach) $('teach-slot').appendChild(teachCard(ans));
-    audio.tone(ans, 0.05);
+    /* In Tone ID the useful feedback is the difference, not the answer. */
+    if(mode === 'game-tone' && chosen) audio.compare(ans, chosen);
+    else audio.tone(ans, 0.05);
+    toneProgress(false);
     if(session) session.missed[ans.toUpperCase()] = (session.missed[ans.toUpperCase()] || 0) + 1;
     highlightCorrect(ans);
   }
@@ -2610,7 +2764,7 @@ function teachCard(ch){
   const info = document.createElement('div');
   info.className = 'tinfo';
   info.innerHTML = '<b>' + SHAPE_NAME[getShape(ch)] + '</b> · ' +
-    (custom ? rgbToHex(col) : colorLabel(u)) + ' · ' + Math.round(FREQ[u]) + ' Hz<br>' +
+    (custom ? rgbToHex(col) : colorLabel(u)) + ' · ' + voiceLabel(u) + '<br>' +
     '<span class="tmn">' + MNEMONIC[u][0] + '</span> ' + u + ' for <b>' + MNEMONIC[u][1] + '</b>';
   card.append(g, info);
   return card;
@@ -2939,9 +3093,17 @@ function renderLearnCard(){
   const meta = document.createElement('div');
   meta.className = 'lmeta';
   meta.innerHTML = '<span>' + SHAPE_NAME[getShape(k)] + (isDigit ? '' : ' / Circle') + '</span>' +
-    '<span>' + rgbToHex(col) + '</span><span>' + Math.round(FREQ[k]) + ' Hz</span>' +
+    '<span>' + rgbToHex(col) + '</span><span>' + voiceLabel(k) + '</span>' +
     '<span>' + (seenOf(k) ? Math.round(accOf(k)*100) + '% · ' + seenOf(k) + ' seen' : 'not yet trained') + '</span>';
-  card.append(g, ch, mn, story, meta);
+  const sound = document.createElement('div');
+  sound.className = 'lstory';
+  sound.style.marginTop = '6px';
+  const v = VOICE[k];
+  sound.innerHTML = 'Sounds <b>' + TIMBRES[v.family].name.toLowerCase() + '</b> — ' +
+    TIMBRES[v.family].desc + ' — on note <b>' + DEGREE_NAMES[v.degree] + '</b>. ' +
+    '<span class="tiny muted">Shares its timbre with ' +
+    familyMembers(v.family).filter(x => x !== k).join(' ') + '</span>';
+  card.append(g, ch, mn, story, sound, meta);
 
   $$('#learn-strip button').forEach((b, i) => b.classList.toggle('on', i === learnIdx));
   audio.tone(k);
