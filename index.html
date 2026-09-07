@@ -239,6 +239,17 @@ input[type=range]{ flex:1; }
 .challenge-btn.challenge-reveal{ border-color:var(--brass); color:var(--brass); }
 .challenge-btn.challenge-reveal .challenge-btn-label{ color:var(--brass-dim); }
 
+/* Zen mode: scoped to the session view so it can never affect Setup's own .compass-wrap */
+#view-session.zen-mode .mode-pill,
+#view-session.zen-mode .compass-wrap,
+#view-session.zen-mode .caption,
+#view-session.zen-mode .progress-block,
+#view-session.zen-mode #session-mixer-panel,
+#view-session.zen-mode #session-challenge-panel h2,
+#view-session.zen-mode #session-challenge-panel .challenge-stats{
+  display:none;
+}
+
 .center-card{ text-align:center; padding:60px 10px 20px; }
 .summary-total{ font-family:var(--font-display); font-size:28px; color:var(--brass); margin:8px 0 16px; font-weight:600; }
 .summary-list{ list-style:none; padding:0; margin:0 0 26px; color:var(--muted); font-size:13px; display:flex; flex-direction:column; gap:5px; }
@@ -361,6 +372,15 @@ input[type=range]{ flex:1; }
         </div>
         <p class="hint">When it goes quiet, press the number for the sound that stopped as soon as you notice &mdash; there's nothing on screen to give it away.</p>
       </div>
+
+      <div class="panel">
+        <h2>Zen mode</h2>
+        <div class="field-row">
+          <label class="switch"><input type="checkbox" id="zen-toggle" /><span></span></label>
+          <span>Hide the compass, captions, and progress during the session</span>
+        </div>
+        <p class="hint">Only pause/end and the Focus Challenge buttons (if that's on) stay on screen. You can flip this on or off mid-session too.</p>
+      </div>
     </section>
 
     <section id="view-library" class="view">
@@ -395,6 +415,7 @@ input[type=range]{ flex:1; }
     <section id="view-session" class="view">
       <div class="session-header">
         <span class="mode-pill" id="session-mode-pill">Selective Attention</span>
+        <button type="button" id="zen-toggle-btn" class="btn-secondary">Zen</button>
         <button type="button" id="pause-btn" class="btn-secondary">Pause</button>
         <button type="button" id="stop-btn" class="btn-secondary btn-danger">End</button>
       </div>
@@ -505,6 +526,7 @@ var playDividedPrompt = true;
 var masterVolume = 1;
 var soundVolumes = {};      // soundId -> 0..1, persisted, applies whether or not the sound is currently playing
 var challengeEnabled = false;
+var zenMode = false;
 
 var audioCtx = null;
 var masterGain = null;
@@ -671,13 +693,14 @@ async function restoreConfig(){
     if (cfg.assignment) assignment = cfg.assignment;
     if (typeof cfg.masterVolume === 'number') masterVolume = cfg.masterVolume;
     if (typeof cfg.challengeEnabled === 'boolean') challengeEnabled = cfg.challengeEnabled;
+    if (typeof cfg.zenMode === 'boolean') zenMode = cfg.zenMode;
   }catch(e){}
 }
 async function saveConfig(){
   await safeStorageSet('app-config', JSON.stringify({
     difficulty: difficulty, modesConfig: modesConfig, ttsVoiceURI: ttsVoiceURI,
     playDividedPrompt: playDividedPrompt, assignment: assignment, masterVolume: masterVolume,
-    challengeEnabled: challengeEnabled
+    challengeEnabled: challengeEnabled, zenMode: zenMode
   }));
 }
 
@@ -1249,6 +1272,7 @@ function startSession(){
   updateChallengeScoreUI();
   $('#session-challenge-panel').style.display = challengeEnabled ? '' : 'none';
   if (challengeEnabled) renderChallengeButtons();
+  applyZenMode();
   clockState.running = true; clockState.paused = false;
   clockState.lastTick = performance.now();
   clockState.phaseElapsed = 0;
@@ -1479,6 +1503,11 @@ function handleChallengeKeydown(e){
   resolveChallengeRound(posId);
 }
 
+function applyZenMode(){
+  $('#view-session').classList.toggle('zen-mode', zenMode);
+  $('#zen-toggle-btn').textContent = zenMode ? 'Exit Zen' : 'Zen';
+}
+
 function togglePause(){
   if (!session) return;
   if (!clockState.paused){
@@ -1639,6 +1668,13 @@ function wireStaticEvents(){
   $('#custom-name-input').addEventListener('input', updateCustomAddBtn);
   $('#custom-add-btn').addEventListener('click', onCustomAddClicked);
   $('#challenge-toggle').addEventListener('change', function(e){ challengeEnabled = e.target.checked; saveConfig(); });
+  $('#zen-toggle').addEventListener('change', function(e){ zenMode = e.target.checked; saveConfig(); });
+  $('#zen-toggle-btn').addEventListener('click', function(){
+    zenMode = !zenMode;
+    applyZenMode();
+    $('#zen-toggle').checked = zenMode;
+    saveConfig();
+  });
   $('#mixer-toggle-btn').addEventListener('click', function(){
     var list = $('#session-mixer-list');
     var willShow = list.style.display === 'none';
@@ -1662,6 +1698,7 @@ async function init(){
   wireStaticEvents();
   $('#divided-prompt-toggle').checked = playDividedPrompt;
   $('#challenge-toggle').checked = challengeEnabled;
+  $('#zen-toggle').checked = zenMode;
   $('#volume-slider').value = Math.round(masterVolume*100);
   if (window.speechSynthesis){
     loadVoices();
