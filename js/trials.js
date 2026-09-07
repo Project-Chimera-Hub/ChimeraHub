@@ -15,18 +15,34 @@ let usedLure = false;
 let lureTarget = null;
 
 /* Index sampler with controlled target and lure rates. */
-function sampleIndex(streamKey, len, nbackIdx, lureIdxs) {
+/* A uniform draw that will not land on one particular index.
+   Falls back to a plain draw where there is nothing else to pick, so a
+   one-cell grid still produces a trial. */
+function randExcept(len, forbid) {
+  if (forbid == null || len <= 1) return randInt(len);
+  let i, guard = 0;
+  do { i = randInt(len); guard++; } while (i === forbid && guard < 40);
+  return i;
+}
+
+function sampleIndex(streamKey, len, nbackIdx, lureIdxs, forbid) {
   /* Lure is checked BEFORE the target-match roll. A lure is by definition not an
      n-back match, so rolling for a match first would silently eat the lure on 28% of
      the trials that were chosen to carry one. */
-  const lures = (lureIdxs || []).filter(i => i != null && i !== nbackIdx);
+  const lures = (lureIdxs || []).filter(i => i != null && i !== nbackIdx && i !== forbid);
   if (lures.length && lureTarget === streamKey) {
     lureTarget = null; usedLure = true;
     return pick(lures);
   }
-  if (nbackIdx != null && Math.random() < TARGET_RATE) return nbackIdx;
+  /* A match that would leave the cube where it stands is not shown. The caller
+     only forbids anything above lag one, where a match is never a repeat by
+     construction — so this costs the occasional match and never all of them. */
+  if (nbackIdx != null && nbackIdx !== forbid && Math.random() < TARGET_RATE) {
+    return nbackIdx;
+  }
   let i, guard = 0;
-  do { i = randInt(len); guard++; } while (i === nbackIdx && guard < 20 && len > 1);
+  do { i = randInt(len); guard++; }
+  while ((i === nbackIdx || i === forbid) && guard < 40 && len > 1);
   return i;
 }
 
@@ -75,9 +91,16 @@ function cardinalNeighbours(fromIdx) {
 
 /* Choose the next cell by which meta-relation it should realise, uniformly over the
    types actually reachable from here. `A` is the previous move as [axis, sign]. */
-function pickMetaTarget(fromIdx, A) {
-  const neigh = cardinalNeighbours(fromIdx);
-  if (!A || !neigh.length) return neigh.length ? pick(neigh) : randInt(state.cells.length);
+function pickMetaTarget(fromIdx, A, forbid) {
+  const all = cardinalNeighbours(fromIdx);
+  /* Keep the cube moving: a neighbour that is where it already stands is a
+     trial the eye reads as nothing happening. Dropped only when something else
+     is available — a relation that cannot be stated is worse than a still cube. */
+  const trimmed = all.filter(i => i !== forbid);
+  const neigh = trimmed.length ? trimmed : all;
+  if (!A || !neigh.length) {
+    return neigh.length ? pick(neigh) : randExcept(state.cells.length, forbid);
+  }
   const f = state.cells[fromIdx];
   const byType = { same: [], opp: [], diff: [] };
   neigh.forEach(i => {
@@ -112,6 +135,23 @@ function sampleTrial() {
     on(k) && (cfg.streams[k] === 'identity' || k === 'position'));
   lureTarget = (eligible.length && Math.random() < cfg.lureRate) ? pick(eligible) : null;
 
+  /* The cube always moves.
+     Standing still reads as nothing having happened — the eye has no event to
+     attach the judgement to, and above lag one it is never a target either, so
+     the trial asks for a comparison against a picture that did not change.
+
+     Lag one is the whole exception: there the previous trial *is* the n-back
+     item, so a position match is a repeat by definition and forbidding one would
+     make the match unstateable.
+
+     Above that the rule is unconditional, including when the n-back cell happens
+     to be where the cube already stands. That trial simply is not a match —
+     matches are drawn at a rate rather than owed on particular trials, and the
+     first attempt at this exempted the case, which let a stationary cube back in
+     on about one trial in twenty-six. */
+  const prev = backAt(1);
+  const noRepeat = prev && n > 1 ? prev.cellIdx : null;
+
   /* Identity mode needs forced matches (1/27 is far too rare otherwise);
      relational mode is dense by construction, so sample freely. */
   if (cfg.meta && rel('position') && nb) {
@@ -120,20 +160,23 @@ function sampleTrial() {
        uniformly yields same 5% / opposite 28% / different 66%, because four of six
        directions leave the axis and walls block continuing straight; "always answer
        different" would then score 66%. */
-    t.cellIdx = pickMetaTarget(nb.cellIdx, nb.pair ? cardinalOf(nb.pair[0], nb.pair[1]) : null);
+    t.cellIdx = pickMetaTarget(nb.cellIdx,
+                               nb.pair ? cardinalOf(nb.pair[0], nb.pair[1]) : null,
+                               noRepeat);
   } else if (rel('position') && nb && lureTarget === 'position') {
     /* Relational lure: make the move from the (n−1)-back item clean and cardinal,
        so mis-counting your lag yields a confident WRONG answer rather than noise.
        Without this the lure axis would do nothing until identity streams appear. */
     const cand = lureA ? cardinalNeighbours(lureA.cellIdx)
-                          .filter(i => i !== nb.cellIdx) : [];
+                          .filter(i => i !== nb.cellIdx && i !== noRepeat) : [];
     if (cand.length) { t.cellIdx = pick(cand); usedLure = true; lureTarget = null; }
-    else t.cellIdx = randInt(state.cells.length);
+    else t.cellIdx = randExcept(state.cells.length, noRepeat);
   } else if (rel('position') || !on('position')) {
-    t.cellIdx = randInt(state.cells.length);
+    t.cellIdx = randExcept(state.cells.length, noRepeat);
   } else {
     t.cellIdx = sampleIndex('position', state.cells.length, nb ? nb.cellIdx : null,
-                            [lureA && lureA.cellIdx, lureB && lureB.cellIdx]);
+                            [lureA && lureA.cellIdx, lureB && lureB.cellIdx],
+                            noRepeat);
   }
 
   const feature = (key, pool) => {
