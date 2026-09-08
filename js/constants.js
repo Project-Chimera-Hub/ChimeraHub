@@ -140,7 +140,23 @@ const STREAMS = {
     meta: [
       { id:'meta-same', glyph:'⇉', label:'Same direction',  key:'w', color:'#51cf66' },
       { id:'meta-opp',  glyph:'⇄', label:'Opposite',        key:'s', color:'#ff6b6b' },
-      { id:'meta-diff', glyph:'⤢', label:'Different axis',  key:'d', color:'#fcc419' },
+      /*
+       * Orthogonal, not "different". The other two name a relation — same
+       * direction, opposite direction — and this one named the leftovers, which
+       * is a category rather than a relation and cannot be reasoned with.
+       *
+       * The predicate is unchanged, and today it is exactly the same one:
+       * `cardinalOf` reduces a move to one axis and a sign, so a different axis
+       * *is* a zero dot product. The name matters for what comes next. There are
+       * as many mutually orthogonal directions as there are dimensions, so a
+       * fourth axis gives a third way to be orthogonal instead of a second —
+       * the response set stays at three while the state behind it grows, which
+       * is difficulty that costs no buttons.
+       *
+       * The id stays `meta-diff`: it is written into stored blocks, and renaming
+       * it would silently orphan every one of them.
+       */
+      { id:'meta-diff', glyph:'⤢', label:'Orthogonal',  key:'d', color:'#fcc419' },
     ],
     /* Screen-frame twins. Separate channels so "both frames" can ask for the same
        movement twice, once per reference frame. */

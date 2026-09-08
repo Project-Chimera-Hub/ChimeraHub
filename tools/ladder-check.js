@@ -180,5 +180,28 @@ const crit = (src('js/analysis.js').match(/const CRIT = [^;]*;/) || [''])[0];
 ok('"load held" is held to the score that would advance you',
    /advanceAt\(\)/.test(crit), `CRIT reads: ${crit || '(not found)'}`);
 
+/* ------------------------------------------------------------------ *
+ * What the meta relations are called                                  *
+ * ------------------------------------------------------------------ */
+
+/*
+ * "Same direction" and "Opposite" name relations; the third named the leftovers.
+ * A residual category cannot be reasoned with — and it is not a residual, it is
+ * orthogonality: `cardinalOf` reduces a move to one axis and a sign, so a
+ * different axis is a zero dot product exactly.
+ *
+ * Checked because the payoff is dimensional and arrives later. There are as
+ * many mutually orthogonal directions as dimensions, so a fourth axis gives a
+ * third way to be orthogonal rather than a second, and the response set stays
+ * at three while the state behind it grows.
+ */
+const meta = fs.readFileSync(path.join(ROOT, 'js/constants.js'), 'utf8');
+ok('the third meta relation is named for what it is',
+   /id:'meta-diff'[^}]*label:'Orthogonal'/.test(meta),
+   'the third option still names the leftovers rather than the relation');
+ok('its id is untouched, so stored blocks still resolve',
+   /id:'meta-diff'/.test(meta),
+   'renaming the id orphans every block already recorded under it');
+
 console.log(bad ? `\n${bad} FAILED` : '\nall checks passed');
 process.exit(bad ? 1 : 0);
