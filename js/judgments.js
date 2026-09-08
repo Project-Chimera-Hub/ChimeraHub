@@ -8,6 +8,16 @@
 function cardinalOf(a, b) {
   const ca = state.cells[a.cellIdx], cb = state.cells[b.cellIdx];
   const d = [cb.x - ca.x, cb.y - ca.y, cb.z - ca.z];
+  /*
+   * The fourth component, when there is one. Heard rather than seen, and it is
+   * an index into an ordered pool, so its sign is its direction.
+   *
+   * A move stays on exactly one axis — the invariant this function has always
+   * enforced by returning null otherwise — so a spatial move leaves the pitch
+   * alone and a pitch move leaves the cell alone. `trials.js` draws them that
+   * way rather than filtering afterwards.
+   */
+  if (dimCount() >= 4) d.push((b.pitch ?? 0) - (a.pitch ?? 0));
   const nz = d.map((v, i) => [v, i]).filter(([v]) => v !== 0);
   return nz.length === 1 ? [nz[0][1], Math.sign(nz[0][0])] : null;
 }
@@ -15,7 +25,11 @@ function cardinalOf(a, b) {
 /* [axis, sign] → the axis id everything else in the app speaks. Mirrors the axisJ()
    calls below exactly: +x east, +y south (CSS +Y points DOWN), +z above. If those
    ever disagree the deck would light one arrow and the trace name another. */
-const CARDINAL_IDS = [['west', 'east'], ['north', 'south'], ['below', 'above']];
+const CARDINAL_IDS = [
+  ['west', 'east'], ['north', 'south'], ['below', 'above'],
+  /* The fourth, in the same [negative, positive] order as the three above. */
+  ['lower', 'higher'],
+];
 const cardinalId = c => c ? CARDINAL_IDS[c[0]][c[1] > 0 ? 1 : 0] : null;
 
 /* The direction this trial's stimulus arrived from — the move you just made, as an
@@ -65,6 +79,19 @@ function buildJudgments(a, b, extra) {
       axisJ('position', v[0], ['east', 'west']);
       axisJ('position', v[1], ['south', 'north']);
       axisJ('position', v[2], ['above', 'below']);
+      /*
+       * One more axis, asked exactly as the other three are: an independent
+       * up/down/neither, not a fourth option in a widening list. That is what
+       * keeps the response cost flat as the space grows.
+       *
+       * The sign is passed rather than a normalised component: a pitch step is
+       * ±1 in an ordered pool, and normalising a single-axis integer against
+       * the spatial magnitude would put it under the movement threshold.
+       */
+      if (dimCount() >= 4) {
+        axisJ('position', Math.sign((b.pitch ?? 0) - (a.pitch ?? 0)),
+              ['higher', 'lower']);
+      }
     }
     if (cfg.frame === 'screen' || cfg.frame === 'both') {
       const v = normalise(projectScreen(raw, b.matrix));

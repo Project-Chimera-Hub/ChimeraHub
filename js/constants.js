@@ -48,7 +48,43 @@ const AXIS_ORIENT = {
 };
 
 /* Stimulus pools. Every pool is ORDERED so a relational judgement is well defined. */
-const PITCHES = [220, 293.66, 392, 523.25];                 // A3 D4 G4 C5, low → high
+/*
+ * Three tones, an octave apart.
+ *
+ * Three rather than four because as a *coordinate* the pool is a short axis, not
+ * a pool of stimuli: three positions leave displacements of one and two, which
+ * is the whole range a magnitude ever needs on it, and every step is a wide
+ * enough interval that "higher" arrives without listening for it.
+ *
+ * An octave, not the fourths and fifths this used to be. A step has to read as
+ * one step, and a mixture of intervals makes the same displacement sound
+ * different depending where on the axis it happened — which is the property a
+ * coordinate cannot afford.
+ */
+const PITCHES = [220, 440, 880];                            // A3 A4 A5, low → high
+
+/*
+ * How much louder the bottom of the pool is than the top, when the option is on.
+ *
+ * A second cue on the same axis, running the other way: down is lower *and*
+ * louder. Redundant on purpose — two cues agreeing is easier to read than one,
+ * and the direction only has to be sensed, not deduced.
+ *
+ * Deeper is louder rather than quieter for a reason beyond preference: low tones
+ * are heard as quieter at equal amplitude, and small speakers lose the bottom
+ * octave first, so the gain is partly buying back the loudness the frequency
+ * gave away.
+ */
+const PITCH_LOUDNESS_RANGE = 1.7;
+
+/** Gain multiplier for a pitch index, or 1 when the option is off. */
+function pitchLevel(i, c) {
+  c = c || cfg;
+  if (!c.pitchLoudness || i == null || PITCHES.length < 2) return 1;
+  /* 1 at the top of the pool, `RANGE` at the bottom. */
+  const t = 1 - i / (PITCHES.length - 1);
+  return 1 + t * (PITCH_LOUDNESS_RANGE - 1);
+}
 /* Timbre voices. Every set is FOUR voices ordered dull → bright, because the deck
    labels them "Brighter"/"Duller" and a relational answer is only defined on an
    ordered scale. The ordering is by spectral centroid, measured by rendering each

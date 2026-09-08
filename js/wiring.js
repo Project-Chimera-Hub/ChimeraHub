@@ -246,6 +246,7 @@ $('varNBack').onchange = e => { freeCfg.varN = +e.target.value; applyFree(); syn
 $('cubeDimension').onchange = e => { freeCfg.dim = +e.target.value; applyFree(); buildCube(cfg.dim); updateHUD(); saveProgress(); };
 $('rotationOn').onchange    = e => { freeCfg.rotation = e.target.checked; applyFree(); updateHUD(); saveProgress(); };
 $('dimensions').onchange    = e => { freeCfg.dimensions = Number(e.target.value); applyFree(); syncSettingsUI(); updateHUD(); saveProgress(); };
+$('pitchLoudness').onchange = e => { freeCfg.pitchLoudness = e.target.checked; applyFree(); saveProgress(); };
 $('frameMode').onchange     = e => { freeCfg.frame = e.target.value; applyFree(); updateHUD(); saveProgress(); };
 $('feedbackModeF').onchange = e => { freeCfg.feedback = e.target.value; cfg.feedback = e.target.value; renderGlyphLegend(); saveProgress(); };
 /* --- display (shared by both modes) --- */

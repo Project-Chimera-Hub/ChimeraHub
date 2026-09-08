@@ -552,7 +552,7 @@ function playTone(t) {
   const v = set[t.timbre != null ? t.timbre : 0] || set[0];
 
   const gain = audioCtx.createGain();
-  const peak = 0.09 * (v.level || 1);
+  const peak = 0.09 * (v.level || 1) * pitchLevel(t.pitch);
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(peak, now + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.30);

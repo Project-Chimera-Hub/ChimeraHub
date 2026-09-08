@@ -46,6 +46,14 @@ const cfg = {
    * is judged twice — and `applyDimensions` enforces that.
    */
   dimensions: 3,
+  /*
+   * Deeper tones louder, as a second cue on the same axis.
+   *
+   * Only useful where pitch is a coordinate, but harmless as a stream too, so
+   * it is not gated on the dimension count — a player who finds the tones hard
+   * to place can have the help either way.
+   */
+  pitchLoudness: false,
   rotation: false,
   spinPath: 'solved',     // 'solved' = non-degenerate turntable + roll, 'free' = original tumble
   voiceSet: 'waves',      // which four timbres the timbre stream draws from
@@ -90,7 +98,8 @@ const progCfg = { feedback: 'reveal' };
 
 /* Free Play keeps its own settings so switching modes doesn't clobber either one. */
 const freeCfg = {
-  n: 2, streams: { position: 'relational' }, dim: 3, dimensions: 3, rotation: false,
+  n: 2, streams: { position: 'relational' }, dim: 3, dimensions: 3,
+  pitchLoudness: false, rotation: false,
   spin: 60, frame: 'cube', interval: 2500, blockLength: 20, feedback: 'reveal',
   lureRate: 0.20, meta: false, gate: 0, retro: 0, varN: 0,
   /* varPriority was missing here while cfg defaulted it on, so Free Play silently

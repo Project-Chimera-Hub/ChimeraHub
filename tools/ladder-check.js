@@ -305,5 +305,37 @@ ok('and the guard runs on both paths into a block',
    (blk.match(/applyDimensions\(cfg\)/g) || []).length >= 2,
    'progression or free play can still reach a block with pitch judged twice');
 
+
+/* ------------------------------------------------------------------ *
+ * The tones themselves                                               *
+ * ------------------------------------------------------------------ */
+
+ok('three tones, which is two displacements and no more',
+   g4('PITCHES.length') === 3, `there are ${g4('PITCHES.length')}`);
+
+/*
+ * Equal intervals. A step has to read as one step wherever on the axis it
+ * happens; a mixture of fourths and fifths makes the same displacement sound
+ * different depending where it started, which a coordinate cannot afford.
+ */
+ok('every step is the same interval',
+   Math.abs(g4('PITCHES[1] / PITCHES[0]') - g4('PITCHES[2] / PITCHES[1]')) < 1e-9,
+   `ratios ${g4('PITCHES[1] / PITCHES[0]').toFixed(3)} and `
+   + `${g4('PITCHES[2] / PITCHES[1]').toFixed(3)}`);
+
+/* The second cue, and it runs the same way as the first: down is lower and louder. */
+vm.runInContext('cfg.pitchLoudness = true;', geo);
+ok('deeper is louder when it is asked for',
+   g4('pitchLevel(0)') > g4('pitchLevel(1)') && g4('pitchLevel(1)') > g4('pitchLevel(2)'),
+   `levels ${[0, 1, 2].map(i => g4(`pitchLevel(${i})`).toFixed(2)).join(', ')}`);
+ok('and the top of the pool is left where it was',
+   g4('pitchLevel(PITCHES.length - 1)') === 1,
+   'the option makes every tone louder rather than tilting them');
+
+vm.runInContext('cfg.pitchLoudness = false;', geo);
+ok('off, every tone is the level it always was',
+   [0, 1, 2].every(i => g4(`pitchLevel(${i})`) === 1),
+   'the option is doing something while switched off');
+
 console.log(bad ? `\n${bad} FAILED` : '\nall checks passed');
 process.exit(bad ? 1 : 0);

@@ -260,6 +260,7 @@ function syncSettingsUI() {
   $('rotationOn').checked = freeCfg.rotation;
   $('rotationSpeed').value = freeCfg.spin;
   $('dimensions').value = String(freeCfg.dimensions || 3);
+  $('pitchLoudness').checked = !!freeCfg.pitchLoudness;
   $('frameMode').value = freeCfg.frame;
   $('varPriority').checked = !!freeCfg.varPriority;
   $('fixedGlyphMap').checked = !!freeCfg.fixedGlyphMap;

@@ -486,6 +486,7 @@ function applyFree() {
     varPriority: !!freeCfg.varPriority,
     dim: freeCfg.dim,
     dimensions: freeCfg.dimensions || 3,
+    pitchLoudness: !!freeCfg.pitchLoudness,
     frame: freeCfg.frame,
     rotation: freeCfg.rotation,
     spin: freeCfg.spin,
