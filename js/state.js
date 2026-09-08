@@ -4,11 +4,48 @@
    3. STATE
    ============================================================ */
 
+/*
+ * Pitch is a coordinate or a stream, never both.
+ *
+ * At four dimensions a pitch step *is* the move, so judging pitch separately
+ * would ask the same question twice and score it twice — and the second answer
+ * would be the first one wearing a different button.
+ *
+ * Enforced rather than documented: the settings screen can offer both, and a
+ * saved configuration from before this existed can hold both.
+ */
+function applyDimensions(c) {
+  c = c || cfg;
+  if ((c.dimensions || 3) >= 4 && c.streams && c.streams.pitch) {
+    delete c.streams.pitch;
+  }
+  return c;
+}
+
 const cfg = {
   mode: 'progression',                 // 'progression' | 'free'
   n: 1,
   streams: { position: 'relational' },
   dim: 3,
+  /*
+   * How many axes a move can happen on.
+   *
+   * Three is the cube. Four adds pitch as a coordinate of the same vector
+   * rather than as a stream beside it: a move is then east/west, north/south,
+   * above/below *or* higher/lower, and the meta relation lives in R⁴.
+   *
+   * The reason to want it is orthogonality. There are as many mutually
+   * orthogonal directions as there are dimensions, so a fourth axis gives a
+   * third way to be orthogonal instead of a second — the response set stays at
+   * three while the space behind it grows, which is the only kind of difficulty
+   * that costs no buttons. Quaternary at four back is eight variables held and
+   * composed; widening the space is a way to make the relation carry more
+   * without asking memory to hold more.
+   *
+   * Pitch cannot also be judged as a stream while it is a coordinate — nothing
+   * is judged twice — and `applyDimensions` enforces that.
+   */
+  dimensions: 3,
   rotation: false,
   spinPath: 'solved',     // 'solved' = non-degenerate turntable + roll, 'free' = original tumble
   voiceSet: 'waves',      // which four timbres the timbre stream draws from
@@ -53,7 +90,7 @@ const progCfg = { feedback: 'reveal' };
 
 /* Free Play keeps its own settings so switching modes doesn't clobber either one. */
 const freeCfg = {
-  n: 2, streams: { position: 'relational' }, dim: 3, rotation: false,
+  n: 2, streams: { position: 'relational' }, dim: 3, dimensions: 3, rotation: false,
   spin: 60, frame: 'cube', interval: 2500, blockLength: 20, feedback: 'reveal',
   lureRate: 0.20, meta: false, gate: 0, retro: 0, varN: 0,
   /* varPriority was missing here while cfg defaulted it on, so Free Play silently

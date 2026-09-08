@@ -462,6 +462,8 @@ function applyProgression() {
 
   if (cfg.streams.glyph === 'relational' && !state.glyphMap) ensureGlyphMap();
   onConfigChanged();
+  /* Pitch is a coordinate or a stream, never both. */
+  applyDimensions(cfg);
 }
 
 function applyFree() {
@@ -483,11 +485,14 @@ function applyFree() {
     fixedGlyphMap: !!freeCfg.fixedGlyphMap,
     varPriority: !!freeCfg.varPriority,
     dim: freeCfg.dim,
+    dimensions: freeCfg.dimensions || 3,
     frame: freeCfg.frame,
     rotation: freeCfg.rotation,
     spin: freeCfg.spin,
     blockLength: freeCfg.blockLength,
   });
+  /* Pitch is a coordinate or a stream, never both. */
+  applyDimensions(cfg);
   restoreFixedGlyphMap();
   /* A retro trial spends its first stretch showing the stimulus and locks responses
      until the cue, so it needs a floor the plain task doesn't. */

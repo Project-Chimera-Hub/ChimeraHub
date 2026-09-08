@@ -259,6 +259,7 @@ function syncSettingsUI() {
       + 'layout about half its slot size, since cells must fit the tightest moment.';
   $('rotationOn').checked = freeCfg.rotation;
   $('rotationSpeed').value = freeCfg.spin;
+  $('dimensions').value = String(freeCfg.dimensions || 3);
   $('frameMode').value = freeCfg.frame;
   $('varPriority').checked = !!freeCfg.varPriority;
   $('fixedGlyphMap').checked = !!freeCfg.fixedGlyphMap;

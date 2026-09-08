@@ -91,25 +91,64 @@ function cardinalNeighbours(fromIdx) {
 
 /* Choose the next cell by which meta-relation it should realise, uniformly over the
    types actually reachable from here. `A` is the previous move as [axis, sign]. */
-function pickMetaTarget(fromIdx, A, forbid) {
+/*
+ * The move that realises a drawn relation to the previous one.
+ *
+ * Returns a destination on whichever axis realises it — `{ cellIdx, pitch }` —
+ * because with a fourth dimension the axis is part of the choice. At three
+ * dimensions `pitch` comes back unchanged and this behaves exactly as it did.
+ *
+ * The fourth axis is where the extra orthogonality lives. A pitch step against
+ * a spatial previous move is orthogonal by construction, and against a previous
+ * pitch move it is the only way to state same or opposite — so the axis is not
+ * decoration, it is a third way to answer "orthogonal" where there were two.
+ */
+function pickMetaMove(fromIdx, fromPitch, A, forbid) {
+  const dims = dimCount();
   const all = cardinalNeighbours(fromIdx);
   /* Keep the cube moving: a neighbour that is where it already stands is a
      trial the eye reads as nothing happening. Dropped only when something else
      is available — a relation that cannot be stated is worse than a still cube. */
   const trimmed = all.filter(i => i !== forbid);
   const neigh = trimmed.length ? trimmed : all;
-  if (!A || !neigh.length) {
-    return neigh.length ? pick(neigh) : randExcept(state.cells.length, forbid);
+
+  /*
+   * Pitch has walls too: an ordered pool of four, so the bottom can only rise
+   * and the top can only fall. The same shape as a cube face, and the same
+   * consequence — a relation that needs a step there is sometimes unavailable.
+   */
+  const steps = [];
+  if (dims >= 4) {
+    if (fromPitch > 0) steps.push(-1);
+    if (fromPitch < PITCHES.length - 1) steps.push(1);
   }
+
+  const moves = neigh.map(i => ({ cellIdx: i, pitch: fromPitch }))
+    .concat(steps.map(d => ({ cellIdx: fromIdx, pitch: fromPitch + d })));
+
+  if (!A || !moves.length) {
+    return moves.length
+      ? pick(moves)
+      : { cellIdx: randExcept(state.cells.length, forbid), pitch: fromPitch };
+  }
+
   const f = state.cells[fromIdx];
   const byType = { same: [], opp: [], diff: [] };
-  neigh.forEach(i => {
-    const c = state.cells[i];
-    const d = [c.x - f.x, c.y - f.y, c.z - f.z];
-    const ax = d.findIndex(v => v !== 0);
-    if (ax === A[0]) (Math.sign(d[ax]) === A[1] ? byType.same : byType.opp).push(i);
-    else byType.diff.push(i);
+  moves.forEach(m => {
+    var ax, sign;
+    if (m.pitch !== fromPitch) {
+      ax = 3;
+      sign = Math.sign(m.pitch - fromPitch);
+    } else {
+      const c = state.cells[m.cellIdx];
+      const d = [c.x - f.x, c.y - f.y, c.z - f.z];
+      ax = d.findIndex(v => v !== 0);
+      sign = Math.sign(d[ax]);
+    }
+    if (ax === A[0]) (sign === A[1] ? byType.same : byType.opp).push(m);
+    else byType.diff.push(m);
   });
+
   /* "Same" means continuing straight, which a wall blocks about half the time, so
      uniform-over-available leaves it at ~11%. Over-weight it when it IS reachable to
      pull the three answers closer together. */
@@ -151,6 +190,8 @@ function sampleTrial() {
      on about one trial in twenty-six. */
   const prev = backAt(1);
   const noRepeat = prev && n > 1 ? prev.cellIdx : null;
+  /* Set by the meta branch when it picks the axis as well as the cell. */
+  let metaMove = null;
 
   /* Identity mode needs forced matches (1/27 is far too rare otherwise);
      relational mode is dense by construction, so sample freely. */
@@ -160,9 +201,10 @@ function sampleTrial() {
        uniformly yields same 5% / opposite 28% / different 66%, because four of six
        directions leave the axis and walls block continuing straight; "always answer
        different" would then score 66%. */
-    t.cellIdx = pickMetaTarget(nb.cellIdx,
-                               nb.pair ? cardinalOf(nb.pair[0], nb.pair[1]) : null,
-                               noRepeat);
+    metaMove = pickMetaMove(nb.cellIdx, nb.pitch ?? 0,
+                            nb.pair ? cardinalOf(nb.pair[0], nb.pair[1]) : null,
+                            noRepeat);
+    t.cellIdx = metaMove.cellIdx;
   } else if (rel('position') && nb && lureTarget === 'position') {
     /* Relational lure: make the move from the (n−1)-back item clean and cardinal,
        so mis-counting your lag yields a confident WRONG answer rather than noise.
@@ -193,6 +235,38 @@ function sampleTrial() {
   t.size     = feature('size',     SIZES);
   t.quantity = feature('quantity', COUNTS);
   t.letter   = feature('letter',   LETTER_KEYS);
+
+  /*
+   * The fourth coordinate, once the features have had their say.
+   *
+   * Written last because it is not a feature: at four dimensions the pitch is
+   * part of *where the stimulus is*, and `feature('pitch', …)` would have drawn
+   * it as an independent stream — which is the one thing it must not be, since
+   * nothing is judged twice.
+   *
+   * A move stays on exactly one axis, which is the invariant `cardinalOf`
+   * enforces by refusing to name anything else. So a spatial move copies the
+   * reference's pitch and a pitch move copies its cell, and the axis is drawn
+   * rather than filtered for afterwards: one in four, because there are four of
+   * them.
+   */
+  if (dimCount() >= 4 && rel('position')) {
+    if (metaMove) {
+      t.pitch = metaMove.pitch;
+    } else if (nb) {
+      const from = nb.pitch ?? 0;
+      const steps = [];
+      if (from > 0) steps.push(-1);
+      if (from < PITCHES.length - 1) steps.push(1);
+      /* A quarter of the time, and only when the pool leaves somewhere to go. */
+      t.pitch = steps.length && Math.random() < 0.25
+        ? from + pick(steps)
+        : from;
+      if (t.pitch !== from) t.cellIdx = nb.cellIdx;
+    } else if (t.pitch == null) {
+      t.pitch = randInt(PITCHES.length);
+    }
+  }
 
   if (on('glyph')) {
     if (rel('glyph')) {

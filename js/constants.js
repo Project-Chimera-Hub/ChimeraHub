@@ -15,6 +15,28 @@ const AXES = [
 ];
 const AXIS = Object.fromEntries(AXES.map(a => [a.id, a]));
 
+/*
+ * The fourth axis, which is heard rather than seen.
+ *
+ * Not in `AXES`: that list drives the cube — `AXIS_ORIENT`, the gizmo arms, the
+ * move arrow — and a pitch step has no direction to point in. A fourth *cell*
+ * coordinate would be four times the lattice with nothing to draw it on, so the
+ * coordinate rides on the trial's pitch instead, which is already an ordered
+ * pool of four.
+ *
+ * Ordered, bipolar, metric in semitone-ish steps, and cross-modal — which is
+ * the point: an auditory coordinate is not competing with the visual scene for
+ * the same representation, so it can be held at the same time rather than
+ * checked after.
+ */
+const PITCH_AXIS = [
+  { id:'higher', letter:'H', name:'Higher', key:'r', color:'#22b8cf' },
+  { id:'lower',  letter:'L', name:'Lower',  key:'f', color:'#e599f7' },
+];
+
+/** Axes a move may happen on, given how many dimensions are in play. */
+const dimCount = c => Math.max(3, Math.min(4, (c || cfg).dimensions || 3));
+
 /* Transform that maps the element's local +X onto each axis direction. */
 const AXIS_ORIENT = {
   east:  '',
@@ -132,7 +154,8 @@ const STREAMS = {
   position: {
     label: 'Position', color: '#8ab4ff',
     identity:   [{ id:'pos', glyph:'●', label:'Same', key:' ' }],
-    relational: AXES.map(a => ({ id:a.id, glyph:a.letter, label:a.name, key:a.key, color:a.color })),
+    relational: AXES.concat(PITCH_AXIS)
+      .map(a => ({ id:a.id, glyph:a.letter, label:a.name, key:a.key, color:a.color })),
     /* Second-order judgement: how this move relates to the PREVIOUS move, rather
        than where it went. Three channels, not six — you only need to hold the
        direction you derived n trials ago, so response load stays low while the

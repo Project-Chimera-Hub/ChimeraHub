@@ -203,5 +203,107 @@ ok('its id is untouched, so stored blocks still resolve',
    /id:'meta-diff'/.test(meta),
    'renaming the id orphans every block already recorded under it');
 
+
+/* ------------------------------------------------------------------ *
+ * The fourth axis                                                     *
+ * ------------------------------------------------------------------ *
+ *
+ * Pitch as a coordinate of the move rather than a stream beside it. The point
+ * is orthogonality: there are as many mutually orthogonal directions as there
+ * are dimensions, so a fourth axis gives a third way to be orthogonal instead
+ * of a second — the answers stay at three while the space behind them grows,
+ * which is the only kind of difficulty that costs no buttons.
+ *
+ * Driven through a sandbox rather than a browser, so it needs the geometry the
+ * real app builds. `state.cells` is stood up here as the lattice it would be.
+ */
+const geo = vm.createContext({ console, Math, Array, Object, JSON });
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/constants.js'), 'utf8')
+  .replace(/^"use strict";/, ''), geo);
+
+/* A 3×3×3 lattice, which is what `dim: 3` builds. */
+vm.runInContext(`
+  var cfg = { dimensions: 4, streams: { position: 'relational' } };
+  var state = { cells: [] };
+  for (var x = 0; x < 3; x++) for (var y = 0; y < 3; y++) for (var z = 0; z < 3; z++)
+    state.cells.push({ x: x, y: y, z: z });
+  var idx = function (x, y, z) {
+    for (var i = 0; i < state.cells.length; i++) {
+      var c = state.cells[i];
+      if (c.x === x && c.y === y && c.z === z) return i;
+    }
+    return -1;
+  };
+`, geo);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/judgments.js'), 'utf8')
+  .replace(/^"use strict";/, ''), geo);
+
+const g4 = k => vm.runInContext(k, geo);
+
+ok('a pitch step is named as a direction of its own',
+   g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
+                             { cellIdx: idx(1,1,1), pitch: 2 }))`) === 'higher',
+   'a move up the pool was not read as a move');
+ok('and downward too',
+   g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 2 },
+                             { cellIdx: idx(1,1,1), pitch: 1 }))`) === 'lower');
+
+ok('the three cube axes still read as they did',
+   g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
+                             { cellIdx: idx(2,1,1), pitch: 1 }))`) === 'east',
+   'adding a fourth component changed what a spatial move is called');
+
+/*
+ * The invariant the whole thing rests on: a move is on exactly one axis. Moving
+ * the cell *and* the pitch names nothing, which is what makes the generator
+ * draw the axis rather than filter for it afterwards.
+ */
+ok('a move on two axes at once is not a direction',
+   g4(`cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
+                   { cellIdx: idx(2,1,1), pitch: 2 })`) === null,
+   'a diagonal through space and pitch was given a name');
+
+ok('a pitch step is invisible at three dimensions',
+   (vm.runInContext('cfg.dimensions = 3;', geo),
+    g4(`cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
+                    { cellIdx: idx(1,1,1), pitch: 2 })`) === null),
+   'the fourth axis is being read when nobody asked for four');
+vm.runInContext('cfg.dimensions = 4;', geo);
+
+/* Given a move east, the axes orthogonal to it: two at three dimensions, three
+   at four. That count *is* the feature. */
+const orth = d => {
+  vm.runInContext(`cfg.dimensions = ${d};`, geo);
+  return g4(`(function () {
+    var A = cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
+                       { cellIdx: idx(2,1,1), pitch: 1 });
+    var moves = [
+      { cellIdx: idx(1,0,1), pitch: 1 }, { cellIdx: idx(1,2,1), pitch: 1 },
+      { cellIdx: idx(1,1,0), pitch: 1 }, { cellIdx: idx(1,1,2), pitch: 1 },
+      { cellIdx: idx(1,1,1), pitch: 0 }, { cellIdx: idx(1,1,1), pitch: 2 },
+    ];
+    var axes = {};
+    moves.forEach(function (m) {
+      var c = cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 }, m);
+      if (c && c[0] !== A[0]) axes[c[0]] = true;
+    });
+    return Object.keys(axes).length;
+  })()`);
+};
+ok('three dimensions leave two ways to be orthogonal', orth(3) === 2,
+   `counted ${orth(3)}`);
+ok('four dimensions leave three', orth(4) === 3,
+   `counted ${orth(4)} — the fourth axis is not reaching the relation`);
+
+/* Nothing is judged twice. */
+const st = fs.readFileSync(path.join(ROOT, 'js/state.js'), 'utf8');
+ok('pitch cannot be a coordinate and a stream at once',
+   /function applyDimensions[\s\S]*?delete c\.streams\.pitch/.test(st),
+   'the guard that stops pitch being judged twice is gone');
+const blk = fs.readFileSync(path.join(ROOT, 'js/block.js'), 'utf8');
+ok('and the guard runs on both paths into a block',
+   (blk.match(/applyDimensions\(cfg\)/g) || []).length >= 2,
+   'progression or free play can still reach a block with pitch judged twice');
+
 console.log(bad ? `\n${bad} FAILED` : '\nall checks passed');
 process.exit(bad ? 1 : 0);
