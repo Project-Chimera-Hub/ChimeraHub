@@ -5,9 +5,9 @@
    ============================================================ */
 
 /*
- * Pitch is a coordinate or a stream, never both.
+ * A property is a coordinate or a stream, never both.
  *
- * At four dimensions a pitch step *is* the move, so judging pitch separately
+ * A step on a coordinate *is* the move, so judging that property separately
  * would ask the same question twice and score it twice — and the second answer
  * would be the first one wearing a different button.
  *
@@ -16,9 +16,7 @@
  */
 function applyDimensions(c) {
   c = c || cfg;
-  if ((c.dimensions || 3) >= 4 && c.streams && c.streams.pitch) {
-    delete c.streams.pitch;
-  }
+  coordAxes(c).forEach(k => { if (c.streams) delete c.streams[k]; });
   return c;
 }
 
@@ -28,24 +26,34 @@ const cfg = {
   streams: { position: 'relational' },
   dim: 3,
   /*
-   * How many axes a move can happen on.
+   * The reason coordinate axes exist at all is orthogonality. There are as many
+   * mutually orthogonal directions as there are dimensions, so a fourth axis
+   * gives a third way to be orthogonal instead of a second — the response set
+   * stays at three while the space behind it grows, which is the only kind of
+   * difficulty that costs no buttons. Quaternary at four back is eight
+   * variables held and composed; widening the space makes the relation carry
+   * more without asking memory to hold more.
    *
-   * Three is the cube. Four adds pitch as a coordinate of the same vector
-   * rather than as a stream beside it: a move is then east/west, north/south,
-   * above/below *or* higher/lower, and the meta relation lives in R⁴.
-   *
-   * The reason to want it is orthogonality. There are as many mutually
-   * orthogonal directions as there are dimensions, so a fourth axis gives a
-   * third way to be orthogonal instead of a second — the response set stays at
-   * three while the space behind it grows, which is the only kind of difficulty
-   * that costs no buttons. Quaternary at four back is eight variables held and
-   * composed; widening the space is a way to make the relation carry more
-   * without asking memory to hold more.
-   *
-   * Pitch cannot also be judged as a stream while it is a coordinate — nothing
+   * A property cannot be judged as a stream while it is a coordinate — nothing
    * is judged twice — and `applyDimensions` enforces that.
    */
-  dimensions: 3,
+  /*
+   * Properties that are coordinates of the move rather than streams beside it.
+   * Empty is the cube alone; each entry adds an axis, so `dimCount` is three
+   * plus however many are listed. Order matters and is the order they are
+   * judged and named in.
+   */
+  coordAxes: [],
+  /*
+   * The furthest a move may travel on a coordinate axis: two, or three.
+   *
+   * Two means three levels on the axis, three means four — the pools grow with
+   * it so that the levels stay as far apart as the property allows. A cap is
+   * not a limit on difficulty so much as on ambiguity: three levels maximally
+   * spread are easier to place than five crowded ones, and a displacement of
+   * two on a three-level axis is unmistakable.
+   */
+  magnitudeCap: 2,
   /*
    * Deeper tones louder, as a second cue on the same axis.
    *
@@ -94,12 +102,18 @@ const cfg = {
    copy of its own, so its Feedback control wrote straight to cfg — which the first
    visit to Free Play then overwrote, silently and permanently. It was never saved
    either, so it reset on every reload. */
-const progCfg = { feedback: 'reveal' };
+const progCfg = {
+  feedback: 'reveal',
+  /* Progression's own copy, for the same reason it keeps its own feedback: these
+     were reaching a ladder run out of Free Play's settings, so a box ticked in one
+     mode silently changed what the other mode's recorded ability was about. */
+  coordAxes: [], magnitudeCap: 2, pitchLoudness: false,
+};
 
 /* Free Play keeps its own settings so switching modes doesn't clobber either one. */
 const freeCfg = {
-  n: 2, streams: { position: 'relational' }, dim: 3, dimensions: 3,
-  pitchLoudness: false, rotation: false,
+  n: 2, streams: { position: 'relational' }, dim: 3,
+  coordAxes: [], magnitudeCap: 2, pitchLoudness: false, rotation: false,
   spin: 60, frame: 'cube', interval: 2500, blockLength: 20, feedback: 'reveal',
   lureRate: 0.20, meta: false, gate: 0, retro: 0, varN: 0,
   /* varPriority was missing here while cfg defaulted it on, so Free Play silently

@@ -19,7 +19,10 @@ function deckGroups() {
       const both = cfg.frame === 'both';
       if (cfg.frame === 'cube' || both)
         groups.push({ key:'position', label:'Position' + (both ? ' · cube' : ''),
-                      color: spec.color, channels: spec.relational });
+                      color: spec.color,
+                      /* Coordinate axes are judged inside the position judgement,
+                         so their poles have to be answerable here. */
+                      channels: spec.relational.concat(coordChannels()) });
       if (cfg.frame === 'screen' || both)
         groups.push({ key:'position2', label:'Position' + (both ? ' · screen' : ' · screen'),
                       color:'#9ccc65', channels: spec.relationalScreen });

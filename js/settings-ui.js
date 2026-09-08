@@ -213,8 +213,24 @@ function renderLadderState() {
     `${levels.length - 1} rotation steps: ${levels.slice(1).join('s, ')}s per turn.`;
 }
 
+/* The coordinate-axis controls, which both modes have a set of — one function
+   rather than two copies, because the first version of this drifted the moment
+   Progression got its own copy of the settings. */
+function syncCoordUI(boxesId, capId, countId, loudId, c) {
+  const coords = c.coordAxes || [];
+  document.querySelectorAll('#' + boxesId + ' input[data-coord]').forEach(box => {
+    box.checked = coords.indexOf(box.getAttribute('data-coord')) >= 0;
+  });
+  $(capId).value = String(c.magnitudeCap === 3 ? 3 : 2);
+  $(countId).textContent = (3 + coords.length) + ' axes in play'
+    + (coords.length ? ' — cube plus ' + coords.map(labelFor).join(', ') : '');
+  $(loudId).checked = !!c.pitchLoudness;
+}
+
 function syncSettingsUI() {
   $('feedbackMode').value = progCfg.feedback;
+  syncCoordUI('progCoordAxes', 'progMagnitudeCap', 'progCoordCount',
+              'progPitchLoudness', progCfg);
   $('feedbackModeF').value = freeCfg.feedback;
   $('adaptMode').value = tune.adapt;
   $('startInterval').value = tune.startInterval / 1000;
@@ -259,8 +275,7 @@ function syncSettingsUI() {
       + 'layout about half its slot size, since cells must fit the tightest moment.';
   $('rotationOn').checked = freeCfg.rotation;
   $('rotationSpeed').value = freeCfg.spin;
-  $('dimensions').value = String(freeCfg.dimensions || 3);
-  $('pitchLoudness').checked = !!freeCfg.pitchLoudness;
+  syncCoordUI('coordAxes', 'magnitudeCap', 'coordCount', 'pitchLoudness', freeCfg);
   $('frameMode').value = freeCfg.frame;
   $('varPriority').checked = !!freeCfg.varPriority;
   $('fixedGlyphMap').checked = !!freeCfg.fixedGlyphMap;

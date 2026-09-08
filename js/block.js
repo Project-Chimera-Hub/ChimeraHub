@@ -453,6 +453,13 @@ function applyProgression() {
        glyph stream markedly easier, which is exactly why it is opt-in. */
     gate: 0, retro: 0, varN: 0, fixedGlyphMap: false,
     varPriority: true,
+    /* Chosen rather than laddered. Extra axes widen the space a move lives in
+       without adding an answer, which is what makes quaternary at a high N
+       carry more; but they change what a rung means, so the ladder does not
+       move them on its own. */
+    coordAxes: (progCfg.coordAxes || []).slice(),
+    magnitudeCap: progCfg.magnitudeCap === 3 ? 3 : 2,
+    pitchLoudness: !!progCfg.pitchLoudness,
     dim: 3,
     frame: 'cube',
     rotation: prog.spinLevel > 0,
@@ -485,7 +492,8 @@ function applyFree() {
     fixedGlyphMap: !!freeCfg.fixedGlyphMap,
     varPriority: !!freeCfg.varPriority,
     dim: freeCfg.dim,
-    dimensions: freeCfg.dimensions || 3,
+    coordAxes: (freeCfg.coordAxes || []).slice(),
+    magnitudeCap: freeCfg.magnitudeCap === 3 ? 3 : 2,
     pitchLoudness: !!freeCfg.pitchLoudness,
     frame: freeCfg.frame,
     rotation: freeCfg.rotation,

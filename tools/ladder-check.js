@@ -223,7 +223,7 @@ vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/constants.js'), 'utf8')
 
 /* A 3×3×3 lattice, which is what `dim: 3` builds. */
 vm.runInContext(`
-  var cfg = { dimensions: 4, streams: { position: 'relational' } };
+  var cfg = { coordAxes: ['pitch'], magnitudeCap: 2, streams: { position: 'relational' } };
   var state = { cells: [] };
   for (var x = 0; x < 3; x++) for (var y = 0; y < 3; y++) for (var z = 0; z < 3; z++)
     state.cells.push({ x: x, y: y, z: z });
@@ -240,13 +240,41 @@ vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/judgments.js'), 'utf8')
 
 const g4 = k => vm.runInContext(k, geo);
 
-ok('a pitch step is named as a direction of its own',
+/*
+ * A coordinate step is a direction like any other, and it borrows the stream's
+ * own relational channel ids for its poles — no new buttons, no new keys.
+ */
+ok('a coordinate step is named as a direction of its own',
    g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
-                             { cellIdx: idx(1,1,1), pitch: 2 }))`) === 'higher',
+                             { cellIdx: idx(1,1,1), pitch: 2 }))`) === 'pitch-up',
    'a move up the pool was not read as a move');
 ok('and downward too',
    g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 2 },
-                             { cellIdx: idx(1,1,1), pitch: 1 }))`) === 'lower');
+                             { cellIdx: idx(1,1,1), pitch: 1 }))`) === 'pitch-down');
+
+/* Each of the four properties can be the coordinate, not just the tone. */
+['pitch', 'color', 'size', 'quantity'].forEach(k => {
+  vm.runInContext(`cfg.coordAxes = ['${k}'];`, geo);
+  const poles = g4(`coordPoles('${k}')`);
+  ok(`${k} can be an axis of the move`,
+     g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), ${k}: 0 },
+                               { cellIdx: idx(1,1,1), ${k}: 1 }))`) === poles[0],
+     `a step on ${k} was not read as a move`);
+  ok(`and it names itself with ${k}'s own two channels`,
+     poles.every(p => typeof p === 'string' && p) && poles[0] !== poles[1],
+     `poles ${JSON.stringify(poles)} — a coordinate needs no invented ids`);
+});
+
+/* Several at once, which is what makes five, six and seven dimensions. */
+vm.runInContext("cfg.coordAxes = ['pitch', 'size', 'quantity'];", geo);
+ok('the count of axes is the cube plus whatever was chosen',
+   g4('dimCount()') === 6, `dimCount() reads ${g4('dimCount()')}`);
+ok('and a later coordinate is still its own axis',
+   g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 0, size: 0, quantity: 0 },
+                             { cellIdx: idx(1,1,1), pitch: 0, size: 0, quantity: 1 }))`)
+     === g4("coordPoles('quantity')[0]"),
+   'the third coordinate is being read on somebody else\'s axis');
+vm.runInContext("cfg.coordAxes = ['pitch'];", geo);
 
 ok('the three cube axes still read as they did',
    g4(`cardinalId(cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
@@ -254,26 +282,27 @@ ok('the three cube axes still read as they did',
    'adding a fourth component changed what a spatial move is called');
 
 /*
- * The invariant the whole thing rests on: a move is on exactly one axis. Moving
- * the cell *and* the pitch names nothing, which is what makes the generator
- * draw the axis rather than filter for it afterwards.
+ * The invariant a *named* move rests on: it is on exactly one axis. Moving the
+ * cell *and* the pitch names nothing, which is what makes the generator draw
+ * the axis rather than filter for it afterwards. (Composite moves are still
+ * drawn — they are measured as vectors, and simply have no cardinal name.)
  */
 ok('a move on two axes at once is not a direction',
    g4(`cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
                    { cellIdx: idx(2,1,1), pitch: 2 })`) === null,
    'a diagonal through space and pitch was given a name');
 
-ok('a pitch step is invisible at three dimensions',
-   (vm.runInContext('cfg.dimensions = 3;', geo),
+ok('a coordinate step is invisible when nothing is a coordinate',
+   (vm.runInContext('cfg.coordAxes = [];', geo),
     g4(`cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
                     { cellIdx: idx(1,1,1), pitch: 2 })`) === null),
-   'the fourth axis is being read when nobody asked for four');
-vm.runInContext('cfg.dimensions = 4;', geo);
+   'a coordinate axis is being read when none was chosen');
+vm.runInContext("cfg.coordAxes = ['pitch'];", geo);
 
 /* Given a move east, the axes orthogonal to it: two at three dimensions, three
    at four. That count *is* the feature. */
 const orth = d => {
-  vm.runInContext(`cfg.dimensions = ${d};`, geo);
+  vm.runInContext(`cfg.coordAxes = ${d >= 4 ? "['pitch']" : '[]'};`, geo);
   return g4(`(function () {
     var A = cardinalOf({ cellIdx: idx(1,1,1), pitch: 1 },
                        { cellIdx: idx(2,1,1), pitch: 1 });
@@ -297,9 +326,21 @@ ok('four dimensions leave three', orth(4) === 3,
 
 /* Nothing is judged twice. */
 const st = fs.readFileSync(path.join(ROOT, 'js/state.js'), 'utf8');
-ok('pitch cannot be a coordinate and a stream at once',
-   /function applyDimensions[\s\S]*?delete c\.streams\.pitch/.test(st),
-   'the guard that stops pitch being judged twice is gone');
+ok('a coordinate cannot also be a stream',
+   (function () {
+     /* Run the real guard rather than read it: lifted out of state.js, because
+        state.js declares a cfg of its own that would collide with the sandbox's. */
+     const src = st.slice(st.indexOf('function applyDimensions'));
+     vm.runInContext(src.slice(0, src.indexOf('\n}') + 2), geo);
+     return g4(`(function () {
+       var c = { coordAxes: ['pitch', 'size'],
+                 streams: { position: 'relational', pitch: 'identity',
+                            size: 'relational', color: 'identity' } };
+       applyDimensions(c);
+       return Object.keys(c.streams).sort().join(',');
+     })()`) === 'color,position';
+   })(),
+   'a property is being judged both as a coordinate and as a stream');
 const blk = fs.readFileSync(path.join(ROOT, 'js/block.js'), 'utf8');
 ok('and the guard runs on both paths into a block',
    (blk.match(/applyDimensions\(cfg\)/g) || []).length >= 2,
@@ -310,18 +351,43 @@ ok('and the guard runs on both paths into a block',
  * The tones themselves                                               *
  * ------------------------------------------------------------------ */
 
-ok('three tones, which is two displacements and no more',
-   g4('PITCHES.length') === 3, `there are ${g4('PITCHES.length')}`);
+ok('the tone axis offers three levels at the default cap',
+   g4("COORD_POOLS.pitch[2].length") === 3);
+ok('and four when the furthest step is three',
+   g4("COORD_POOLS.pitch[3].length") === 4,
+   'a step of three needs a level to reach');
 
 /*
  * Equal intervals. A step has to read as one step wherever on the axis it
  * happens; a mixture of fourths and fifths makes the same displacement sound
  * different depending where it started, which a coordinate cannot afford.
  */
-ok('every step is the same interval',
-   Math.abs(g4('PITCHES[1] / PITCHES[0]') - g4('PITCHES[2] / PITCHES[1]')) < 1e-9,
-   `ratios ${g4('PITCHES[1] / PITCHES[0]').toFixed(3)} and `
-   + `${g4('PITCHES[2] / PITCHES[1]').toFixed(3)}`);
+/*
+ * Equal steps on every ordered axis, at every cap. A step has to read as one
+ * step wherever on the axis it happens, and an uneven pool makes the same
+ * displacement feel different depending where it started.
+ *
+ * Ratios for the ones discrimination scales on — pitch and size — and
+ * differences for quantity, which is counted exactly rather than estimated.
+ * Colour is a hue sweep and neither, so it is left out.
+ */
+[['pitch', 'ratio'], ['size', 'ratio'], ['quantity', 'diff']].forEach(([k, how]) => {
+  [2, 3].forEach(cap => {
+    const steps = g4(`(function () {
+      var p = COORD_POOLS['${k}'][${cap}], out = [];
+      for (var i = 1; i < p.length; i++) out.push(${how === 'ratio' ? 'p[i] / p[i-1]' : 'p[i] - p[i-1]'});
+      return out;
+    })()`);
+    const spread = Math.max(...steps) / Math.min(...steps);
+    ok(`${k} steps evenly at cap ${cap}`, spread < 1.15,
+       `steps ${steps.map(x => x.toFixed(2)).join(', ')}`);
+  });
+});
+
+/* Hue is a circle, so the sweep must stop short of wrapping or a step would
+   sometimes reverse its own direction. */
+ok('the colour axis does not wrap round to where it started',
+   g4("COORD_POOLS.color[2][0]") !== g4("COORD_POOLS.color[2][2]"));
 
 /* The second cue, and it runs the same way as the first: down is lower and louder. */
 vm.runInContext('cfg.pitchLoudness = true;', geo);
@@ -347,7 +413,7 @@ ok('off, every tone is the level it always was',
  * it a dot product, and there are far more ways to satisfy one, which is the
  * difference between deriving the relation and reading off whichever axis moved.
  */
-vm.runInContext('cfg.dimensions = 3;', geo);
+vm.runInContext("cfg.coordAxes = [];", geo);
 
 ok('parallel is parallel, however many axes it runs on',
    g4(`metaRelationOf([1,1,0], [1,1,0])`) === 'same');
@@ -373,7 +439,7 @@ ok('a move that goes nowhere states no relation',
 /* The count that makes the mode less slow: how many directions are orthogonal
    to a given move, once a move may combine axes. */
 const orthCount = (vec, d) => {
-  vm.runInContext(`cfg.dimensions = ${d};`, geo);
+  vm.runInContext(`cfg.coordAxes = ${d >= 4 ? "['pitch']" : '[]'};`, geo);
   return g4(`(function () {
     var out = [], v = [];
     (function walk(w) {
@@ -397,12 +463,224 @@ ok('the fourth dimension widens it again',
    + ` ${orthCount([1,0,0,0], 3)} at three`);
 
 /* A diagonal has no single name, and now it has several. */
-vm.runInContext('cfg.dimensions = 3;', geo);
+vm.runInContext("cfg.coordAxes = [];", geo);
 ok('a composite move can be spelled out',
    g4(`moveNames([1,-1,0]).join('+')`) === 'east+north',
    `named ${g4(`moveNames([1,-1,0]).join('+')`)}`);
 ok('and a single-axis one reads as the one axis',
    g4(`moveNames([0,0,1]).join('+')`) === 'above');
+
+/* ------------------------------------------------------------------ *
+ * What the generator actually draws                                  *
+ * ------------------------------------------------------------------ *
+ *
+ * `pickMetaMove` is lifted out of trials.js and run against the same lattice,
+ * because the bounds it enforces are the ones nothing downstream re-checks: a
+ * level outside its pool renders as an undefined colour or a missing tone, and
+ * a move past the cap is a displacement the player was told could not happen.
+ */
+const trialsSrc = fs.readFileSync(path.join(ROOT, 'js/trials.js'), 'utf8');
+const pmAt = trialsSrc.indexOf('function pickMetaMove');
+vm.runInContext(trialsSrc.slice(pmAt, trialsSrc.indexOf('\n}\n', pmAt) + 2), geo);
+/* The two helpers it reaches for, which live in files with a DOM behind them. */
+vm.runInContext(`
+  var pick = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+  var randInt = function (n) { return Math.floor(Math.random() * n); };
+`, geo);
+
+[['pitch'], ['pitch', 'color', 'size', 'quantity']].forEach(list => {
+  [2, 3].forEach(cap => {
+    vm.runInContext(`cfg.coordAxes = ${JSON.stringify(list)}; cfg.magnitudeCap = ${cap};`, geo);
+    const bad = g4(`(function () {
+      var axes = ${JSON.stringify(list)}, out = [];
+      for (var t = 0; t < ${list.length > 1 ? 25 : 200}; t++) {
+        var from = { cellIdx: idx(1,1,1) };
+        axes.forEach(function (k) { from[k] = 1; });
+        var A = [1, 0, 0].concat(axes.map(function () { return 0; }));
+        var m = pickMetaMove(from.cellIdx, from, A, -1);
+        if (!m) { out.push('drew nothing'); break; }
+        axes.forEach(function (k) {
+          var v = m.levels[k];
+          if (v == null || v < 0 || v >= poolFor(k).length) out.push(k + ' level ' + v);
+        });
+        var c = state.cells[m.cellIdx];
+        [c.x, c.y, c.z].forEach(function (q) { if (q < 0 || q > 2) out.push('off lattice'); });
+      }
+      return out.slice(0, 3);
+    })()`);
+    ok(`every drawn move is in bounds — ${list.length} extra at cap ${cap}`,
+       bad.length === 0, bad.join('; '));
+  });
+});
+
+/*
+ * The cap and the pool are the same fact stated twice: a pool of cap+1 levels
+ * makes the furthest step exactly the cap and makes every level reachable, and
+ * it is the pool — not the offset list — that bounds a drawn move. So the
+ * length is the thing worth guarding.
+ */
+Object.keys(g4('COORD_POOLS')).forEach(k => {
+  [2, 3].forEach(cap => {
+    vm.runInContext(`cfg.coordAxes = ['${k}']; cfg.magnitudeCap = ${cap};`, geo);
+    ok(`${k} has exactly ${cap + 1} levels at cap ${cap}`,
+       g4(`poolFor('${k}').length`) === cap + 1,
+       `${g4(`poolFor('${k}').length`)} levels — either a step past the cap fits, `
+       + 'or the furthest one does not');
+  });
+});
+
+/* And the furthest step is not merely permitted but drawn, which is the point of
+   raising the cap. */
+[2, 3].forEach(cap => {
+  vm.runInContext(`cfg.coordAxes = ['pitch']; cfg.magnitudeCap = ${cap};`, geo);
+  const far = g4(`(function () {
+    var most = 0;
+    for (var t = 0; t < 200; t++) {
+      var from = { cellIdx: idx(1,1,1), pitch: 0 };
+      var m = pickMetaMove(from.cellIdx, from, [1, 0, 0, 0], -1);
+      if (m) most = Math.max(most, Math.abs(m.levels.pitch - 0));
+    }
+    return most;
+  })()`);
+  ok(`a step of ${cap} does get drawn at cap ${cap}`, far === cap,
+     `the furthest step drawn was ${far}`);
+});
+
+/* And the relation it draws is always one of the three that have a button. */
+vm.runInContext("cfg.coordAxes = ['pitch', 'size']; cfg.magnitudeCap = 2;", geo);
+const rels = g4(`(function () {
+  var seen = {};
+  for (var t = 0; t < 400; t++) {
+    var from = { cellIdx: idx(1,1,1), pitch: 1, size: 1 };
+    var A = [1, 0, 0, 0, 0];
+    var m = pickMetaMove(from.cellIdx, from, A, -1);
+    if (!m) continue;
+    var b = { cellIdx: m.cellIdx, pitch: m.levels.pitch, size: m.levels.size };
+    seen[String(metaRelationOf(A, moveVectorOf(from, b)))] = true;
+  }
+  return Object.keys(seen).sort();
+})()`);
+ok('no trial is drawn oblique, which has no answer',
+   rels.indexOf('null') < 0, `drew ${rels.join(', ')}`);
+ok('and all three answers do get drawn',
+   ['same', 'opp', 'diff'].every(r => rels.indexOf(r) >= 0), `drew ${rels.join(', ')}`);
+vm.runInContext("cfg.coordAxes = ['pitch']; cfg.magnitudeCap = 2;", geo);
+
+/* ------------------------------------------------------------------ *
+ * Every axis has a button                                            *
+ * ------------------------------------------------------------------ *
+ *
+ * A coordinate axis is judged inside the *position* judgement while the
+ * property's own stream is off, so its two poles have to appear on the position
+ * deck or the trial asks something with no key to answer it — which shows up as
+ * a run of misses on a stream the player never turned on.
+ *
+ * The whole check is "what can be asked" against "what can be pressed", read
+ * off the same two functions the app uses.
+ */
+const deckSrc = fs.readFileSync(path.join(ROOT, 'js/deck.js'), 'utf8');
+vm.runInContext(deckSrc.replace(/^"use strict";/, ''), geo);
+
+const deckIds = () => g4(`(function () {
+  var g = deckGroups().filter(function (x) { return x.key === 'position'; })[0];
+  return g ? g.channels.map(function (c) { return c.id; }) : [];
+})()`);
+
+[[], ['pitch'], ['color', 'size', 'quantity']].forEach(list => {
+  vm.runInContext(`cfg.coordAxes = ${JSON.stringify(list)}; cfg.meta = false; cfg.frame = 'cube';`, geo);
+  const ids = deckIds();
+  const askable = g4('cardinalIds()').flat();
+  ok(`every direction can be pressed with ${list.length ? list.join(' + ') : 'the cube alone'}`,
+     askable.every(id => ids.indexOf(id) >= 0),
+     `asked ${askable.filter(id => ids.indexOf(id) < 0).join(', ')} with no button`);
+  ok(`and nothing extra is offered`,
+     ids.length === askable.length,
+     `${ids.length} buttons for ${askable.length} directions: ${ids.join(', ')}`);
+});
+
+/* At quaternary the answer is the relation between two moves, so the axes widen
+   the space without touching the deck at all — the reason this scales. */
+vm.runInContext("cfg.coordAxes = ['pitch', 'size']; cfg.meta = true; cfg.frame = 'cube';", geo);
+ok('quaternary asks the same three questions however wide the space is',
+   deckIds().length === 3, `${deckIds().length} buttons: ${deckIds().join(', ')}`);
+vm.runInContext("cfg.coordAxes = ['pitch']; cfg.meta = false;", geo);
+
+/* ------------------------------------------------------------------ *
+ * Which mode owns the extra axes                                     *
+ * ------------------------------------------------------------------ *
+ *
+ * Progression keeps its own copy, for the reason cfg.feedback exists twice: a
+ * setting written by one mode and read by the other is invisible until you are
+ * in the other mode wondering why the task changed. Extra axes are worse than
+ * feedback that way — they change what a recorded rung is about.
+ *
+ * Source scans, because there is no DOM here. Each names the writer and the
+ * store it must read, so a line copied from the other mode fails.
+ */
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const wir = fs.readFileSync(path.join(ROOT, 'js/wiring.js'), 'utf8');
+const sui = fs.readFileSync(path.join(ROOT, 'js/settings-ui.js'), 'utf8');
+const body = (src, fn) => {
+  const at = src.indexOf('function ' + fn);
+  return at < 0 ? '' : src.slice(at, src.indexOf('\n}', at));
+};
+
+const COORD_FIELDS = ['coordAxes', 'magnitudeCap', 'pitchLoudness'];
+[['applyProgression', 'progCfg', 'freeCfg'],
+ ['applyFree', 'freeCfg', 'progCfg']].forEach(([fn, mine, theirs]) => {
+  const src = body(blk, fn);
+  COORD_FIELDS.forEach(f => {
+    ok(`${fn} sets ${f} from ${mine}`,
+       new RegExp(`${f}:[^,\n]*${mine}`).test(src),
+       `${fn} either leaves ${f} to whatever the other mode left behind, or reads ${theirs}`);
+  });
+});
+ok('a ladder run cannot inherit Free Play\'s axes',
+   !new RegExp('freeCfg').test(body(blk, 'applyProgression')));
+
+const per = fs.readFileSync(path.join(ROOT, 'js/persistence.js'), 'utf8');
+const resetBody = body(per, 'resetInMemoryState');
+/* The assign that clears each store, read out of the reset rather than pattern-
+   matched across it, so a field listed on the wrong store still fails. */
+const clears = store => {
+  const at = resetBody.indexOf('Object.assign(' + store);
+  return at < 0 ? '' : resetBody.slice(at, resetBody.indexOf('});', at));
+};
+COORD_FIELDS.forEach(f => {
+  ['progCfg', 'freeCfg'].forEach(store => {
+    ok(`a reset clears ${f} on ${store}`,
+       clears(store).indexOf(f) >= 0,
+       `a new profile would start with the last profile's ${f}`);
+  });
+});
+
+/* Both panes offer every property, and every box names a real one. */
+['coordAxes', 'progCoordAxes'].forEach(id => {
+  const at = html.indexOf(`id="${id}"`);
+  const grp = at < 0 ? '' : html.slice(at, html.indexOf('</div>', at));
+  const offered = (grp.match(/data-coord="(\w+)"/g) || [])
+    .map(m => m.replace(/.*"(\w+)"/, '$1'));
+  ok(`${id} offers every property that can be an axis`,
+     Object.keys(g4('COORD_POOLS')).every(k => offered.indexOf(k) >= 0),
+     `offers ${offered.join(', ') || 'nothing'}`);
+  ok(`and offers nothing that has no pool`,
+     offered.length > 0 && offered.every(k => g4(`!!COORD_POOLS['${k}']`)),
+     `${offered.join(', ')} against pools for ${Object.keys(g4('COORD_POOLS')).join(', ')}`);
+  ok(`${id} is wired to a handler`,
+     wir.indexOf(`#${id} input[data-coord]`) >= 0,
+     'the boxes render and do nothing');
+});
+
+/* Every id the sync touches has to exist, or syncSettingsUI throws and the whole
+   settings screen stops updating — which is how a silent one of these hides. */
+['magnitudeCap', 'coordCount', 'pitchLoudness',
+ 'progMagnitudeCap', 'progCoordCount', 'progPitchLoudness'].forEach(id => {
+  ok(`#${id} exists for the sync to write to`,
+     html.indexOf(`id="${id}"`) >= 0);
+});
+ok('both panes sync through the one helper',
+   (sui.match(/syncCoordUI\(/g) || []).length >= 3,
+   'a second copy of the sync is how the two modes drift apart');
 
 console.log(bad ? `\n${bad} FAILED` : '\nall checks passed');
 process.exit(bad ? 1 : 0);

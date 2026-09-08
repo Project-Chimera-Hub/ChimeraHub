@@ -44,6 +44,16 @@ function run({ n, streams, meta = false, trials = 4000, lureRate = 0.25 }) {
     var PITCHES = [0,0,0,0], PANS = [0,0,0], COLORS = [0,0,0,0],
         SIZES = [0,0,0], COUNTS = [0,0,0], LETTER_KEYS = [0,0,0,0];
     function voiceSet() { return { voices: [0,0,0] }; }
+    /* No coordinate axes here — this file is about the cube standing still, and
+       a property that is a coordinate is drawn by a different branch. The pool
+       lookup still has to answer, since the feature draws go through it. */
+    function coordAxes() { return []; }
+    function magnitudeCap() { return 2; }
+    function dimCount() { return 3; }
+    function poolFor(k) {
+      return { pitch: PITCHES, pan: PANS, color: COLORS, size: SIZES,
+               quantity: COUNTS, letter: LETTER_KEYS }[k] || [0,0,0];
+    }
     var TARGET_RATE = 0.28;
     function cardinalOf() { return null; }
     function positionGuides() {}

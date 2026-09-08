@@ -94,16 +94,20 @@ function cardinalNeighbours(fromIdx) {
 /*
  * The move that realises a drawn relation to the previous one.
  *
- * Returns a destination on whichever axis realises it — `{ cellIdx, pitch }` —
- * because with a fourth dimension the axis is part of the choice. At three
- * dimensions `pitch` comes back unchanged and this behaves exactly as it did.
+ * Returns a destination on every axis at once — `{ cellIdx, levels }` — because
+ * with coordinate axes the axis is part of the choice. With none configured the
+ * levels come back empty and this behaves exactly as it did.
  *
- * The fourth axis is where the extra orthogonality lives. A pitch step against
- * a spatial previous move is orthogonal by construction, and against a previous
- * pitch move it is the only way to state same or opposite — so the axis is not
- * decoration, it is a third way to answer "orthogonal" where there were two.
+ * The coordinate axes are where the extra orthogonality lives. A step along one
+ * of them against a spatial previous move is orthogonal by construction, and
+ * against a previous move on the same axis it is the only way to state same or
+ * opposite — so an axis is not decoration, it is another way to answer
+ * "orthogonal" where there were two.
+ *
+ * `from` is the reference trial rather than a cell index, because a move starts
+ * from a position on every axis.
  */
-function pickMetaMove(fromIdx, fromPitch, A, forbid) {
+function pickMetaMove(fromIdx, from, A, forbid) {
   const dims = dimCount();
   const f = state.cells[fromIdx];
 
@@ -116,17 +120,28 @@ function pickMetaMove(fromIdx, fromPitch, A, forbid) {
    * four, and orthogonality becomes a dot product with far more ways to satisfy
    * it — which is what makes the relation worth deriving rather than reading off
    * the one axis that moved.
-   *
-   * One step per axis rather than several: the magnitude is a separate question
-   * from how many axes, and a lattice three cells wide has no room for both.
    */
+  /*
+   * Steps per axis, up to the cap. Two by default — three positions on an axis
+   * leave displacements of one and two — and three when the cap is raised,
+   * which is why the pools grow a level with it.
+   *
+   * The cube keeps ±1: a lattice three cells wide has nowhere to put a longer
+   * spatial step, and the cap is about the coordinate axes, where a pool can be
+   * spread as far as the property allows.
+   */
+  const cap = magnitudeCap();
+  const spatial = [-1, 0, 1];
+  const along = [];
+  for (let m = -cap; m <= cap; m++) along.push(m);
+
   const offsets = [];
   const walk = (v) => {
     if (v.length === dims) {
       if (v.some(c => c !== 0)) offsets.push(v.slice());
       return;
     }
-    [-1, 0, 1].forEach(c => walk(v.concat(c)));
+    (v.length < 3 ? spatial : along).forEach(c => walk(v.concat(c)));
   };
   walk([]);
 
@@ -135,22 +150,34 @@ function pickMetaMove(fromIdx, fromPitch, A, forbid) {
   const cellAt = {};
   state.cells.forEach((c, i) => { cellAt[c.x + ',' + c.y + ',' + c.z] = i; });
 
+  const axes = coordAxes();
   const moves = [];
   offsets.forEach(o => {
     const key = (f.x + o[0]) + ',' + (f.y + o[1]) + ',' + (f.z + o[2]);
     const idx = cellAt[key];
     if (idx == null) return;
-    const pitch = dims >= 4 ? fromPitch + o[3] : fromPitch;
-    if (dims >= 4 && (pitch < 0 || pitch >= PITCHES.length)) return;
+
+    /* Each coordinate has to land inside its own pool, as a cell has to land
+       inside the lattice. */
+    const levels = {};
+    let ok = true;
+    axes.forEach((k, i) => {
+      const v = (from[k] ?? 0) + o[3 + i];
+      if (v < 0 || v >= poolFor(k).length) ok = false;
+      levels[k] = v;
+    });
+    if (!ok) return;
+
     /* Standing exactly where it already stands reads as nothing happening. */
-    if (idx === forbid && pitch === fromPitch) return;
-    moves.push({ cellIdx: idx, pitch: pitch, vec: o });
+    const still = idx === forbid && axes.every(k => levels[k] === (from[k] ?? 0));
+    if (still) return;
+    moves.push({ cellIdx: idx, levels: levels, vec: o });
   });
 
   if (!A || !moves.length) {
     return moves.length
       ? pick(moves)
-      : { cellIdx: randExcept(state.cells.length, forbid), pitch: fromPitch };
+      : { cellIdx: randExcept(state.cells.length, forbid), levels: {} };
   }
 
   /*
@@ -217,7 +244,7 @@ function sampleTrial() {
        uniformly yields same 5% / opposite 28% / different 66%, because four of six
        directions leave the axis and walls block continuing straight; "always answer
        different" would then score 66%. */
-    metaMove = pickMetaMove(nb.cellIdx, nb.pitch ?? 0,
+    metaMove = pickMetaMove(nb.cellIdx, nb,
                             nb.pair ? moveVectorOf(nb.pair[0], nb.pair[1]) : null,
                             noRepeat);
     t.cellIdx = metaMove.cellIdx;
@@ -244,47 +271,48 @@ function sampleTrial() {
                        [lureA && lureA[key], lureB && lureB[key]]);
   };
 
-  t.pitch    = feature('pitch',    PITCHES);
+  /* `poolFor` rather than the raw pools: a property that is a coordinate has a
+     pool of its own, and drawing a stream against the wrong length is how an
+     index lands outside what gets rendered. (A coordinate's stream is off, so
+     these return null for it and the block below draws it instead.) */
+  t.pitch    = feature('pitch',    poolFor('pitch'));
   t.timbre   = feature('timbre',   voiceSet().voices);
   t.pan      = feature('pan',      PANS);
-  t.color    = feature('color',    COLORS);
-  t.size     = feature('size',     SIZES);
-  t.quantity = feature('quantity', COUNTS);
+  t.color    = feature('color',    poolFor('color'));
+  t.size     = feature('size',     poolFor('size'));
+  t.quantity = feature('quantity', poolFor('quantity'));
   t.letter   = feature('letter',   LETTER_KEYS);
 
   /*
-   * The fourth coordinate, once the features have had their say.
+   * The coordinates, once the features have had their say.
    *
-   * Written last because it is not a feature: at four dimensions the pitch is
-   * part of *where the stimulus is*, and `feature('pitch', …)` would have drawn
-   * it as an independent stream — which is the one thing it must not be, since
-   * nothing is judged twice.
-   *
-   * A move stays on exactly one axis, which is the invariant `cardinalOf`
-   * enforces by refusing to name anything else. So a spatial move copies the
-   * reference's pitch and a pitch move copies its cell, and the axis is drawn
-   * rather than filtered for afterwards: one in four, because there are four of
-   * them.
+   * Written last because they are not features: a coordinate is part of *where
+   * the stimulus is*, and `feature(k, …)` would have drawn it as an independent
+   * stream — the one thing it must not be, since nothing is judged twice.
    */
-  if (dimCount() >= 4 && rel('position')) {
+  coordAxes().forEach(k => {
+    if (!rel('position')) return;
+    const pool = poolFor(k);
     if (metaMove) {
-      t.pitch = metaMove.pitch;
+      t[k] = metaMove.levels[k] ?? (nb ? nb[k] ?? 0 : 0);
     } else if (nb) {
       /*
-       * A step on the heard axis alongside whatever the cell did, rather than
-       * instead of it. The move is a vector now, so the fourth component is
-       * drawn like the other three and nothing has to be held back to keep the
-       * move on one axis.
+       * A step on this axis alongside whatever the others did, rather than
+       * instead of them. The move is a vector, so every component is drawn the
+       * same way and nothing is held back to keep the move on one axis.
        */
-      const from = nb.pitch ?? 0;
+      const cap = magnitudeCap();
+      const from = nb[k] ?? 0;
       const steps = [0];
-      if (from > 0) steps.push(-1);
-      if (from < PITCHES.length - 1) steps.push(1);
-      t.pitch = from + pick(steps);
-    } else if (t.pitch == null) {
-      t.pitch = randInt(PITCHES.length);
+      for (let m = 1; m <= cap; m++) {
+        if (from - m >= 0) steps.push(-m);
+        if (from + m < pool.length) steps.push(m);
+      }
+      t[k] = from + pick(steps);
+    } else if (t[k] == null) {
+      t[k] = randInt(pool.length);
     }
-  }
+  });
 
   if (on('glyph')) {
     if (rel('glyph')) {
@@ -341,15 +369,16 @@ function renderTrial(t) {
      size levels into each other and make the size judgement unanswerable. */
   const cellPx = (gridCube.clientWidth || 240) / cfg.dim;
   const maxFont = (cellPx - 4) / (t.quantity != null ? 1.4 : 1.1);
-  const scale = Math.min(1, maxFont / SIZES[SIZES.length - 1]);
-  const fontSize = (t.size != null ? SIZES[t.size] : 26) * scale;
+  const sizePool = poolFor('size');
+  const scale = Math.min(1, maxFont / sizePool[sizePool.length - 1]);
+  const fontSize = (t.size != null ? sizePool[t.size] : 26) * scale;
 
   /* Quantity gets its own marker row rather than repeating the glyph — repeating a
      multi-character glyph like "III" three times is unreadable. */
   let html = '';
   if (glyphChar) html += `<span class="g" style="font-size:${fontSize}px">${glyphChar}</span>`;
   if (t.quantity != null) {
-    const dots = '●'.repeat(COUNTS[t.quantity]);
+    const dots = '●'.repeat(poolFor('quantity')[t.quantity]);
     const qs = glyphChar ? Math.max(7, fontSize * 0.32) : Math.max(9, fontSize * 0.55);
     html += `<span class="q" style="font-size:${qs}px">${dots}</span>`;
   }
@@ -357,7 +386,7 @@ function renderTrial(t) {
     html = `<span class="g" style="font-size:${fontSize}px">●</span>`;
 
   faces.forEach(f => {
-    if (t.color != null) litColour(f, COLORS[t.color]);
+    if (t.color != null) litColour(f, poolFor('color')[t.color]);
     f.innerHTML = html;
   });
 
@@ -583,7 +612,7 @@ function playTone(t) {
   }
   tail.connect(audioCtx.destination);
 
-  const osc = buildVoice(audioCtx, v, t.pitch != null ? PITCHES[t.pitch] : 330, gain, now);
+  const osc = buildVoice(audioCtx, v, t.pitch != null ? poolFor('pitch')[t.pitch] : 330, gain, now);
   osc.stop(now + 0.32);
 }
 

@@ -245,7 +245,29 @@ $('varNBack').onchange = e => { freeCfg.varN = +e.target.value; applyFree(); syn
 
 $('cubeDimension').onchange = e => { freeCfg.dim = +e.target.value; applyFree(); buildCube(cfg.dim); updateHUD(); saveProgress(); };
 $('rotationOn').onchange    = e => { freeCfg.rotation = e.target.checked; applyFree(); updateHUD(); saveProgress(); };
-$('dimensions').onchange    = e => { freeCfg.dimensions = Number(e.target.value); applyFree(); syncSettingsUI(); updateHUD(); saveProgress(); };
+/* Order matters — it is the order the axes are judged and named in — so a box
+   being ticked appends rather than rebuilding the list from the DOM. */
+document.querySelectorAll('#coordAxes input[data-coord]').forEach(box => {
+  box.onchange = e => {
+    const k = e.target.getAttribute('data-coord');
+    const list = (freeCfg.coordAxes || []).filter(x => x !== k);
+    if (e.target.checked) list.push(k);
+    freeCfg.coordAxes = list;
+    applyFree(); syncSettingsUI(); updateHUD(); saveProgress();
+  };
+});
+$('magnitudeCap').onchange  = e => { freeCfg.magnitudeCap = Number(e.target.value); applyFree(); updateHUD(); saveProgress(); };
+document.querySelectorAll('#progCoordAxes input[data-coord]').forEach(box => {
+  box.onchange = e => {
+    const k = e.target.getAttribute('data-coord');
+    const list = (progCfg.coordAxes || []).filter(x => x !== k);
+    if (e.target.checked) list.push(k);
+    progCfg.coordAxes = list;
+    applyProgression(); syncSettingsUI(); updateHUD(); saveProgress();
+  };
+});
+$('progMagnitudeCap').onchange = e => { progCfg.magnitudeCap = Number(e.target.value); applyProgression(); updateHUD(); saveProgress(); };
+$('progPitchLoudness').onchange = e => { progCfg.pitchLoudness = e.target.checked; applyProgression(); saveProgress(); };
 $('pitchLoudness').onchange = e => { freeCfg.pitchLoudness = e.target.checked; applyFree(); saveProgress(); };
 $('frameMode').onchange     = e => { freeCfg.frame = e.target.value; applyFree(); updateHUD(); saveProgress(); };
 $('feedbackModeF').onchange = e => { freeCfg.feedback = e.target.value; cfg.feedback = e.target.value; renderGlyphLegend(); saveProgress(); };

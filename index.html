@@ -54,6 +54,40 @@
     </div>
 
     <details class="sect">
+      <summary>Extra axes</summary>
+      <div class="sect-body">
+      <div class="setting-group">
+        <div class="row" id="progCoordAxes">
+          <label><input type="checkbox" data-coord="pitch"> Tone</label>
+          <label><input type="checkbox" data-coord="color"> Colour</label>
+          <label><input type="checkbox" data-coord="size"> Size</label>
+          <label><input type="checkbox" data-coord="quantity"> Quantity</label>
+        </div>
+        <div class="hint">Each becomes a <b>coordinate of the move</b> rather than a
+          stream beside it. There are as many mutually orthogonal directions as
+          dimensions, so every axis added is another way for two moves to be at
+          right angles &mdash; the answers stay three while the space behind them
+          grows. Quaternary is where that pays: relating two directions in a wider
+          space carries more without asking memory to hold more.</div>
+        <div class="hint" id="progCoordCount"></div>
+      </div>
+      <div class="setting-group">
+        <label>Furthest step</label>
+        <select id="progMagnitudeCap">
+          <option value="2">Two &mdash; three levels per axis</option>
+          <option value="3">Three &mdash; four levels per axis</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label class="row"><input type="checkbox" id="progPitchLoudness"> Deeper tones louder</label>
+      </div>
+      <div class="hint">The ladder never moves these &mdash; a rung has to mean the
+        same thing each time you reach it. Changing them changes what your recorded
+        speed and N are about.</div>
+      </div>
+    </details>
+
+    <details class="sect">
       <summary>Where you are</summary>
       <div class="sect-body">
       <div class="ladder" id="ladderState"></div>
@@ -305,25 +339,39 @@
         <div class="hint" id="spinPathHint"></div>
       </div>
       <div class="setting-group">
-        <label>Dimensions</label>
-        <select id="dimensions">
-          <option value="3">Three — the cube</option>
-          <option value="4">Four — cube plus pitch</option>
+        <label>Extra axes</label>
+        <div class="row" id="coordAxes">
+          <label><input type="checkbox" data-coord="pitch"> Tone</label>
+          <label><input type="checkbox" data-coord="color"> Colour</label>
+          <label><input type="checkbox" data-coord="size"> Size</label>
+          <label><input type="checkbox" data-coord="quantity"> Quantity</label>
+        </div>
+        <div class="hint">Each one becomes a <b>coordinate of the move</b> rather
+          than a stream beside it, judged exactly as the three cube axes are.
+          There are as many mutually orthogonal directions as dimensions, so every
+          axis added is another way for two moves to be at right angles &mdash;
+          the answers stay three while the space behind them grows. A property
+          cannot also be judged as its own stream while it is a coordinate.</div>
+        <div class="hint" id="coordCount"></div>
+      </div>
+      <div class="setting-group">
+        <label>Furthest step</label>
+        <select id="magnitudeCap">
+          <option value="2">Two &mdash; three levels per axis</option>
+          <option value="3">Three &mdash; four levels per axis</option>
         </select>
-        <div class="hint">A move happens on one axis. The fourth is <b>heard</b>
-          rather than seen: higher or lower, asked exactly as the three cube axes
-          are. There are as many mutually orthogonal directions as dimensions, so
-          a fourth axis gives a third way to be <em>orthogonal</em> instead of a
-          second &mdash; the answers stay three while the space behind them grows.
-          Pitch cannot also be judged as its own stream while it is a coordinate.</div>
+        <div class="hint">How far a move may travel along an extra axis. The pool
+          grows a level with it, and either way the levels are spread as far apart
+          as the property allows: three maximally distinct levels are easier to
+          place than five crowded ones. The cube keeps its single step &mdash; a
+          lattice three cells wide has nowhere to put a longer one.</div>
       </div>
       <div class="setting-group">
         <label class="row"><input type="checkbox" id="pitchLoudness"> Deeper tones louder</label>
         <div class="hint">A second cue running the same way as the first: down is
           lower <em>and</em> louder. Redundant on purpose &mdash; two cues agreeing
           are easier to read than one, and low tones are heard as quieter at equal
-          amplitude anyway, so some of this is buying back what the frequency gave
-          away.</div>
+          amplitude anyway.</div>
       </div>
       <div class="setting-group">
         <label>Reference frame</label>

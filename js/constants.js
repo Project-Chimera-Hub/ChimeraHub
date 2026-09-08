@@ -15,27 +15,92 @@ const AXES = [
 ];
 const AXIS = Object.fromEntries(AXES.map(a => [a.id, a]));
 
-/*
- * The fourth axis, which is heard rather than seen.
+/* ---------- Coordinates beyond the cube ----------
  *
- * Not in `AXES`: that list drives the cube — `AXIS_ORIENT`, the gizmo arms, the
- * move arrow — and a pitch step has no direction to point in. A fourth *cell*
- * coordinate would be four times the lattice with nothing to draw it on, so the
- * coordinate rides on the trial's pitch instead, which is already an ordered
- * pool of four.
+ * A property can be a *coordinate of the move* rather than a stream beside it:
+ * a step on it is part of where the stimulus went, judged exactly as the three
+ * cube axes are.
  *
- * Ordered, bipolar, metric in semitone-ish steps, and cross-modal — which is
- * the point: an auditory coordinate is not competing with the visual scene for
- * the same representation, so it can be held at the same time rather than
- * checked after.
+ * The reason to want more of them is orthogonality. There are as many mutually
+ * orthogonal directions as there are dimensions, so each axis added gives
+ * another way for two moves to be at right angles — the answers stay at three
+ * while the space behind them grows, which is the only kind of difficulty that
+ * costs no buttons. It is also the way to make a heavy relation carry more
+ * without asking memory to hold more, which is what quaternary at four back
+ * needs.
+ *
+ * A fourth *cell* coordinate would be four times the lattice with nothing to
+ * draw it on. These are all properties the stimulus already has.
+ *
+ * **Poles come from the stream's own relational channels** — `pitch-up` and
+ * `pitch-down`, `color-warm` and `color-cool` — so a coordinate needs no new
+ * buttons, no new keys, and reads in the words the property already used.
+ *
+ * **Levels are their own pools, not the stream's.** A stream wants several
+ * distinguishable values; a coordinate wants few, maximally far apart, in equal
+ * steps — a step has to read as one step wherever on the axis it happens, and
+ * an uneven pool makes the same displacement feel different depending where it
+ * started. Two pools each, one per magnitude cap.
  */
-const PITCH_AXIS = [
-  { id:'higher', letter:'H', name:'Higher', key:'r', color:'#22b8cf' },
-  { id:'lower',  letter:'L', name:'Lower',  key:'f', color:'#e599f7' },
-];
+const COORD_POOLS = {
+  /* Octaves. Equal ratios, and the widest interval that stays one note. */
+  pitch: { 2: [220, 440, 880], 3: [220, 440, 880, 1760] },
+  /*
+   * A hue sweep, which the colour stream already treats as ordered warm → cool.
+   * Hue is a circle, so the pool stops short of wrapping: red to blue, never
+   * round to red again, or a step would sometimes reverse its own direction.
+   */
+  color: {
+    2: ['#ff4d4d', '#ffe14d', '#4d9fff'],
+    3: ['#ff4d4d', '#ffe14d', '#4ddb6f', '#4d9fff'],
+  },
+  /* Equal ratios, because size discrimination is a ratio and not a difference. */
+  size: { 2: [14, 24, 41], 3: [14, 20, 29, 41] },
+  /*
+   * Equal differences, because small counts are read exactly rather than
+   * estimated — the one property here where a difference is the honest step.
+   */
+  quantity: { 2: [1, 3, 5], 3: [1, 2, 3, 4] },
+};
+const COORD_KEYS = Object.keys(COORD_POOLS);
 
-/** Axes a move may happen on, given how many dimensions are in play. */
-const dimCount = c => Math.max(3, Math.min(4, (c || cfg).dimensions || 3));
+/** The furthest a move may travel on one axis. Two unless asked otherwise. */
+const magnitudeCap = c => ((c || cfg).magnitudeCap === 3 ? 3 : 2);
+
+/** Which properties are coordinates of the move, in order. */
+function coordAxes(c) {
+  const list = (c || cfg).coordAxes;
+  return Array.isArray(list) ? list.filter(k => COORD_POOLS[k]) : [];
+}
+
+/** The levels an axis uses — its own pool when it is a coordinate. */
+function poolFor(k, c) {
+  c = c || cfg;
+  if (coordAxes(c).indexOf(k) >= 0) return COORD_POOLS[k][magnitudeCap(c)];
+  return { pitch: PITCHES, color: COLORS, size: SIZES, quantity: COUNTS }[k];
+}
+
+/** The two channel ids this axis answers with: [positive, negative]. */
+function coordPoles(k) {
+  const rel = (STREAMS[k] || {}).relational || [];
+  return [rel[0] && rel[0].id, rel[1] && rel[1].id];
+}
+
+/** Three cube axes plus one per coordinate, which is how many a move has. */
+const dimCount = c => 3 + coordAxes(c).length;
+
+/*
+ * The response channels a coordinate axis is answered on: the property's own
+ * two relational channels, borrowed whole — glyph, label and default key.
+ *
+ * The position deck has to carry these, because the axis is judged as part of
+ * the position judgement and the property's own stream is off (it cannot be
+ * judged twice). Without them a coordinate move is asked and cannot be
+ * answered, which reads as a run of misses on a stream the player never saw.
+ */
+function coordChannels(c) {
+  return coordAxes(c).flatMap(k => ((STREAMS[k] || {}).relational || []));
+}
 
 /* Transform that maps the element's local +X onto each axis direction. */
 const AXIS_ORIENT = {
@@ -80,9 +145,10 @@ const PITCH_LOUDNESS_RANGE = 1.7;
 /** Gain multiplier for a pitch index, or 1 when the option is off. */
 function pitchLevel(i, c) {
   c = c || cfg;
-  if (!c.pitchLoudness || i == null || PITCHES.length < 2) return 1;
+  const pool = poolFor('pitch', c);
+  if (!c.pitchLoudness || i == null || pool.length < 2) return 1;
   /* 1 at the top of the pool, `RANGE` at the bottom. */
-  const t = 1 - i / (PITCHES.length - 1);
+  const t = 1 - i / (pool.length - 1);
   return 1 + t * (PITCH_LOUDNESS_RANGE - 1);
 }
 /* Timbre voices. Every set is FOUR voices ordered dull → bright, because the deck
@@ -190,8 +256,7 @@ const STREAMS = {
   position: {
     label: 'Position', color: '#8ab4ff',
     identity:   [{ id:'pos', glyph:'●', label:'Same', key:' ' }],
-    relational: AXES.concat(PITCH_AXIS)
-      .map(a => ({ id:a.id, glyph:a.letter, label:a.name, key:a.key, color:a.color })),
+    relational: AXES.map(a => ({ id:a.id, glyph:a.letter, label:a.name, key:a.key, color:a.color })),
     /* Second-order judgement: how this move relates to the PREVIOUS move, rather
        than where it went. Three channels, not six — you only need to hold the
        direction you derived n trials ago, so response load stays low while the

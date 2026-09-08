@@ -6,18 +6,16 @@
 
 /* Cardinal direction between two cells as [axis, sign], or null if not axis-aligned. */
 function cardinalOf(a, b) {
-  const ca = state.cells[a.cellIdx], cb = state.cells[b.cellIdx];
-  const d = [cb.x - ca.x, cb.y - ca.y, cb.z - ca.z];
   /*
-   * The fourth component, when there is one. Heard rather than seen, and it is
-   * an index into an ordered pool, so its sign is its direction.
+   * The same vector the meta judgement uses, so a move can never be named on
+   * one axis here and measured on another there.
    *
-   * A move stays on exactly one axis — the invariant this function has always
-   * enforced by returning null otherwise — so a spatial move leaves the pitch
-   * alone and a pitch move leaves the cell alone. `trials.js` draws them that
-   * way rather than filtering afterwards.
+   * A cardinal move stays on exactly one axis — the invariant this function has
+   * always enforced by returning null otherwise — so a spatial move leaves the
+   * coordinates alone and a coordinate move leaves the cell alone. `trials.js`
+   * draws them that way rather than filtering afterwards.
    */
-  if (dimCount() >= 4) d.push((b.pitch ?? 0) - (a.pitch ?? 0));
+  const d = moveVectorOf(a, b);
   const nz = d.map((v, i) => [v, i]).filter(([v]) => v !== 0);
   return nz.length === 1 ? [nz[0][1], Math.sign(nz[0][0])] : null;
 }
@@ -25,12 +23,23 @@ function cardinalOf(a, b) {
 /* [axis, sign] → the axis id everything else in the app speaks. Mirrors the axisJ()
    calls below exactly: +x east, +y south (CSS +Y points DOWN), +z above. If those
    ever disagree the deck would light one arrow and the trace name another. */
-const CARDINAL_IDS = [
-  ['west', 'east'], ['north', 'south'], ['below', 'above'],
-  /* The fourth, in the same [negative, positive] order as the three above. */
-  ['lower', 'higher'],
-];
-const cardinalId = c => c ? CARDINAL_IDS[c[0]][c[1] > 0 ? 1 : 0] : null;
+const CUBE_CARDINAL_IDS = [['west', 'east'], ['north', 'south'], ['below', 'above']];
+
+/*
+ * The axes a move can happen on, named. Three cube pairs and one per
+ * coordinate, in the order the coordinates were chosen — the same order
+ * `moveVectorOf` builds the vector in.
+ *
+ * A getter rather than a constant now, because which axes exist is a setting.
+ */
+function cardinalIds() {
+  return CUBE_CARDINAL_IDS.concat(coordAxes().map(k => {
+    const poles = coordPoles(k);
+    /* [negative, positive], to match the cube pairs above. */
+    return [poles[1], poles[0]];
+  }));
+}
+const cardinalId = c => c ? cardinalIds()[c[0]][c[1] > 0 ? 1 : 0] : null;
 
 /**
  * The move as a vector — every axis it happened on, not the one it happened on.
@@ -44,7 +53,10 @@ const cardinalId = c => c ? CARDINAL_IDS[c[0]][c[1] > 0 ? 1 : 0] : null;
 function moveVectorOf(a, b) {
   const ca = state.cells[a.cellIdx], cb = state.cells[b.cellIdx];
   const d = [cb.x - ca.x, cb.y - ca.y, cb.z - ca.z];
-  if (dimCount() >= 4) d.push((b.pitch ?? 0) - (a.pitch ?? 0));
+  /* One component per coordinate axis, in the order they were chosen — the same
+     order `CARDINAL_IDS` names them in, or a move would be reported as a step on
+     somebody else's property. */
+  coordAxes().forEach(k => d.push((b[k] ?? 0) - (a[k] ?? 0)));
   return d;
 }
 
@@ -84,8 +96,9 @@ function metaRelationOf(A, B) {
 function moveNames(v) {
   if (!v) return [];
   const out = [];
+  const ids = cardinalIds();
   v.forEach((c, i) => {
-    if (c && CARDINAL_IDS[i]) out.push(CARDINAL_IDS[i][c > 0 ? 1 : 0]);
+    if (c && ids[i]) out.push(ids[i][c > 0 ? 1 : 0]);
   });
   return out;
 }
@@ -145,18 +158,19 @@ function buildJudgments(a, b, extra) {
       axisJ('position', v[1], ['south', 'north']);
       axisJ('position', v[2], ['above', 'below']);
       /*
-       * One more axis, asked exactly as the other three are: an independent
-       * up/down/neither, not a fourth option in a widening list. That is what
-       * keeps the response cost flat as the space grows.
+       * One more independent up/down/neither per coordinate axis, asked exactly
+       * as the three cube axes are — never a widening list of options, which is
+       * what keeps the response cost flat however many axes there are.
        *
-       * The sign is passed rather than a normalised component: a pitch step is
-       * ±1 in an ordered pool, and normalising a single-axis integer against
-       * the spatial magnitude would put it under the movement threshold.
+       * The sign is passed rather than a normalised component: a step is ±1 in
+       * an ordered pool, and normalising a single integer against the spatial
+       * magnitude would put it under the movement threshold.
        */
-      if (dimCount() >= 4) {
-        axisJ('position', Math.sign((b.pitch ?? 0) - (a.pitch ?? 0)),
-              ['higher', 'lower']);
-      }
+      coordAxes().forEach(k => {
+        const poles = coordPoles(k);
+        if (!poles[0] || !poles[1]) return;
+        axisJ('position', Math.sign((b[k] ?? 0) - (a[k] ?? 0)), poles);
+      });
     }
     if (cfg.frame === 'screen' || cfg.frame === 'both') {
       const v = normalise(projectScreen(raw, b.matrix));

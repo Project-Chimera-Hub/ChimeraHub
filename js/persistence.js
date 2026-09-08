@@ -66,11 +66,13 @@ function resetInMemoryState() {
   stairLog = null;
   keyBinds = {};
   actionBinds = {};
-  Object.assign(progCfg, { feedback: 'reveal' });
+  Object.assign(progCfg, { feedback: 'reveal', coordAxes: [], magnitudeCap: 2,
+    pitchLoudness: false });
   state.glyphMap = null;
   Object.assign(tune, TUNE_DEFAULTS);
   Object.assign(freeCfg, {
     n:2, streams:{ position:'relational' }, dim:3, rotation:false, spin:60,
+    coordAxes:[], magnitudeCap:2, pitchLoudness:false,
     frame:'cube', interval:2500, blockLength:20, feedback:'reveal',
     lureRate:0.20, meta:false, gate:0, retro:0, varN:0,
     varPriority:true, fixedGlyphMap:false,
