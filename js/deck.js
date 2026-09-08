@@ -147,13 +147,26 @@ const META_CHANNEL_IDS = new Set((STREAMS.position.meta || []).map(c => c.id));
    direction it draws is the one the next trial has to be judged against, so the
    moment it is most useful is after the next stimulus has already appeared. */
 function traceMove(trial) {
-  const axisId = moveIntoTrial(trial);
-  if (!axisId) return;
-  showMoveArrow(axisId);
+  /*
+   * Every axis the move ran on, not the one it ran on.
+   *
+   * A move may now combine axes, and the trace used to give up on those — it
+   * asked for a single cardinal and got null. Losing the anchor is exactly when
+   * the trace is needed, and a diagonal is exactly the move that loses it, so
+   * the case it skipped was the case it was for.
+   *
+   * The arrow still draws one axis, since it is a rotation of one arm and a
+   * diagonal has none; the arms flash for all of them, which is what says the
+   * move was more than one.
+   */
+  const names = moveNames(trial && trial.pair
+    ? moveVectorOf(trial.pair[0], trial.pair[1]) : null);
+  if (!names.length) return;
+  showMoveArrow(names[0]);
   state.traceUntil = state.trial + 1;
-  /* The gizmo arm for the same axis, once, so the eye is handed from the arrow
-     inside the lattice out to the label that names it. */
-  flashArm(axisId);
+  /* The gizmo arms for the same axes, once, so the eye is handed from the arrow
+     inside the lattice out to the labels that name it. */
+  names.forEach(flashArm);
 }
 
 function pressFeedback(channelId, ok, trial) {

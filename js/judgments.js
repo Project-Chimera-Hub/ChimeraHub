@@ -32,6 +32,64 @@ const CARDINAL_IDS = [
 ];
 const cardinalId = c => c ? CARDINAL_IDS[c[0]][c[1] > 0 ? 1 : 0] : null;
 
+/**
+ * The move as a vector — every axis it happened on, not the one it happened on.
+ *
+ * A move on several axes at once was previously nameless: `cardinalOf` returns
+ * null unless exactly one component is non-zero, and the meta relation was
+ * built on that, so "orthogonal" could only ever mean "a different axis". With
+ * a vector it means what it says — a zero dot product — and there are far more
+ * ways to satisfy it, which is the whole reason to allow composite moves.
+ */
+function moveVectorOf(a, b) {
+  const ca = state.cells[a.cellIdx], cb = state.cells[b.cellIdx];
+  const d = [cb.x - ca.x, cb.y - ca.y, cb.z - ca.z];
+  if (dimCount() >= 4) d.push((b.pitch ?? 0) - (a.pitch ?? 0));
+  return d;
+}
+
+const dot = (A, B) => A.reduce((s, v, i) => s + v * (B[i] || 0), 0);
+const norm = A => Math.sqrt(dot(A, A));
+
+/**
+ * How one move stands to another: parallel, antiparallel, orthogonal, or none
+ * of the three.
+ *
+ * `null` is the oblique case, and it is new. Single-axis moves have no oblique
+ * relation — two axis-aligned vectors are always one of the three — so three
+ * response options were exhaustive. Composite moves break that: (1,0,0) and
+ * (1,1,0) are neither parallel nor perpendicular, and no button says so.
+ *
+ * Rather than add a fourth answer, the generator only draws the three clean
+ * relations. This returns null so that a trial which somehow arrives oblique
+ * asks nothing instead of scoring a coin toss — and so the constraint is
+ * enforced where the relation is computed rather than trusted upstream.
+ */
+function metaRelationOf(A, B) {
+  if (!A || !B) return null;
+  const na = norm(A), nb = norm(B);
+  if (!na || !nb) return null;
+
+  const d = dot(A, B);
+  if (d === 0) return 'diff';
+
+  /* Cosine rather than a component test, because either vector may be composite. */
+  const cos = d / (na * nb);
+  if (cos > 1 - 1e-9) return 'same';
+  if (cos < -1 + 1e-9) return 'opp';
+  return null;
+}
+
+/** Every axis a move happened on, named — so a diagonal can be spelled out. */
+function moveNames(v) {
+  if (!v) return [];
+  const out = [];
+  v.forEach((c, i) => {
+    if (c && CARDINAL_IDS[i]) out.push(CARDINAL_IDS[i][c > 0 ? 1 : 0]);
+  });
+  return out;
+}
+
 /* The direction this trial's stimulus arrived from — the move you just made, as an
    axis id. Not the pair it was compared against: where the sequence came FROM is
    already spent, and what you need to carry forward is where it is now heading,
@@ -60,12 +118,19 @@ function buildJudgments(a, b, extra) {
        once there IS a previous move, so the first comparison of a block is skipped. */
     const prev = extra && extra.metaPrev;
     if (prev) {
-      const A = cardinalOf(prev[0], prev[1]), B = cardinalOf(a, b);
-      if (A && B) {
-        const same = A[0] === B[0] && A[1] === B[1];
-        const opp  = A[0] === B[0] && A[1] !== B[1];
-        push('position', ['meta-same', 'meta-opp', 'meta-diff'],
-             [same ? 'meta-same' : opp ? 'meta-opp' : 'meta-diff']);
+      /*
+       * Vectors, not cardinals. A composite move has no single axis, and the
+       * relation between two of them is a dot product — which is what
+       * "orthogonal" meant all along and what a different axis was only ever a
+       * special case of.
+       */
+      const A = moveVectorOf(prev[0], prev[1]), B = moveVectorOf(a, b);
+      const rel = metaRelationOf(A, B);
+      /* Oblique asks nothing: no button says "neither", and the generator does
+         not draw it. See `metaRelationOf`. */
+      if (rel) {
+        const id = { same: 'meta-same', opp: 'meta-opp', diff: 'meta-diff' }[rel];
+        push('position', ['meta-same', 'meta-opp', 'meta-diff'], [id]);
       }
     }
   } else if (mode('position') === 'identity') {

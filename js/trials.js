@@ -105,26 +105,47 @@ function cardinalNeighbours(fromIdx) {
  */
 function pickMetaMove(fromIdx, fromPitch, A, forbid) {
   const dims = dimCount();
-  const all = cardinalNeighbours(fromIdx);
-  /* Keep the cube moving: a neighbour that is where it already stands is a
-     trial the eye reads as nothing happening. Dropped only when something else
-     is available — a relation that cannot be stated is worse than a still cube. */
-  const trimmed = all.filter(i => i !== forbid);
-  const neigh = trimmed.length ? trimmed : all;
+  const f = state.cells[fromIdx];
 
   /*
-   * Pitch has walls too: an ordered pool of four, so the bottom can only rise
-   * and the top can only fall. The same shape as a cube face, and the same
-   * consequence — a relation that needs a step there is sometimes unavailable.
+   * Every move of one step or none on each axis, the standing-still one aside.
+   *
+   * Composite, which is the change: a move used to be one axis, so "orthogonal"
+   * could only mean "a different axis" and there were two of those in three
+   * dimensions. A vector of ±1s has 26 directions in three dimensions and 80 in
+   * four, and orthogonality becomes a dot product with far more ways to satisfy
+   * it — which is what makes the relation worth deriving rather than reading off
+   * the one axis that moved.
+   *
+   * One step per axis rather than several: the magnitude is a separate question
+   * from how many axes, and a lattice three cells wide has no room for both.
    */
-  const steps = [];
-  if (dims >= 4) {
-    if (fromPitch > 0) steps.push(-1);
-    if (fromPitch < PITCHES.length - 1) steps.push(1);
-  }
+  const offsets = [];
+  const walk = (v) => {
+    if (v.length === dims) {
+      if (v.some(c => c !== 0)) offsets.push(v.slice());
+      return;
+    }
+    [-1, 0, 1].forEach(c => walk(v.concat(c)));
+  };
+  walk([]);
 
-  const moves = neigh.map(i => ({ cellIdx: i, pitch: fromPitch }))
-    .concat(steps.map(d => ({ cellIdx: fromIdx, pitch: fromPitch + d })));
+  /* A move has to land somewhere that exists — inside the lattice, and inside
+     the pool on the axis that is heard. */
+  const cellAt = {};
+  state.cells.forEach((c, i) => { cellAt[c.x + ',' + c.y + ',' + c.z] = i; });
+
+  const moves = [];
+  offsets.forEach(o => {
+    const key = (f.x + o[0]) + ',' + (f.y + o[1]) + ',' + (f.z + o[2]);
+    const idx = cellAt[key];
+    if (idx == null) return;
+    const pitch = dims >= 4 ? fromPitch + o[3] : fromPitch;
+    if (dims >= 4 && (pitch < 0 || pitch >= PITCHES.length)) return;
+    /* Standing exactly where it already stands reads as nothing happening. */
+    if (idx === forbid && pitch === fromPitch) return;
+    moves.push({ cellIdx: idx, pitch: pitch, vec: o });
+  });
 
   if (!A || !moves.length) {
     return moves.length
@@ -132,28 +153,23 @@ function pickMetaMove(fromIdx, fromPitch, A, forbid) {
       : { cellIdx: randExcept(state.cells.length, forbid), pitch: fromPitch };
   }
 
-  const f = state.cells[fromIdx];
+  /*
+   * Bucketed by the relation each move would state, and only the three a button
+   * can express. Oblique moves are dropped rather than shown: no answer says
+   * "neither", and a trial nobody can answer is worse than a narrower draw.
+   */
   const byType = { same: [], opp: [], diff: [] };
   moves.forEach(m => {
-    var ax, sign;
-    if (m.pitch !== fromPitch) {
-      ax = 3;
-      sign = Math.sign(m.pitch - fromPitch);
-    } else {
-      const c = state.cells[m.cellIdx];
-      const d = [c.x - f.x, c.y - f.y, c.z - f.z];
-      ax = d.findIndex(v => v !== 0);
-      sign = Math.sign(d[ax]);
-    }
-    if (ax === A[0]) (sign === A[1] ? byType.same : byType.opp).push(m);
-    else byType.diff.push(m);
+    const rel = metaRelationOf(A, m.vec);
+    if (rel) byType[rel].push(m);
   });
 
   /* "Same" means continuing straight, which a wall blocks about half the time, so
-     uniform-over-available leaves it at ~11%. Over-weight it when it IS reachable to
+     uniform-over-available leaves it rare. Over-weight it when it IS reachable to
      pull the three answers closer together. */
   const W = { same: 3, opp: 1, diff: 1 };
   const avail = ['same', 'opp', 'diff'].filter(k => byType[k].length);
+  if (!avail.length) return pick(moves);
   let r = Math.random() * avail.reduce((s, k) => s + W[k], 0);
   const type = avail.find(k => (r -= W[k]) < 0) || avail[avail.length - 1];
   return pick(byType[type]);
@@ -202,7 +218,7 @@ function sampleTrial() {
        directions leave the axis and walls block continuing straight; "always answer
        different" would then score 66%. */
     metaMove = pickMetaMove(nb.cellIdx, nb.pitch ?? 0,
-                            nb.pair ? cardinalOf(nb.pair[0], nb.pair[1]) : null,
+                            nb.pair ? moveVectorOf(nb.pair[0], nb.pair[1]) : null,
                             noRepeat);
     t.cellIdx = metaMove.cellIdx;
   } else if (rel('position') && nb && lureTarget === 'position') {
@@ -254,15 +270,17 @@ function sampleTrial() {
     if (metaMove) {
       t.pitch = metaMove.pitch;
     } else if (nb) {
+      /*
+       * A step on the heard axis alongside whatever the cell did, rather than
+       * instead of it. The move is a vector now, so the fourth component is
+       * drawn like the other three and nothing has to be held back to keep the
+       * move on one axis.
+       */
       const from = nb.pitch ?? 0;
-      const steps = [];
+      const steps = [0];
       if (from > 0) steps.push(-1);
       if (from < PITCHES.length - 1) steps.push(1);
-      /* A quarter of the time, and only when the pool leaves somewhere to go. */
-      t.pitch = steps.length && Math.random() < 0.25
-        ? from + pick(steps)
-        : from;
-      if (t.pitch !== from) t.cellIdx = nb.cellIdx;
+      t.pitch = from + pick(steps);
     } else if (t.pitch == null) {
       t.pitch = randInt(PITCHES.length);
     }

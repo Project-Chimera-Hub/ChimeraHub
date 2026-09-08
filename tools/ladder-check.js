@@ -337,5 +337,72 @@ ok('off, every tone is the level it always was',
    [0, 1, 2].every(i => g4(`pitchLevel(${i})`) === 1),
    'the option is doing something while switched off');
 
+
+/* ------------------------------------------------------------------ *
+ * Moves on several axes at once                                      *
+ * ------------------------------------------------------------------ *
+ *
+ * A move used to be one axis, so "orthogonal" could only mean "a different
+ * axis" — two of them in three dimensions, three in four. Composite moves make
+ * it a dot product, and there are far more ways to satisfy one, which is the
+ * difference between deriving the relation and reading off whichever axis moved.
+ */
+vm.runInContext('cfg.dimensions = 3;', geo);
+
+ok('parallel is parallel, however many axes it runs on',
+   g4(`metaRelationOf([1,1,0], [1,1,0])`) === 'same');
+ok('antiparallel likewise',
+   g4(`metaRelationOf([1,1,0], [-1,-1,0])`) === 'opp');
+ok('a zero dot product is orthogonal, not "a different axis"',
+   g4(`metaRelationOf([1,1,0], [-1,1,0])`) === 'diff',
+   'two moves at right angles across two axes each were not read as orthogonal');
+ok('and the axis-aligned case still is',
+   g4(`metaRelationOf([1,0,0], [0,1,0])`) === 'diff');
+
+/*
+ * The case three buttons cannot express, and the reason the generator draws only
+ * the clean three. (1,0,0) against (1,1,0) is 45° — neither the same direction
+ * nor a right angle.
+ */
+ok('oblique asks nothing rather than scoring a coin toss',
+   g4(`metaRelationOf([1,0,0], [1,1,0])`) === null,
+   'a 45-degree relation was given one of the three answers');
+ok('a move that goes nowhere states no relation',
+   g4(`metaRelationOf([1,0,0], [0,0,0])`) === null);
+
+/* The count that makes the mode less slow: how many directions are orthogonal
+   to a given move, once a move may combine axes. */
+const orthCount = (vec, d) => {
+  vm.runInContext(`cfg.dimensions = ${d};`, geo);
+  return g4(`(function () {
+    var out = [], v = [];
+    (function walk(w) {
+      if (w.length === ${d}) { if (w.some(function (c) { return c !== 0; })) v.push(w.slice()); return; }
+      [-1, 0, 1].forEach(function (c) { walk(w.concat(c)); });
+    })([]);
+    return v.filter(function (b) { return metaRelationOf(${JSON.stringify(vec)}.slice(0, ${d}), b) === 'diff'; }).length;
+  })()`);
+};
+
+ok('an axis-aligned move has more than two ways to be crossed',
+   orthCount([1,0,0,0], 3) > 2,
+   `counted ${orthCount([1,0,0,0], 3)} in three dimensions, where a single-axis`
+   + ' move had exactly two');
+ok('and a diagonal has its own set',
+   orthCount([1,1,0,0], 3) >= 2,
+   `counted ${orthCount([1,1,0,0], 3)} orthogonal to a two-axis move`);
+ok('the fourth dimension widens it again',
+   orthCount([1,0,0,0], 4) > orthCount([1,0,0,0], 3),
+   `${orthCount([1,0,0,0], 4)} at four dimensions against`
+   + ` ${orthCount([1,0,0,0], 3)} at three`);
+
+/* A diagonal has no single name, and now it has several. */
+vm.runInContext('cfg.dimensions = 3;', geo);
+ok('a composite move can be spelled out',
+   g4(`moveNames([1,-1,0]).join('+')`) === 'east+north',
+   `named ${g4(`moveNames([1,-1,0]).join('+')`)}`);
+ok('and a single-axis one reads as the one axis',
+   g4(`moveNames([0,0,1]).join('+')`) === 'above');
+
 console.log(bad ? `\n${bad} FAILED` : '\nall checks passed');
 process.exit(bad ? 1 : 0);
