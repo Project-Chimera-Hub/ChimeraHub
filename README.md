@@ -45,6 +45,26 @@ and never asks a trainer to report anything. A trainer that has never heard of
 this page works here exactly as well as one that has — which is the whole
 reason eight repositories could be merged in an afternoon.
 
+## Reading an app's history
+
+Every commit from all eight repositories is here — 1100 of them — but
+
+```bash
+git log -- apps/rnb          # shows about seven
+```
+
+is not how to see them. `git subtree add` grafts the original history on as a
+parent, and those commits carry their *original* paths: RNB's work is recorded
+against `js/deck.js`, not `apps/rnb/js/deck.js`. The path filter finds only the
+graft and what came after.
+
+```bash
+git log --follow -- apps/rnb/js/deck.js   # crosses the rename
+git log <a commit from before the graft>  # the old history, from its own tip
+```
+
+Nothing is lost; it is indexed under the name it had at the time.
+
 ## Build
 
 ```bash
