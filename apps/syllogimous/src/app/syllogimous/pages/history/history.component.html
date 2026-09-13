@@ -1,0 +1,227 @@
+<app-card>
+    <div body class="p-3">
+        <div class="text-center" *ngIf="!questions.length">
+            <h3 class="mb-3">Play to see something here</h3>
+            <button class="btn btn-lg btn-primary" (click)="game.playArcadeMode()">
+                Play <i class="bi bi-play-fill"></i>
+            </button>
+        </div>
+
+        <div class="d-grid py-3" style="gap: 2rem;">
+            <div
+                class="card mx-md-3"
+                *ngFor="let q of questions"
+                [class.timeout]="q.userAnswer === undefined"
+                [class.correct]="tally(q).right === tally(q).asked && !tally(q).timedOut"
+                [class.partial]="tally(q).right > 0 && tally(q).right < tally(q).asked"
+                [class.incorrect]="tally(q).right === 0 && !tally(q).timedOut"
+            >
+                <div class="mode-title">{{q.playgroundMode ? "Practice" : "Scored"}}</div>
+
+                <button class="copy-paste" (click)="copyQuestion(q)" ngbTooltip="Click here to copy the question raw JSON data">C</button>
+
+                <div class="question-text">
+                    <div *ngIf="q.instructions?.length || q.notes?.length">
+                        <div *ngIf="q.instructions?.length">
+                            <div class="small text-muted">Instructions</div>
+                            <div class="instructions">
+                                <div *ngFor="let instruction of q.instructions" [innerHTML]="instruction"></div>
+                            </div>
+                        </div>
+                
+                        <div *ngIf="q.notes?.length" class="notes">
+                            <div *ngFor="let note of q.notes" [innerHTML]="note"></div>
+                        </div>
+                    </div>
+
+                    <app-question-map [question]="q"></app-question-map>
+
+                    <div class="webs" *ngIf="q.webs?.length">
+                        <div class="webs__one" *ngFor="let w of q.webs; let i = index">
+                            <small class="text-muted">{{ i === 0 ? "First web" : "Second web" }}</small>
+                            <app-relational-web [web]="w"></app-relational-web>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="small text-muted mb-1">Premises</div>
+                        <div class="premises">
+                            <div *ngFor="let p of q.premises" [innerHTML]="p"></div>
+                        </div>
+                    </div>
+
+                    <div *ngIf="Array.isArray(q.conclusion); else conclusionIsStringTemplate">
+                        <div class="small text-muted mb-1">Conclusion</div>
+                        <div class="conclusions">
+                            <div *ngFor="let c of q.conclusion" [innerHTML]="c"></div>
+                        </div>
+                    </div>
+                    <ng-template #conclusionIsStringTemplate>
+                        <div>
+                            <div class="small text-muted mb-1">Conclusion</div>
+                            <div [innerHTML]="q.conclusion"></div>
+                        </div>
+                    </ng-template>
+                </div>
+    
+                <!--
+                  How it followed.
+
+                  The review overlay shows this once, only after a wrong answer,
+                  and only until it is dismissed. That is the right rule for the
+                  overlay -- it interrupts, so it should interrupt rarely -- and
+                  the wrong rule for the only other place an item can be looked
+                  at. History held the derivation on every stored question and
+                  rendered none of them.
+
+                  Shown for right answers too: "why was that right" is a fair
+                  question, and the item is already open.
+                -->
+                <!--
+                  One derivation per conclusion, not one per item.
+
+                  `takeSeriesAnswer` overwrites `question.explanation` as the
+                  card advances, so a three-conclusion item reached storage
+                  carrying only the third one's — and the first two, which are
+                  the ones somebody opens History to understand, were never
+                  shown even though `series[i].explanation` had them all along.
+                -->
+                <div *ngIf="claims(q) as list" class="mb-2 claims-step">
+                    <div class="claims-step__bar">
+                        <button type="button" class="claims-step__nav"
+                                (click)="stepClaim(q, -1)" aria-label="Previous conclusion">&lsaquo;</button>
+                        <span class="claims-step__dots">
+                            <button type="button" *ngFor="let c of list"
+                                    class="claims-step__dot"
+                                    [class.is-on]="c.index === claimIndex(q)"
+                                    [class.is-right]="c.answered === true"
+                                    [class.is-wrong]="c.answered === false"
+                                    (click)="showClaim(q, c.index)"
+                                    [title]="'Conclusion ' + (c.index + 1)">{{ c.index + 1 }}</button>
+                        </span>
+                        <button type="button" class="claims-step__nav"
+                                (click)="stepClaim(q, 1)" aria-label="Next conclusion">&rsaquo;</button>
+                        <span class="claims-step__count">
+                            Conclusion {{ claimIndex(q) + 1 }} of {{ list.length }}
+                        </span>
+                    </div>
+
+                    <ng-container *ngFor="let c of list">
+                        <div *ngIf="c.index === claimIndex(q)">
+                            <div class="small text-muted mb-1">Premises</div>
+                            <div class="premises">
+                                <div *ngFor="let p of c.premises" [innerHTML]="p"></div>
+                            </div>
+                            <div class="small text-muted mb-1 mt-2">Conclusion</div>
+                            <div [innerHTML]="c.text"></div>
+                            <!-- Where the answer was a pick, the options are the question. -->
+                            <div *ngIf="c.choices?.length" class="claims-step__choices">
+                                <span *ngFor="let choice of c.choices; let ci = index"
+                                      class="claims-step__choice"
+                                      [class.is-answer]="ci === c.correctChoice"
+                                      [innerHTML]="choice"></span>
+                            </div>
+                            <div *ngIf="c.explanation?.length">
+                                <div class="small text-muted mb-1 mt-2">How it follows</div>
+                                <ol class="ps-3 mb-1">
+                                    <li *ngFor="let step of c.explanation" [innerHTML]="step"></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </ng-container>
+                    <app-venn *ngIf="q.venn" [diagram]="q.venn"></app-venn>
+                    <app-stages [question]="q"></app-stages>
+                </div>
+
+                <!-- An item that asked one conclusion has one derivation. -->
+                <div *ngIf="!claims(q) && q.explanation?.length" class="mb-2">
+                    <div class="small text-muted mb-1">How it follows</div>
+                    <ol class="ps-3 mb-1">
+                        <li *ngFor="let step of q.explanation" [innerHTML]="step"></li>
+                    </ol>
+                    <app-venn *ngIf="q.venn" [diagram]="q.venn"></app-venn>
+                    <app-stages [question]="q"></app-stages>
+                </div>
+
+                <!--
+                  A built conclusion, dimension by dimension.
+                  `true` against `false` is one bit about a seven-part answer,
+                  and which part went wrong is the only thing worth knowing.
+                -->
+                <div *ngIf="breakdown(q) as claims" class="mb-2">
+                    <div class="small text-muted mb-1">By dimension</div>
+                    <div *ngFor="let slots of claims" class="mb-1">
+                        <div *ngFor="let s of slots"
+                             class="d-flex small gap-2 align-items-baseline">
+                            <span class="fw-bold" [ngClass]="s.colorClass">{{ s.label }}</span>
+                            <span [class.is-negated]="!s.ok">
+                                {{ s.entered === null ? "not answered" : s.entered }}
+                            </span>
+                            <span *ngIf="!s.ok" class="text-muted">
+                                &rarr; {{ s.correct }}<ng-container
+                                    *ngIf="s.directionOk"> (right way, wrong distance)</ng-container>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!--
+                  Which conclusion went which way, for an item that asked more
+                  than one.
+                  The game screen flashes these under the verdict and then they
+                  were gone: History kept a single true-or-false for the whole
+                  item, so afterwards there was no way to tell which of three
+                  claims lost it — or whether the one you remember answering was
+                  the one you got wrong. That is exactly the question somebody
+                  opens History to settle.
+                -->
+                <div class="marks" *ngIf="(q.series?.length || 0) > 1">
+                    <span class="marks__name">Conclusions</span>
+                    <span *ngFor="let a of q.seriesAnswers; let i = index"
+                          class="marks__one"
+                          [class.is-right]="a === true"
+                          [class.is-wrong]="a === false"
+                          [title]="'Conclusion ' + (i + 1)">{{ a === undefined ? "–" : (a ? "✓" : "✗") }}</span>
+                </div>
+
+                <small class="d-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="bd-left">
+                        <div class="fw-bold">Type</div>
+                        {{ q.type }}
+                    </div>
+    
+                    <div class="bd-left">
+                        <div class="fw-bold">Correct Answer</div>
+                        {{ q.isValid }}
+                    </div>
+    
+                    <div class="bd-left">
+                        <div class="fw-bold">User Answer</div>
+                        {{ (q.userAnswer === undefined) ? "Timeout" : q.userAnswer }}
+                    </div>
+    
+                    <div class="bd-left">
+                        <div class="fw-bold">Time</div>
+                        {{ (q.userAnswer === undefined) ? "Timeout" : (((q.answeredAt - q.createdAt) / 1000) | number:".1-1") + "s" }}
+                    </div>
+                </small>
+            </div>
+
+            <div *ngIf="questions.length && questions.length !== allQuestions.length" class="d-flex justify-content-center">
+                <button class="btn btn-primary" (click)="loadMoreQuestions()">Load More</button>
+            </div>
+        </div>
+    </div>
+
+    <div footer class="playcard-toolbar">
+        <div>
+            <button
+                class="btn btn-outline-primary"
+                (click)="router.navigate([EnumScreens.Start]);"
+            >
+                <i class="bi bi-arrow-left"></i> Start
+            </button>
+        </div>
+        <div>{{ questions.length }} / {{ allQuestions.length }}</div>
+    </div>
+</app-card>

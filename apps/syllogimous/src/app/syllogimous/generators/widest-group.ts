@@ -1,0 +1,355 @@
+/**
+ * Widest Group — the reform of Oddest Relation. See fixes/5.2.
+ *
+ * Several groups of objects, each placed on the same set of dimensions. Within
+ * a group, on any one dimension, the members spread out between an extreme at
+ * each end; the group's **spread on that dimension** is the distance between
+ * those two edge members. A group is scored by its **widest** dimension, and
+ * the answer is the group scoring highest.
+ *
+ * ── Why this rather than the mode it replaces ──
+ *
+ * Oddest Relation decides every dimension by majority vote and then counts, per
+ * candidate, how many dimensions depart from it. Six axes across four relations
+ * is twenty-four comparisons in a fixed order with no decision anywhere in it —
+ * arithmetic with reading attached, and difficulty that grows with axis count
+ * rather than with structure, which is what the ground rules warn against.
+ *
+ * This does not decompose that way. Finding a group's score means ordering its
+ * members along each dimension to find the extremes, and comparing groups means
+ * knowing each one's *widest* dimension first — so the per-dimension work
+ * cannot be finished before the cross-group work starts. Three nested steps
+ * with a real decision in each, where the old mode had one flat count.
+ *
+ * ── Why it is decidable ──
+ *
+ * Two things have to hold or the item has no defensible answer, and both are
+ * built rather than hoped for:
+ *
+ *   - **The winner is unique.** A tie for widest is unanswerable, so the
+ *     margin between the best group and the next is drawn first and the
+ *     coordinates are constructed to hit it.
+ *   - **Every group's own widest dimension is unique too.** Otherwise "which
+ *     dimension is this group's widest" has two answers, and a reader who
+ *     checks the other one is right and marked wrong.
+ */
+
+import { EnumQuestionType } from "../constants/question.constants";
+import { Question } from "../models/question.models";
+import { canGenerateQuestion, clampPremises } from "../models/settings.models";
+import { getRandomSymbols, shuffle } from "../utils/question.utils";
+import { hi, subj, dimClass, dimSlot } from "../utils/phrasing";
+import { axesForDimensions } from "../utils/ndspace.utils";
+import { ANCHORS, statePosition } from "../utils/anchor.utils";
+import { GeneratorContext } from "./context";
+
+const pick = <T>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)];
+
+interface Member { name: string; coord: number[]; }
+interface Built { members: Member[]; spreads: number[]; score: number; widest: number; }
+
+/**
+ * One group whose widest dimension spans exactly `score`.
+ *
+ * Built from the answer backwards. Placing members at random and measuring
+ * afterwards gives no control over the margin between groups, and the margin
+ * *is* the difficulty: left to chance the winner is usually obvious, and
+ * occasionally tied, which is worse than obvious.
+ */
+function buildGroup(names: string[], dims: number, score: number): Built | null {
+    const widest = Math.floor(Math.random() * dims);
+    const spreads: number[] = [];
+
+    for (let d = 0; d < dims; d++) {
+        if (d === widest) { spreads.push(score); continue; }
+        /*
+         * Strictly narrower, and by at least one. A second dimension equal to
+         * the widest makes "this group's widest dimension" a question with two
+         * answers, and a reader who picks the other is right and marked wrong.
+         */
+        if (score < 2) return null;
+        spreads.push(1 + Math.floor(Math.random() * (score - 1)));
+    }
+
+    const members: Member[] = names.map(name => ({ name, coord: Array(dims).fill(0) }));
+
+    for (let d = 0; d < dims; d++) {
+        const lo = -Math.floor(spreads[d] / 2);
+        // The two edges are placed outright; the rest land strictly between
+        // them, so the spread is the one stated and not an accident of the draw.
+        const inner = members.length - 2;
+        const middles = Array.from({ length: inner }, () =>
+            lo + 1 + Math.floor(Math.random() * Math.max(1, spreads[d] - 1)));
+        const values = shuffle([lo, lo + spreads[d], ...middles]);
+        members.forEach((m, i) => { m.coord[d] = values[i]; });
+    }
+
+    return { members, spreads, score, widest };
+}
+
+/** What the reader is asked to compute, done independently of how it was built. */
+export function spreadsOf(members: Member[], dims: number): number[] {
+    return Array.from({ length: dims }, (_, d) => {
+        const values = members.map(m => m.coord[d]);
+        return Math.max(...values) - Math.min(...values);
+    });
+}
+
+function features(ctx: GeneratorContext, type: EnumQuestionType) {
+    const has = (r: string) => ctx.hasRung(type, r);
+
+    let dims = 2;
+    for (const d of [3, 4, 5, 6]) if (has(`dim-${d}`)) dims = d;
+
+    /*
+     * Two is what the mode is; three or four is a thing you go and ask for.
+     *
+     * More groups is not a harder version of comparing two so much as a longer
+     * one — the reading is identical and there is more of it — so it is not
+     * something to be granted as a reward for playing well. Both group rungs
+     * are off the ladder and settable only in Customise.
+     *
+     * `rank` forces three whatever else is set, because ranking two things is
+     * not ranking: there are two possible orderings, so an item cannot offer
+     * three wrong ones beside the right one, and the generator would spend its
+     * whole attempt budget failing to find distractors.
+     */
+    const groups = has("groups-4") ? 4 : (has("groups-3") || has("rank")) ? 3 : 2;
+
+    /*
+     * The margin is the difficulty, and it shrinks as it is earned.
+     *
+     * Two apart is a glance; one apart has to be measured. It is the last thing
+     * to tighten because a narrow margin over many dimensions is the hardest
+     * this mode gets, and there is no point reaching it before the dimensions
+     * are there to hide it in.
+     */
+    const margin = has("margin-1") ? 1 : 2;
+
+    return { dims, groups, margin, rank: has("rank") };
+}
+
+export function createWidestGroup(ctx: GeneratorContext, numOfPremises: number): Question {
+    ctx.logger.info("createWidestGroup");
+
+    const type = EnumQuestionType.WidestGroup;
+    const settings = ctx.settings;
+    if (!canGenerateQuestion(type, numOfPremises, settings)) {
+        throw new Error("Cannot generate.");
+    }
+    numOfPremises = clampPremises(type, numOfPremises);
+
+    const feat = features(ctx, type);
+    const scales = axesForDimensions(feat.dims).slice(0, feat.dims);
+    const axes = scales.map(a => ({ name: a.name || a.axisName }));
+
+    // Premises buy members per group: more rows is more ordering to do before
+    // any group's own widest dimension is known.
+    const size = Math.max(3, Math.min(6, numOfPremises));
+
+    for (let attempt = 0; attempt < 300; attempt++) {
+        /*
+         * Scores drawn first, winner downwards.
+         *
+         * The gap between first and second is the margin; the rest sit below
+         * the runner-up so no third group can be mistaken for the answer, and
+         * so the item is not decided by a coincidence among the also-rans.
+         */
+        const top = 4 + Math.floor(Math.random() * 4);
+        const scores = [top, top - feat.margin];
+        for (let g = 2; g < feat.groups; g++) {
+            const below = top - feat.margin - 1 - Math.floor(Math.random() * 2);
+            if (below < 2) { scores.length = 0; break; }
+            scores.push(below);
+        }
+        if (scores.length !== feat.groups) continue;
+
+        const names = getRandomSymbols(settings, feat.groups * size);
+        if (names.length < feat.groups * size) continue;
+
+        const built: Built[] = [];
+        for (let g = 0; g < feat.groups; g++) {
+            const made = buildGroup(names.slice(g * size, (g + 1) * size), feat.dims, scores[g]);
+            if (!made) break;
+            built.push(made);
+        }
+        if (built.length !== feat.groups) continue;
+
+        /*
+         * Measured back off the finished coordinates, never trusted from the
+         * construction. Placing the two edges and scattering the rest between
+         * them should give the spread that was asked for, and "should" is not a
+         * thing to ship: an item whose stated answer disagrees with its own
+         * numbers is the one failure a trainer must not have.
+         */
+        const actual = built.map(g => spreadsOf(g.members, feat.dims));
+        const measured = actual.map(s => Math.max(...s));
+        const best = Math.max(...measured);
+        if (measured.filter(v => v === best).length !== 1) continue;
+        if (measured.some((v, i) => v !== built[i].score)) continue;
+        /*
+         * Under `rank` every group's score has to differ, or the order is not
+         * one order — two groups tied for third make several answers right and
+         * only one of them offered.
+         */
+        if (feat.rank && new Set(measured).size !== measured.length) continue;
+        // Each group's own widest has to be its alone, or "which dimension is
+        // widest here" has two answers.
+        if (actual.some(s => s.filter(v => v === Math.max(...s)).length !== 1)) continue;
+
+        const winner = measured.indexOf(best);
+        const order = shuffle(built.map((_, i) => i));
+
+        /*
+         * One marker for the whole item, not one per group.
+         *
+         * Every group is measured from the same point, which is what makes the
+         * tables comparable at all — a group read from its own marker would put
+         * the same arrangement at different numbers, and the reader would be
+         * comparing frames rather than spreads. It changes no answer, spreads
+         * being differences within a group, and that is the point: the frame is
+         * there to give the numbers a meaning, not to be part of the question.
+         */
+        const anchor = pick(ANCHORS).token;
+
+        const question = new Question(type);
+        question.bucket = names;
+        question.buckets = order.map(i => built[i].members.map(m => m.name));
+        question.setup = [
+            `Positions are given against ${anchor}, which never moves, or against`
+            + ` another member of the same group.`
+            + ` A direction nobody mentions is one nothing differs on.`,
+            `A group's <b>spread</b> on a direction is the distance between its two`
+            + ` outermost members on it. Score a group by its <b>widest</b>`
+            + ` direction — its largest spread.`,
+        ];
+        /*
+         * Stated as spatial premises, the way every other spatial mode states
+         * things, rather than as a grid of numbers.
+         *
+         * A table of coordinates is easier to *scan* and is not what the app
+         * asks anywhere else — reading "3 east, 1 above relative to ●" and
+         * holding it is part of the work, and a mode that hands the same facts
+         * over as a column of integers has removed that part without saying so.
+         * Members that differ on two axes of six read as two facts, not six,
+         * so a wide space stays wide without every line naming every direction.
+         */
+        /*
+         * Not every member against the marker.
+         *
+         * Stating all of them against the same point made a group's spread a
+         * column of numbers to scan for a maximum and a minimum — reported from
+         * play as *"a counting task without any relational integration"*, and
+         * that is what it was: nothing had to be composed before it could be
+         * compared, because every position arrived finished.
+         *
+         * A member stated against another member of its own group has to be
+         * resolved before it can be ranked, and it is the *ranking* that the
+         * mode is about. At least one per group, so the property is there
+         * rather than likely, and chains capped at two hops from the marker —
+         * past that the item stops being about spread and becomes an offset
+         * chain, which is what the composed spaces already are.
+         *
+         * Within a group only. A member placed against something in another
+         * group would make the groups an arbitrary label on one arrangement,
+         * where the whole question is which of them is widest.
+         */
+        question.premises = order.flatMap((i, k) => {
+            const ms = built[i].members;
+            const depth: number[] = [];
+            // One member is always chained, whatever the coin says.
+            const mustChain = ms.length >= 2 ? 1 + Math.floor(Math.random() * (ms.length - 1)) : -1;
+
+            return [
+                hi(`Group ${k + 1}`),
+                ...ms.map((m, mi) => {
+                    const hosts = ms.slice(0, mi).filter((_, hostIdx) => depth[hostIdx] < 2);
+                    const chain = hosts.length && (mi === mustChain || Math.random() < 0.45);
+
+                    if (!chain) {
+                        depth[mi] = 0;
+                        return statePosition(m.name, anchor, m.coord, scales);
+                    }
+
+                    const host = pick(hosts);
+                    depth[mi] = depth[ms.indexOf(host)] + 1;
+                    return statePosition(m.name, host.name,
+                        m.coord.map((v, d) => v - host.coord[d]), scales);
+                }),
+            ];
+        });
+
+        /*
+         * Naming the top group needs only the top group's score. Ordering them
+         * all needs every score, so a reader who found the winner early cannot
+         * stop — which is the difference the rung is for, rather than a smaller
+         * guess floor.
+         */
+        const label = (i: number) => `Group ${order.indexOf(i) + 1}`;
+        question.answerMode = "choice";
+
+        if (feat.rank) {
+            const ranking = [...built.map((_, i) => i)]
+                .sort((a, b) => measured[b] - measured[a])
+                .map(label).join(" > ");
+
+            /*
+             * One wrong order, and it is the right one with two neighbours
+             * swapped.
+             *
+             * Four orderings drawn at random is a search: most of them put the
+             * widest group somewhere obviously wrong, so they are dismissed
+             * without ranking anything. Swapping an adjacent pair leaves the
+             * only difference at the place the scores are closest, which is
+             * where the ranking actually has to be worked out.
+             */
+            const order = [...built.map((_, i) => i)].sort((a, b) => measured[b] - measured[a]);
+            const swap = Math.floor(Math.random() * (order.length - 1));
+            const nearly = [...order];
+            [nearly[swap], nearly[swap + 1]] = [nearly[swap + 1], nearly[swap]];
+
+            const wrong = new Set([nearly.map(label).join(" > ")]);
+            wrong.delete(ranking);
+            if (!wrong.size) continue;
+
+            const options = shuffle([ranking, ...wrong]);
+            question.choicePrompt = "Widest first — which order?";
+            question.choices = options;
+            question.correctChoice = options.indexOf(ranking);
+        } else {
+            question.choicePrompt = "Which group is widest?";
+            question.choices = order.map((_, k) => `Group ${k + 1}`);
+            question.correctChoice = order.indexOf(winner);
+        }
+        question.conclusion = "";
+        question.isValid = true;
+
+        /*
+         * Which two members the spread is between, and where they resolved to.
+         *
+         * The spread alone was enough while every position was stated outright.
+         * Now that some are stated against each other, a reader who got the
+         * item wrong most likely resolved one member to the wrong place — and a
+         * derivation that opens with the finished spread explains the half they
+         * already had.
+         */
+        question.explanation = order.map((i, k) => {
+            const s = actual[i];
+            const w = s.indexOf(Math.max(...s));
+            const ms = built[i].members;
+            const lo = ms.reduce((a, b) => (a.coord[w] <= b.coord[w] ? a : b));
+            const hi_ = ms.reduce((a, b) => (a.coord[w] >= b.coord[w] ? a : b));
+            return `Group ${k + 1} is widest on ${hi(axes[w].name, dimClass(dimSlot(w)))}`
+                + `, spanning ${hi(String(s[w]))}`
+                + ` — from ${subj(lo.name)} to ${subj(hi_.name)}, once every position`
+                + ` is resolved against ${anchor}.`;
+        }).concat([
+            `so the widest is ${hi(`Group ${order.indexOf(winner) + 1}`)}`
+            + `, by ${hi(String(best - Math.max(...measured.filter((_, i) => i !== winner))))}.`,
+        ]);
+
+        return question;
+    }
+
+    throw new Error("Cannot generate.");
+}

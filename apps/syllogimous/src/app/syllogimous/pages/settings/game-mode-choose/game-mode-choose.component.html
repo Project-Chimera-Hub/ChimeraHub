@@ -1,0 +1,44 @@
+<div class="mb-2 text-muted">Game mode</div>
+
+<div class="game-mode-choices">
+    <div class="game-mode-choice">
+        <input type="radio" id="mode-choice-0" name="mode-kind" (click)="setMode('0')">
+        <label for="mode-choice-0" ngbTooltip="View all premises on the screen simultaneously">All premises</label>
+    </div>
+
+    <div class="game-mode-choice">
+        <input type="radio" id="mode-choice-1" name="mode-kind" (click)="setMode('1')">
+        <label for="mode-choice-1" ngbTooltip="View one premise at a time in a carousel format">Carousel</label>
+    </div>
+
+    <div class="game-mode-choice">
+        <input type="radio" id="mode-choice-2" name="mode-kind" (click)="setMode('2')">
+        <label for="mode-choice-2" ngbTooltip="View one premise at a time in a carousel format without going back">Carousel (no back)</label>
+    </div>
+</div>
+
+<div class="mt-3 mb-2 text-muted">Carousel advancement</div>
+
+<div class="game-mode-choices">
+    <div class="game-mode-choice">
+        <input type="radio" id="advance-choice-manual" name="advance-kind" (click)="setAdvance('manual')">
+        <label for="advance-choice-manual" ngbTooltip="Step through premises with the Prev and Next buttons">Buttons</label>
+    </div>
+
+    <div class="game-mode-choice">
+        <input type="radio" id="advance-choice-click" name="advance-kind" (click)="setAdvance('click')">
+        <label for="advance-choice-click" ngbTooltip="Click anywhere on the premise to jump straight to the next one">Click anywhere</label>
+    </div>
+
+    <div class="game-mode-choice">
+        <input type="radio" id="advance-choice-timer" name="advance-kind" (click)="setAdvance('timer')">
+        <label for="advance-choice-timer" ngbTooltip="Advance automatically after a fixed number of seconds">Timed</label>
+    </div>
+</div>
+
+<div class="d-grid mt-2" style="gap: 0.5rem; padding-inline: 0.5rem;" *ngIf="advance === 'timer'">
+    <label for="advance-seconds" class="text-muted small">Seconds per premise</label>
+    <input id="advance-seconds" type="number" class="form-control form-control-sm"
+           min="1" max="60" style="max-width: 8rem;"
+           [value]="advanceSeconds" (change)="setAdvanceSeconds($any($event.target).value)">
+</div>

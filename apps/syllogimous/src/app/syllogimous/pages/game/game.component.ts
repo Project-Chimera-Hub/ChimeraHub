@@ -1,0 +1,1097 @@
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { GameService } from '../../services/game.service';
+import { StatsService } from '../../services/stats.service';
+import { LS_CAROUSEL_ADVANCE, LS_CAROUSEL_SECONDS, LS_GAME_MODE, LS_TIMER } from '../../constants/local-storage.constants';
+import { LS_CUSTOM_TIMERS_KEY } from '../settings/modal-timer-settings/modal-timer-settings.component';
+import { Router } from '@angular/router';
+import { EnumScreens } from '../../constants/game.constants';
+import { GameTimerService } from '../../services/game-timer.service';
+import { ConstructSlot } from '../../models/question.models';
+import { ProgressionService } from '../../services/progression.service';
+import { SlotAnswer, blankPicks, compareConstruction, slotsRemaining } from '../../utils/construct.utils';
+import { KeybindService, keyLabel } from '../../services/keybind.service';
+import { slideNames, stepSlide } from '../../utils/slides.utils';
+import { advanceHold, isHoldClaim } from "../../utils/answer.utils";
+import { symbolLegend } from '../../utils/phrasing';
+import { ProgressAndPerformanceService } from '../../services/progress-and-performance.service';
+
+@Component({
+    selector: 'app-game',
+    templateUrl: './game.component.html',
+    styleUrls: ['./game.component.css']
+})
+export class GameComponent {
+    Array = Array;
+    EnumScreens = EnumScreens;
+
+    /**
+     * Whether today's goal has been reached, and so whether there is a way out.
+     *
+     * The stream stays endless — nothing here stops or interrupts play, which
+     * is the point of an arcade. What reaching the goal buys is a *stopping
+     * point*: a button that was not there before, offering the day's summary.
+     * An app with no end and no marker of having done anything is one you stop
+     * playing for no reason and start again for none either.
+     *
+     * Recomputed when an answer lands rather than continuously, since the only
+     * thing that can change it is an answer.
+     */
+    goalMet = false;
+
+    refreshGoal() {
+        // The daily goal that has always been in Settings, in minutes, tracked
+        // per day by the service that has always tracked it. Nothing here
+        // invents a second goal for the button to answer to.
+        const today = this.progress.getToday();
+        this.goalMet = this.progress.calcDailyProgress(today) >= 100;
+    }
+
+    /**
+     * The answer just given, dimension by dimension.
+     *
+     * The same rows History has shown for a while, moved to where they are
+     * actually useful. A player reviewing a wrong seven-dimension answer needs
+     * to know *which* dimension while the item is still in front of them;
+     * finding out days later in History is finding out about a different item.
+     *
+     * `compareConstruction` is the one judge — the same call the result rows,
+     * the ability model and the history page all read, so none of them can
+     * disagree about which slot was right.
+     */
+    breakdown() {
+        const q = this.game.question;
+        if (!q || q.answerMode !== "construct" || !q.construct?.length) return null;
+        return compareConstruction(q.construct, q.userConstruct);
+    }
+    
+    timerType;
+    gameMode;
+    timerTimeSeconds = 0;
+    trueButtonToTheRight = false;
+    private questionSub?: Subscription;
+
+    /** 'manual' = Prev/Next, 'click' = advance anywhere, 'timer' = auto-advance. */
+    carouselAdvance: 'manual' | 'click' | 'timer' = 'manual';
+    carouselSeconds = 4;
+
+    constructor(
+        public game: GameService,
+        public gameTimerService: GameTimerService,
+        private statsService: StatsService,
+        public progressionService: ProgressionService,
+        public keys: KeybindService,
+        public router: Router,
+        private progress: ProgressAndPerformanceService,
+    ) {
+        this.timerType = localStorage.getItem(LS_TIMER) || '0';
+        this.gameMode = localStorage.getItem(LS_GAME_MODE) || '0';
+        this.carouselAdvance = (localStorage.getItem(LS_CAROUSEL_ADVANCE) as any) || 'manual';
+        this.carouselSeconds = Number(localStorage.getItem(LS_CAROUSEL_SECONDS)) || 4;
+        this.trueButtonToTheRight = Math.random() > 0.5;
+
+        if (this.game.question.conclusion === "!") {
+            this.router.navigate([EnumScreens.Start]);
+        }
+    }
+
+    /**
+     * Click-to-advance. Ignores clicks on real controls so the answer buttons
+     * and nav do not also step the carousel.
+     */
+    onSlideAreaClick(event: Event) {
+        if (this.carouselAdvance !== 'click') return;
+        if ((event.target as HTMLElement)?.closest('button, a, input, select, textarea')) return;
+        this.step(1);
+    }
+
+    /**
+     * Whether a clock is actually counting down on this question.
+     *
+     * The bar used to be shown on `timerType !== '0'`, which is the *setting*
+     * rather than the fact. Progression arms a clock of its own regardless of
+     * that setting, so with the ladder on and the timer preference set to off
+     * the question was being timed out with nothing on screen — no warning, no
+     * countdown, and no way to tell it apart from a bug. The honest condition is
+     * whether a limit was armed for this question.
+     */
+    get timerRunning() {
+        return this.timerTimeSeconds > 0;
+    }
+
+    private startTimerForQuestion() {
+        // Cleared first: it survives from the previous question otherwise, and a
+        // stale value both shows a bar for an untimed item and divides the
+        // progress bar by the wrong total.
+        this.timerTimeSeconds = 0;
+        /*
+         * And told to the service, which prices the item when it is answered.
+         * The clock is part of what an item was worth, and this is the only
+         * place that knows which of the four rules below armed it.
+         */
+        this.game.armedSeconds = null;
+
+        // Progression owns the clock when it is on: the shrinking limit *is* the
+        // difficulty, so a fixed or stats-derived timer would fight it. It
+        // returns null when the player has the timer off, so "Timer disabled"
+        // means no countdown here either.
+        //
+        // Free Play is the exception. It runs on settings the player wrote
+        // themselves and its answers are never recorded, so no ladder is driving
+        // that item — a limit computed for a configuration it was not built from
+        // is the wrong number as well as an unasked-for one.
+        const ladderSeconds = this.game.question.playgroundMode
+            ? null
+            : this.progressionService.timeLimitFor(this.game.question.type);
+        if (ladderSeconds != null) {
+            this.timerTimeSeconds = ladderSeconds;
+            this.game.armedSeconds = ladderSeconds;
+            this.kickTimer();
+            return;
+        }
+
+        /*
+         * A mode the player has taken the clock off stays untimed here too.
+         *
+         * The ladder already knows -- `configFor` builds and scores that mode's
+         * items with no time component -- but the two paths below do not go
+         * through it: a custom or adaptive timer would put a countdown back on
+         * a mode that was explicitly asked to have none, and Free Play would do
+         * it even with progression off entirely.
+         */
+        if (this.game.settingsOverrideService.untimedFor(this.game.question.type)) return;
+
+        switch(this.timerType) {
+            case '1': {
+                console.log("Custom timer");
+
+                const customTimers = JSON.parse(localStorage.getItem(LS_CUSTOM_TIMERS_KEY) || "{}");
+                this.timerTimeSeconds = customTimers[this.game.question.type] || 90;
+                this.game.armedSeconds = this.timerTimeSeconds;
+                this.kickTimer();
+                
+                break;
+            }
+            case '2': {
+                console.log("Adaptive timer");
+
+                /*
+                 * Budget = typical time for this shape of item, plus headroom.
+                 *
+                 * Two things were wrong. The budget *was* the mean of the last
+                 * ten answers, and a mean is the middle of a distribution — so
+                 * about half of all answers ran out of clock by construction.
+                 * And the adjustments were seconds multiplied by raw counts, so
+                 * ten correct in a row cut five seconds off a mode whose whole
+                 * budget might be eight, with a floor of zero underneath.
+                 *
+                 * Now the mean gets a headroom multiplier, the adjustments are
+                 * proportions of that budget rather than absolute seconds, and
+                 * nothing can drop below a floor a human can actually read the
+                 * premises in.
+                 */
+                const HEADROOM = 1.6;
+                const MIN_SECONDS = 12;
+                /* What the ladder itself will never exceed. */
+                const MAX_SECONDS = this.progressionService.config.ceilingSeconds;
+                /* Fractions of the budget, not seconds. */
+                const correctTighten = 0.25;
+                const incorrectLoosen = 0.3;
+                const timeoutLoosen = 0.5;
+                const newLevelBonus = 15;
+                const negationBonus = 3;
+                const metaRelationBonus = 4;
+                this.timerTimeSeconds = 90;
+
+                const questionType = this.game.question.type;
+                const questionPremises = this.game.question.premises.length;
+                const { typeBasedStats } = this.statsService.calcStats(this.timerType);
+                const tbs = typeBasedStats[questionType];
+
+                /** Budget from one premise-count bucket, or null if too thin to trust. */
+                const budgetFrom = (st: any): number | null => {
+                    const n = st?.last10Count || 0;
+                    if (!st || n < 1) return null;
+                    const mean = (st.last10Sum / 1000) / n;
+                    if (!isFinite(mean) || mean <= 0) return null;
+                    const scale = 1
+                        - correctTighten * (st.last10Correct / n)
+                        + incorrectLoosen * (st.last10Incorrect / n)
+                        + timeoutLoosen * (st.last10Timeout / n);
+                    return mean * HEADROOM * scale;
+                };
+
+                if (tbs?.stats) {
+                    const prevStats = (tbs.stats as any)[questionPremises - 1];
+                    const currStats = (tbs.stats as any)[questionPremises];
+
+                    let budget: number | null = null;
+                    if (currStats && currStats.count > 2) {
+                        budget = budgetFrom(currStats);
+                    } else if (prevStats && prevStats.count > 2) {
+                        const shorter = budgetFrom(prevStats);
+                        // One premise longer than anything measured, so pay for
+                        // the extra step as well as the unfamiliarity.
+                        if (shorter != null) budget = shorter + newLevelBonus;
+                    }
+
+                    if (budget != null) {
+                        budget += negationBonus * this.game.question.negations;
+                        budget += metaRelationBonus * this.game.question.metaRelations;
+                        /*
+                         * And a ceiling, which this never had.
+                         *
+                         * The budget is a measured mean multiplied by headroom,
+                         * so anything that inflates the mean inflates it without
+                         * limit — a single walk-away armed a seventeen-minute
+                         * deadline. The floor was there from the start; the cap
+                         * is the same one the ladder holds itself to, because a
+                         * deadline longer than the longest the ladder will ever
+                         * set is not a deadline.
+                         */
+                        this.timerTimeSeconds = Math.floor(
+                            Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, budget)));
+                        this.game.armedSeconds = this.timerTimeSeconds;
+                    }
+                }
+
+                this.kickTimer();
+                
+                break;
+            }
+            default: {
+                console.log("No timer");
+            }
+        }
+    }
+
+    ngOnInit() {
+        this.startTimerForQuestion();
+        this.resetPicks();
+        this.refreshGoal();
+
+        // Auto-advance replaces the question in place, so the screen has to
+        // re-arm itself rather than relying on a fresh component.
+        this.questionSub = this.game.questionChanged.subscribe(() => {
+            this.closeLabelKey();
+            this.gameTimerService.stop();
+            this.trueButtonToTheRight = Math.random() > 0.5;
+            this.resetPicks();
+            this.startTimerForQuestion();
+            // The item that just left is the one that may have met the goal.
+            this.refreshGoal();
+        });
+
+        /*
+         * A new claim of the same item: go to where it is asked.
+         *
+         * Answering leaves the carousel at the end of the card, because reaching
+         * the end is what unlocks answering. The next claim then arrives with
+         * its question somewhere behind you — the operator lines in Infer
+         * Relation, the chain in Axis Maps — and the only way to it was paging
+         * back by hand, past premises that had not changed.
+         */
+        this.claimSub = this.game.claimChanged.subscribe(() => {
+            this.showClaimSite();
+            // Answering a conclusion buys seconds, so the bar has further to
+            // fall than it did a moment ago and its sweep has to be re-armed.
+            this.armTimerBar();
+        });
+
+        /*
+         * Coming back to the tab: put the deadline back under the count.
+         *
+         * A hidden tab throttles `setInterval` to a crawl, so the countdown
+         * barely moves while its deadline goes on passing in real time. The
+         * clock then has eighty seconds on it and nothing left to draw, which
+         * leaves the bar sitting empty at the left for the rest of the item —
+         * it looks like a bar that has broken rather than one that agrees with
+         * a number nobody was watching.
+         *
+         * `resync` hands the count back to the deadline, and the bar is re-armed
+         * against it. Neither the seconds nor the scoring change: this is the
+         * drawing catching up with the clock, not the clock being reset.
+         */
+        if (typeof document !== "undefined") {
+            document.addEventListener("visibilitychange", this.onVisible);
+        }
+    }
+
+    /**
+     * Construction answers, one entry per slot per claim.
+     *
+     * Held here rather than on the Question so an unfinished attempt is not
+     * written into history if the clock runs out mid-build.
+     */
+    picks: SlotAnswer[][] = [];
+
+    /**
+     * Bound once, so it is the same reference to remove.
+     *
+     * An arrow property rather than a method: `removeEventListener` compares by
+     * identity, and a bound method handed straight to `addEventListener` cannot
+     * be taken off again — the listener would then outlive the screen and arm a
+     * bar belonging to a component that had gone.
+     */
+    private onVisible = () => {
+        if (document.visibilityState !== "visible") return;
+        this.gameTimerService.resync();
+        this.armTimerBar();
+    };
+
+    ngOnDestroy() {
+        this.barAnim?.cancel();
+        this.questionSub?.unsubscribe();
+        this.claimSub?.unsubscribe();
+        if (typeof document !== "undefined") {
+            document.removeEventListener("visibilitychange", this.onVisible);
+        }
+        this.gameTimerService.stop();
+        clearInterval(this.carouselTimerHandle);
+    }
+
+    /**
+     * Slide gating for the conclusion builder.
+     *
+     * In carousel modes the builder waits until every premise has been shown.
+     * Visible from the first slide it is a scratchpad you can fill in as you
+     * read, which is exactly the memory load that stepping through premises one
+     * at a time — and not being able to go back — exists to impose.
+     *
+     * "Furthest reached", not "currently on the last slide": in the mode that
+     * allows Prev, stepping back should not take the form away again.
+     */
+    private reachedEnd = false;
+
+    /**
+     * Which slide is showing, by name.
+     *
+     * Names rather than generated ids, and no per-question token. The token
+     * existed only to make `ngb-carousel` let go of a slide id it was still
+     * holding from the previous question — a workaround for a component that is
+     * no longer here.
+     */
+    activeSlide = "";
+
+    /** How the skip key reads, for the button that says so. */
+    /**
+     * The keys, said once and quietly, for the mode that removed the buttons.
+     *
+     * Zen mode is about having less on the card, not about guessing — a screen
+     * with no controls and no hint is a screen you cannot start. Muted and one
+     * line, so it is information rather than a control.
+     */
+    get zenKeyHint(): string {
+        const b = this.keys.binds;
+        if (this.game.question.answerMode === "boolean") {
+            return `${keyLabel(b.answerTrue)} true · ${keyLabel(b.answerFalse)} false`;
+        }
+        if (this.game.question.answerMode === "choice") {
+            // Two options answer outright, so there is no confirm to mention.
+            if (this.choiceCount === 2) {
+                return `${keyLabel(b.answerTrue)} first · ${keyLabel(b.answerFalse)} second`;
+            }
+            return `${keyLabel(b.answerTrue)}${keyLabel(b.answerFalse)} choose`
+                + ` · ${keyLabel(b.submit)} answer`;
+        }
+        return "";
+    }
+
+    /**
+     * What the marks on this card mean, for the key behind the "?".
+     *
+     * Built from the rendered text of the item in front of you, so it lists
+     * exactly the marks that are on it — no more, and never fewer. Only in
+     * minimal mode: with words on the card there is nothing to decode.
+     */
+    /**
+     * Whether this item's labels come with a key at all.
+     *
+     * The three standalone schemes hand the reader the pairing in the labels
+     * themselves — red for the inverted pole, its letters turned round, or the
+     * axis colour and nothing else — and carry no key, which the item says by
+     * arriving without one.
+     */
+    get mappedLabels(): boolean {
+        return !!this.game.question.relationLabels;
+    }
+
+    /** Closed whenever the card underneath it changes. */
+    private closeLabelKey() { this.labelKeyOpen = false; }
+
+    get symbolLegend(): Array<{ mark: string; word: string }> {
+        const q = this.game.question;
+        /*
+         * Decoded with *this item's* key. Items are generated ahead of the one
+         * on screen, so a shared current vocabulary would describe the card
+         * with the next item's labels — and with fresh labels that is not a
+         * cosmetic error, it is a wrong key for an unanswerable card.
+         */
+        if (!this.game.symbolRelations && !q.relationLabels) return [];
+        return symbolLegend([
+            ...q.setup ?? [],
+            ...q.premises,
+            ...(Array.isArray(q.conclusion) ? q.conclusion : [q.conclusion ?? ""]),
+            ...q.choices,
+        ], q.relationLabels);
+    }
+
+    get skipKeyLabel() {
+        const key = this.keys.binds.submit;
+        return key ? keyLabel(key) : "";
+    }
+
+    private show(name: string) {
+        this.activeSlide = name;
+        if (name === this.slideOrder[this.slideOrder.length - 1]) this.reachedEnd = true;
+    }
+
+    /**
+     * The index carried by the active slide's name, or -1.
+     *
+     * `premise-3` and `conclusion-0` are the only slides there can be several
+     * of, and the template needs to know which one without a second source of
+     * truth about the order.
+     */
+    slideIndexOf(prefix: string): number {
+        return this.activeSlide.startsWith(prefix)
+            ? Number(this.activeSlide.slice(prefix.length))
+            : -1;
+    }
+
+    conclusionAt(i: number) {
+        const c = this.game.question.conclusion;
+        return Array.isArray(c) ? c[i] : c;
+    }
+
+    conclusionLabel(i: number) {
+        const c = this.game.question.conclusion;
+        if (!Array.isArray(c)) return "Conclusion";
+        return i === c.length - 1 ? "Last conclusion" : `Conclusion ${i + 1}`;
+    }
+
+    /**
+     * Every slide this question has, in the order they are meant to be read.
+     *
+     * ngb-carousel decides `next()` from its own `ContentChildren` list, and
+     * that list is assembled from four separate structural blocks — an `*ngIf`
+     * setup, an `*ngIf` webs slide, an `*ngFor` over premises, and an `*ngIf`
+     * pair for the ending. Its order is whatever those views happened to be
+     * created in, which is how a carousel ended up going premise 2, premise 1,
+     * last premise, premise 3. Stepping is driven from this array instead, so
+     * reading order is stated once and cannot drift from the template.
+     */
+    slideOrder: string[] = [];
+
+    private buildSlideOrder() {
+        // The order lives in `slides.utils`, where its contract is tested.
+        this.slideOrder = slideNames(this.game.question);
+    }
+
+    /**
+     * Move by one slide, clamped at both ends.
+     *
+     * Deliberately not wrapping: reaching the end is what unlocks answering in
+     * the carousel modes, and wrapping round to the first premise again made
+     * that a lap counter rather than a position.
+     */
+    step(delta: number) {
+        if (!this.slideOrder.length) return;
+        this.show(stepSlide(this.slideOrder, this.activeSlide, delta));
+    }
+
+    private claimSub?: Subscription;
+
+    /**
+     * Land on the slide where the new claim is asked.
+     *
+     * The claim records which premise it replaced, so that is where to go. A
+     * claim that replaced no premise asks in the options or the conclusion
+     * instead, which is the end of the card and is where answering already left
+     * you — so that case moves nothing.
+     *
+     * Only in the carousel modes: all-at-once has the whole card on screen and
+     * there is nowhere to jump to.
+     */
+    private showClaimSite() {
+        if (this.gameMode === "0") return;
+
+        this.buildSlideOrder();
+
+        const at = this.game.question.seriesFocusPremise;
+        const target = at >= 0 ? "premise-" + at
+            : this.game.question.answerMode === "choice" ? "choices"
+            : "conclusion-0";
+
+        if (!this.slideOrder.includes(target)) return;
+        this.show(target);
+        /*
+         * The end has already been reached for this item, so answering stays
+         * unlocked — jumping backwards to re-read is not starting over.
+         */
+        this.reachedEnd = true;
+    }
+
+    /** All-at-once has no slides to wait for, so the form is there from the start. */
+    get builderReady() {
+        return this.gameMode === "0" || this.reachedEnd;
+    }
+
+    private armCarousel() {
+        this.buildSlideOrder();
+        this.activeSlide = this.slideOrder[0] ?? "";
+        // A one-slide question is already at its end and would otherwise never
+        // fire a slide event to say so.
+        this.reachedEnd = this.slideOrder.length <= 1;
+        this.armCarouselTimer();
+    }
+
+    private carouselTimerHandle?: any;
+
+    /**
+     * Timed advance, driven here rather than by the carousel's own `interval`.
+     *
+     * The same reason as `step`: the carousel's auto-advance walks its content
+     * list, which is the order being replaced.
+     */
+    private armCarouselTimer() {
+        clearInterval(this.carouselTimerHandle);
+        if (this.carouselAdvance !== "timer") return;
+        this.carouselTimerHandle = setInterval(
+            () => this.step(1), Math.max(1, this.carouselSeconds) * 1000);
+    }
+
+    /* ---------------- structure matching ---------------- */
+
+    /**
+     * Nodes pointed at in the second web, in the order they were pointed at.
+     *
+     * Held here rather than on the question so that a redraw cannot lose them
+     * and an unfinished answer is never mistaken for a submitted one.
+     */
+    mapPicks: number[] = [];
+
+    /**
+     * Pointing at a node adds it; pointing at one already chosen takes it back
+     * out, along with everything after it.
+     *
+     * Removing the tail rather than closing the gap is the honest behaviour: the
+     * order is part of the answer, so silently promoting the later picks would
+     * change claims the player never revisited.
+     */
+    onWebPick(node: number) {
+        if (this.game.question.answerMode !== "map") return;
+
+        const at = this.mapPicks.indexOf(node);
+        if (at >= 0) {
+            this.mapPicks = this.mapPicks.slice(0, at);
+        } else if (this.mapPicks.length < this.game.question.mapTargets.length) {
+            this.mapPicks = [...this.mapPicks, node];
+        }
+        this.showPicks();
+    }
+
+    /**
+     * Mirror the picks onto the drawn web, which is what colours them.
+     *
+     * Mutated in place, deliberately. Replacing the array — or the web object
+     * inside it — makes `*ngFor` destroy and rebuild a component that lives
+     * *inside a carousel slide*, and ngb-carousel re-picks its active slide
+     * whenever its content children churn. Every tap therefore threw the reader
+     * back to the first slide, which is a mode that does not work in carousel.
+     */
+    private showPicks() {
+        const second = this.game.question.webs?.[1];
+        if (second) second.picked = [...this.mapPicks];
+        this.webRedraw++;
+    }
+
+    /**
+     * Bumped on every pick, purely to give the drawing a changed input.
+     *
+     * The web object is mutated rather than replaced, so an `@Input` bound to
+     * it never sees a new reference; this is the changed reference, and it
+     * costs nothing structural.
+     */
+    webRedraw = 0;
+
+    get mapComplete() {
+        return this.game.question.answerMode === "map"
+            && this.mapPicks.length === this.game.question.mapTargets.length;
+    }
+
+    submitMapping() {
+        if (!this.mapComplete || !this.builderReady) return;
+        this.game.checkMapping(this.mapPicks);
+    }
+
+    private resetPicks() {
+        this.mapPicks = [];
+        this.webRedraw = 0;
+        // A cursor left on the last item's third option would be pointing at
+        // an answer to a question nobody has read yet.
+        this.choiceFocus = -1;
+        this.picks = blankPicks(this.game.question.construct);
+        this.armCarousel();
+    }
+
+    /**
+     * A direction word without its leading "is".
+     *
+     * These strings double as rendered relation sentences elsewhere, so they
+     * carry a verb the dropdown does not need.
+     */
+    short(option: string) {
+        return option.replace(/^is /, "");
+    }
+
+    /** Direction dropdown: normal, reversed, or same. */
+    pickDirection(claim: number, slot: number, raw: string) {
+        // The placeholder option carries "", which must not become 0.
+        this.picks[claim][slot].direction = raw === "" ? -1 : Number(raw);
+    }
+
+    /** Distance box. Blank or nonsense falls back to one rather than to zero. */
+    pickMagnitude(claim: number, slot: number, raw: string) {
+        const n = Math.floor(Number(raw));
+        this.picks[claim][slot].magnitude = Number.isFinite(n) && n > 0 ? n : 1;
+    }
+
+    /**
+     * Whether this slot wants a distance right now.
+     *
+     * Two reasons it might not: the mode is asking for direction only, or the
+     * player has said "same", which has no distance to state.
+     */
+    needsMagnitude(claim: number, slot: number, spec: ConstructSlot) {
+        if (!spec.asksDistance) return false;
+        const dir = this.picks[claim]?.[slot]?.direction;
+        return dir === 0 || dir === 1;
+    }
+
+    /** How many slots are still unset, phrased for the button. */
+    get slotsLeft() {
+        const left = slotsRemaining(this.picks);
+        return left === 0 ? "all set" : `${left} left`;
+    }
+
+    /** Every direction chosen — until then there is nothing to submit. */
+    get constructComplete() {
+        return this.picks.length > 0 && slotsRemaining(this.picks) === 0;
+    }
+
+    submitConstruction() {
+        if (!this.constructComplete) return;
+        this.game.checkConstruction(this.picks);
+    }
+
+
+    /**
+     * Playing from the keyboard.
+     *
+     * The answer buttons swap sides between questions on purpose, so the mouse
+     * is a poor instrument here — you cannot aim until you have read, and the
+     * aiming comes out of the time budget. Up and down mean the same thing
+     * whatever the buttons are doing.
+     *
+     * Number keys still answer a choice item directly: four buttons is more
+     * hunting than two, and 1–4 is faster than any binding could be.
+     */
+    /**
+     * Which option the arrow keys are sitting on, in zen mode.
+     *
+     * -1 until the first arrow press, so an item does not open with an answer
+     * already half-given — the cursor appearing is what says the keys are live,
+     * and a highlight that is there before you touch anything reads as a
+     * suggestion.
+     */
+    choiceFocus = -1;
+
+    /** Options in the order they are drawn, whichever of the two forms is up. */
+    private get choiceCount(): number {
+        const q = this.game.question;
+        return q.choiceGrids?.length || q.choices.length;
+    }
+
+    private moveChoice(by: number) {
+        const n = this.choiceCount;
+        if (!n) return;
+        // Wraps, because a cursor that stops at the end makes you count to know
+        // which way is shorter — and the whole point is not having to look.
+        this.choiceFocus = this.choiceFocus < 0
+            ? (by > 0 ? 0 : n - 1)
+            : (this.choiceFocus + by + n) % n;
+    }
+
+    /**
+     * Whether the key to this item's labels is being held open.
+     *
+     * Drawn labels are arbitrary, so a key beside the card is a lookup and
+     * costs nothing — read the label, read the premise, carry neither. `v`
+     * swaps the card for the key instead: while it is open the premises are not
+     * on screen, so consulting it means holding what you had read.
+     */
+    labelKeyOpen = false;
+
+    @HostListener("document:keydown", ["$event"])
+    onKey(event: KeyboardEvent) {
+        // Typing in the conclusion builder is typing, not playing.
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("input, select, textarea")) return;
+
+        /*
+         * The key, before anything else looks at the keystroke.
+         *
+         * Above the verdict guard on purpose: an item is worth looking up after
+         * it has been answered as much as before, and that is where a reader
+         * checks what they had wrong.
+         */
+        if (event.key === "v" || event.key === "V") {
+            if (!this.labelKeyOpen && !this.mappedLabels) return;
+            event.preventDefault();
+            this.labelKeyOpen = !this.labelKeyOpen;
+            return;
+        }
+        if (this.labelKeyOpen) {
+            /*
+             * Anything else puts the card back, rather than acting on a screen
+             * the player cannot see. Bare modifiers do not count: holding shift
+             * to reach a key would otherwise close the thing on the way to it.
+             */
+            if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+            event.preventDefault();
+            this.labelKeyOpen = false;
+            return;
+        }
+
+        // Never while a verdict is up: a late keypress would answer the next
+        // question before it has been read.
+        if (this.game.verdict) return;
+
+        if (this.game.review.length) {
+            // The one thing worth doing while the explanation is up.
+            if (this.keys.actionFor(event) === "submit") {
+                event.preventDefault();
+                this.game.dismissReview();
+            }
+            return;
+        }
+
+        /*
+         * A held screen has one thing to do, so every key that means "go on"
+         * does it and nothing that means an answer does anything. Answering by
+         * reflex on a screen that asked nothing is the mistake worth designing
+         * out: the keystroke would otherwise be carried into the next screen,
+         * which is the one that actually asks something.
+         */
+        if (this.holding) {
+            if (this.keys.actionFor(event) === "submit"
+                || event.key === " " || event.key === "Enter") {
+                event.preventDefault();
+                this.holdOn();
+            }
+            return;
+        }
+
+        if (this.game.question.answerMode === "choice") {
+            const index = Number(event.key) - 1;
+            if (Number.isInteger(index) && index >= 0 && index < this.choiceCount) {
+                event.preventDefault();
+                this.game.checkChoice(index);
+                return;
+            }
+
+            /*
+             * Two options are answered by the arrows outright.
+             *
+             * Move-then-confirm is the right shape for a list you have to walk,
+             * and the wrong one for a pair: with two options the cursor has
+             * nowhere to be that is not the answer, so the confirm keystroke
+             * carries no information — it exists only to repeat what the arrow
+             * already said. Up is the first, down is the second, and that is
+             * the same shape as true and false on a boolean item, which is
+             * most of what gets played.
+             *
+             * Outside zen too, where the arrows were doing nothing on a picking
+             * item at all. Left and right page the carousel; up and down were
+             * free, and a keyboard answer should not depend on which mode the
+             * screen is in.
+             */
+            const twoWay = this.keys.actionFor(event);
+            if (this.choiceCount === 2
+                && (twoWay === "answerTrue" || twoWay === "answerFalse")) {
+                event.preventDefault();
+                this.game.checkChoice(twoWay === "answerTrue" ? 0 : 1);
+                return;
+            }
+
+            /*
+             * Three or more still walk, and still confirm.
+             *
+             * Up and down move the cursor rather than left and right, because
+             * left and right already page the carousel — and an item can be
+             * both a carousel and a picking item, so the two must not fight.
+             * `submit` commits, which is the same key that dismisses an
+             * explanation elsewhere: in zen mode there is no explanation to
+             * dismiss, so it is free and it is where the thumb already is.
+             */
+            if (this.game.zenMode) {
+                const action = this.keys.actionFor(event);
+                if (action === "answerTrue" || action === "answerFalse") {
+                    event.preventDefault();
+                    this.moveChoice(action === "answerFalse" ? 1 : -1);
+                    return;
+                }
+                if (action === "submit" && this.choiceFocus >= 0) {
+                    event.preventDefault();
+                    this.game.checkChoice(this.choiceFocus);
+                    return;
+                }
+            }
+        }
+
+        const action = this.keys.actionFor(event);
+        if (!action) return;
+
+        switch (action) {
+            case "answerTrue":
+                if (this.game.question.answerMode === "construct") {
+                    // The same key submits what has been built: on that mode
+                    // there is no true or false to press, and a second binding
+                    // for "the affirmative action" would be one to remember.
+                    if (this.constructComplete) { event.preventDefault(); this.submitConstruction(); }
+                    return;
+                }
+                if (this.game.question.answerMode !== "boolean") return;
+                event.preventDefault();
+                this.game.checkQuestion(true);
+                return;
+
+            case "answerFalse":
+                if (this.game.question.answerMode !== "boolean") return;
+                event.preventDefault();
+                this.game.checkQuestion(false);
+                return;
+
+            case "next":
+                if (this.gameMode === "0") return;
+                event.preventDefault();
+                this.step(1);
+                return;
+
+            case "prev":
+                // Game mode 2 is the no-going-back carousel; the button is
+                // disabled there, and the key must not be a way around it.
+                if (this.gameMode === "0" || this.gameMode === "2") return;
+                event.preventDefault();
+                this.step(-1);
+                return;
+        }
+    }
+
+    /*
+     * `static: true`, because the first question is armed from `ngOnInit` and a
+     * dynamic query is not resolved until after the first view check — so the
+     * opening item of every session would have found no element and drawn a bar
+     * that never moved. Legal here only because the bar is no longer behind an
+     * `*ngIf`: a static query needs an element that is unconditionally present,
+     * which is the second reason for keeping it in the tree.
+     */
+    @ViewChild('timerFill', { static: true }) timerFill?: ElementRef<HTMLElement>;
+
+    /**
+     * Sweep the bar from where it is to empty, over the time that is left.
+     *
+     * The width is set by a transition rather than by a binding, so the browser
+     * animates it continuously instead of the bar moving once per tick. The
+     * duration is read from the clock's own deadline, which means it arrives at
+     * empty exactly when the countdown does — a transition of a fixed second
+     * per step would instead trail the clock by a second and still be draining
+     * after the time was up.
+     *
+     * Called after every change to the clock: starting an item, and answering a
+     * conclusion of a series, which buys seconds and so lengthens the bar.
+     */
+    private armTimerBar() {
+        const el = this.timerFill?.nativeElement;
+        if (!el) return;
+
+        /*
+         * The clock's own idea of how long it was given, not the screen's.
+         *
+         * These were two fields in two places that had to agree — numerator
+         * from the service, denominator from here — and every wrong bar has
+         * been them disagreeing. `timerTimeSeconds` is left only as the fallback
+         * for a bar armed before any clock started, where it is the same number
+         * anyway.
+         */
+        const totalMs = Math.max(
+            1, this.gameTimerService.totalMs || this.timerTimeSeconds * 1000);
+        const frac = (ms: number) => Math.min(1, Math.max(0, ms / totalMs));
+
+        /*
+         * Placed now, swept next frame.
+         *
+         * `startTimerForQuestion` clears the seconds and sets them again, then
+         * calls this in the same synchronous run — so at this point the bar is
+         * still `hidden` from the previous value and change detection has not
+         * caught up. **A transition does not run on a `display:none` element**,
+         * so setting both ends here applied both instantly and left the fill at
+         * zero: an empty track that never moved, which is what it did.
+         *
+         * The placement is safe to do now — a style write lands whether the
+         * element is displayed or not — and it is the half that matters if the
+         * frame never comes, because the bar then shows the right amount of
+         * time instead of none. The sweep waits for a frame, by which point
+         * change detection has run and the element is rendered.
+         */
+        this.barAnim?.cancel();
+        this.barAnim = undefined;
+        el.style.transition = 'none';
+        el.style.transform = `scaleX(${frac(this.gameTimerService.remainingMs)})`;
+
+        if (typeof requestAnimationFrame !== 'function') return;
+        requestAnimationFrame(() => {
+            if (!el.isConnected) return;
+            // Re-read: a frame has passed, and on the first item of a session
+            // that frame can be a long one.
+            const leftMs = Math.max(0, this.gameTimerService.remainingMs);
+            if (leftMs <= 0) return;
+            const from = frac(leftMs);
+
+            /*
+             * Keyframes, not a transition, and this is the whole bug.
+             *
+             * The sweep used to place `scaleX(from)` with `transition: none`,
+             * flush with `void el.offsetWidth`, then set the transition and
+             * `scaleX(0)`. Reading `offsetWidth` forces **layout** — and
+             * `transform` is a compositor property that does not affect layout,
+             * so the browser had no reason to commit the intermediate value.
+             * The two writes coalesced into one style change and the transition
+             * ran from the *current computed* transform: wherever the previous
+             * item's sweep had stopped.
+             *
+             * On the first item of a session there is no previous transform, so
+             * it starts at full and looks right. Every item after it starts
+             * where the last one ended, and after enough of them the bar is at
+             * zero and stays there. That is the report, exactly, and it is why
+             * looking at the drawing kept finding nothing: the code says
+             * `scaleX(from)` and means it, and the browser is entitled to skip it.
+             *
+             * An animation takes its start explicitly, so there is nothing to
+             * commit and nothing to coalesce.
+             */
+            this.barAnim?.cancel();
+            this.barAnim = el.animate(
+                [{ transform: `scaleX(${from})` }, { transform: 'scaleX(0)' }],
+                { duration: leftMs, easing: 'linear', fill: 'forwards' });
+        });
+    }
+
+    /**
+     * The running sweep, so it can be cancelled before the next one is armed.
+     *
+     * `fill: 'forwards'` keeps the end state after it finishes, which is what
+     * holds an expired bar at empty — and it also means an old one would go on
+     * asserting that if it were left in place.
+     */
+    private barAnim?: Animation;
+
+    /** Stop where it is: an answered item's bar should not carry on draining. */
+    private freezeTimerBar() {
+        const el = this.timerFill?.nativeElement;
+        if (!el) return;
+
+        /*
+         * Pausing holds the sweep at exactly the point it reached, which is
+         * what "stop where it is" means and what the measure-and-pin below was
+         * approximating. The pin stays for the browser with no animation.
+         */
+        if (this.barAnim) { this.barAnim.pause(); return; }
+        /*
+         * Where it visually is, taken from the rendered box rather than from
+         * the clock — the clock rounds to whole seconds once it has stopped, so
+         * reading the fraction back off it would jump the bar by up to a second
+         * at the moment the item ends.
+         */
+        const track = el.parentElement?.getBoundingClientRect().width || 0;
+        /*
+         * A hidden bar measures zero, and writing that back would collapse it —
+         * so a freeze that cannot see the bar leaves it exactly as it is. There
+         * is nothing to preserve in that case anyway: the next item places it
+         * before it is shown again.
+         */
+        if (track <= 0) return;
+        const scale = Math.min(1, Math.max(0, el.getBoundingClientRect().width / track));
+        el.style.transition = 'none';
+        el.style.transform = `scaleX(${scale})`;
+    }
+
+    /**
+     * A screen of the delay line that is only showing, not asking.
+     *
+     * The first screens of a run have an arrangement to hold and nothing old
+     * enough to ask about yet. The card drops its answer controls for those and
+     * offers one way forward, so a held screen cannot be answered by accident —
+     * and nothing is recorded for it, because a screen that asked nothing
+     * cannot have been got wrong.
+     */
+    get holding(): boolean {
+        return isHoldClaim(this.game.question);
+    }
+
+    holdOn() {
+        if (!this.holding) return;
+        advanceHold(this.game.question);
+        // The clock is the item's, not the screen's: holding buys the same
+        // seconds answering does, or the early screens would eat the run.
+        this.gameTimerService.extend(this.game.seriesBonusSeconds);
+        this.game.claimChanged.next();
+    }
+
+    kickTimer = async () => {
+        /*
+         * A clock that refuses to start leaves nothing armed.
+         *
+         * `start` rejects if one is already running, and the bar used to be
+         * armed on the next line regardless — against the *previous* item's
+         * deadline, since that is what the service still held. The rejection
+         * then went unhandled, so the freeze and the timeout never ran either:
+         * a bar sweeping to somebody else's schedule and a countdown that could
+         * not end the item.
+         *
+         * Reachable only if two questions arm without a stop between them,
+         * which the subscription is careful about — but "careful about" is not
+         * "cannot", and the failure is silent.
+         */
+        let started: Promise<boolean>;
+        try {
+            started = this.gameTimerService.start(this.timerTimeSeconds);
+        } catch {
+            this.timerTimeSeconds = 0;
+            return;
+        }
+        started.catch(() => { /* settled below; this stops the unhandled warning */ });
+
+        // Armed once the clock has a deadline to sweep against, and directly:
+        // the bar is never removed from the tree, so it is always there.
+        this.armTimerBar();
+
+        let elapsed: boolean;
+        try {
+            elapsed = await started;
+        } catch {
+            // No clock of our own, so nothing to freeze and nothing to time out.
+            this.timerTimeSeconds = 0;
+            return;
+        }
+        /*
+         * The sweep is a CSS transition, so it carries on draining after the
+         * clock stops — through the verdict flash and any review overlay, which
+         * would say the item was still running. This resolves on both endings,
+         * which makes it the one place that knows the clock is done.
+         */
+        this.freezeTimerBar();
+        if (elapsed) this.game.checkQuestion();
+    }
+}

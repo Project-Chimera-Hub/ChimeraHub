@@ -1,0 +1,110 @@
+<div class="adv">
+
+    <h2 class="mb-1">Experimental</h2>
+
+
+    <app-collapsible heading="Delay line">
+        <div class="d-grid" style="gap: 0.75rem;">
+            <label class="flag">
+                <input type="checkbox" class="form-check-input"
+                       [checked]="delayOn" (change)="setDelayOn($any($event.target).checked)">
+                <span>Delay line
+                    <small class="d-block text-muted">
+                        Each screen shows a new arrangement and asks about the one
+                        from <em>n</em> screens back.
+                    </small>
+                </span>
+            </label>
+
+            <div class="d-grid" style="gap: 0.35rem;" [class.is-idle]="!delayOn">
+                <label for="delay-type" class="text-muted small">Arrangements from</label>
+                <select id="delay-type" class="form-select form-select-sm"
+                        [disabled]="!delayOn" [value]="delayType"
+                        (change)="setDelayType($any($event.target).value)">
+                    <option *ngFor="let t of delayTypes" [value]="t">{{ t }}</option>
+                </select>
+
+                <label for="delay-depth" class="text-muted small mt-2">
+                    Screens of delay
+                </label>
+                <input id="delay-depth" type="number" min="1" max="6"
+                       class="form-control form-control-sm" style="max-width: 6rem;"
+                       [disabled]="!delayOn" [value]="delayDepth"
+                       (change)="setDelayDepth($any($event.target).value)">
+
+                <label for="delay-rounds" class="text-muted small mt-2">
+                    Conclusions per run
+                </label>
+                <input id="delay-rounds" type="number" min="1"
+                       class="form-control form-control-sm" style="max-width: 6rem;"
+                       [disabled]="!delayOn" [value]="delayRounds"
+                       (change)="setDelayRounds($any($event.target).value)">
+                <small class="text-muted">
+                    {{ delayRounds }} conclusions over {{ delayRounds + delayDepth }} screens.
+                </small>
+            </div>
+        </div>
+    </app-collapsible>
+
+    <!--
+      A way of *showing* relations rather than a kind of relation, which is
+      why it sits beside the game mode and not among the question types.
+    -->
+    <app-collapsible heading="Continuous stream">
+        <div class="d-grid" style="gap: 0.75rem;">
+            <label class="flag">
+                <input type="checkbox" class="form-check-input"
+                       [checked]="streamOn" (change)="setStreamOn($any($event.target).checked)">
+                <span>Continuous stream
+                    <small class="d-block text-muted">
+                        Premises arrive one at a time and expire. Questions follow from the last <em>n</em>.</small>
+                </span>
+            </label>
+
+            <div class="d-grid" style="gap: 0.35rem;" [class.is-idle]="!streamOn">
+                <label for="stream-type" class="text-muted small">Relations from</label>
+                <select id="stream-type" class="form-select form-select-sm"
+                        [disabled]="!streamOn" [value]="streamType"
+                        (change)="setStreamType($any($event.target).value)">
+                    <option *ngFor="let t of streamTypes" [value]="t">{{ t }}</option>
+                </select>
+
+                <label for="stream-window" class="text-muted small mt-2">
+                    Relations kept live
+                </label>
+                <input id="stream-window" type="number" min="2" max="6"
+                       class="form-control form-control-sm" style="max-width: 6rem;"
+                       [disabled]="!streamOn" [value]="streamWindow"
+                       (change)="setStreamWindow($any($event.target).value)">
+
+                <label class="flag mt-2">
+                    <input type="checkbox" class="form-check-input"
+                           [disabled]="!streamOn" [checked]="streamAnalogy"
+                           (change)="setStreamAnalogy($any($event.target).checked)">
+                    <span>Analogy questions
+                        <small class="d-block text-muted">
+                            Questions ask whether one move matches another.</small>
+                    </span>
+                </label>
+
+                <label for="stream-length" class="text-muted small mt-2">
+                    Questions per run
+                </label>
+                <input id="stream-length" type="number" min="1"
+                       class="form-control form-control-sm" style="max-width: 6rem;"
+                       [disabled]="!streamOn" [value]="streamLength"
+                       (change)="setStreamLength($any($event.target).value)">
+                <small class="d-block text-muted">No ceiling — a stream has no stopping point of its own.</small>
+            </div>
+        </div>
+    </app-collapsible>
+
+    <div class="playcard-toolbar mt-3">
+        <div></div>
+        <div>
+            <button class="btn btn-primary" (click)="game.playArcadeMode()">
+                Play <i class="bi bi-play-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>

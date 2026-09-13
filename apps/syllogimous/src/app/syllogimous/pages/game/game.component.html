@@ -1,0 +1,543 @@
+<!--
+  The way out, and only once there is one.
+  Nothing on this screen interrupts play — reaching the goal does not stop the
+  stream, end a session or throw up a modal. What it does is put a door where
+  there was none: an app you can only leave by closing the tab is one you leave
+  for no reason and return to for none either.
+-->
+<button class="day-done" *ngIf="goalMet && !game.verdict"
+        (click)="router.navigate([EnumScreens.Summary])">
+    <i class="bi bi-check2-circle"></i>
+    Today's goal done &mdash; see the day
+</button>
+
+<!--
+  Verdict flashes over the card, then the next question loads itself.
+  `feedbackShown` gates the drawing only: `verdict` stays set either way,
+  because it is also what stops a late keypress from answering the next
+  question through the gap.
+-->
+<div class="verdict-box" *ngIf="game.verdict && game.feedbackShown"
+     [attr.data-verdict]="game.verdict">
+    <span>{{ game.verdict === 'correct' ? 'Correct' : game.verdict === 'wrong' ? 'Wrong' : 'Timeout' }}</span>
+    <!-- One word about three conclusions is a verdict on none of them. -->
+    <small class="verdict-box__note" *ngIf="game.verdictNote">{{ game.verdictNote }}</small>
+</div>
+
+<!--
+  Shown only after a wrong answer, and only for modes that can derive one.
+  Everything else on this screen is built to avoid interrupting; this is the
+  deliberate exception, because a verdict alone is one bit and the item that
+  earned it took a minute to read.
+-->
+<div class="review" *ngIf="game.review.length">
+    <div class="review__title">How it follows</div>
+    <div class="review__note" *ngIf="game.reviewNote">{{ game.reviewNote }}</div>
+    <ol class="review__steps">
+        <li *ngFor="let step of game.review" [innerHTML]="step"></li>
+    </ol>
+
+    <!--
+      Which dimension went wrong, before anything else in the panel.
+      A built conclusion scored as one bit cannot tell six-right-one-wrong from
+      seven-wrong, and the player who just gave one needs that answer here,
+      while the item is still in front of them, rather than in History days
+      later about an item they no longer remember.
+    -->
+    <div *ngIf="breakdown() as claims" class="review__dims">
+        <div class="review__title">By dimension</div>
+        <div *ngFor="let slots of claims" class="mb-1">
+            <div *ngFor="let s of slots" class="d-flex small gap-2 align-items-baseline">
+                <span class="fw-bold" [ngClass]="s.colorClass">{{ s.label }}</span>
+                <span [class.is-negated]="!s.ok">
+                    {{ s.entered === null ? "not answered" : s.entered }}
+                </span>
+                <span *ngIf="!s.ok" class="text-muted">
+                    &rarr; {{ s.correct }}<ng-container
+                        *ngIf="s.directionOk"> (right way, wrong distance)</ng-container>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- The state, beside the reasoning: one says how the answer follows, the
+         other says where everything was. -->
+    <app-question-map [question]="game.question"></app-question-map>
+    <!--
+      For the class-membership modes the picture *is* the reasoning. Shading is
+      what the universal premises rule out, a dot is what a particular one says
+      exists, and the conclusion follows exactly when the drawing already shows
+      it — which is a thing to look at rather than a sentence to be told.
+    -->
+    <app-venn *ngIf="game.question?.venn" [diagram]="game.question!.venn"></app-venn>
+    <!--
+      A composed change, watched happening. A still of the end state says only
+      that the answer was what it was; the reader who got it wrong is usually
+      wrong about one step, and this is where theirs and the item's part company.
+    -->
+    <app-stages [question]="game.question"></app-stages>
+    <!--
+      The key is named on the button, because a keyboard shortcut nobody is
+      told about is a shortcut for the person who wrote it.
+    -->
+    <button class="btn btn-primary review__go" (click)="game.dismissReview()" autofocus>
+        Continue <i class="bi bi-arrow-right"></i>
+        <small class="review__key" *ngIf="skipKeyLabel">{{ skipKeyLabel }}</small>
+    </button>
+</div>
+
+<!--
+  Mode rules (instructions/notes) are no longer on the card. They said the same
+  thing above every question of that type forever, which is noise after the
+  first read; they live on the tutorial screen. Only `setup` survives here —
+  the per-item facts the premises do not state, without which the item cannot
+  be answered at all.
+-->
+<ng-template #questionSetup>
+    <div *ngIf="game.question.setup?.length" class="setup">
+        <div *ngFor="let line of game.question.setup" [innerHTML]="line"></div>
+    </div>
+</ng-template>
+
+<!--
+  The key to the marks, behind a "?".
+  Only for the fixed marks, and only the ones this card is using — a key listing
+  an axis the item does not mention is worse than none, and one missing an axis
+  it does is worse still. Hover or focus opens it, so it is reachable from the
+  keyboard as well as the mouse, and it never takes space from the question.
+
+  Drawn labels do not get it. A fixed mark is learned once and the chip is a
+  reminder; a label drawn for this item alone is the exercise, and a key beside
+  the card would make reading it free.
+-->
+<ng-template #symbolKey>
+    <div class="symkey-row" *ngIf="symbolLegend.length && !mappedLabels">
+      <div class="symkey" tabindex="0" [attr.aria-label]="'What the symbols mean'">
+        <span class="symkey__mark">?</span>
+        <div class="symkey__panel">
+            <div class="symkey__row" *ngFor="let row of symbolLegend">
+                <span class="symkey__sym">{{ row.mark }}</span>
+                <span class="symkey__word">{{ row.word }}</span>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!--
+      And the key to this item's own labels, which costs the card to read.
+      `v` opens it over everything; any other key puts the card back.
+    -->
+    <div class="labelkey-hint" *ngIf="mappedLabels && !labelKeyOpen">v — key</div>
+</ng-template>
+
+<div class="labelkey" *ngIf="labelKeyOpen" (click)="labelKeyOpen = false">
+    <div class="labelkey__grid">
+        <ng-container *ngFor="let row of symbolLegend">
+            <span class="labelkey__sym">{{ row.mark }}</span>
+            <span class="labelkey__word">{{ row.word }}</span>
+        </ng-container>
+    </div>
+    <div class="labelkey__foot">any key to go back</div>
+</div>
+
+<ng-container *ngTemplateOutlet="symbolKey"></ng-container>
+
+<app-card>
+    <div body class="battlefield" [ngStyle]="{ width: (gameMode === '1' || gameMode === '2') ? '100%' : 'auto' }">
+        <!--
+          Which mode is being asked, said plainly.
+
+          In focus mode the card is the whole screen: the tier badge, the nav
+          and everything else that names the game are gone, and the premises
+          alone often do not say which of the near-identical modes this is —
+          Direction3D Spatial and Temporal read the same until you know. In
+          flow rather than pinned to a corner, because both corners already
+          hold a fixed button, and outside the slides, because the slides are
+          hidden entirely in the all-premises mode.
+        -->
+        <div class="mode-tag text-muted text-center mb-2" *ngIf="game.question">{{ game.question.type }}</div>
+
+        <div class="timerbar-wrap">
+            <!--
+              A plain bar, for the same reason the carousel below is one.
+
+              `ngb-progressbar` takes a value and writes a width, so the bar
+              could only move when that value changed — once a second, which on
+              a short limit is a jump of an eighth of the width at a time. The
+              fill is now animated from where it is to empty over exactly the
+              time that is left, which the browser runs on the compositor: no
+              value to re-bind, no change detection per frame, and it arrives at
+              zero when the clock does rather than a second behind it.
+
+              The number keeps ticking in whole seconds, which is what it is
+              for.
+            -->
+            <!--
+              Hidden, not removed.
+
+              `*ngIf` destroyed and rebuilt this on every question, and the
+              `@ViewChild` that arms the sweep is only updated during change
+              detection — so arming could write to the element that had just
+              been thrown away, leaving the new one at full width with no
+              transition on it. That is a bar that sometimes does not move.
+              Kept in the tree, the reference is always the live element and
+              arming needs no timing at all.
+            -->
+            <div [hidden]="!timerRunning" class="timerbar" role="progressbar"
+                 [attr.aria-valuemin]="0"
+                 [attr.aria-valuemax]="timerTimeSeconds"
+                 [attr.aria-valuenow]="gameTimerService.remainingSeconds"
+                 [attr.aria-label]="'Time remaining'">
+                <div class="timerbar__fill" #timerFill></div>
+                <span class="timerbar__label">{{gameTimerService.remainingSeconds}} s</span>
+            </div>
+        </div>
+
+        <!--
+          One slide, rendered directly.
+
+          This was an `ngb-carousel`. Everything it offered was already computed
+          here — the order of the slides, which one is active, and the buttons
+          that move between them — and all it added was a second state machine
+          with its own idea of the active slide, which had to be coaxed into
+          agreeing with this one and repeatedly did not. Rendering the active
+          slide is what a carousel is; the rest was overhead.
+        -->
+        <div class="slides" [class.d-none]="gameMode === '0'"
+             [style.cursor]="carouselAdvance === 'click' ? 'pointer' : null"
+             (click)="onSlideAreaClick($event)">
+
+            <div class="slides__one" [attr.data-slide]="activeSlide">
+
+                <ng-container *ngIf="activeSlide === 'setup'">
+                    <ng-container *ngTemplateOutlet="questionSetup"></ng-container>
+                </ng-container>
+
+                <!--
+                  Every arrangement on one slide. Comparing them *is* the task,
+                  so showing one at a time would make it a memory test with a
+                  comparison bolted on.
+                -->
+                <div class="grids" *ngIf="activeSlide === 'grids'">
+                    <div class="grids__one" *ngFor="let g of game.question.grids">
+                        <small class="text-muted">{{ g.label }}</small>
+                        <app-question-map [plot]="{ map: g.map, axes: game.question.gridAxes, bounds: game.question.gridBounds }"></app-question-map>
+                    </div>
+                </div>
+
+                <!-- Both webs together, for the same reason. -->
+                <div class="webs" *ngIf="activeSlide === 'webs'">
+                    <div class="webs__one" *ngFor="let w of game.question.webs; let i = index">
+                        <small class="text-muted">{{ i === 0 ? "First web" : "Second web" }}</small>
+                        <app-relational-web [web]="w" [redraw]="webRedraw"
+                                            (pick)="onWebPick($event)"></app-relational-web>
+                    </div>
+                </div>
+
+                <div *ngIf="slideIndexOf('premise-') >= 0">
+                    <small class="text-muted">
+                        {{ slideIndexOf('premise-') === game.question.premises.length - 1
+                           ? "Last premise" : "Premise " + (slideIndexOf('premise-') + 1) }}
+                    </small>
+                    <div [innerHTML]="game.question.premises[slideIndexOf('premise-')]"></div>
+                </div>
+
+                <!--
+                  Candidates together, not one at a time: they have to be
+                  compared against each other.
+                -->
+                <div *ngIf="activeSlide === 'choices'">
+                    <small class="text-muted">{{ game.question.choicePrompt || "Which follows?" }}</small>
+                    <div class="choice-list" *ngIf="!game.question.choiceGrids?.length">
+                        <div *ngFor="let c of game.question.choices; let i = index">
+                            <span class="choice__key">{{ i + 1 }}</span>
+                            <span [innerHTML]="c"></span>
+                        </div>
+                    </div>
+                    <div class="grids" *ngIf="game.question.choiceGrids?.length">
+                        <div class="grids__one" *ngFor="let g of game.question.choiceGrids; let i = index">
+                            <small class="text-muted">{{ i + 1 }}</small>
+                            <app-question-map [plot]="{ map: g, axes: game.question.gridAxes, bounds: game.question.gridBounds }"></app-question-map>
+                        </div>
+                    </div>
+                </div>
+
+                <div *ngIf="slideIndexOf('conclusion-') >= 0">
+                    <small class="text-muted">{{ conclusionLabel(slideIndexOf('conclusion-')) }}</small>
+                    <div [innerHTML]="conclusionAt(slideIndexOf('conclusion-'))"></div>
+                </div>
+
+            </div>
+    
+            <div class="flex-between p-3" style="position: absolute; left: 0; bottom: 0; width: 100%;"
+                 *ngIf="carouselAdvance === 'manual'">
+                <button
+                    class="btn border-0" style="box-shadow: none;"
+                    (click)="step(-1)"
+                    [disabled]="gameMode === '2'"
+                >
+                    <i class="bi bi-arrow-left"></i> Prev
+                </button>
+                <button class="btn border-0" style="box-shadow: none;" (click)="step(1)">
+                    Next <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-4" [class.d-none]="gameMode !== '0'">
+            <ng-container *ngTemplateOutlet="questionSetup"></ng-container>
+
+            <!-- Relational Web states itself in pictures; there are no
+                 premises to list. -->
+            <div class="webs" *ngIf="game.question.webs?.length; else gridsOrPremises">
+                <div class="webs__one" *ngFor="let w of game.question.webs; let i = index">
+                    <small class="text-muted">{{ i === 0 ? "First web" : "Second web" }}</small>
+                    <app-relational-web [web]="w" [redraw]="webRedraw"
+                                        (pick)="onWebPick($event)"></app-relational-web>
+                </div>
+            </div>
+
+            <!--
+              And so does Transformation Matching. Listing the coordinates
+              underneath would put the arithmetic form back beside the picture
+              that replaced it, which is the reading habit the drawing exists to
+              break.
+            -->
+            <ng-template #gridsOrPremises>
+                <div class="grids" *ngIf="game.question.grids?.length; else premiseList">
+                    <div class="grids__one" *ngFor="let g of game.question.grids">
+                        <small class="text-muted">{{ g.label }}</small>
+                        <app-question-map [plot]="{ map: g.map, axes: game.question.gridAxes, bounds: game.question.gridBounds }"></app-question-map>
+                    </div>
+                </div>
+            </ng-template>
+
+            <ng-template #premiseList>
+                <div>
+                    <div class="small text-muted">Premises</div>
+                    <div class="premises" *ngIf="game.question.premises as premises">
+                        <div *ngFor="let p of premises" [innerHTML]="p"></div>
+                    </div>
+                </div>
+            </ng-template>
+
+            <!--
+              Prompt only. The candidates themselves are the footer buttons, and
+              listing them here as well doubled the height of the tallest item
+              in the game for no added information.
+            -->
+            <div *ngIf="game.question.answerMode === 'choice'" class="small text-muted">
+                {{ game.question.choicePrompt || "Which of the statements below follows?" }}
+            </div>
+
+            <ng-container *ngIf="game.question.answerMode !== 'choice' && game.question.answerMode !== 'construct' && game.question.answerMode !== 'map'">
+            <div *ngIf="Array.isArray(game.question.conclusion); else conclusionIsStringTemplate">
+                <div class="small text-muted">
+                    Conclusions <span class="text-muted">— all must follow</span>
+                </div>
+                <div class="conclusions" *ngIf="game.question.conclusion as conclusions">
+                    <div *ngFor="let c of conclusions" [innerHTML]="c"></div>
+                </div>
+            </div>
+            <ng-template #conclusionIsStringTemplate>
+                <div>
+                    <!--
+                      One claim at a time when the item has several, with where
+                      you are in them: the premises do not change, so without a
+                      count there is nothing to say the card moved on.
+                    -->
+                    <div class="small text-muted" *ngIf="game.question.series.length > 1; else oneOnly">
+                        Conclusion
+                        <span class="text-muted">
+                            {{ game.question.seriesAt + 1 }} of {{ game.question.series.length }}
+                            <ng-container *ngIf="game.seriesBonusSeconds">
+                                — each one answered buys {{ game.seriesBonusSeconds }}s
+                            </ng-container>
+                        </span>
+                    </div>
+                    <ng-template #oneOnly>
+                        <div class="small text-muted">Conclusion</div>
+                    </ng-template>
+                    <div [innerHTML]="game.question.conclusion"></div>
+                </div>
+            </ng-template>
+            </ng-container>
+        </div>
+
+        <!--
+          The builder sits outside both view containers. It is the answer, not
+          the material, so it belongs with the answer controls — and inside the
+          all-at-once container it was `d-none` in carousel mode, which left
+          those modes with a Submit button and nothing to fill in.
+        -->
+        <div *ngIf="game.question.answerMode === 'construct' && !builderReady" class="build__wait">
+            Read every premise — the form opens on the last one.
+        </div>
+
+        <div *ngIf="game.question.answerMode === 'construct' && builderReady" class="build">
+            <div class="build__head">
+                <span class="small text-muted">State the relation</span>
+                <span class="build__left" [class.is-done]="constructComplete">{{ slotsLeft }}</span>
+            </div>
+            <div class="build__claim" *ngFor="let claim of game.question.construct; let ci = index">
+                <div class="build__pair">
+                    <!--
+                      innerHTML, not interpolation: a stimulus is not always
+                      a word. Emoji and visual-noise stimuli are HTML
+                      fragments, so interpolating printed the raw source as
+                      literal text.
+                    -->
+                    <span class="subject" [innerHTML]="claim.a"></span>
+                    <span class="build__arrow">&rarr;</span>
+                    <span class="subject" [innerHTML]="claim.b"></span>
+                </div>
+                <!--
+                  Selects rather than button rows. Every axis has to be
+                  answered, so the list length is fixed and long; as wrapping
+                  rows of buttons a five-axis item ran past the card twice
+                  over. A select is one line whatever the option count, and
+                  it shows the current choice without needing a highlight.
+                -->
+                <div class="build__grid">
+                    <label class="build__slot" *ngFor="let slot of claim.slots; let si = index">
+                        <!-- Painted like the premises painted this dimension,
+                             so a row of six slots is matched to the clauses
+                             they answer by colour rather than by reading. -->
+                        <span class="build__label" [ngClass]="slot.colorClass">{{ slot.label }}</span>
+                        <span class="build__pick" [class.is-set]="picks[ci] && picks[ci][si].direction >= 0">
+                            <select class="form-select form-select-sm"
+                                    [value]="picks[ci] && picks[ci][si].direction >= 0 ? picks[ci][si].direction : ''"
+                                    (change)="pickDirection(ci, si, $any($event.target).value)">
+                                <option value="" disabled>choose&hellip;</option>
+                                <!-- However many the slot offers: three for a
+                                     relation, one per candidate when a mode
+                                     asks you to rank or measure. -->
+                                <option *ngFor="let d of slot.directions; let di = index"
+                                        [value]="di">{{ short(d) }}</option>
+                            </select>
+                        </span>
+                        <!--
+                          "Same" has no distance to state, so the box goes
+                          blank rather than sitting there inviting a number
+                          that would be ignored.
+                        -->
+                        <input class="form-control form-control-sm build__mag"
+                               type="number" min="1" step="1"
+                               [class.is-idle]="!needsMagnitude(ci, si, slot)"
+                               [disabled]="!needsMagnitude(ci, si, slot)"
+                               [value]="picks[ci] ? picks[ci][si].magnitude : 1"
+                               (change)="pickMagnitude(ci, si, $any($event.target).value)">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+      One projected element, switching inside. Content projection is resolved
+      against the statically declared nodes, so putting the *ngIf on the [footer]
+      element itself would leave the footer slot empty.
+    -->
+    <div footer>
+        <!--
+          Three answering modes, each replacing the others outright. Written as
+          three independent conditions rather than if/else, because an else
+          branch made construction render a Submit button *and* True/False.
+        -->
+
+        <!-- Construction submits once, when every slot is filled. Disabled
+             rather than hidden, so the button states what is still missing. -->
+        <div *ngIf="game.question.answerMode === 'construct'" class="d-grid">
+            <button class="btn btn-lg btn-primary"
+                    [disabled]="!constructComplete"
+                    (click)="submitConstruction()">
+                {{ !builderReady ? 'Read every premise first'
+                   : constructComplete ? 'Submit' : 'Fill every dimension' }}
+            </button>
+        </div>
+
+        <!--
+          A structure match is answered on the picture, so there is nothing to
+          list here — only a submit, and a note of how far through the order the
+          player is. The colours on the second web are the answer being given.
+        -->
+        <div *ngIf="game.question.answerMode === 'map'" class="d-grid">
+            <div class="small text-muted text-center mb-2"
+                 *ngIf="game.question.choicePrompt">{{ game.question.choicePrompt }}</div>
+            <button class="btn btn-lg btn-primary"
+                    [disabled]="!mapComplete || !builderReady"
+                    (click)="submitMapping()">
+                {{ !builderReady ? 'Look at both webs first'
+                   : mapComplete ? 'Submit'
+                   : game.question.mapTargets.length === 1 ? 'Tap the matching node'
+                   : 'Pick node ' + (mapPicks.length + 1) + ' of ' + game.question.mapTargets.length }}
+            </button>
+            <small class="text-muted text-center mt-2" *ngIf="builderReady && mapPicks.length">
+                Tap a chosen node again to take it back.
+            </small>
+        </div>
+
+        <!-- Choice: the question is which statement follows, so a True button
+             would have nothing to refer to. -->
+        <div class="choices" *ngIf="game.question.answerMode === 'choice' && !game.question.choiceGrids?.length">
+            <button *ngFor="let c of game.question.choices; let i = index"
+                    class="btn choice" [class.choice--focus]="choiceFocus === i"
+                    (click)="game.checkChoice(i)">
+                <span class="choice__key">{{ i + 1 }}</span>
+                <span [innerHTML]="c"></span>
+            </button>
+        </div>
+
+        <!--
+          Options that are themselves arrangements. Drawn on the item's own
+          frame, so an option can be compared against the premises rather than
+          only against the other options.
+        -->
+        <div class="choices choices--grid" *ngIf="game.question.answerMode === 'choice' && game.question.choiceGrids?.length">
+            <button *ngFor="let g of game.question.choiceGrids; let i = index"
+                    class="btn choice choice--grid" [class.choice--focus]="choiceFocus === i"
+                    (click)="game.checkChoice(i)">
+                <span class="choice__key">{{ i + 1 }}</span>
+                <app-question-map [plot]="{ map: g, axes: game.question.gridAxes, bounds: game.question.gridBounds }"></app-question-map>
+            </button>
+        </div>
+
+        <!-- The keys, once and quietly, since zen mode removed the controls. -->
+        <div class="zen-keys" *ngIf="game.zenMode && zenKeyHint">{{ zenKeyHint }}</div>
+
+        <!--
+          Zen mode takes the answer buttons away and leaves the keys.
+          The buttons swap sides between questions so the mouse was never the
+          fast way to play them; removing them removes the only thing on the
+          card that is not the question.
+        -->
+        <!--
+          A delay-line screen with nothing to answer yet: one way forward, and
+          the True/False pair withheld so it cannot be answered by accident.
+        -->
+        <div class="d-flex gap-3 justify-content-center" *ngIf="holding">
+            <button class="btn btn-lg answer col-md-5 col-8" (click)="holdOn()">
+                <span class="answer__face">Hold &rarr;</span>
+            </button>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-center"
+             *ngIf="!holding && game.question.answerMode === 'boolean' && !game.zenMode">
+            <!--
+              The face carries the fill and the silhouette; the button stays a
+              plain rectangle so the whole area still takes a click. Clipping the
+              button itself would clip where it can be hit, which is the wrong
+              trade on the one control pressed under a countdown.
+            -->
+            <button *ngIf="!trueButtonToTheRight" class="btn btn-lg answer col-md-3 col-4" (click)="game.checkQuestion(true)">
+                <span class="answer__face answer__face--yes">True</span>
+            </button>
+            <button class="btn btn-lg answer col-md-3 col-4" (click)="game.checkQuestion(false)">
+                <span class="answer__face answer__face--no">False</span>
+            </button>
+            <button *ngIf="trueButtonToTheRight" class="btn btn-lg answer col-md-3 col-4" (click)="game.checkQuestion(true)">
+                <span class="answer__face answer__face--yes">True</span>
+            </button>
+        </div>
+    </div>
+</app-card>

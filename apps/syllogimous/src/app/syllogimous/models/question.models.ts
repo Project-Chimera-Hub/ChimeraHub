@@ -1,0 +1,605 @@
+import { EnumArrangements, EnumQuestionType } from "../constants/question.constants";
+import { VennDiagram } from "../utils/venn.utils";
+
+export interface IArrangementRelationship {
+    description: EnumArrangements;
+    steps: number;
+}
+
+export interface IArrangementPremise {
+    a: string;
+    b: string;
+    relationship: IArrangementRelationship;
+    metaRelationships: IArrangementPremise[],
+    uid: string;
+}
+
+export interface IDirectionProposition {
+    pair: [[string, number, number], [string, number, number]];
+    trasversalDifference?: number;
+    cardinals: [string, number][];
+    relationship: string;
+    uid: string;
+}
+
+export interface IDirection3DProposition {
+    pair: [[string, number, number, number], [string, number, number, number]];
+    trasversalDifference: number;
+    cardinals: [string, number][];
+    relationship: string;
+    uid: string;
+}
+
+/** One relation the player has to state, dimension by dimension. */
+/**
+ * One claim of a series, with the answer it is looking for.
+ *
+ * Two shapes, because two kinds of item ask several things. A true-or-false
+ * claim carries its wording and whether it holds. A claim answered by *picking*
+ * carries the options and which of them is right instead — "which corner is
+ * Buckles on after the turns?", asked again about the next object, on premises
+ * that have not moved.
+ *
+ * The picking form is the one that gains most from being asked several times:
+ * the turns are worked out once and every further object is that same result
+ * read somewhere else, so the second question costs the reader almost nothing
+ * except the thing the mode is actually training.
+ */
+export interface SeriesClaim {
+    text: string;
+    isValid: boolean;
+    /** The options, for a claim answered by picking rather than by judging. */
+    choices?: string[];
+    correctChoice?: number;
+    /** What the picker is being asked, which changes with the claim. */
+    prompt?: string;
+    /**
+     * How *this* claim follows, where the item's own derivation would not do.
+     *
+     * A series usually asks several questions about one arrangement, so one
+     * derivation covers them all. Where a claim replaces the premises it is a
+     * different question about different material, and the item's derivation
+     * then describes something no longer on the card — which is worse than no
+     * derivation, because it is confidently about the wrong pair of objects.
+     */
+    explanation?: string[];
+    /**
+     * A screen with nothing to answer: read the set and carry it forward.
+     *
+     * The delay mode asks about the arrangement from `n` screens ago, so its
+     * first `n` screens have an arrangement to hold and no question yet — and
+     * its last `n` have a question and no new arrangement. Without a claim that
+     * asks nothing, the delay could only ever be paid for by front-loading
+     * every early set onto one card, which is a span task rather than a delay.
+     *
+     * Excluded from the tally and from the item's verdict: a screen that asked
+     * nothing cannot have been got wrong.
+     */
+    holdOnly?: boolean;
+    /**
+     * How many negations this claim's own text carries.
+     *
+     * Summed into the item by `extendWithSeries`, rather than added by the
+     * generator as it draws. A drawn claim is not a kept claim — `buildSeries`
+     * discards duplicates, and drops the whole batch if it cannot fill the
+     * count — so a generator that counts while drawing reports negations for
+     * text nobody was shown. That is how an arrangement item with a clean card
+     * came to claim three of them.
+     */
+    negations?: number;
+    /**
+     * The premises shown while this claim is up, where they are not the same
+     * ones the last claim had.
+     *
+     * Most series keep every premise: the arrangement is stated once and each
+     * claim asks something else about it. Two modes are built the other way
+     * round — the expensive half is a *map* and the cheap half is what it is
+     * applied to. Axis Maps reads a change off its examples and then applies it
+     * to a chain; Infer Relation reads a space off its premises and then judges
+     * a handful of claims made with a withheld operator. In both, the examples
+     * or the space stay put and the part being *asked about* is replaced, which
+     * is the same trade every other series makes and simply falls on the other
+     * side of the card.
+     *
+     * Absent means nothing changes, which is what the other modes want.
+     */
+    premises?: string[];
+}
+
+export interface ConstructClaim {
+    a: string;
+    b: string;
+    slots: ConstructSlot[];
+    /**
+     * How many premises this claim follows from, when that is fewer than all.
+     *
+     * A checkpoint claim is answerable halfway down the page, so it is a
+     * genuinely easier question than the one at the end — and scoring the two
+     * at the same difficulty credits the easy one as though it were the hard
+     * one, which walks the ability estimate upwards. Absent means "all of
+     * them", which is what every claim outside a checkpoint needs.
+     */
+    fromPremises?: number;
+}
+
+/**
+ * One dimension of a claim, split into direction and distance.
+ *
+ * A single list of whole relations could not express distance without one
+ * option per possible value, so it only ever asked which side of the axis the
+ * pair sat on. Splitting it asks *how far* as well, which is the part that
+ * cannot be got by tracking a sign through the premises.
+ */
+export interface ConstructSlot {
+    /** Which dimension this slot is for, e.g. "Up-down". */
+    label: string;
+    /**
+     * Axis colour class, matching how the premises painted this dimension.
+     *
+     * Absent on the one-axis modes, which have nothing to tell apart.
+     */
+    colorClass?: string;
+    /**
+     * The options offered, in order.
+     *
+     * Three of them — [normal, reversed, same] — for a slot that states a
+     * relation, and that triple is a convention the distance rules depend on:
+     * `slotSatisfied` reads index 2 as "same", which has no distance. A slot
+     * that only asks *which* of several answers is right may offer any number,
+     * and must then set `asksDistance` false.
+     */
+    directions: string[];
+    /** Index into `directions`. 0 = normal, 1 = reversed, 2 = same. */
+    answerDirection: number;
+    /** Steps along the axis. Zero when the answer is "same". */
+    answerMagnitude: number;
+    /**
+     * Whether the distance is asked for as well as the direction.
+     *
+     * Direction alone is the easier half and the one the premises hand over
+     * almost directly — a sign can be tracked through a chain without holding
+     * the structure. Distance cannot, so it is earned separately rather than
+     * being the price of entry to building a conclusion at all.
+     */
+    asksDistance: boolean;
+    /**
+     * Loop size, for a circular axis.
+     *
+     * Present means distances are judged modulo it, because on a ring "2 steps
+     * clockwise" and "3 steps anticlockwise" of a five-loop are the same claim
+     * and marking one of them wrong would be marking a correct answer wrong.
+     */
+    modulus?: number;
+}
+
+export class Question {
+    /**
+     * Rules for the mode. Fixed across every item of that type.
+     *
+     * No longer rendered on the game card — they say the same thing above every
+     * question forever, which is noise once read. They stay on the object for
+     * the tutorial and history screens.
+     */
+    instructions?: string[];
+    notes?: string[];
+    /**
+     * Facts about *this* item that the premises do not state.
+     *
+     * The distinction from `instructions` is whether the answer changes without
+     * it: how many subjects share an arrangement, or which operators a Binary
+     * item was built from, cannot be recovered from the premises, so dropping
+     * those makes the item unanswerable rather than merely tidier. Rendered as
+     * one dim line, no heading.
+     */
+    setup: string[] = [];
+
+    /**
+     * How the answer follows, shown only after a wrong answer.
+     *
+     * A verdict of "Wrong" is one bit, and an item that took a minute to read
+     * deserves more than that — an error with corrective feedback only teaches
+     * if the feedback is actually processed. Built at generation time, where the
+     * layout is still in hand, rather than reconstructed later from rendered
+     * text.
+     *
+     * Empty means the mode has none to offer, and the screen shows nothing
+     * rather than something vague.
+     */
+    explanation: string[] = [];
+    type: EnumQuestionType;
+    isValid = false;
+    premises: string[] = [];
+    conclusion: string | string[] = "";
+    createdAt = new Date().getTime();
+    /**
+     * Whether this question has been answered at all.
+     *
+     * `answeredAt` cannot serve: it is initialised to the moment the question
+     * was built, so it is truthy from the start. Without a flag, a timer tick
+     * arriving just after a real answer answered the question a second time —
+     * with no value, which reads as a timeout.
+     */
+    answered = false;
+
+    answeredAt = new Date().getTime();
+    userAnswer?: boolean;
+    /**
+     * How the item is answered.
+     *
+     * "boolean" is the stock true/false judgement. "choice" presents several
+     * candidate conclusions of which exactly one follows, which removes the
+     * coin-flip floor — a guess is worth 1/n rather than 1/2, so the same number
+     * of trials says considerably more about whether the item was understood.
+     */
+    answerMode: "boolean" | "choice" | "construct" | "map" = "boolean";
+
+    /**
+     * A whole-structure match, answered by pointing rather than by picking.
+     *
+     * `mapTargets` are nodes of the first web, in the order they are to be
+     * matched; the renderer colours them by that order. `mapAnswer` is where
+     * each one lands in the second web. A menu could only ever ask about one
+     * node at a time, and asking about one node is not matching a structure —
+     * it is the difference between reading a correspondence and constructing
+     * one.
+     */
+    mapTargets: number[] = [];
+    mapAnswer: number[] = [];
+    userMap: number[] = [];
+    /** Candidate conclusions, in display order. Choice mode only. */
+    choices: string[] = [];
+    /**
+     * What the choices are being asked *for*.
+     *
+     * Choice mode began as "which of these conclusions follows", and the screen
+     * said so. Modes that offer corner names, or relations to identify, are
+     * choosing among something other than conclusions, and the stock wording
+     * then describes the wrong task. Blank keeps the original phrasing.
+     */
+    choicePrompt = "";
+    /** Index into `choices` of the one that follows. */
+    correctChoice = -1;
+    userChoice?: number;
+    /**
+     * Slots the player fills in to state the conclusion themselves.
+     *
+     * Construction mode. Every dimension has to be filled, so a six-axis item
+     * has a one-in-729 guess floor against true/false's one in two — which is
+     * the point: a placement or a rating built on binary answers cannot tell a
+     * lucky run from an understood one, and twenty items is not enough trials
+     * for that to average out.
+     */
+    construct: ConstructClaim[] = [];
+    /** What the player entered, one direction-and-distance per slot. */
+    userConstruct?: Array<Array<{ direction: number; magnitude: number }>>;
+    /**
+     * How the premises were shown, at the moment this was answered.
+     *
+     * "0" is all of them at once, "1" and "2" are the carousels. The sibling of
+     * `timerTypeOnAnswer`, and missing for the same reason it was once missing:
+     * the setting lives in storage and the item never wrote it down, so a
+     * history could say what you answered and not how you were shown it.
+     *
+     * That matters more than it looks. Carousel shows one premise at a time,
+     * which is a straightforwardly harder task at the same premise count — and
+     * `levelOf` has no term for it, so the model reads a change of presentation
+     * as a change in you. Recorded now so the question is answerable from
+     * answered items later, which is the same standing `widthDelta` and `depth`
+     * have: written down, and not yet read for difficulty.
+     */
+    gameModeOnAnswer = "0";
+
+    negations = 0;
+    metaRelations = 0;
+    timerTypeOnAnswer = "0";
+
+    /**
+     * The relation labels this item was written in, when they were invented for
+     * it.
+     *
+     * Kept on the question rather than in a module variable because items are
+     * generated ahead of the one on screen: by the time you are reading item N
+     * the generator has already built N+1, so a shared "current vocabulary"
+     * would decode the card with the *next* item's key. History has the same
+     * need — an item read back a week later has to say what its labels meant.
+     */
+    relationLabels?: Record<string, string>;
+
+    /**
+     * What this item was worth, and what made it worth that.
+     *
+     * A premise count is not a difficulty: seven premises of Linear Arrangement
+     * and seven of a 7D space are not the same item, and neither is the same
+     * read one at a time as read all at once. `levelOf` already prices all of
+     * that — the mode's own weight, the rungs it carried, the clock it was
+     * under — and the ability model has been using it all along, while anything
+     * reading the stored history could only see `premises.length`.
+     *
+     * Written here, at answer time, by the code that actually served the item,
+     * with the configuration that was in force. The alternative is for every
+     * reader to rebuild the number from the parts, which means a second copy of
+     * the rule and two answers to the same question.
+     *
+     * The inputs travel with the level so a reader can say *why* an item was
+     * hard, and so a refitted coefficient can be applied to old records without
+     * having to guess what they were built from.
+     */
+    difficulty?: {
+        /** The one number, on the same scale the ability model uses. */
+        level: number;
+        premises: number;
+        rungs: string[];
+        /** Deadline actually armed, or null when the item was untimed. */
+        seconds: number | null;
+        /** True where the premises were shown one at a time. */
+        carousel: boolean;
+    };
+    userScore = 0;
+    playgroundMode = false;
+    // Technical fields
+    rule = "";
+    bucket: string[] = [];
+    /**
+     * Which group each stimulus landed in, for the modes that partition.
+     *
+     * Two groups of words. It was three levels deep — groups of one-element
+     * arrays — so membership was tested by array *identity*, which worked only
+     * because the very same reference was pushed and then looked up. Flattened
+     * to what it means, so the test is value equality and the words are words.
+     */
+    buckets: string[][] = [];
+    /**
+     * Where everything ended up, keyed by word, one entry per axis.
+     *
+     * Kept so the item can be *drawn* afterwards. A derivation says how the
+     * answer follows; a map says where everything was, which is what people
+     * reconstruct on paper when they get one wrong. Written by the modes that
+     * have coordinates in hand — the composed spaces, the scale family, anchor
+     * space — and absent elsewhere, where there is nothing to plot.
+     */
+    /**
+     * The evidence an Axis Maps item hands over, as data.
+     *
+     * The card states the examples in words, and the property the whole mode
+     * rests on is that those examples leave exactly one map standing. That
+     * property is about coordinates, not about sentences, so checking it
+     * against the rendered text would mean parsing the phrasing back into
+     * numbers — a second implementation of the wording, drifting from the
+     * first. Carried here instead, so the claim can be checked against the item
+     * that actually ships.
+     */
+    axisEvidence?: {
+        examples: Array<{ coord: number[]; after: number[] }>;
+        /** Axis indices the examples speak about; the rest are unchanged. */
+        covered: number[];
+        dims: number;
+    };
+
+    /**
+     * Directed graphs to draw, for Relational Web.
+     *
+     * The only mode whose premises are not sentences: the picture *is* the
+     * statement, so it is carried as data and drawn by a component. Angular's
+     * sanitiser strips SVG out of `[innerHTML]`, so smuggling it through the
+     * premise list was never an option.
+     */
+    webs?: Array<{
+        adj: boolean[][];
+        labels: string[];
+        /** Positions as fractions of the box, so the drawing can be any size. */
+        layout: Array<[number, number]>;
+        /** The node being asked about, in the first web only. */
+        highlight?: number;
+        /** Nodes to be matched, in the order they are to be matched. */
+        marks?: number[];
+        /** This web takes the answer: its nodes can be pointed at. */
+        selectable?: boolean;
+        /** Filled in as the player answers, never by the generator. */
+        picked?: number[];
+    }>;
+    /**
+     * Labelled point sets to draw, for the modes whose subject is a shape.
+     *
+     * Transformation Matching states two arrangements and asks what changed
+     * between them. As coordinate lists that is arithmetic — you cannot *see* a
+     * rotation in a column of numbers, which is precisely the thing the mode
+     * asks you to spot. Drawn on a shared frame, you can.
+     */
+    grids?: Array<{ label: string; map: Record<string, number[]> }>;
+    /** Options that are themselves arrangements, drawn on the same frame. */
+    choiceGrids?: Array<Record<string, number[]>>;
+    /** The frame every grid of this item is drawn in. */
+    gridBounds?: Array<[number, number]>;
+    /** Axis names for those grids. */
+    gridAxes?: string[];
+
+    /**
+     * The three circles, for the modes whose premises are about class membership.
+     *
+     * Carried as data and drawn by a component, the same way `webs` is: a
+     * syllogism's content is overlap, exclusion and the existential dot, and a
+     * list of sentences is the one shape that cannot show them. Absent
+     * everywhere else, where there are no classes to draw.
+     */
+    venn?: VennDiagram;
+
+    /**
+     * The arrangement at each point of a multi-step change, for stepping through.
+     *
+     * A picture of where things ended up says only *that* the answer was what
+     * it was. When the change is a composition, the reader who got it wrong is
+     * usually wrong about one of its steps, and the useful thing is to watch
+     * the steps happen — so each stage carries the whole arrangement after one
+     * more of them, and the screen offers a slider rather than a still.
+     *
+     * `axisNames` names the columns, as it does for `wordCoordMap`.
+     */
+    stages?: Array<{ label: string; map: Record<string, number[]> }>;
+
+    wordCoordMap?: Record<string, number[]>;
+    /** Axis names for the map, in the same order as the coordinates. */
+    axisNames?: string[];
+    /**
+     * Position per object on a one-axis scale, when the mode has one.
+     *
+     * Written by the scale generators so a mode that *builds on* one — Analogy
+     * takes a finished layout and asks a different question of it — can word
+     * the relation between two objects without re-deriving it from the
+     * rendered premises, which negation and meta have already rewritten.
+     */
+    /**
+     * How much wider or narrower this item came out than typical, in bits.
+     *
+     * Measured against the median of the batch it was drawn from, so it is a
+     * departure from *this configuration's* middle rather than an absolute
+     * figure — 8.5 bits means nothing until you know what 8.5 is wide for.
+     *
+     * Recorded rather than charged. Converting bits to levels needs a
+     * coefficient, and the honest way to get one is to fit it against answered
+     * items, which needs this to have been logged first.
+     */
+    widthDelta = 0;
+
+    /**
+     * How much of the item the conclusion needs: the number of relations that
+     * have to be composed to reach it.
+     *
+     * Zero means the generator does not measure it yet, not that the item is
+     * shallow — a distinction worth keeping, since the point of recording this
+     * is to settle by measurement whether conclusion depth tracks premise
+     * count, and an unmeasured mode reported as depth 0 would answer that
+     * question by assumption.
+     *
+     * Counted in the units the mode's own solver works in, which is not always
+     * premises: a nested item's premise carries a relation in each of two
+     * spaces, and only the asked-about one is on the path to the answer.
+     *
+     * Recorded rather than charged, for the same reason as `widthDelta` — the
+     * coefficient that would turn depth into difficulty has to be fitted
+     * against answered items, and that needs the items logged first.
+     */
+    depth = 0;
+
+    /**
+     * The premise count the configuration asked for, which is not always the
+     * number of sentences printed.
+     *
+     * Wide premises merge two consecutive links into one sentence, so a
+     * seven-link item shows about four. The difficulty model was reading
+     * `premises.length` — the printed count — and both sides of the loop read
+     * that number, so the posterior would settle at roughly half true ability
+     * and the next configuration would be chosen to match. It converges quietly
+     * to too easy, and every archived level is wrong by the same factor.
+     *
+     * Zero means the item was built before this was recorded; readers fall back
+     * to the printed count, which is what they used to use.
+     */
+    builtPremises = 0;
+
+    /**
+     * How much has to be held together at once, and how much one premise joins.
+     *
+     * Three numbers from `integrationLoad`, taken off the rendered card: the
+     * groups the heaviest premise welds, how many of those were already
+     * structures rather than fresh names, and the peak number of part-built
+     * structures carried. All three are properties of the order the premises
+     * are shown in, which scramble decides and has never measured.
+     *
+     * Recorded rather than charged, as `widthDelta` and `depth` are: the
+     * coefficients have to be fitted against answered items, and that needs the
+     * items logged first.
+     */
+    arity = 0;
+    integration = 0;
+    pairsSettled = 0;
+    openGroups = 0;
+
+    /**
+     * Several claims about one arrangement, asked one at a time.
+     *
+     * The form this replaces put every claim on the card at once and scored
+     * them as an AND — true only if all of them followed. Two things were wrong
+     * with that. It is one bit for two or three questions, so the reader who
+     * settles the first claim and guesses the rest is scored the same as the
+     * reader who settled all of them. And an AND is not a coin: a set of claims
+     * that must *all* hold is false far more often than it is true, so "false"
+     * becomes the percentage answer and the reasoning is optional.
+     *
+     * Asked one at a time, each claim is its own true-or-false at even odds,
+     * each is scored on its own, and the premises stay on screen throughout —
+     * which is the whole point, since the second claim is the one that cannot
+     * be answered from the corner of the arrangement the first one came from.
+     */
+    series: SeriesClaim[] = [];
+    /** Which claim is on screen. */
+    seriesAt = 0;
+    /**
+     * The first premise this claim changed, or -1 where it changed none.
+     *
+     * Read by the carousel so that answering one conclusion lands you where the
+     * next one is actually asked. A series claim replaces exactly the part being
+     * asked about — the operator claims in Infer Relation, the chain in Axis
+     * Maps — and everything before it is the reading that was already paid for.
+     * Without this the carousel stays wherever the last answer left it, which is
+     * the end of the card, and the new question is somewhere behind you.
+     */
+    seriesFocusPremise = -1;
+    /** What was answered for each, in order. Absent means never reached. */
+    seriesAnswers: Array<boolean | undefined> = [];
+
+    positions: Record<string, number> = {};
+
+    coords: [string, number, number][] = [];
+    coords3D: [string, number, number, number][] = [];
+    graphPremises: [string, string, string][] = [];
+    graphConclusion: [string, string, string][] = [];
+
+    constructor(type: EnumQuestionType) {
+        this.type = type;
+    }
+
+    /**
+     * Strip the answering apparatus back to a plain true-or-false.
+     *
+     * For the one mode that reuses another mode's finished question object.
+     * Analogy takes an item from one of five other modes, keeps its premises
+     * and overwrites the conclusion with a claim of its own — and the claim it
+     * writes is always "one pair stands to each other as another pair does",
+     * which is a true-or-false and nothing else.
+     *
+     * Everything about *how the inner item was answered* therefore has to go,
+     * and this is the list of it. Reported from play as a correct answer marked
+     * wrong, and that is exactly what it was: an inner item carrying the
+     * `construct-conclusion` rung left `answerMode` as "construct", so the card
+     * showed the builder from a question the item no longer asked while the
+     * scoring compared "did you build that arrangement" against whether the
+     * analogy held. A right answer was wrong and a wrong one was right.
+     *
+     * The series clearing was here first, for the same reason and found the
+     * same way. It stopped at the series; the rest of the apparatus is the rest
+     * of the same bug, which is why the whole of it lives in one method next to
+     * the fields it clears rather than in the five branches that take over.
+     */
+    askAsTrueOrFalse() {
+        this.answerMode = "boolean";
+
+        this.series = [];
+        this.seriesAt = 0;
+        this.seriesAnswers = [];
+
+        this.choices = [];
+        this.choicePrompt = "";
+        this.correctChoice = -1;
+        this.userChoice = undefined;
+        this.choiceGrids = undefined;
+
+        this.construct = [];
+        this.userConstruct = undefined;
+
+        this.mapTargets = [];
+        this.mapAnswer = [];
+        this.userMap = [];
+
+        return this;
+    }
+}

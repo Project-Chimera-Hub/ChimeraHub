@@ -1,0 +1,634 @@
+<div class="adv">
+
+    <h2 class="mb-1">Customise</h2>
+
+    <!--
+      The two switches that decide everything else, together and in front.
+
+      They used to sit two hundred lines apart — "use my settings" at the top,
+      "use fluid progression" two thirds of the way down — and they overlap: an
+      override of the premise count is silently ignored while progression is on,
+      because progression owns that number. Nothing on the page said so, so the
+      only way to find out was to set a premise count, watch it not happen, and
+      go looking. Side by side, with one line stating what the pair of them comes
+      to, is the whole fix.
+    -->
+    <div class="card p-3 mb-3">
+        <label class="master">
+            <input type="checkbox"
+                   class="form-check-input"
+                   [checked]="active"
+                   (change)="setActive($any($event.target).checked)">
+            <span>
+                <strong>Use my settings instead of the tier</strong>
+                <small class="d-block text-muted">
+                    Which modes appear, and what an item contains.
+                </small>
+            </span>
+        </label>
+
+        <label class="master mt-2">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="prog.enabled"
+                   (change)="setProg('enabled', $any($event.target).checked)">
+            <span>
+                <strong>Use fluid progression</strong>
+                <small class="d-block text-muted">
+                    One ability estimate per mode, each item built to sit just
+                    below it. Takes over the countdown, the premise count and the
+                    modifiers &mdash; including where you have set them yourself.
+                </small>
+            </span>
+        </label>
+
+        <p class="decides mb-0 mt-3">{{ decidesSummary() }}</p>
+    </div>
+
+    <h3 class="adv__group">What you get<small>which modes appear, and what an item contains</small></h3>
+
+
+    <!--
+      Not greyed with the master switch: which modes appear, and whether each is
+      timed, are answers to "what do I want to practise" rather than difficulty
+      overrides, and they apply on their own. The premise column below still
+      belongs to the master switch, and is still greyed with it.
+    -->
+    <app-collapsible heading="Question types" [note]="enabledCount() + ' of ' + rows.length + ' on'" [startClosed]="true">
+        <!--
+          Drilling one mode was thirty-five unticks and thirty-five more to undo,
+          which is why nobody undid it. Both halves are one press now.
+        -->
+        <div class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    (click)="allModes(true)">All on</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    (click)="allModes(false)">All off</button>
+        </div>
+        <app-collapsible *ngFor="let family of families"
+                         [heading]="family.name"
+                         [note]="family.on + ' of ' + family.rows.length"
+                         [startClosed]="true">
+        <div class="mode" *ngFor="let row of family.rows">
+            <button type="button" class="btn btn-sm mode__solo"
+                    [class.is-on]="isSolo(row)"
+                    (click)="soloMode(row)"
+                    title="Turn this one on and every other one off">Only</button>
+            <label class="mode__name">
+                <input type="checkbox"
+                       class="form-check-input"
+                       [checked]="shownEnabled(row)"
+                       (change)="toggleMode(row, $any($event.target).checked)">
+                <span>
+                    {{ row.type }}
+                    <small class="text-muted d-block">{{ row.group }}</small>
+                    <!--
+                      The estimate, so that progress below a whole step is
+                      visible. An item only changes when the level crosses a
+                      premise or a rung, and most of a level can be earned with
+                      nothing to show for it.
+                    -->
+                    <small class="text-muted d-block" *ngIf="prog.enabled">
+                        <ng-container *ngIf="abilityOf(row) as a">
+                            <ng-container *ngIf="a.trials">
+                                level {{ a.level | number:'1.1-1' }}
+                                <span class="opacity-75">± {{ a.sure | number:'1.1-1' }}</span>
+                                · {{ a.premises }}p, {{ a.rungs }}/{{ a.ofRungs }} rungs
+                                · {{ a.trials }} answered
+                            </ng-container>
+                            <ng-container *ngIf="!a.trials">not measured yet</ng-container>
+                        </ng-container>
+                    </small>
+                </span>
+            </label>
+
+            <!--
+              Greyed while fluid progression owns the number, rather than taking
+              a premise count and quietly not using it. The value is still stored
+              and still editable — it comes back the moment progression is off —
+              but a control that looks live and is not is what sent somebody
+              hunting through the page in the first place.
+            -->
+            <span class="mode__premises" [class.is-idle]="prog.enabled"
+                  [title]="prog.enabled ? 'Fluid progression is setting this — switch it off to use your own' : ''">
+                <!--
+                  Auto is a real state, not the absence of one. Without it a
+                  profile can only ever *fix* a premise count, so switching
+                  Customise on took the premise ladder away with no way to give
+                  it back.
+                -->
+                <input type="number"
+                       class="form-control form-control-sm"
+                       [class.is-auto]="!premisesSet(row)"
+                       [disabled]="!active || !shownEnabled(row)"
+                       [min]="row.min" [max]="row.max"
+                       [value]="shownPremises(row)"
+                       (change)="setPremises(row, $any($event.target).value)">
+                <small class="text-muted">
+                    <button type="button" class="mode__auto"
+                            [class.is-on]="!premisesSet(row)"
+                            [disabled]="!active"
+                            (click)="clearPremises(row)"
+                            title="Let play decide this, as it would with no profile">auto</button>
+                    premises ({{ row.min }}–{{ row.max }})
+                    <span *ngIf="enabledSet(row)">
+                        · <button type="button" class="mode__auto"
+                                  (click)="clearEnabled(row)"
+                                  title="Let the tier decide whether this mode appears">unset on/off</button>
+                    </span>
+                    <!--
+                      Per mode, because the ladder only reaches for the clock
+                      once a mode has run out of structure to add — so the timed
+                      modes are the ones you are strongest in, which are often
+                      the ones worth sitting and thinking in. It can only take a
+                      clock away, never add one.
+                    -->
+                    · <button type="button" class="mode__auto"
+                              [class.is-on]="untimed(row)"
+                              (click)="toggleUntimed(row, !untimed(row))"
+                              [title]="untimed(row)
+                                ? 'This mode is played with no countdown. Click to let the timer settings decide again.'
+                                : 'Play this mode with no countdown, whatever the timer settings say'">no clock</button>
+                </small>
+
+                <!--
+                  How often, as distinct from whether. A mode you find tedious
+                  but do not want gone had no setting between "on" and "off",
+                  and switching it off to avoid it also stops it being measured.
+                -->
+                <select class="form-select form-select-sm mt-1"
+                        [disabled]="!active || !shownEnabled(row)"
+                        [value]="weightOf(row)"
+                        (change)="setWeight(row, $any($event.target).value)">
+                    <option *ngFor="let w of weights" [value]="w.value">{{ w.label }}</option>
+                </select>
+                <small class="text-muted">how often</small>
+
+                <ng-container *ngIf="hasDepth(row)">
+                    <input type="number"
+                           class="form-control form-control-sm mt-1"
+                           [disabled]="!active || !modeOf(row).enabled"
+                           min="0" max="6"
+                           [value]="depthOf(row)"
+                           (change)="setDepth(row, $any($event.target).value)">
+                    <small class="text-muted">extra transforms (0–6)</small>
+                </ng-container>
+            </span>
+        </div>
+        </app-collapsible>
+    </app-collapsible>
+
+    <app-collapsible heading="Transformations &amp; stimuli" [class.is-idle]="!active" [startClosed]="true">
+        <div class="lin">
+            <span class="lin__name">Meta relations
+                <small class="d-block text-muted">Premises that relate other premises</small>
+            </span>
+            <span class="lin__tri" role="group" aria-label="Meta relations">
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.meta === null"
+                        (click)="setFlag('meta', null)">Ladder</button>
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.meta === false"
+                        (click)="setFlag('meta', false)">Off</button>
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.meta === true"
+                        (click)="setFlag('meta', true)">On</button>
+            </span>
+        </div>
+
+        <div class="lin">
+            <span class="lin__name">Negation
+                <small class="d-block text-muted">Invert relations, forcing a second reasoning step</small>
+            </span>
+            <span class="lin__tri" role="group" aria-label="Negation">
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.negation === null"
+                        (click)="setFlag('negation', null)">Ladder</button>
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.negation === false"
+                        (click)="setFlag('negation', false)">Off</button>
+                <button type="button" class="btn btn-sm" [disabled]="!active"
+                        [class.is-on]="flags.negation === true"
+                        (click)="setFlag('negation', true)">On</button>
+            </span>
+        </div>
+
+        <p class="text-muted small mb-0">
+            How the stimuli look — words, emoji or shapes — is on
+            <strong>Display &amp; timer</strong>. It changes what you are looking
+            at rather than how hard the reasoning is, so it does not wait for
+            this switch.
+        </p>
+    </app-collapsible>
+
+    <app-mode-modifiers [enabled]="active"></app-mode-modifiers>
+
+    <!--
+      Not marked idle when Customise is off, and the checkbox is never
+      disabled. Every other section here layers something on top of what the
+      tier decided; this one picks which version of the generators runs, so it
+      applies whether or not the rest of this page is switched on.
+    -->
+    <app-collapsible heading="Conclusions" [startClosed]="true">
+        <label class="master mb-2">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="deepConclusions"
+                   (change)="setDeepConclusions($any($event.target).checked)">
+            <span>
+                <strong>Conclusions that need the whole item</strong>
+                <small class="d-block text-muted">
+                    The answer has to be composed from several relations rather
+                    than found in one premise, and a question about many
+                    dimensions asks about all of them.
+                </small>
+            </span>
+        </label>
+
+        <p class="text-muted small mb-0">
+            Turn it off to go back to the earlier behaviour: the pair asked
+            about is drawn without regard to how far apart it sits, and a claim
+            names one dimension of however many. Nothing else changes — the
+            premise counts, the modifiers and the clock are all as they were.
+        </p>
+
+        <hr class="my-2">
+        <div class="mode">
+            <label>Seconds per claim answered
+            </label>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm" min="0" max="60" step="1"
+                       [value]="seriesBonus"
+                       (change)="setSeriesBonus($any($event.target).value)">
+                <small class="text-muted">0 – 60</small>
+            </span>
+        </div>
+    </app-collapsible>
+
+    <app-collapsible heading="What comes up" [startClosed]="true">
+        <label class="master mb-2">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="curateSession"
+                   (change)="setCurateSession($any($event.target).checked)">
+            <span>
+                <strong>Lean towards what needs the work</strong>
+                <small class="d-block text-muted">
+                    A mode well below your average, or one that has gone cold,
+                    comes up about twice as often. The day's summary says which
+                    and why.
+                </small>
+            </span>
+        </label>
+
+        <p class="text-muted small mb-0">
+            A lean, not a takeover: two modes doubled, everything else
+            untouched. Serving only your worst modes would stop the rest being
+            measured, and an unmeasured mode goes stale &mdash; which is half of
+            what this is trying to fix. Off, every enabled mode is drawn as it
+            always was and the findings are reported without being acted on.
+        </p>
+    </app-collapsible>
+    <h3 class="adv__group">How difficulty moves<small>who sets the premise count, the clock and the modifiers</small></h3>
+
+
+    <app-collapsible heading="Fluid progression settings" [startClosed]="true"
+                     [class.is-idle]="!prog.enabled">
+        <p class="text-muted small mb-2">
+            One ability estimate per mode; each item is built to sit just below it.
+            Premises, modifiers and the clock all trade against each other.
+        </p>
+
+
+        <!--
+          Fatigue, and what it suppresses.
+
+          A pause with no explanation is worse than no pause: the player sees
+          the difficulty stop responding and has no way to tell that from a
+          bug. So the signal is shown as a number, alongside the switch that
+          turns the behaviour off.
+        -->
+        <div class="fatigue" [class.is-idle]="!prog.enabled" [class.is-tired]="progression.tired">
+            <span class="fatigue__name">
+                Fatigue
+                <small class="d-block text-muted">
+                    How far below expectation you are answering. Say the model
+                    predicted 8 of your last 10 and you got 5 — that reads &minus;30.
+                    Past the threshold your level rests until you recover.
+                </small>
+            </span>
+            <span class="fatigue__value">
+                {{ fatigueReading }}
+                <small class="d-block">{{ progression.tired ? "resting" : "tracking" }}</small>
+            </span>
+        </div>
+
+        <div [class.is-idle]="!prog.enabled">
+            <div class="mode">
+                <label>Slump threshold
+                    <small class="text-muted d-block">0.15 = 15 points below. 0 turns it off</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="0" max="0.5" step="0.05"
+                           [disabled]="!prog.enabled" [value]="prog.fatigueThreshold"
+                           (change)="setProg('fatigueThreshold', $any($event.target).value)">
+                    <small class="text-muted">0 – 0.5</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Fatigue window
+                    <small class="text-muted d-block">Answers the signal is averaged over</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="6" max="40" step="1"
+                           [disabled]="!prog.enabled" [value]="prog.fatigueWindow"
+                           (change)="setProg('fatigueWindow', $any($event.target).value)">
+                    <small class="text-muted">6 – 40</small>
+                </span>
+            </div>
+
+            <label class="master mb-2">
+                <input type="checkbox" class="form-check-input"
+                       [checked]="prog.pauseWhenTired" [disabled]="!prog.enabled"
+                       (change)="setProg('pauseWhenTired', $any($event.target).checked)">
+                <span>
+                    <strong>Rest the estimate during a slump</strong>
+                    <small class="d-block text-muted">They still count towards recovery.</small>
+                </span>
+            </label>
+
+            <label class="master mb-2">
+                <input type="checkbox" class="form-check-input"
+                       [checked]="prog.perClaimCredit" [disabled]="!prog.enabled"
+                       (change)="setProg('perClaimCredit', $any($event.target).checked)">
+                <span>
+                    <strong>Score each claim separately</strong>
+                    <small class="d-block text-muted">
+                        An item with a halfway conclusion and a final one counts
+                        as two pieces of evidence, each at its own difficulty.
+                        Off, it counts as one, right only if both were.
+                    </small>
+                </span>
+            </label>
+
+            <div class="mode">
+                <label>Fastest clock
+                    <small class="text-muted d-block">Floor for the countdown when difficulty is made up with time</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="3" max="60" step="1"
+                           [disabled]="!prog.enabled" [value]="prog.floorSeconds"
+                           (change)="setProg('floorSeconds', $any($event.target).value)">
+                    <small class="text-muted">seconds</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Target accuracy
+                    <small class="text-muted d-block">0.8 = right about 4 times in 5</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="0.5" max="0.95" step="0.05"
+                           [disabled]="!prog.enabled" [value]="prog.targetAccuracy"
+                           (change)="setProg('targetAccuracy', $any($event.target).value)">
+                    <small class="text-muted">0.5 – 0.95</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Longest limit
+                    <small class="text-muted d-block">The clock only appears once structure runs out</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="10" max="300"
+                           [disabled]="!prog.enabled" [value]="prog.ceilingSeconds"
+                           (change)="setProg('ceilingSeconds', $any($event.target).value)">
+                    <small class="text-muted">seconds</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Structure before length
+                    <small class="text-muted d-block">Past this, premises rise only once every modifier is in play</small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="3" max="12"
+                           [disabled]="!prog.enabled" [value]="prog.structureBefore"
+                           (change)="setProg('structureBefore', $any($event.target).value)">
+                    <small class="text-muted">premises</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Carry-over between modes
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="0.5" max="8" step="0.5"
+                           [disabled]="!prog.enabled" [value]="prog.crossModeSd"
+                           (change)="setProg('crossModeSd', $any($event.target).value)">
+                    <small class="text-muted">levels</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Measurement items
+                    <small class="text-muted d-block">
+                One item in this many is aimed at your estimate rather than below
+                it, so the answer measures instead of training. 0 turns it off.
+            </small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="0" max="20" step="1"
+                           [disabled]="!prog.enabled" [value]="prog.probeEvery"
+                           (change)="setProg('probeEvery', $any($event.target).value)">
+                    <small class="text-muted">one in</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Recent answers weighed
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="40" max="1000" step="10"
+                           [disabled]="!prog.enabled" [value]="prog.memoryAnswers"
+                           (change)="setProg('memoryAnswers', $any($event.target).value)">
+                    <small class="text-muted">answers</small>
+                </span>
+            </div>
+
+            <div class="mode">
+                <label>Decay while idle
+                    <small class="text-muted d-block">
+                        Uncertainty added per day away. Nothing is taken back — the
+                        estimate simply loosens, so returning re-measures you quickly.
+                    </small>
+                </label>
+                <span class="mode__premises">
+                    <input type="number" class="form-control form-control-sm" min="0" max="1" step="0.05"
+                           [disabled]="!prog.enabled" [value]="prog.decayPerDay"
+                           (change)="setProg('decayPerDay', $any($event.target).value)">
+                    <small class="text-muted">levels / day</small>
+                </span>
+            </div>
+
+            <label class="flag">
+                <input type="checkbox" class="form-check-input" [disabled]="!prog.enabled"
+                       [checked]="prog.derivedScore"
+                       (change)="setProg('derivedScore', $any($event.target).checked)">
+                <span>Skill points from ability
+                </span>
+            </label>
+
+            <button class="btn btn-sm btn-danger mt-3" [disabled]="!prog.enabled"
+                    (click)="resetLadders()">Reset all estimates</button>
+        </div>
+    </app-collapsible>
+
+    <!--
+      The other adaptive system. It moves premises on its own thresholds and is
+      silent while fluid progression is on, since the two would fight over the
+      same number. Anyone who turns progression off inherits it, and until now
+      could not see or tune it.
+    -->
+    <app-collapsible heading="Training units" [startClosed]="true" [class.is-idle]="prog.enabled || !unitsOn">
+        <p class="text-muted small mb-3">
+            Used only when fluid progression is off. After this many answers in a
+            mode, the premise count moves if accuracy passed a threshold.
+        </p>
+
+        <label class="master mb-2">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="unitsOn"
+                   (change)="setUnitsOn($any($event.target).checked)">
+            <span>
+                <strong>Use training units</strong>
+            </span>
+        </label>
+
+        <!--
+          Said plainly, because it is a large change and easy to make by
+          accident: two checkboxes away is a different app, with every mode
+          available and nothing moving on its own.
+        -->
+        <div class="issues mb-2" *ngIf="nothingAdapts">
+            Nothing is adapting. The tier is hidden and no longer decides which
+            modes you get &mdash; every mode is available at its shortest length,
+            and <strong>Customise</strong> is the only thing choosing what you play.
+        </div>
+
+        <div class="mode">
+            <label>Answers per unit</label>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm" min="4" max="40" step="1"
+                       [disabled]="prog.enabled || !unitsOn" [value]="unit.length"
+                       (change)="setUnit('length', $any($event.target).value)">
+                <small class="text-muted">4–40</small>
+            </span>
+        </div>
+
+        <div class="mode">
+            <label>Move up at
+                <small class="text-muted d-block">Share right, e.g. 0.8 = four in five</small>
+            </label>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm" min="0.5" max="1" step="0.05"
+                       [disabled]="prog.enabled || !unitsOn" [value]="unit.up"
+                       (change)="setUnit('up', $any($event.target).value)">
+                <small class="text-muted">0.5–1</small>
+            </span>
+        </div>
+
+        <div class="mode">
+            <label>Move down at
+                <small class="text-muted d-block">Share wrong or timed out</small>
+            </label>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm" min="0.1" max="0.9" step="0.05"
+                       [disabled]="prog.enabled || !unitsOn" [value]="unit.down"
+                       (change)="setUnit('down', $any($event.target).value)">
+                <small class="text-muted">0.1–0.9</small>
+            </span>
+        </div>
+    </app-collapsible>
+    <h3 class="adv__group">Saving, and starting over</h3>
+
+    <!-- Profiles: what Free Play became, made durable. -->
+    <app-collapsible heading="Profiles" [note]="profiles.length ? '' : 'none saved yet'" [startClosed]="true">
+
+        <div class="profile" *ngFor="let p of profiles" [class.is-on]="applied(p.id)">
+            <span class="profile__name">
+                <input class="form-control form-control-sm" [value]="p.name"
+                       (change)="rename(p.id, $any($event.target).value)"
+                       [attr.aria-label]="'Profile name'">
+                <label class="profile__practice">
+                    <input type="checkbox" class="form-check-input" [checked]="p.practice"
+                           (change)="setPractice(p.id, $any($event.target).checked)">
+                    <small>practice — not scored</small>
+                </label>
+            </span>
+            <span class="profile__acts">
+                <!--
+                  Three states, not two: in force, loaded but switched off, and
+                  not loaded. The middle one used to read "In use" and do
+                  nothing.
+                -->
+                <button type="button" class="btn btn-sm"
+                        [class.is-on]="applied(p.id)"
+                        [disabled]="applied(p.id)"
+                        [attr.title]="applied(p.id) ? 'Already in use' : loadedButOff(p.id)
+                            ? 'Loaded, but Customise is switched off — press to switch it on'
+                            : 'Load these settings and switch Customise on'"
+                        (click)="use(p.id)">{{ applied(p.id) ? "In use" : loadedButOff(p.id) ? "Switched off" : "Use" }}</button>
+                <button type="button" class="btn btn-sm" (click)="duplicate(p.id)">Copy</button>
+                <button type="button" class="btn btn-sm" (click)="remove(p.id)">Delete</button>
+            </span>
+        </div>
+
+        <div class="profile__new">
+            <input class="form-control form-control-sm" placeholder="New profile name"
+                   [value]="newProfileName" (input)="newProfileName = $any($event.target).value"
+                   (keyup.enter)="saveCurrent()">
+            <button type="button" class="btn btn-sm" (click)="saveCurrent()">
+                Save current settings
+            </button>
+            <button type="button" class="btn btn-sm" *ngIf="activeProfileId"
+                    (click)="stopUsing()">Stop using</button>
+        </div>
+    </app-collapsible>
+
+    <app-collapsible heading="Tutorials" [startClosed]="true">
+        <label class="master">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="game.skipAllTutorials"
+                   (change)="game.skipAllTutorials = $any($event.target).checked">
+            <span>
+                <strong>Skip every tutorial</strong>
+                <small class="d-block text-muted">
+                    Including modes not met yet. Reachable here as well as on a tutorial
+                    screen, which was no use once they were all skipped.
+                </small>
+            </span>
+        </label>
+    </app-collapsible>
+
+    <app-collapsible heading="Tier cheat" [startClosed]="true">
+        <p class="text-muted small mb-2">
+            For testing. Jumps the score so tier-gated modes can be reached without
+            playing to them. Currently <strong>{{ currentTier }}</strong>,
+            {{ currentScore }} pts.
+        </p>
+        <div class="run-row mb-2">
+            <select class="form-select form-select-sm" style="max-width: 14rem;"
+                    (change)="jumpToTier($any($event.target).value)">
+                <option value="">Jump to tier…</option>
+                <option *ngFor="let t of tiers" [value]="t">{{ t }}</option>
+            </select>
+            <button class="btn btn-sm" (click)="nudgeScore(250)">+250 pts</button>
+            <button class="btn btn-sm" (click)="nudgeScore(-250)">−250 pts</button>
+        </div>
+    </app-collapsible>
+
+    <app-collapsible heading="Reset" [startClosed]="true">
+        <p class="text-muted mb-2">Clears every override and returns to tier-driven settings.</p>
+        <button class="btn btn-sm btn-danger" (click)="reset()">Reset advanced options</button>
+    </app-collapsible>
+
+</div>
