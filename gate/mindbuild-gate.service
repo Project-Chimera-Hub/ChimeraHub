@@ -1,0 +1,28 @@
+[Unit]
+Description=mindbuild gate — a training quota the desktop enforces
+Documentation=file:%h/mindbuild/gate/README.md
+# A user unit, tied to the graphical session, never a system one. The gate is a
+# window over a session you are already logged into; it has no business
+# existing before you have logged in, and every design that does have business
+# there is one that can lock you out.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/mindbuild/gate/gate.py
+WorkingDirectory=%h/mindbuild
+
+# on-failure, not always, and thirty seconds apart. A gate that respawns
+# instantly is a gate you cannot stop from a terminal, which is the one escape
+# route that has to keep working.
+Restart=on-failure
+RestartSec=30
+
+# The counting shells out to Firefox's own storage and to node; neither needs
+# any privilege this session does not already have.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=graphical-session.target

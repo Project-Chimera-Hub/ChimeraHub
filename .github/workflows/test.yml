@@ -1,0 +1,18 @@
+name: Tests
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      # The gate's logic is testable without a display precisely because GTK is
+      # imported lazily — so this runs on a bare CI runner with nothing
+      # installed.
+      - run: python3 gate/test_gate.py
+      - run: node test/run.js
+      - run: node apps/archive/test/run.js
