@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training archive</title>
+<!-- ?v= on every asset. Pages serves these with max-age=600, so a browser
+     that loaded the page while the wiring was broken would keep serving
+     itself the broken script for ten more minutes — and the failure is
+     silent, so it would read as "the fix did not work". Bump on release. -->
+<link rel="stylesheet" href="css/base.css?v=4">
+</head>
+<body>
+
+<nav class="topbar" aria-label="Sections">
+  <a class="topbar__brand" href="#drop">Training archive</a>
+  <div class="topbar__links">
+    <a href="#drop">Import</a>
+    <a href="#year">Year</a>
+    <a href="#sources">Sources</a>
+    <a href="#over-time">Over&nbsp;time</a>
+    <a href="#modes">Modes</a>
+    <a href="#overlap">Overlap</a>
+    <a href="#days">Days</a>
+    <a href="#notes">Notes</a>
+    <a href="#imports">Log</a>
+  </div>
+  <!-- The one action worth reaching from anywhere: the page is six thousand
+       pixels tall and the archive only exists once it is downloaded. -->
+  <button id="save" class="btn primary topbar__save" type="button" disabled>
+    Download<span id="unsaved" class="pill" hidden></span>
+  </button>
+</nav>
+
+<header>
+  <h1>Training archive</h1>
+  <p class="dim">
+    One record across every trainer. The <b>file is the archive</b> — this page only
+    maintains it. Nothing a browser holds survives clearing site data, so the copy
+    that matters is the one you download and keep.
+  </p>
+</header>
+
+<section id="drop" class="drop">
+  <p><b>Drop exports here</b> — or the archive itself, to restore it.</p>
+  <p class="dim">Syllogimous backups and RNB exports are recognised by their shape, not their name.</p>
+  <div class="row">
+    <label class="btn">Choose files<input id="file" type="file" accept=".json" multiple hidden></label>
+    <button id="neighbours" class="btn" type="button">Read this browser</button>
+  </div>
+  <div class="row">
+    <button id="undo" class="btn quiet" type="button" hidden>Undo last import</button>
+  </div>
+  <p id="savestate" class="savestate"></p>
+</section>
+
+<section id="year">
+  <h2>The year</h2>
+  <p class="dim">
+    One square per day. A <b>filled</b> square is a day with training; an
+    <b>empty</b> one is a rest day inside a stretch some export vouched for; a
+    <b>hatched</b> one is a day nobody has evidence about — usually because site
+    data was cleared before a backup was taken. Drawing the last two alike would
+    claim you rested through exactly the weeks the record was lost.
+  </p>
+  <div id="streaks" class="streaks"></div>
+  <div id="heatmap" class="heatmap"></div>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <div id="sourceCards" class="cards"></div>
+</section>
+
+<section id="over-time">
+  <h2>Over time</h2>
+  <p class="dim">
+    Minutes as bars, <b>difficulty</b> as the line &mdash; because an adaptive
+    trainer holds accuracy at a target and moves the difficulty until it gets
+    there. A flat accuracy line means the controller is working and says nothing
+    about whether you improved; what improved is whatever had to rise to keep it
+    flat. Accuracy is in each day's tooltip, where it belongs.
+  </p>
+  <div id="charts"></div>
+</section>
+
+<section id="modes">
+  <h2>By mode</h2>
+  <div id="modeTables" class="modes"></div>
+</section>
+
+<section id="overlap">
+  <h2>Overlap</h2>
+  <p class="dim">
+    Comparing two trainers needs weeks in which both were played. Until there are
+    enough, this counts them and says nothing else — with a handful of days, the
+    strongest correlation between two <em>unrelated</em> measures still looks
+    convincing, so a number here would mislead exactly when it was least earned.
+  </p>
+  <div id="overlapCards" class="cards"></div>
+</section>
+
+<section id="days">
+  <h2>Days</h2>
+  <div class="row">
+    <label>Source <select id="filterSource"></select></label>
+    <label>From <input id="filterFrom" type="date"></label>
+    <label>To <input id="filterTo" type="date"></label>
+    <button id="more" class="btn" type="button" hidden></button>
+    <button id="csv" class="btn" type="button">Download CSV</button>
+  </div>
+  <table id="daysTable"></table>
+</section>
+
+<section id="notes">
+  <h2>Notes</h2>
+  <p class="dim">
+    Everything the trainers cannot tell you &mdash; a test score, an illness, a
+    change of dose, a month you felt slow. None of it is in any export, and all
+    of it is what makes a two-year series readable. Notes live in the archive
+    file with the records, and in <b>no export anywhere</b>: this file or
+    nowhere.
+  </p>
+
+  <form id="noteForm" class="noteform">
+    <div class="row">
+      <label>Day <input id="noteDay" type="date" required></label>
+      <label class="grow">Tags
+        <input id="noteTags" type="text" placeholder="sleep, iq, illness" autocomplete="off">
+      </label>
+    </div>
+    <label class="grow">
+      <textarea id="noteText" rows="3" placeholder="What happened, how it felt, what you changed&hellip;"></textarea>
+    </label>
+    <!-- A score kept as prose can never be put beside the next one, so the
+         number gets its own three fields. Optional: most notes are just text. -->
+    <fieldset class="measure">
+      <legend>A number, if there is one</legend>
+      <div class="row">
+        <label>Measure <input id="noteMeasure" type="text" placeholder="RAPM" autocomplete="off"></label>
+        <label>Value <input id="noteValue" type="number" step="any" placeholder="27"></label>
+        <label>Unit <input id="noteUnit" type="text" placeholder="raw" autocomplete="off"></label>
+      </div>
+    </fieldset>
+    <div class="row">
+      <button id="noteSave" class="btn primary" type="submit">Add note</button>
+      <button id="noteCancel" class="btn quiet" type="button" hidden>Cancel edit</button>
+      <span id="noteHint" class="dim"></span>
+    </div>
+  </form>
+
+  <div id="noteTags-known" class="tagrow"></div>
+  <div id="measures" class="cards"></div>
+
+  <div class="row">
+    <label class="grow">Find
+      <input id="noteFilter" type="search" placeholder="text or tag" autocomplete="off">
+    </label>
+  </div>
+  <ul id="noteList" class="notes"></ul>
+</section>
+
+<section id="imports">
+  <h2>Imports</h2>
+  <ul id="log" class="log"></ul>
+</section>
+
+<script src="js/record.js?v=4"></script>
+<script src="js/notes.js?v=4"></script>
+<script src="js/adapters.js?v=4"></script>
+<script src="js/archive.js?v=4"></script>
+<script src="js/insight.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
+</body>
+</html>

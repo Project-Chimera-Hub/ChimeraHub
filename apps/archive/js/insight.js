@@ -1,0 +1,362 @@
+"use strict";
+
+/* ============================================================
+   WHAT THE RECORD SHOWS
+   ============================================================
+
+   Pure functions over a folded archive: a calendar, streaks, a series to plot,
+   a per-mode breakdown, and a CSV. Nothing here touches the DOM or storage, so
+   every claim the page makes is a function that can be checked.
+
+   **The three states are the reason this module exists.**
+
+   Every other tracker's heatmap has two: trained, or didn't. That works when
+   the tracker *is* the trainer and therefore always knows. This one ingests
+   exports from apps it does not own, so it has a third state and cannot avoid
+   it — a day can be inside a span some export vouched for (so an empty day
+   really was a rest day), or outside every span (so nobody knows, and the usual
+   cause is that site data was cleared before an export was taken).
+
+   Drawing those two the same colour would assert you rested through exactly the
+   stretches where the record was lost, which is the one lie this project exists
+   to avoid.
+*/
+
+/*
+ * `covered` comes from `archive.js`, which the page loads as a plain script and
+ * node loads as a module. Resolved once here rather than at every call site, so
+ * neither environment needs a special case further down.
+ */
+var isCovered = (typeof module !== "undefined" && typeof require === "function")
+  ? require("./archive.js").covered
+  : function (a, s, d) { return covered(a, s, d); };
+
+var UNKNOWN = "unknown";
+var RESTED = "rested";
+var TRAINED = "trained";
+
+function ymd(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(day, n) {
+  var d = new Date(day + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return ymd(d);
+}
+
+function daysBetween(from, to) {
+  return Math.round(
+    (new Date(to + "T00:00:00Z") - new Date(from + "T00:00:00Z")) / 86400000);
+}
+
+/**
+ * One square per day, ending today, with what is known about each.
+ *
+ * `minutes` is the total across sources; `state` is the distinction above.
+ * A day counts as covered if *any* source vouched for it — one trainer's export
+ * says nothing about whether another was played, but it does establish that the
+ * day itself is inside the observed record.
+ */
+function calendar(archive, endDay, weeks) {
+  var end = endDay || ymd(new Date());
+  var span = (weeks || 53) * 7;
+  var start = addDays(end, -(span - 1));
+  var out = [];
+
+  var sources = Object.keys(archive.minutes || {});
+
+  for (var i = 0; i < span; i++) {
+    var day = addDays(start, i);
+    var row = { day: day, minutes: 0, bySource: {} };
+
+    for (var s = 0; s < sources.length; s++) {
+      var m = (archive.minutes[sources[s]] || {})[day] || 0;
+      row.bySource[sources[s]] = m;
+      row.minutes += m;
+    }
+
+    var anyCovered = false;
+    for (var c = 0; c < sources.length; c++) {
+      if (isCovered(archive, sources[c], day)) { anyCovered = true; break; }
+    }
+
+    row.state = row.minutes > 0 ? TRAINED : (anyCovered ? RESTED : UNKNOWN);
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * Current and longest run of trained days.
+ *
+ * **A day nobody has evidence about does not break a streak, and does not
+ * extend one.** Counting it as a miss would punish you for a cleared cache;
+ * counting it as a hit would invent training. It is skipped, and the streak
+ * spans it — with `uncertain` saying how many of those the current streak is
+ * standing on, so a number resting on guesses says so.
+ */
+function streaks(archive, endDay) {
+  var cal = calendar(archive, endDay, 260);
+  var longest = 0, run = 0;
+  var current = 0, uncertain = 0, currentDone = false;
+
+  for (var i = 0; i < cal.length; i++) {
+    if (cal[i].state === TRAINED) run++;
+    else if (cal[i].state === RESTED) { if (run > longest) longest = run; run = 0; }
+    // UNKNOWN: neither breaks nor extends.
+    if (run > longest) longest = run;
+  }
+
+  /*
+   * The walk back stops where the record itself starts.
+   *
+   * Unknown days neither break nor extend a streak, so without a floor the walk
+   * runs off the front of the archive and counts every day before you ever
+   * played as an unevidenced day inside your current streak — a fixture with
+   * two real days reported 1818 of them. Everything before the first day with
+   * any evidence is not a gap in the record; it is the absence of a record.
+   */
+  var floor = 0;
+  while (floor < cal.length && cal[floor].state === UNKNOWN) floor++;
+
+  for (var j = cal.length - 1; j >= floor && !currentDone; j--) {
+    if (cal[j].state === TRAINED) current++;
+    else if (cal[j].state === UNKNOWN) uncertain++;
+    else currentDone = true;
+  }
+
+  // Unknown days trailing the streak with no trained day beyond them are not
+  // inside it.
+  if (!current) uncertain = 0;
+
+  return { current: current, longest: longest, uncertain: uncertain };
+}
+
+/**
+ * A per-day series for one source, for plotting.
+ *
+ * Accuracy is reported only where the day has enough items to mean anything —
+ * a day with three answers is a coin toss wearing a percentage, and drawing it
+ * beside a day with two hundred invites reading noise as a trend.
+ */
+/**
+ * The day's difficulty, in the unit most of it was measured in.
+ *
+ * A day that straddles a change of scale has no single honest average, so the
+ * larger sample wins and the smaller is dropped rather than folded in. One day
+ * of a slightly thin line beats a point that is the mean of two different
+ * quantities.
+ */
+function dominant(byUnit) {
+  var best = null;
+  for (var unit in byUnit) {
+    if (!Object.prototype.hasOwnProperty.call(byUnit, unit)) continue;
+    var u = byUnit[unit];
+    if (!best || u.n > best.n) best = { unit: unit || null, n: u.n, mean: u.sum / u.n };
+  }
+  return best || { unit: null, n: 0, mean: null };
+}
+
+function series(archive, source, minItems) {
+  var floor = minItems == null ? 10 : minItems;
+  var byDay = {};
+
+  for (var i = 0; i < archive.records.length; i++) {
+    var r = archive.records[i];
+    if (r.source !== source) continue;
+    var d = (byDay[r.day] ??= {
+      day: r.day, n: 0, right: 0, seconds: 0, byUnit: {},
+    });
+    d.n++;
+    if (r.correct) d.right++;
+    d.seconds += r.seconds || 0;
+    /*
+     * Difficulties are summed per unit, never across them.
+     *
+     * This used to add every difficulty into one total and keep whichever unit
+     * happened to come last, so a day that mixed two scales reported their mean
+     * under one of their names. Nothing mixed them while each source had a
+     * single unit forever — and then Syllogimous started reporting levels
+     * instead of premise counts, and the changeover day would have averaged a
+     * level of 9 with a premise count of 4 and called the result premises.
+     */
+    if (r.difficulty != null) {
+      var u = (d.byUnit[r.unit || ""] ??= { sum: 0, n: 0 });
+      u.sum += r.difficulty;
+      u.n++;
+    }
+  }
+
+  return Object.keys(byDay).sort().map(function (day) {
+    var d = byDay[day];
+    return {
+      day: day,
+      n: d.n,
+      minutes: d.seconds / 60,
+      /*
+       * The progress line, and the reason it is not accuracy.
+       *
+       * An adaptive trainer *holds accuracy constant*: it aims at a target and
+       * moves the difficulty until it gets there. A flat accuracy line means the
+       * controller is working and says nothing about whether you improved. What
+       * improved is whatever had to rise to keep it flat.
+       */
+      difficulty: dominant(d.byUnit).mean,
+      unit: dominant(d.byUnit).unit,
+      accuracy: d.n >= floor ? d.right / d.n : null,
+    };
+  });
+}
+
+/**
+ * What a correct answer was worth guessing at.
+ *
+ * A record carries the answer mode it was given under, and the modes are not
+ * comparable: true or false is one chance in two, a three-way pick one in
+ * three, and a six-slot construction about one in seven hundred. Ninety per
+ * cent on true/false and sixty on a construction are not what they look like
+ * side by side — the first is barely above guessing and the second is nowhere
+ * near it.
+ *
+ * Absent for a record that did not say, and then nothing is corrected: an
+ * assumed chance level would be this tool inventing the number it is supposed
+ * to be reporting.
+ */
+function chanceOf(raw) {
+  if (!raw || !raw.answerMode) return null;
+  var slots = Number(raw.slots) || 0;
+  var options = Number(raw.options) || 3;
+  var choices = Number(raw.choices) || 0;
+
+  if (raw.answerMode === "choice") return choices > 0 ? 1 / choices : 1 / 3;
+  if (raw.answerMode === "construct") {
+    return slots > 0 ? Math.pow(1 / Math.max(2, options), slots) : null;
+  }
+  if (raw.answerMode === "map") {
+    if (slots <= 0 || options <= 1) return null;
+    var ways = 1;
+    for (var i = 0; i < slots; i++) ways *= Math.max(1, options - i);
+    return 1 / ways;
+  }
+  return 0.5;
+}
+
+/**
+ * Accuracy with the guessing taken out: 0 is what never knowing would score,
+ * 1 is flawless.
+ *
+ * The same correction RNB's own bars use, for the same reason. Null where the
+ * chance level is unknown, so a raw figure is never quietly relabelled.
+ */
+function corrected(right, n, chance) {
+  if (!n || chance == null || chance >= 1) return null;
+  return Math.max(0, (right / n - chance) / (1 - chance));
+}
+
+/** Volume and accuracy per label — per mode, per deck, per whatever it names. */
+function byLabel(archive, source) {
+  var out = {};
+  for (var i = 0; i < archive.records.length; i++) {
+    var r = archive.records[i];
+    if (r.source !== source) continue;
+    var key = r.label || "unlabelled";
+    var e = (out[key] ??= {
+      label: key, n: 0, right: 0, seconds: 0,
+      chanceSum: 0, chanceN: 0, knownRight: 0, times: [],
+      negations: 0, metas: 0, detailed: 0,
+    });
+    e.n++;
+    if (r.correct) e.right++;
+    e.seconds += r.seconds || 0;
+    if (r.seconds) e.times.push(r.seconds);
+
+    /*
+     * The detail every record has carried and nothing has read.
+     *
+     * `raw` is the exporting program's own record of the item — how it was
+     * answered, what modifiers it had on, how deep the conclusion was. Summed
+     * here rather than shown per item: three thousand rows is a file, and what
+     * a page can say is what they come to.
+     */
+    var chance = chanceOf(r.raw);
+    if (chance != null) {
+      e.chanceSum += chance;
+      e.chanceN++;
+      if (r.correct) e.knownRight++;
+    }
+    if (r.raw) {
+      e.detailed++;
+      e.negations += Number(r.raw.negations) || 0;
+      e.metas += Number(r.raw.metaRelations) || 0;
+    }
+  }
+  return Object.keys(out)
+    .map(function (k) {
+      var e = out[k];
+      e.accuracy = e.n ? e.right / e.n : null;
+      e.minutes = e.seconds / 60;
+      /* The mean chance level across the items actually served. */
+      e.chance = e.chanceN ? e.chanceSum / e.chanceN : null;
+      /*
+       * Over the records that said what they were answered under, not over all
+       * of them. Requiring every record to say meant one old item without the
+       * field blanked the whole mode — and the field is recent, so that was
+       * every mode.
+       *
+       * Withheld below half, where the subset is no longer describing the mode
+       * so much as a corner of it.
+       */
+      e.knownShare = e.n ? e.chanceN / e.n : 0;
+      e.corrected = e.knownShare >= 0.5
+        ? corrected(e.knownRight, e.chanceN, e.chance)
+        : null;
+      e.median = median(e.times);
+      /* Per item, so a mode with more items does not look more modified. */
+      e.negationRate = e.detailed ? e.negations / e.detailed : null;
+      e.metaRate = e.detailed ? e.metas / e.detailed : null;
+      return e;
+    })
+    .sort(function (a, b) { return b.n - a.n; });
+}
+
+/** The middle, not the mean: one walk-away moves a mean and not a median. */
+function median(xs) {
+  if (!xs.length) return null;
+  var s = xs.slice().sort(function (a, b) { return a - b; });
+  var m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/**
+ * The records as CSV, one row each.
+ *
+ * Deliberately the *records* and not a summary: the point of an archive is that
+ * somebody else's tool can read it, and a summary is this tool's opinion.
+ */
+function toCsv(archive) {
+  var head = ["source", "id", "day", "at", "kind", "seconds", "correct",
+              "difficulty", "unit", "label"];
+  var lines = [head.join(",")];
+
+  function cell(v) {
+    if (v == null) return "";
+    var s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  for (var i = 0; i < archive.records.length; i++) {
+    var r = archive.records[i];
+    lines.push(head.map(function (k) { return cell(r[k]); }).join(","));
+  }
+  return lines.join("\n");
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    calendar: calendar, streaks: streaks, series: series, byLabel: byLabel,
+    toCsv: toCsv, addDays: addDays, daysBetween: daysBetween,
+    chanceOf: chanceOf, corrected: corrected, median: median,
+    TRAINED: TRAINED, RESTED: RESTED, UNKNOWN: UNKNOWN,
+  };
+}
