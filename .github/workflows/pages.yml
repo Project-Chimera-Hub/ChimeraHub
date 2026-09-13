@@ -1,0 +1,55 @@
+# The only workflow that runs. Each app kept its own .github/workflows when it
+# was grafted in, and GitHub reads workflows from the repository root only, so
+# they are inert history rather than eight competing deploys.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # Two apps have lockfiles and both are cached; the other six have no
+          # build at all.
+          cache: npm
+          cache-dependency-path: |
+            apps/syllogimous/package-lock.json
+            apps/precision/package-lock.json
+
+      - name: Build the site
+        run: node tools/build-site.mjs
+        env:
+          # The repository name is the path a project Pages site is served
+          # under, and getting it wrong is a blank page rather than an error.
+          BASE: /${{ github.event.repository.name }}/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

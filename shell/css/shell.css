@@ -1,0 +1,235 @@
+/* Deliberately the archive's stylesheet, token for token. The eight apps do not
+   look alike and are not going to — reskinning seven working trainers is how a
+   merge turns into a rewrite — so the shell is the one surface that carries the
+   family resemblance, and it borrows it from the app that already had one.
+   No build step and no webfont, for the same reason the archive has neither. */
+
+:root {
+  --bg: #0b0e14;
+  --panel: #131924;
+  --panel-hi: #171e2b;
+  --line: #232c3b;
+  --line-soft: #1b2230;
+  --ink: #dce4f0;
+  --ink-strong: #f2f6fc;
+  --dim: #8494ad;
+  --accent: #6cb6ff;
+  --ok: #3fb950;
+  --bad: #f85149;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- the hub ---- */
+
+#hub {
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 5rem;
+  max-inline-size: 62rem;
+  background-image: radial-gradient(60rem 22rem at 50% -8rem, rgba(88,140,255,.10), transparent 70%);
+  background-repeat: no-repeat;
+}
+
+h1 {
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin: 0 0 .35rem;
+  letter-spacing: -.02em;
+  color: var(--ink-strong);
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--dim);
+  font-weight: 600;
+  margin: 2.5rem 0 1rem;
+}
+h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-soft);
+}
+
+.dim { color: var(--dim); }
+
+/* ---- today ---- */
+
+.today {
+  margin-top: 1.75rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.today__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.today__figure {
+  font-size: 2.1rem;
+  line-height: 1;
+  color: var(--ink-strong);
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+.today__figure small { font-size: .9rem; color: var(--dim); letter-spacing: 0; }
+
+/* One bar, because the question is one question: is the quota met. Segments are
+   sources, so a day made of one trainer looks different from a balanced one at
+   a glance, without a legend and without a second chart. */
+.bar {
+  display: flex;
+  height: 10px;
+  margin-top: 1rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line-soft);
+  outline: 1px solid var(--line);
+}
+.bar__seg { height: 100%; min-width: 2px; }
+.bar__seg + .bar__seg { box-shadow: inset 1px 0 0 rgba(0,0,0,.45); }
+
+.quota {
+  margin-top: .75rem;
+  font-size: .85rem;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.quota b { color: var(--ink); font-weight: 600; }
+.quota.met b { color: var(--ok); }
+
+/* ---- trainer grid ---- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: .875rem;
+}
+
+.card {
+  display: block;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  padding: 1rem 1.125rem 1.125rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color .12s, background .12s, transform .12s;
+}
+.card:hover, .card:focus-visible {
+  border-color: var(--accent);
+  background: var(--panel-hi);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.card__name {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--ink-strong);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+/* The source's colour, the same one it has in the bar above — the only thing
+   tying a card to its share of the day. */
+.card__dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; }
+
+.card__what { font-size: .85rem; color: var(--dim); margin-top: .3rem; }
+
+.card__today {
+  margin-top: .7rem;
+  font-size: .85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+.card__today b { color: var(--ok); font-weight: 600; }
+
+/* The archive is not a trainer and its minutes are not training. Given its own
+   section rather than a card in the grid, so that the rule the gate enforces is
+   visible in the layout before anyone has to read it. */
+.aside-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.125rem;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.aside-card p { margin: 0; font-size: .875rem; color: var(--dim); flex: 1 1 18rem; }
+
+.btn {
+  font: inherit;
+  cursor: pointer;
+  padding: .45rem .9rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-hi);
+  color: var(--ink);
+  text-decoration: none;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #08111f; font-weight: 600; }
+
+/* ---- the trainer view ---- */
+
+/* Hidden rather than unmounted: the iframe keeps running, so switching to the
+   hub mid-session and back does not restart the trainer. */
+#stage { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
+#stage[hidden] { display: none !important; }
+
+.stagebar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .4rem .75rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-size: .85rem;
+  flex: none;
+}
+.stagebar__name { color: var(--ink-strong); font-weight: 600; }
+.stagebar__spacer { flex: 1; }
+.stagebar__clock { font-variant-numeric: tabular-nums; color: var(--dim); }
+
+/* A trainer gets the whole window below the bar. Several of these draw a 3D
+   scene sized to the viewport, and a frame that is not exactly the space left
+   over is how they end up with a scrollbar they never had standalone. */
+#stage iframe { flex: 1; width: 100%; border: 0; display: block; background: var(--bg); }
+
+@media (max-width: 32rem) {
+  #hub { padding: 1.75rem 1rem 4rem; }
+  .today__figure { font-size: 1.7rem; }
+}

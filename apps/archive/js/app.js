@@ -292,12 +292,19 @@ function importNeighbours() {
      not involve reading the browser's own files off disk. Synth does have its
      own export and does not need this — it is here because it costs one line
      and a trainer whose whole record sits in localStorage is exactly the case
-     this archive exists for. */
+     this archive exists for.
+
+     Precision and rotation were missing from this list while their adapters
+     read exactly this shape, so the button quietly covered five trainers of
+     seven and said "nothing found" for the other two on a browser that held
+     them. */
   try {
     var singles = [
       { key: "mp_prog", label: "cct" },
       { key: "attentional_shield_v2", label: "ewmt" },
       { key: "synth5_en", label: "synth" },
+      { key: "nback-performance", label: "precision" },
+      { key: "spatial-rotation.progress.v1", label: "rotation" },
     ];
     for (var s = 0; s < singles.length; s++) {
       var val = localStorage.getItem(singles[s].key);

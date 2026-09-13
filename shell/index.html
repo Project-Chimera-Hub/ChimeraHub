@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindbuild</title>
+<link rel="stylesheet" href="css/shell.css?v=1">
+</head>
+<body data-base="%BASE%">
+
+<main id="hub">
+
+  <h1>mindbuild</h1>
+  <p class="dim">Seven trainers, one record, one day's total.</p>
+
+  <section class="today" aria-labelledby="today-h">
+    <div class="today__head">
+      <div>
+        <div class="today__figure" id="fig">—<small> min today</small></div>
+      </div>
+      <div class="dim" id="streak"></div>
+    </div>
+    <div class="bar" id="bar" role="img" aria-label="Today's minutes by trainer"></div>
+    <div class="quota" id="quota"></div>
+  </section>
+
+  <h2 id="today-h">Trainers</h2>
+  <div class="grid" id="grid"></div>
+
+  <h2>The record</h2>
+  <div class="aside-card">
+    <p>
+      The archive is the file, and this page is not it. Nothing here is kept
+      anywhere that survives clearing site data — sort the record, write notes,
+      and <b>download the file</b>. Time spent in here is not training and does
+      not count toward the quota.
+    </p>
+    <a class="btn" id="archive-link" href="archive/">Open archive</a>
+  </div>
+
+  <h2>Gate</h2>
+  <div class="aside-card">
+    <p id="gate-state" class="dim">Checking for the gate…</p>
+  </div>
+
+</main>
+
+<!-- Built once and reused. Reloading the shell to leave a trainer would throw
+     away an in-progress block, which is the one thing a training app must never
+     do to you. -->
+<section id="stage" hidden>
+  <div class="stagebar">
+    <button class="btn" type="button" id="back">← Hub</button>
+    <span class="stagebar__name" id="stage-name"></span>
+    <span class="stagebar__spacer"></span>
+    <span class="stagebar__clock" id="clock"></span>
+    <a class="btn" id="standalone" href="#" target="_blank" rel="noopener">Open on its own ↗</a>
+  </div>
+  <iframe id="frame" title="Trainer" allow="autoplay; fullscreen"></iframe>
+</section>
+
+<!-- The archive's own files, copied to dist/shared by the build. The archive
+     remains the only place they are edited. -->
+<script src="shared/record.js?v=1"></script>
+<script src="shared/adapters.js?v=1"></script>
+<script src="js/today.js?v=1"></script>
+<script src="js/shell.js?v=1"></script>
+</body>
+</html>
