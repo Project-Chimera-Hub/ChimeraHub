@@ -1,0 +1,215 @@
+"use strict";
+
+/* ============================================================
+   3. STATE
+   ============================================================ */
+
+/*
+ * A property is a coordinate or a stream, never both.
+ *
+ * A step on a coordinate *is* the move, so judging that property separately
+ * would ask the same question twice and score it twice — and the second answer
+ * would be the first one wearing a different button.
+ *
+ * Enforced rather than documented: the settings screen can offer both, and a
+ * saved configuration from before this existed can hold both.
+ */
+function applyDimensions(c) {
+  c = c || cfg;
+  coordAxes(c).forEach(k => { if (c.streams) delete c.streams[k]; });
+  return c;
+}
+
+const cfg = {
+  mode: 'progression',                 // 'progression' | 'free'
+  n: 1,
+  streams: { position: 'relational' },
+  dim: 3,
+  /*
+   * The reason coordinate axes exist at all is orthogonality. There are as many
+   * mutually orthogonal directions as there are dimensions, so a fourth axis
+   * gives a third way to be orthogonal instead of a second — the response set
+   * stays at three while the space behind it grows, which is the only kind of
+   * difficulty that costs no buttons. Quaternary at four back is eight
+   * variables held and composed; widening the space makes the relation carry
+   * more without asking memory to hold more.
+   *
+   * A property cannot be judged as a stream while it is a coordinate — nothing
+   * is judged twice — and `applyDimensions` enforces that.
+   */
+  /*
+   * Properties that are coordinates of the move rather than streams beside it.
+   * Empty is the cube alone; each entry adds an axis, so `dimCount` is three
+   * plus however many are listed. Order matters and is the order they are
+   * judged and named in.
+   */
+  coordAxes: [],
+  /*
+   * The furthest a move may travel on a coordinate axis: two, or three.
+   *
+   * Two means three levels on the axis, three means four — the pools grow with
+   * it so that the levels stay as far apart as the property allows. A cap is
+   * not a limit on difficulty so much as on ambiguity: three levels maximally
+   * spread are easier to place than five crowded ones, and a displacement of
+   * two on a three-level axis is unmistakable.
+   */
+  magnitudeCap: 2,
+  /*
+   * Deeper tones louder, as a second cue on the same axis.
+   *
+   * Only useful where pitch is a coordinate, but harmless as a stream too, so
+   * it is not gated on the dimension count — a player who finds the tones hard
+   * to place can have the help either way.
+   */
+  pitchLoudness: false,
+  rotation: false,
+  spinPath: 'solved',     // 'solved' = non-degenerate turntable + roll, 'free' = original tumble
+  voiceSet: 'waves',      // which four timbres the timbre stream draws from
+  letterVoice: 'slt',     // who reads the letters, or 'mix' for a new speaker each trial
+  spin: 60,
+  frame: 'cube',                       // 'cube' | 'screen' | 'both'
+  interval: 5000,
+  blockLength: 20,
+  gizmo: 'full',
+  cellVis: 'lattice',
+  layout: 'dense',
+  cubeScale: 1,
+  dailyGoal: 20,
+  buzzer: false,
+  /* A pulse for a wrong answer on a phone. On by default: unlike the buzzer it
+     costs nothing to have on, works with the sound off, and on the desktop where
+     there is no vibrator it simply never fires. */
+  haptics: true,
+  /* Meta-relations chains: this trial's answer depends on the move you made last
+     trial, so one wrong answer costs you the anchor and every trial after it is a
+     guess. On an error the two moves are spelled out so you can rejoin. */
+  moveTrace: true,
+  /* Seconds to wait on the report before the next block starts itself, or 0 for the
+     old behaviour of waiting to be told. */
+  autoAdvance: 0,
+  feedback: 'reveal',
+  lureRate: 0.20,
+  meta: false,        // second-order relational judgements
+  gate: 0,            // fraction of compare-only (gate-closed) trials
+  retro: 0,           // 0 = off, else how many lags the post-cue can name
+  varN: 0,            // 0 = fixed N, else the ± spread the per-trial lag is drawn in
+  varPriority: true,  // cue one stream to prioritise per block
+  fixedGlyphMap: false,   // live rule; Progression forces it off, see applyProgression
+};
+
+/* What Progression owns that the ladder does not decide for it. Symmetric with
+   freeCfg below, and it exists because the asymmetry was a bug: Progression had no
+   copy of its own, so its Feedback control wrote straight to cfg — which the first
+   visit to Free Play then overwrote, silently and permanently. It was never saved
+   either, so it reset on every reload. */
+const progCfg = {
+  feedback: 'reveal',
+  /* Progression's own copy, for the same reason it keeps its own feedback: these
+     were reaching a ladder run out of Free Play's settings, so a box ticked in one
+     mode silently changed what the other mode's recorded ability was about. */
+  coordAxes: [], magnitudeCap: 2, pitchLoudness: false,
+};
+
+/* Free Play keeps its own settings so switching modes doesn't clobber either one. */
+const freeCfg = {
+  n: 2, streams: { position: 'relational' }, dim: 3,
+  coordAxes: [], magnitudeCap: 2, pitchLoudness: false, rotation: false,
+  spin: 60, frame: 'cube', interval: 2500, blockLength: 20, feedback: 'reveal',
+  lureRate: 0.20, meta: false, gate: 0, retro: 0, varN: 0,
+  /* varPriority was missing here while cfg defaulted it on, so Free Play silently
+     ran without the cue that progression uses. */
+  varPriority: true, fixedGlyphMap: false,
+};
+
+const TUNE_DEFAULTS = {
+  adapt: 'bayes',                    // 'bayes' | 'fixed'
+  startInterval: 5000, targetInterval: 3000, intervalStep: 250, maxInterval: 6500,
+  spinStart: 100, spinEnd: 20, spinStep: 10,
+  nMax: 3, nAfterStimulus: 2, blockLength: 20,
+  /* Chance-corrected: 0 is a player who never presses, 1 is perfect. See
+     `targetAccuracy` in ladder.js for why one number means the same thing at
+     every milestone, and why it belongs per tier. */
+  targetAccuracy: 0.40,
+};
+
+/* The tunables for the tier you are on. Always mutated in place, never reassigned —
+   the input handlers and every ladder function close over this object. Switching
+   tiers copies values through it rather than swapping the reference. */
+const tune = { ...TUNE_DEFAULTS };
+
+let prog = { streamCount: 1, n: 1, spinLevel: 0, interval: 5000, lureRate: 0.20 };
+
+/* Each relational-complexity tier keeps its own ladder, its own staircase and its
+   own tunables, so quaternary is a parallel track rather than something gated behind
+   ~20 hours of ternary. Enthusiasts can start at the ceiling; the ladder underneath
+   still works. The tunables belong here for the same reason the ladder does: a target
+   speed that is right for ternary is not the same target under a heavier relational
+   load, and editing one used to silently edit the other. */
+let rcTier = 3;
+const tiers = {};
+function tierState(rc) {
+  return tiers[rc] || (tiers[rc] = {
+    prog: { streamCount: 1, n: 1, spinLevel: 0, interval: 5000, lureRate: 0.20 },
+    stair: null,
+    /* A tier first visited mid-session inherits the settings you are already using,
+       so the first switch carries your speeds across instead of dropping you on the
+       factory defaults. They diverge from there. */
+    tune: { ...tune },
+  });
+}
+function switchTier(rc) {
+  const cur = tierState(rcTier);
+  cur.prog = { ...prog }; cur.stair = stairLog ? stairLog.slice() : null;
+  cur.tune = { ...tune };
+  rcTier = rc;
+  /* Read before the assign below: a tier being created right now copies `tune` as it
+     still stands, which is what makes the inheritance above work. */
+  const nx = tierState(rc);
+  prog = { ...nx.prog };
+  Object.assign(tune, nx.tune);
+  stairLog = nx.stair ? nx.stair.slice() : null;
+  if (!stairLog) stairInit(tune.startInterval);
+}
+
+const state = {
+  running: false, timer: null,
+  history: [],            // every trial shown
+  chain: [],              // only trials the gate ADMITTED — this is what n-back counts
+  judgments: [], presses: new Set(),
+  trial: 0, scored: 0, tally: {},
+  lureTally: null,        // {ok,total,empty} restricted to lure trials
+  cued: true,             // false while a retro-cue trial is still hiding its cue
+  cueTimer: null,
+  stimAt: 0,              // when the response window opened, for reaction times
+  presses_log: [],        // {trial, ch, rt, ok} for every press in the block
+  priorityStream: null,   // stream cued for extra weight this block
+  paused: false, interrupted: false,
+  /* Set while `endBlock` is scoring, so the `stopBlock` it calls to tear the
+     block down does not also record it as abandoned. */
+  ending: false,
+  builtSize: 0,           // cube box the lattice was last laid out for, in px
+  spinKey: '',            // identity of the running spin, so a rebuild need not restart it
+  stimShown: false,       // is a stimulus on screen right now (vs cleared for a retro cue)
+  tickAt: 0,              // when the stimulus last swapped, for the late-press grace
+  lastSnap: null,         // the interval just closed, still open to a late press
+  buzzTimer: null,
+  glyphMap: null, cells: [],
+  sessionStart: null, keyIndex: {}, traceUntil: null, moveArrowAxis: null,
+  autoTimer: null, autoAt: 0,
+};
+
+/* Declared here, but only populated once the profile registry below has resolved
+   which record to read — `let profiles` sits in the persistence section and a call
+   before it would hit the temporal dead zone. */
+let progress = null;
+
+/* ============================================================
+   4. DOM
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const gridCube = $('gridCube'), cubeWrapper = $('cubeWrapper'), gizmoEl = $('gizmo');
+const deckEl = $('deck'), modalEl = $('modal'), modalBox = $('modalBox');
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+

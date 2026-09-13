@@ -1,0 +1,135 @@
+/* ---------- MODAL ---------- */
+.modal {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+  background: rgba(4, 6, 10, .78); z-index: 50; padding: 20px;
+}
+.modal.open { display: flex; }
+.modal-box {
+  background: var(--panel); border: 1px solid var(--border-outer);
+  border-radius: 14px; padding: 24px; max-width: 480px; width: 100%;
+  max-height: 88vh; max-height: 88dvh; overflow-y: auto;
+}
+.modal-box h2 { margin: 0 0 6px; font-size: 20px; }
+.modal-box p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.modal-box .cta {
+  width: 100%; margin-top: 16px; padding: 11px; font-size: 14px;
+  background: rgba(77, 127, 214, .34);
+  background: color-mix(in srgb, var(--accent, #4d7fd6) 34%, transparent);
+  border: 1px solid var(--accent, #4d7fd6); color: var(--text);
+  border-radius: 8px; cursor: pointer;
+}
+
+.glyph-map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 8px; }
+.glyph-map .gm-cell {
+  padding: 14px 10px; border: 1px solid var(--border-inner);
+  border-radius: 10px; text-align: center; background: var(--panel-2);
+}
+.glyph-map .gm-cell .set { font-size: 22px; font-weight: 700; }
+.glyph-map .gm-cell .items { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.bars { display: flex; flex-direction: column; gap: 3px; margin: 4px 0; }
+.bar-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.bar-row .nm { width: 96px; flex: none; }
+.bar-row .track { flex: 1; height: 9px; background: rgba(255,255,255,.08); border-radius: 5px; overflow: hidden; }
+/* display:block matters — these are spans, and width/height are ignored on
+   non-replaced inline elements, which renders every bar empty. */
+.bar-row .fill { display: block; height: 100%; border-radius: 5px; }
+.bar-row .val { width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.bar-detail { margin: -3px 0 5px 105px; font-size: 11px; color: var(--muted); }
+.verdict { text-align: center; font-size: 15px; margin: 14px 0 2px; }
+.verdict.up { color: var(--good); }
+.verdict.down { color: var(--bad); }
+.milestone-banner {
+  margin-top: 10px; padding: 12px; border-radius: 10px; text-align: center;
+  background: rgba(81, 207, 102, .12); border: 1px solid rgba(81, 207, 102, .45);
+}
+.milestone-banner .t { font-size: 15px; color: var(--good); font-weight: 600; }
+.milestone-banner .s { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
+.glyph-legend {
+  position: fixed; bottom: 14px; left: 14px; z-index: 15;
+  font-size: 11px; color: var(--muted); line-height: 1.6; display: none;
+}
+.glyph-legend.show { display: block; }
+.glyph-legend b { color: var(--text); }
+
+
+/* ---------- PROGRESS VIEW ----------
+   Charts want width the 480px report box cannot give, so the progress view opts into
+   a wider one rather than every modal growing to fit its largest tenant. */
+.modal-box.wide { max-width: 900px; }
+.modal-box.wide h3 {
+  margin: 22px 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text); border-bottom: 1px solid var(--border-inner); padding-bottom: 6px;
+}
+.modal-box.wide h3:first-of-type { margin-top: 14px; }
+.ch-sub {
+  font-size: 10.5px; letter-spacing: .02em; text-transform: none;
+  color: var(--muted); font-weight: 400; margin-left: 8px;
+}
+
+.prog-summary {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+  margin: 10px 0 4px;
+}
+.prog-summary > div {
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--panel-2); border: 1px solid var(--border-inner);
+}
+.prog-summary .k {
+  display: block; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 3px;
+}
+.prog-summary b { font-size: 19px; font-variant-numeric: tabular-nums; }
+.prog-summary .ch-sub { display: block; margin: 2px 0 0; }
+
+/* preserveAspectRatio is none, so the viewBox stretches to whatever width is
+   available and the height stays put — which is what keeps the axis labels legible
+   on a phone instead of shrinking with the box. */
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid  { stroke: var(--border-inner); stroke-width: 1; }
+.chart .axis  { stroke: var(--border-outer); stroke-width: 1; }
+.chart .rule  { stroke-width: 1; stroke-dasharray: 4 3; opacity: .8; }
+.chart .ln    { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round;
+                vector-effect: non-scaling-stroke; }
+.chart .ln.dash { stroke-dasharray: 5 4; }
+.chart .dot   { opacity: .28; }
+.chart .band  { opacity: .9; }
+.chart .ax    { fill: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.chart .rule-lab { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.chart-empty {
+  padding: 22px; text-align: center; font-size: 12.5px; color: var(--muted);
+  border: 1px dashed var(--border-inner); border-radius: 10px;
+}
+
+.ch-legend {
+  display: flex; flex-wrap: wrap; gap: 5px 14px; margin: 7px 0 0;
+  font-size: 11.5px; color: var(--muted);
+}
+.ch-legend i {
+  display: inline-block; width: 10px; height: 3px; border-radius: 2px;
+  margin-right: 6px; vertical-align: middle;
+}
+.ch-legend i.band-key { background: rgba(138, 180, 255, .5); height: 9px; border-radius: 2px; }
+.ch-note { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: 8px 0 0; }
+.modal-box.wide .ch-note b { color: var(--text); }
+
+/* ---------- AUTO-ADVANCE COUNTDOWN ----------
+   Under the report and above the button, where the eye already ends up. Hidden
+   entirely when the feature is off, rather than sitting there at zero. */
+.auto-next { display: none; margin-top: 14px; }
+.auto-next.show { display: block; }
+.auto-next .an-track {
+  height: 4px; border-radius: 3px; overflow: hidden;
+  background: rgba(255, 255, 255, .09);
+}
+.auto-next .an-fill {
+  display: block; height: 100%; width: 100%;
+  background: var(--accent, #4d7fd6);
+  /* No transition: the bar is repainted every 100ms and a transition would make it
+     lag its own countdown. */
+}
+.auto-next .an-cap {
+  margin-top: 6px; font-size: 11.5px; color: var(--muted); text-align: center;
+}
+.auto-next .an-cap b { color: var(--text); font-variant-numeric: tabular-nums; }
