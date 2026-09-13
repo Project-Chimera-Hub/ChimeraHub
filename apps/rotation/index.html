@@ -1,0 +1,3873 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Advanced Dynamic Spatial Rotation Trainer</title>
+
+    <!--
+        Three.js import map.
+
+        IMPORTANT:
+        Three.js and OrbitControls use the EXACT SAME VERSION.
+        This avoids the "THREE.OrbitControls is not a constructor"
+        problem caused by mixing module and non-module builds.
+    -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #090d16;
+            --panel-bg: #131b2e;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --correct: #10b981;
+            --wrong: #ef4444;
+            --card-border: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Roboto,
+                Helvetica,
+                Arial,
+                sans-serif;
+
+            display: flex;
+            flex-direction: column;
+
+            height: 100vh;
+            height: 100dvh;
+
+            overflow: hidden;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+
+        header {
+            padding: 12px 24px;
+
+            background: var(--panel-bg);
+
+            border-bottom:
+                1px solid var(--card-border);
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            z-index: 10;
+
+            height: 64px;
+
+            flex-shrink: 0;
+            position: relative; /* Added for absolute centering of community link */
+        }
+
+        h1 {
+            margin: 0;
+
+            font-size: 18px;
+            font-weight: 700;
+
+            display: flex;
+            align-items: center;
+
+            gap: 10px;
+
+            white-space: nowrap;
+        }
+
+        h1 span {
+            font-size: 11px;
+
+            background: var(--accent);
+
+            padding: 3px 8px;
+
+            border-radius: 12px;
+
+            color: white;
+
+            text-transform: uppercase;
+        }
+
+        .dashboard {
+            display: flex;
+
+            gap: 24px;
+
+            align-items: center;
+
+            min-width: 0;
+        }
+
+        .stat-box {
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: flex-end;
+
+            flex-shrink: 0;
+        }
+
+        .stat-value {
+            color: var(--accent);
+
+            font-size: 20px;
+
+            font-weight: 700;
+
+            font-family: monospace;
+
+            white-space: nowrap;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+
+            font-size: 10px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.5px;
+        }
+
+        /* ============================================================
+           WORKSPACE
+           ============================================================ */
+
+        main {
+            position: relative;
+
+            flex: 1;
+
+            width: 100%;
+
+            min-height: 0;
+
+            overflow: hidden;
+        }
+
+        #timer-bar-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 16px; /* Increased to fit text clearly */
+            background: #1e293b;
+            z-index: 40;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #timer-bar-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            background: var(--correct);
+            transition: width 0.1s linear, background-color 0.3s ease;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            border-radius: 0 4px 4px 0;
+            z-index: 41;
+        }
+
+        #stat-timer {
+            position: relative;
+            z-index: 45; /* Above the fill */
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+
+        .timer-warning {
+            background: #f59e0b !important;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6) !important;
+        }
+
+        .timer-danger {
+            background: var(--wrong) !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.8) !important;
+        }
+
+        #canvas-container {
+            position: absolute;
+
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            cursor: grab;
+
+            touch-action: none;
+
+            overflow: hidden;
+        }
+
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+
+        #canvas-container canvas {
+            display: block;
+
+            width: 100%;
+            height: 100%;
+
+            touch-action: none;
+        }
+
+        /* ============================================================
+           OVERLAYS
+           ============================================================ */
+
+        .overlay {
+            position: absolute;
+
+            inset: 0;
+
+            background:
+                rgba(9, 13, 22, 0.88);
+
+            backdrop-filter: blur(8px);
+
+            display: flex;
+
+            flex-direction: column;
+
+            justify-content: center;
+
+            align-items: center;
+
+            z-index: 50;
+
+            text-align: center;
+
+            padding: 20px;
+        }
+
+        .modal {
+            background: var(--panel-bg);
+
+            border:
+                1px solid var(--card-border);
+
+            border-radius: 16px;
+
+            padding: 32px;
+
+            max-width: 480px;
+
+            width: 100%;
+
+            box-shadow:
+                0 20px 40px
+                rgba(0, 0, 0, 0.5);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+
+            font-size: 22px;
+        }
+
+        .modal p {
+            color: var(--text-muted);
+
+            font-size: 14px;
+
+            line-height: 1.5;
+
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            background: var(--accent);
+
+            color: white;
+
+            border: none;
+
+            padding: 12px 28px;
+
+            font-size: 15px;
+
+            font-weight: 600;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            transition:
+                all 0.2s ease;
+
+            width: 100%;
+        }
+
+        .btn:hover {
+            background:
+                var(--accent-hover);
+
+            transform:
+                translateY(-1px);
+        }
+
+        /* ============================================================
+           INSTRUCTION
+           ============================================================ */
+
+        .instruction-bar {
+            position: absolute;
+
+            top: 24px;
+
+            left: 50%;
+
+            transform:
+                translateX(-50%);
+
+            background:
+                rgba(19, 27, 46, 0.9);
+
+            border:
+                1px solid var(--card-border);
+
+            padding: 10px 20px;
+
+            border-radius: 20px;
+
+            font-size: 13px;
+
+            color: var(--text-muted);
+
+            pointer-events: none;
+
+            z-index: 5;
+
+            box-shadow:
+                0 4px 12px
+                rgba(0, 0, 0, 0.3);
+
+            white-space: nowrap;
+        }
+
+        .instruction-bar strong {
+            color: var(--text-color);
+        }
+
+        /* ============================================================
+           SETTINGS
+           ============================================================ */
+
+        .settings-panel {
+            position: absolute;
+
+            bottom: 16px;
+            right: 16px;
+
+            background:
+                rgba(19, 27, 46, 0.9);
+
+            border:
+                1px solid var(--card-border);
+
+            padding: 12px 16px;
+
+            border-radius: 12px;
+
+            display: flex;
+
+            gap: 16px;
+
+            z-index: 5;
+
+            font-size: 12px;
+
+            align-items: center;
+
+            flex-wrap: wrap;
+        }
+
+        .settings-panel label {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            color: var(--text-muted);
+
+            cursor: pointer;
+        }
+
+        .settings-panel input[type="checkbox"] {
+            accent-color:
+                var(--accent);
+        }
+
+        .settings-control {
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            color: var(--text-muted);
+
+            white-space: nowrap;
+        }
+
+        .settings-control input[type="range"] {
+            width: 110px;
+
+            accent-color:
+                var(--accent);
+
+            cursor: pointer;
+        }
+
+        .settings-control input[type="number"] {
+            width: 58px;
+
+            padding: 5px 6px;
+
+            border:
+                1px solid var(--card-border);
+
+            border-radius: 6px;
+
+            background: #0b1220;
+
+            color: var(--text-color);
+
+            font: inherit;
+        }
+
+        .settings-value {
+            min-width: 38px;
+
+            color: var(--text-color);
+
+            font-weight: 700;
+
+            text-align: right;
+        }
+
+        .community-link {
+            position: absolute;
+            left: 220px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        .community-link:hover {
+            color: var(--text-color);
+        }
+
+        .session-button {
+            width: auto;
+
+            min-width: 120px;
+
+            padding: 9px 16px;
+
+            font-size: 12px;
+        }
+
+        /* ============================================================
+           MOBILE
+           ============================================================ */
+
+        @media (max-width: 900px) {
+
+            header {
+                padding: 10px 14px;
+
+                height: auto;
+
+                min-height: 64px;
+
+                gap: 10px;
+            }
+
+            h1 {
+                font-size: 16px;
+            }
+
+            .dashboard {
+                gap: 10px;
+
+                flex-wrap: wrap;
+
+                justify-content: flex-end;
+            }
+
+            .community-link {
+                display: none;
+            }
+
+            .stat-value {
+                font-size: 16px;
+            }
+
+            .instruction-bar {
+                top: 24px;
+
+                max-width:
+                    calc(100% - 24px);
+
+                padding: 8px 12px;
+
+                font-size: 11px;
+
+                overflow: hidden;
+
+                text-overflow: ellipsis;
+            }
+
+            .settings-panel {
+                left: 10px;
+                right: 10px;
+
+                bottom: 10px;
+
+                justify-content: center;
+
+                gap: 9px 12px;
+
+                padding: 9px 10px;
+            }
+
+            .settings-control input[type="range"] {
+                width: 85px;
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            header {
+                align-items: flex-start;
+            }
+
+            h1 span {
+                display: none;
+            }
+
+            .dashboard {
+                gap: 7px;
+            }
+
+            .stat-box:nth-last-child(-n+2) {
+                display: none;
+            }
+
+            .session-button {
+                min-width: 96px;
+
+                padding:
+                    8px 10px;
+            }
+
+            .settings-panel {
+                font-size: 10px;
+            }
+
+            .settings-control input[type="number"] {
+                width: 50px;
+            }
+        }
+
+        @media (orientation: portrait) and (max-width: 600px) {
+
+            .settings-panel {
+                max-height: 92px;
+
+                overflow-y: auto;
+            }
+
+            .instruction-bar {
+                max-width:
+                    calc(100% - 20px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ============================================================
+         HEADER
+         ============================================================ -->
+
+    <header>
+
+        <h1>
+            Spatial Rotation
+            <span>PRO</span>
+        </h1>
+        
+        <a
+            class="community-link"
+            href="https://discord.gg/brain"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            Mindbuilding
+        </a>
+
+        <div class="dashboard">
+
+            <button
+                class="btn session-button"
+                id="btn-session-toggle"
+            >
+                Start Session
+            </button>
+
+            <div class="stat-box">
+
+                <div
+                    class="stat-value"
+                    id="stat-diff"
+                >
+                    Lv. 0
+                </div>
+
+                <div class="stat-label">
+                    Difficulty
+                </div>
+
+            </div>
+
+            <div class="stat-box">
+
+                <div
+                    class="stat-value"
+                    id="stat-trial"
+                >
+                    #0 • 02:00
+                </div>
+
+                <div class="stat-label">
+                    Trial
+                </div>
+
+            </div>
+
+            <div class="stat-box">
+
+                <div
+                    class="stat-value"
+                    id="stat-score"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Matches
+                </div>
+
+            </div>
+
+            <div class="stat-box">
+
+                <div
+                    class="stat-value"
+                    id="stat-acc"
+                >
+                    100%
+                </div>
+
+                <div class="stat-label">
+                    Accuracy
+                </div>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- ============================================================
+         MAIN
+         ============================================================ -->
+
+    <main>
+        
+        <div id="timer-bar-container">
+            <div id="timer-bar-fill"></div>
+            <div id="stat-timer">00:15</div>
+        </div>
+
+        <div class="instruction-bar">
+
+            <strong>Task:</strong>
+
+            Select the 2 shapes that are
+            <em>identical under rotation</em>.
+
+            Watch out for mirrors!
+
+            <span style="margin-left:12px;">
+                Drag to move • Scroll/pinch to zoom
+            </span>
+
+        </div>
+
+
+        <div id="canvas-container"></div>
+
+
+        <!-- ========================================================
+             SETTINGS
+             ======================================================== -->
+
+        <div class="settings-panel">
+
+            <label>
+                <input
+                    type="checkbox"
+                    id="chk-sound"
+                    checked
+                >
+                Sound Effects
+            </label>
+
+
+            <label>
+                <input
+                    type="checkbox"
+                    id="chk-speed"
+                    checked
+                >
+                Continuous Rotation
+            </label>
+
+
+            <label>
+                <input
+                    type="checkbox"
+                    id="chk-adaptive"
+                    checked
+                >
+                Adaptive Difficulty
+            </label>
+
+
+            <div class="settings-control">
+
+                <span>
+                    Rotation Speed
+                </span>
+
+                <input
+                    type="range"
+                    id="rotation-speed"
+                    min="25"
+                    max="200"
+                    value="100"
+                    step="5"
+                    aria-label="Rotation speed"
+                >
+
+                <span
+                    class="settings-value"
+                    id="rotation-speed-value"
+                >
+                    100%
+                </span>
+
+            </div>
+
+
+            <div class="settings-control">
+
+                <span>
+                    Session (min)
+                </span>
+
+                <input
+                    type="number"
+                    id="session-minutes"
+                    min="1"
+                    max="60"
+                    value="2"
+                    step="1"
+                    aria-label="Session duration in minutes"
+                >
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             START OVERLAY
+             ======================================================== -->
+
+        <div
+            class="overlay"
+            id="start-overlay"
+        >
+
+            <div class="modal">
+
+                <h2>
+                    Dynamic Pair Matching
+                </h2>
+
+                <p>
+                    6 3D shapes will float and continuously spin
+                    in real-time. Identify the two objects that
+                    have identical 3D geometries (ignoring rotation).
+                    Distractors include mirror reflections and
+                    distinct block paths.
+                </p>
+
+                <button
+                    class="btn"
+                    id="btn-start"
+                >
+                    Start Session
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             END OVERLAY
+             ======================================================== -->
+
+        <div
+            class="overlay"
+            id="end-overlay"
+            style="display:none;"
+        >
+
+            <div class="modal">
+
+                <h2>
+                    Session Complete
+                </h2>
+
+                <p id="end-summary">
+                    Score: 0 | Accuracy: 0%
+                </p>
+
+                <button
+                    class="btn"
+                    id="btn-restart"
+                >
+                    Play Again
+                </button>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- ================================================================
+         MAIN THREE.JS MODULE
+         ================================================================ -->
+
+    <script type="module">
+
+        /*
+         * IMPORTANT:
+         *
+         * This is now a real ES module.
+         *
+         * Three.js and OrbitControls are imported from the same
+         * Three.js release through the import map above.
+         *
+         * This means we use:
+         *
+         *     new OrbitControls(...)
+         *
+         * NOT:
+         *
+         *     new THREE.OrbitControls(...)
+         *
+         * ============================================================
+         */
+
+        import * as THREE from 'three';
+
+        import {
+            OrbitControls
+        } from 'three/addons/controls/OrbitControls.js';
+
+
+        // ============================================================
+        // AUDIO ENGINE
+        // ============================================================
+
+        const AudioEngine = {
+
+            ctx: null,
+
+            init() {
+
+                if (!this.ctx) {
+
+                    this.ctx =
+                        new (
+                            window.AudioContext ||
+                            window.webkitAudioContext
+                        )();
+
+                }
+
+                if (
+                    this.ctx.state ===
+                    'suspended'
+                ) {
+
+                    this.ctx
+                        .resume()
+                        .catch(() => {});
+
+                }
+            },
+
+
+            playTone(
+                freq,
+                duration,
+                type = 'sine'
+            ) {
+
+                const soundCheckbox =
+                    document.getElementById(
+                        'chk-sound'
+                    );
+
+
+                if (
+                    !soundCheckbox ||
+                    !soundCheckbox.checked ||
+                    !this.ctx
+                ) {
+                    return;
+                }
+
+
+                const osc =
+                    this.ctx.createOscillator();
+
+
+                const gain =
+                    this.ctx.createGain();
+
+
+                osc.type = type;
+
+
+                osc.frequency.setValueAtTime(
+                    freq,
+                    this.ctx.currentTime
+                );
+
+
+                gain.gain.setValueAtTime(
+                    0.15,
+                    this.ctx.currentTime
+                );
+
+
+                gain.gain.exponentialRampToValueAtTime(
+                    0.001,
+                    this.ctx.currentTime +
+                    duration
+                );
+
+
+                osc.connect(gain);
+
+                gain.connect(
+                    this.ctx.destination
+                );
+
+
+                osc.start();
+
+
+                osc.stop(
+                    this.ctx.currentTime +
+                    duration
+                );
+            },
+
+
+            playSuccess() {
+
+                this.init();
+
+                this.playTone(
+                    523.25,
+                    0.15
+                );
+
+
+                setTimeout(
+                    () => {
+
+                        this.playTone(
+                            659.25,
+                            0.25
+                        );
+
+                    },
+                    100
+                );
+            },
+
+
+            playError() {
+
+                this.init();
+
+                this.playTone(
+                    180,
+                    0.3,
+                    'sawtooth'
+                );
+            },
+
+
+            playSelect() {
+
+                this.init();
+
+                this.playTone(
+                    440,
+                    0.08
+                );
+            }
+
+        };
+
+
+        // ============================================================
+        // SESSION STATE
+        // ============================================================
+
+        let sessionActive = false;
+
+        let trialTimer = null;
+
+        let sessionTimer = null;
+
+        let trialTimeRemaining = 15;
+
+        let sessionTimeRemaining = 120;
+
+        let trialStartTime = 0;
+
+        let trialNumber = 0;
+
+        let score = 0;
+
+        let totalAttempts = 0;
+
+        let selectedShapes = [];
+
+        let shapesData = [];
+
+        let adaptiveLevel = 0;
+
+        let adaptiveHistory = [];
+        
+        let consecutiveWins = 0;
+        let consecutiveLosses = 0;
+        let timeModifier = 0;
+
+        let currentTrialResolved = false;
+
+        let roundTransitionTimeout = null;
+
+        let baseRotationMultiplier = 1;
+
+
+        // ============================================================
+        // THREE.JS SETUP
+        // ============================================================
+
+        const container =
+            document.getElementById(
+                'canvas-container'
+            );
+
+
+        const scene =
+            new THREE.Scene();
+
+
+        scene.background =
+            new THREE.Color(
+                '#090d16'
+            );
+
+
+        // ============================================================
+        // CAMERA
+        // ============================================================
+
+        const initialWidth =
+            Math.max(
+                1,
+                container.clientWidth
+            );
+
+
+        const initialHeight =
+            Math.max(
+                1,
+                container.clientHeight
+            );
+
+
+        const camera =
+            new THREE.PerspectiveCamera(
+
+                45,
+
+                initialWidth /
+                initialHeight,
+
+                0.1,
+
+                1000
+
+            );
+
+
+        camera.position.set(
+            0,
+            0,
+            22
+        );
+
+
+        // ============================================================
+        // RENDERER
+        // ============================================================
+
+        const renderer =
+            new THREE.WebGLRenderer({
+
+                antialias: true,
+
+                powerPreference:
+                    'high-performance'
+
+            });
+
+
+        renderer.setPixelRatio(
+            Math.min(
+                window.devicePixelRatio || 1,
+                2
+            )
+        );
+
+
+        renderer.setSize(
+            initialWidth,
+            initialHeight,
+            false
+        );
+
+
+        container.appendChild(
+            renderer.domElement
+        );
+
+
+        // ============================================================
+        // ORBIT CONTROLS
+        // ============================================================
+
+        /*
+         * Official OrbitControls behavior:
+         *
+         * Left mouse / one finger:
+         *     Orbit
+         *
+         * Mouse wheel / two-finger pinch:
+         *     Zoom
+         *
+         * Right mouse / two fingers:
+         *     Pan
+         *
+         * This is the documented OrbitControls interaction model.
+         */
+
+        const controls =
+            new OrbitControls(
+                camera,
+                renderer.domElement
+            );
+
+
+        controls.enableDamping = true;
+
+        controls.dampingFactor = 0.08;
+
+
+        controls.enableZoom = true;
+
+        controls.enablePan = true;
+
+
+        controls.screenSpacePanning = true;
+
+
+        controls.rotateSpeed = 0.55;
+
+        controls.zoomSpeed = 0.9;
+
+        controls.panSpeed = 0.8;
+
+
+        controls.minDistance = 8;
+
+        controls.maxDistance = 60;
+
+
+        controls.target.set(
+            0,
+            0,
+            0
+        );
+
+
+        controls.update();
+
+
+        // ============================================================
+        // LIGHTING
+        // ============================================================
+
+        scene.add(
+            new THREE.AmbientLight(
+                0xffffff,
+                0.5
+            )
+        );
+
+
+        const dirLight =
+            new THREE.DirectionalLight(
+                0xffffff,
+                0.7
+            );
+
+
+        dirLight.position.set(
+            20,
+            30,
+            20
+        );
+
+
+        scene.add(
+            dirLight
+        );
+
+
+        const fillLight =
+            new THREE.DirectionalLight(
+                0x90b0d0,
+                0.4
+            );
+
+
+        fillLight.position.set(
+            -20,
+            -10,
+            -20
+        );
+
+
+        scene.add(
+            fillLight
+        );
+
+
+        // ============================================================
+        // SHARED GEOMETRY
+        // ============================================================
+
+        const cubeGeo =
+            new THREE.BoxGeometry(
+                0.96,
+                0.96,
+                0.96
+            );
+
+
+        const edgesGeo =
+            new THREE.EdgesGeometry(
+                new THREE.BoxGeometry(
+                    1,
+                    1,
+                    1
+                )
+            );
+
+
+        // ============================================================
+        // MATERIALS
+        // ============================================================
+
+        const matDefault =
+            new THREE.MeshLambertMaterial({
+                color: 0xe2e8f0
+            });
+
+
+        const matSelected =
+            new THREE.MeshLambertMaterial({
+                color: 0xf59e0b
+            });
+
+
+        const matCorrect =
+            new THREE.MeshLambertMaterial({
+                color: 0x10b981
+            });
+
+
+        const matWrong =
+            new THREE.MeshLambertMaterial({
+                color: 0xef4444
+            });
+
+
+        const edgeMat =
+            new THREE.LineBasicMaterial({
+
+                color: 0x090d16,
+
+                transparent: true,
+
+                opacity: 0.6
+
+            });
+
+
+        // ============================================================
+        // RAYCASTER
+        // ============================================================
+
+        const raycaster =
+            new THREE.Raycaster();
+
+
+        const mouse =
+            new THREE.Vector2();
+
+
+        // ============================================================
+        // RESPONSIVE GRID
+        // ============================================================
+
+        let gridPositions = [];
+
+
+        let responsiveShapeLimit = 4.8;
+
+
+        /*
+         * Calculate the world-space grid based on the current
+         * viewport aspect ratio.
+         *
+         * The original fixed values:
+         *
+         *     -7.5 / 0 / +7.5
+         *     -3.8 / +3.8
+         *
+         * are deliberately removed.
+         */
+
+        function updateResponsiveLayout() {
+
+            const width =
+                Math.max(
+                    1,
+                    container.clientWidth
+                );
+
+
+            const height =
+                Math.max(
+                    1,
+                    container.clientHeight
+                );
+
+
+            camera.aspect =
+                width / height;
+
+
+            camera.updateProjectionMatrix();
+
+
+            /*
+             * The objects are positioned around the camera's
+             * default focal distance.
+             */
+
+            const referenceDistance =
+                22;
+
+
+            const halfHeight =
+                referenceDistance *
+                Math.tan(
+                    THREE.MathUtils.degToRad(
+                        camera.fov *
+                        0.5
+                    )
+                );
+
+
+            const halfWidth =
+                halfHeight *
+                camera.aspect;
+
+
+            /*
+             * Safe viewport area.
+             */
+
+            const safeWidth =
+                Math.max(
+                    3.2,
+                    halfWidth - 0.7
+                );
+
+
+            const safeHeight =
+                Math.max(
+                    3.0,
+                    halfHeight - 1.0
+                );
+
+
+            /*
+             * Responsive column spacing.
+             *
+             * Portrait screens automatically contract.
+             */
+
+            const columnSpread =
+                Math.min(
+
+                    6.9,
+
+                    Math.max(
+                        2.25,
+                        safeWidth * 0.72
+                    )
+
+                );
+
+
+            /*
+             * Responsive row spacing.
+             */
+
+            const rowSpread =
+                Math.min(
+
+                    3.65,
+
+                    Math.max(
+                        1.9,
+                        safeHeight * 0.48
+                    )
+
+                );
+
+
+            gridPositions = [
+
+                {
+                    x: -columnSpread,
+                    y: rowSpread,
+                    z: 0
+                },
+
+                {
+                    x: 0,
+                    y: rowSpread,
+                    z: 0
+                },
+
+                {
+                    x: columnSpread,
+                    y: rowSpread,
+                    z: 0
+                },
+
+                {
+                    x: -columnSpread,
+                    y: -rowSpread,
+                    z: 0
+                },
+
+                {
+                    x: 0,
+                    y: -rowSpread,
+                    z: 0
+                },
+
+                {
+                    x: columnSpread,
+                    y: -rowSpread,
+                    z: 0
+                }
+
+            ];
+
+
+            /*
+             * Responsive shape size.
+             *
+             * This is especially important on portrait displays
+             * because the generated 3D structures themselves can
+             * occupy multiple world units.
+             */
+
+            const horizontalCell =
+                (
+                    columnSpread * 2
+                ) / 3;
+
+
+            const verticalCell =
+                rowSpread * 2;
+
+
+            responsiveShapeLimit =
+                Math.min(
+
+                    4.8,
+
+                    Math.max(
+                        1.7,
+                        horizontalCell * 0.78
+                    ),
+
+                    Math.max(
+                        1.7,
+                        verticalCell * 0.70
+                    )
+
+                );
+
+
+            renderer.setSize(
+                width,
+                height,
+                false
+            );
+        }
+
+
+        updateResponsiveLayout();
+
+
+        // ============================================================
+        // PATH GENERATION
+        // ============================================================
+
+        function generateComplexPath(
+            numBlocks
+        ) {
+
+            const positions = [
+                [0, 0, 0]
+            ];
+
+
+            let currentPos = [
+                0,
+                0,
+                0
+            ];
+
+
+            const axes = [
+
+                [1, 0, 0],
+                [-1, 0, 0],
+
+                [0, 1, 0],
+                [0, -1, 0],
+
+                [0, 0, 1],
+                [0, 0, -1]
+
+            ];
+
+
+            let currentDir =
+                axes[
+                    Math.floor(
+                        Math.random() *
+                        axes.length
+                    )
+                ];
+
+
+            while (
+                positions.length <
+                numBlocks
+            ) {
+
+                let segLength =
+                    Math.floor(
+                        Math.random() * 2
+                    ) + 1;
+
+
+                for (
+                    let i = 0;
+
+                    i < segLength &&
+                    positions.length <
+                        numBlocks;
+
+                    i++
+                ) {
+
+                    const candidate = [
+
+                        currentPos[0] +
+                            currentDir[0],
+
+                        currentPos[1] +
+                            currentDir[1],
+
+                        currentPos[2] +
+                            currentDir[2]
+
+                    ];
+
+
+                    if (
+                        !positions.some(
+                            p =>
+                                p[0] ===
+                                    candidate[0] &&
+                                p[1] ===
+                                    candidate[1] &&
+                                p[2] ===
+                                    candidate[2]
+                        )
+                    ) {
+
+                        currentPos =
+                            candidate;
+
+
+                        positions.push(
+                            [
+                                ...currentPos
+                            ]
+                        );
+
+                    } else {
+
+                        break;
+
+                    }
+                }
+
+
+                const occupied =
+                    new Set(
+                        positions.map(
+                            p =>
+                                p.join(',')
+                        )
+                    );
+
+
+                const availableDirections =
+                    axes.filter(
+                        a => {
+
+                            const next = [
+
+                                currentPos[0] +
+                                    a[0],
+
+                                currentPos[1] +
+                                    a[1],
+
+                                currentPos[2] +
+                                    a[2]
+
+                            ];
+
+
+                            return !occupied.has(
+                                next.join(',')
+                            );
+
+                        }
+                    );
+
+
+                const orthos =
+                    availableDirections.filter(
+                        a =>
+
+                            (
+                                a[0] *
+                                    currentDir[0] +
+
+                                a[1] *
+                                    currentDir[1] +
+
+                                a[2] *
+                                    currentDir[2]
+
+                            ) === 0
+                    );
+
+
+                const candidates =
+                    orthos.length
+                        ? orthos
+                        : availableDirections;
+
+
+                if (
+                    !candidates.length
+                ) {
+
+                    const restart =
+                        positions[
+                            Math.floor(
+                                Math.random() *
+                                positions.length
+                            )
+                        ];
+
+
+                    currentPos =
+                        [...restart];
+
+
+                    currentDir =
+                        axes[
+                            Math.floor(
+                                Math.random() *
+                                axes.length
+                            )
+                        ];
+
+
+                    continue;
+                }
+
+
+                currentDir =
+                    candidates[
+                        Math.floor(
+                            Math.random() *
+                            candidates.length
+                        )
+                    ];
+            }
+
+
+            return positions;
+        }
+
+
+        // ============================================================
+        // SHAPE CREATION
+        // ============================================================
+
+        function createShapeGroup(
+            positions,
+            material
+        ) {
+
+            const group =
+                new THREE.Group();
+
+
+            positions.forEach(
+                pos => {
+
+                    const mesh =
+                        new THREE.Mesh(
+                            cubeGeo,
+                            material
+                        );
+
+
+                    mesh.position.set(
+                        ...pos
+                    );
+
+
+                    group.add(
+                        mesh
+                    );
+
+
+                    const edges =
+                        new THREE.LineSegments(
+                            edgesGeo,
+                            edgeMat
+                        );
+
+
+                    edges.position.set(
+                        ...pos
+                    );
+
+
+                    group.add(
+                        edges
+                    );
+
+                }
+            );
+
+
+            /*
+             * Center the generated structure.
+             */
+
+            const box =
+                new THREE.Box3()
+                    .setFromObject(
+                        group
+                    );
+
+
+            const center =
+                box.getCenter(
+                    new THREE.Vector3()
+                );
+
+
+            group.children.forEach(
+                child => {
+
+                    child.position.sub(
+                        center
+                    );
+
+                }
+            );
+
+
+            /*
+             * Responsive scaling.
+             */
+
+            const centeredBox =
+                new THREE.Box3()
+                    .setFromObject(
+                        group
+                    );
+
+
+            const size =
+                centeredBox.getSize(
+                    new THREE.Vector3()
+                );
+
+
+            const maxDimension =
+                Math.max(
+                    size.x,
+                    size.y,
+                    size.z
+                );
+
+
+            if (
+                maxDimension >
+                responsiveShapeLimit
+            ) {
+
+                group.scale.setScalar(
+
+                    responsiveShapeLimit /
+                    maxDimension
+
+                );
+
+            }
+
+
+            return group;
+        }
+
+
+        // ============================================================
+        // DIFFICULTY
+        // ============================================================
+
+        function getDifficultySettings() {
+
+            const adaptiveEnabled =
+                document
+                    .getElementById(
+                        'chk-adaptive'
+                    )
+                    .checked;
+
+
+            const manualSpeed =
+                baseRotationMultiplier;
+
+
+            if (
+                !adaptiveEnabled
+            ) {
+
+                return {
+
+                    level: 0,
+
+                    numCubes: 10,
+
+                    speedScale:
+                        0.008 *
+                        manualSpeed,
+
+                    trialSeconds: 15
+
+                };
+
+            }
+
+            const baseAdaptiveTime = Math.max(4, 15 - adaptiveLevel * 1.1);
+            const finalTrialSeconds = Math.max(3, baseAdaptiveTime + timeModifier);
+
+            return {
+
+                level:
+                    adaptiveLevel,
+
+                numCubes:
+                    Math.min(
+                        10 +
+                            adaptiveLevel *
+                            2,
+
+                        30
+                    ),
+
+                speedScale:
+
+                    (
+                        0.008 +
+                        adaptiveLevel *
+                            0.0012
+                    ) *
+                    manualSpeed,
+
+                trialSeconds: finalTrialSeconds
+
+            };
+        }
+
+
+        // ============================================================
+        // ADAPTIVE DIFFICULTY
+        // ============================================================
+
+        function updateAdaptiveDifficulty(
+            wasCorrect,
+            responseMs,
+            timedOut = false
+        ) {
+
+            if (
+                !document
+                    .getElementById(
+                        'chk-adaptive'
+                    )
+                    .checked
+            ) {
+
+                return;
+            }
+
+
+            const currentSettings =
+                getDifficultySettings();
+
+
+            const responseRatio =
+                timedOut
+
+                    ? 1
+
+                    : Math.min(
+
+                        responseMs /
+                            (
+                                currentSettings
+                                    .trialSeconds *
+                                1000
+                            ),
+
+                        1
+
+                    );
+
+
+            adaptiveHistory.push({
+
+                correct:
+                    wasCorrect,
+
+                ratio:
+                    responseRatio,
+
+                timedOut
+
+            });
+
+
+            if (
+                adaptiveHistory.length >
+                5
+            ) {
+
+                adaptiveHistory.shift();
+
+            }
+
+
+            if (
+                adaptiveHistory.length <
+                3
+            ) {
+
+                return;
+
+            }
+
+
+            const correctRate =
+                adaptiveHistory.filter(
+                    r => r.correct
+                ).length /
+                adaptiveHistory.length;
+
+
+            const averageRatio =
+                adaptiveHistory.reduce(
+                    (sum, r) =>
+                        sum + r.ratio,
+                    0
+                ) /
+                adaptiveHistory.length;
+
+
+            const recentTimeout =
+                adaptiveHistory[
+                    adaptiveHistory.length - 1
+                ].timedOut;
+
+
+            if (
+                correctRate >= 0.8 &&
+                averageRatio <= 0.70
+            ) {
+
+                adaptiveLevel =
+                    Math.min(
+                        adaptiveLevel + 1,
+                        10
+                    );
+
+
+                adaptiveHistory = [];
+
+            } else if (
+                recentTimeout ||
+                correctRate <= 0.40
+            ) {
+
+                adaptiveLevel =
+                    Math.max(
+                        adaptiveLevel - 1,
+                        0
+                    );
+
+
+                adaptiveHistory = [];
+            }
+        }
+
+
+        // ============================================================
+        // TRIAL TIMER
+        // ============================================================
+
+        function startTrialTimer() {
+
+            clearInterval(
+                trialTimer
+            );
+
+
+            const settings =
+                getDifficultySettings();
+
+
+            trialTimeRemaining =
+                settings.trialSeconds;
+
+
+            trialStartTime =
+                performance.now();
+
+
+            currentTrialResolved =
+                false;
+
+
+            updateDashboard();
+
+
+            trialTimer =
+                setInterval(
+                    () => {
+
+                        trialTimeRemaining =
+                            Math.max(
+                                0,
+                                trialTimeRemaining -
+                                    0.1
+                            );
+
+
+                        updateDashboard();
+
+
+                        if (
+                            trialTimeRemaining <=
+                            0
+                        ) {
+
+                            clearInterval(
+                                trialTimer
+                            );
+
+
+                            handleTrialTimeout();
+
+                        }
+
+                    },
+                    100
+                );
+        }
+
+
+        // ============================================================
+        // SESSION TIMER
+        // ============================================================
+
+        function startSessionTimer() {
+
+            clearInterval(
+                sessionTimer
+            );
+
+
+            sessionTimer =
+                setInterval(
+                    () => {
+
+                        if (
+                            !sessionActive
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        sessionTimeRemaining =
+                            Math.max(
+                                0,
+                                sessionTimeRemaining -
+                                    1
+                            );
+
+
+                        updateDashboard();
+
+
+                        if (
+                            sessionTimeRemaining <=
+                            0
+                        ) {
+
+                            endSession();
+
+                        }
+
+                    },
+                    1000
+                );
+        }
+
+
+        // ============================================================
+        // TIMEOUT
+        // ============================================================
+
+        function handleTrialTimeout() {
+
+            if (
+                !sessionActive ||
+                currentTrialResolved
+            ) {
+
+                return;
+
+            }
+
+
+            currentTrialResolved =
+                true;
+
+
+            totalAttempts++;
+
+            consecutiveLosses++;
+            consecutiveWins = 0;
+            if (consecutiveLosses >= 3) {
+                timeModifier += 3;
+                consecutiveLosses = 0;
+            }
+
+            updateAdaptiveDifficulty(
+
+                false,
+
+                getDifficultySettings()
+                    .trialSeconds *
+                    1000,
+
+                true
+
+            );
+
+
+            AudioEngine.playError();
+
+
+            const correctPair =
+                shapesData.filter(
+                    s =>
+                        s.matchId ===
+                        'TARGET_A'
+                );
+
+
+            correctPair.forEach(
+                s =>
+                    setShapeMaterial(
+                        s,
+                        matCorrect
+                    )
+            );
+
+
+            updateDashboard();
+
+
+            roundTransitionTimeout =
+                setTimeout(
+                    () => {
+
+                        if (
+                            sessionActive
+                        ) {
+
+                            advanceTrial();
+
+                        }
+
+                    },
+                    800
+                );
+        }
+
+
+        // ============================================================
+        // ADVANCE TRIAL
+        // ============================================================
+
+        function advanceTrial() {
+
+            if (
+                !sessionActive
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                sessionTimeRemaining <=
+                0
+            ) {
+
+                endSession();
+
+                return;
+
+            }
+
+
+            trialNumber++;
+
+            spawnRound();
+        }
+
+
+        // ============================================================
+        // CLEAR SHAPES
+        // ============================================================
+
+        function clearShapes() {
+
+            shapesData.forEach(
+                item => {
+
+                    scene.remove(
+                        item.containerGroup
+                    );
+
+                }
+            );
+
+
+            shapesData = [];
+
+            selectedShapes = [];
+        }
+
+
+        // ============================================================
+        // SPAWN ROUND
+        // ============================================================
+
+        function spawnRound() {
+
+            clearShapes();
+
+
+            clearTimeout(
+                roundTransitionTimeout
+            );
+
+
+            const settings =
+                getDifficultySettings();
+
+
+            const numCubes =
+                settings.numCubes;
+
+
+            const pathA =
+                generateComplexPath(
+                    numCubes
+                );
+
+
+            const pathAMirror =
+                pathA.map(
+                    p => [
+                        -p[0],
+                        p[1],
+                        p[2]
+                    ]
+                );
+
+
+            const pathB =
+                generateComplexPath(
+                    numCubes
+                );
+
+
+            const pathBMirror =
+                pathB.map(
+                    p => [
+                        -p[0],
+                        p[1],
+                        p[2]
+                    ]
+                );
+
+
+            const pathC =
+                generateComplexPath(
+                    numCubes
+                );
+
+
+            const pathDefs = [
+
+                {
+                    path: pathA,
+                    matchId: 'TARGET_A'
+                },
+
+                {
+                    path: pathA,
+                    matchId: 'TARGET_A'
+                },
+
+                {
+                    path: pathAMirror,
+                    matchId: 'MIRROR_A'
+                },
+
+                {
+                    path: pathB,
+                    matchId: 'DISTRACTOR_B'
+                },
+
+                {
+                    path: pathBMirror,
+                    matchId: 'MIRROR_B'
+                },
+
+                {
+                    path: pathC,
+                    matchId: 'DISTRACTOR_C'
+                }
+
+            ];
+
+
+            pathDefs.sort(
+                () =>
+                    Math.random() -
+                    0.5
+            );
+
+
+            pathDefs.forEach(
+                (def, index) => {
+
+                    const innerGroup =
+                        createShapeGroup(
+                            def.path,
+                            matDefault
+                        );
+
+
+                    const containerGroup =
+                        new THREE.Group();
+
+
+                    containerGroup.add(
+                        innerGroup
+                    );
+
+
+                    const pos =
+                        gridPositions[
+                            index
+                        ];
+
+
+                    containerGroup.position.set(
+
+                        pos.x,
+
+                        pos.y,
+
+                        pos.z
+
+                    );
+
+
+                    /*
+                     * Random initial orientation.
+                     */
+
+                    innerGroup.rotation.set(
+
+                        Math.random() *
+                            Math.PI *
+                            2,
+
+                        Math.random() *
+                            Math.PI *
+                            2,
+
+                        Math.random() *
+                            Math.PI *
+                            2
+
+                    );
+
+
+                    const speedScale =
+                        settings.speedScale;
+
+
+                    const rotVelocity =
+                        new THREE.Vector3(
+
+                            (
+                                Math.random() -
+                                0.5
+                            ) *
+                            speedScale,
+
+                            (
+                                Math.random() -
+                                0.5
+                            ) *
+                            speedScale,
+
+                            (
+                                Math.random() -
+                                0.5
+                            ) *
+                            speedScale
+
+                        );
+
+
+                    scene.add(
+                        containerGroup
+                    );
+
+
+                    shapesData.push({
+
+                        id:
+                            index,
+
+                        matchId:
+                            def.matchId,
+
+                        containerGroup,
+
+                        innerGroup,
+
+                        rotVelocity,
+
+                        meshes:
+                            innerGroup.children
+                                .filter(
+                                    child =>
+                                        child.isMesh
+                                )
+
+                    });
+
+                }
+            );
+
+
+            startTrialTimer();
+        }
+
+
+        // ============================================================
+        // SELECTION
+        // ============================================================
+
+        /*
+         * OrbitControls owns the actual drag gesture.
+         *
+         * We only select when the pointer goes down and up without
+         * meaningful movement.
+         *
+         * This prevents:
+         *
+         *     drag -> accidental selection
+         *
+         * while preserving:
+         *
+         *     tap -> selection
+         */
+
+        let pointerDownPosition =
+            null;
+
+
+        let pointerDragged =
+            false;
+
+
+        let pointerDownTime =
+            0;
+
+
+        function onPointerDown(
+            event
+        ) {
+
+            pointerDownPosition = {
+
+                x:
+                    event.clientX,
+
+                y:
+                    event.clientY
+
+            };
+
+
+            pointerDownTime =
+                performance.now();
+
+
+            pointerDragged =
+                false;
+        }
+
+
+        function onPointerMove(
+            event
+        ) {
+
+            if (
+                !pointerDownPosition
+            ) {
+
+                return;
+
+            }
+
+
+            const dx =
+                event.clientX -
+                pointerDownPosition.x;
+
+
+            const dy =
+                event.clientY -
+                pointerDownPosition.y;
+
+
+            if (
+                (
+                    dx * dx +
+                    dy * dy
+                ) > 36
+            ) {
+
+                pointerDragged =
+                    true;
+
+            }
+        }
+
+
+        function onPointerUp(
+            event
+        ) {
+
+            if (
+                !pointerDownPosition
+            ) {
+
+                return;
+
+            }
+
+
+            const elapsed =
+                performance.now() -
+                pointerDownTime;
+
+
+            const shouldSelect =
+                !pointerDragged &&
+                elapsed < 700;
+
+
+            pointerDownPosition =
+                null;
+
+
+            if (
+                shouldSelect
+            ) {
+
+                trySelectAtPointer(
+                    event
+                );
+
+            }
+
+
+            pointerDragged =
+                false;
+        }
+
+
+        function updatePointerCoordinates(
+            event
+        ) {
+
+            const rect =
+                renderer
+                    .domElement
+                    .getBoundingClientRect();
+
+
+            mouse.x =
+                (
+                    (
+                        event.clientX -
+                        rect.left
+                    ) /
+                    rect.width
+                ) *
+                    2 -
+                1;
+
+
+            mouse.y =
+                -(
+                    (
+                        event.clientY -
+                        rect.top
+                    ) /
+                    rect.height
+                ) *
+                    2 +
+                1;
+        }
+
+
+        function trySelectAtPointer(
+            event
+        ) {
+
+            if (
+                !sessionActive
+            ) {
+
+                return;
+
+            }
+
+
+            updatePointerCoordinates(
+                event
+            );
+
+
+            raycaster.setFromCamera(
+                mouse,
+                camera
+            );
+
+
+            const allMeshes = [];
+
+
+            shapesData.forEach(
+                shape => {
+
+                    allMeshes.push(
+                        ...shape.meshes
+                    );
+
+                }
+            );
+
+
+            const intersects =
+                raycaster.intersectObjects(
+                    allMeshes,
+                    false
+                );
+
+
+            if (
+                !intersects.length
+            ) {
+
+                return;
+
+            }
+
+
+            const hitMesh =
+                intersects[0].object;
+
+
+            const targetShape =
+                shapesData.find(
+                    shape =>
+                        shape.meshes.includes(
+                            hitMesh
+                        )
+                );
+
+
+            if (
+                targetShape
+            ) {
+                if (selectedShapes.includes(targetShape)) {
+                    AudioEngine.playSelect();
+                    
+                    setShapeMaterial(
+                        targetShape,
+                        matDefault
+                    );
+
+                    selectedShapes = selectedShapes.filter(s => s !== targetShape);
+                } else if (selectedShapes.length < 2) {
+                    AudioEngine.playSelect();
+
+
+                    setShapeMaterial(
+                        targetShape,
+                        matSelected
+                    );
+
+
+                    selectedShapes.push(
+                        targetShape
+                    );
+
+
+                    if (
+                        selectedShapes.length ===
+                        2
+                    ) {
+
+                        evaluateSelection();
+
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // MATERIAL
+        // ============================================================
+
+        function setShapeMaterial(
+            shapeItem,
+            material
+        ) {
+
+            shapeItem.meshes.forEach(
+                mesh => {
+
+                    mesh.material =
+                        material;
+
+                }
+            );
+        }
+
+
+        // ============================================================
+        // EVALUATE SELECTION
+        // ============================================================
+
+        function evaluateSelection() {
+
+            if (
+                currentTrialResolved
+            ) {
+
+                return;
+
+            }
+
+
+            currentTrialResolved =
+                true;
+
+
+            clearInterval(
+                trialTimer
+            );
+
+
+            totalAttempts++;
+
+
+            const responseMs =
+                performance.now() -
+                trialStartTime;
+
+
+            const [
+                shape1,
+                shape2
+            ] =
+                selectedShapes;
+
+
+            const isMatch =
+                shape1.matchId ===
+                    'TARGET_A' &&
+                shape2.matchId ===
+                    'TARGET_A';
+
+            if (isMatch) {
+                consecutiveWins++;
+                consecutiveLosses = 0;
+                if (consecutiveWins >= 3) {
+                    timeModifier -= 2;
+                    consecutiveWins = 0;
+                }
+            } else {
+                consecutiveLosses++;
+                consecutiveWins = 0;
+                if (consecutiveLosses >= 3) {
+                    timeModifier += 3;
+                    consecutiveLosses = 0;
+                }
+            }
+
+            updateAdaptiveDifficulty(
+
+                isMatch,
+
+                responseMs,
+
+                false
+
+            );
+
+
+            if (
+                isMatch
+            ) {
+
+                AudioEngine.playSuccess();
+
+
+                setShapeMaterial(
+                    shape1,
+                    matCorrect
+                );
+
+
+                setShapeMaterial(
+                    shape2,
+                    matCorrect
+                );
+
+
+                score++;
+
+
+                updateDashboard();
+
+
+                roundTransitionTimeout =
+                    setTimeout(
+                        () => {
+
+                            if (
+                                sessionActive
+                            ) {
+
+                                advanceTrial();
+
+                            }
+
+                        },
+                        600
+                    );
+
+            } else {
+
+                AudioEngine.playError();
+
+
+                setShapeMaterial(
+                    shape1,
+                    matWrong
+                );
+
+
+                setShapeMaterial(
+                    shape2,
+                    matWrong
+                );
+
+
+                updateDashboard();
+
+
+                const correctPair =
+                    shapesData.filter(
+                        s =>
+                            s.matchId ===
+                            'TARGET_A'
+                    );
+
+
+                correctPair.forEach(
+                    s =>
+                        setShapeMaterial(
+                            s,
+                            matCorrect
+                        )
+                );
+
+
+                roundTransitionTimeout =
+                    setTimeout(
+                        () => {
+
+                            if (
+                                sessionActive
+                            ) {
+
+                                advanceTrial();
+
+                            }
+
+                        },
+                        1000
+                    );
+            }
+        }
+
+
+        // ============================================================
+        // DASHBOARD
+        // ============================================================
+
+        function updateDashboard() {
+
+            document
+                .getElementById(
+                    'stat-score'
+                )
+                .innerText =
+                score;
+
+
+            const acc =
+                totalAttempts === 0
+
+                    ? 100
+
+                    : Math.round(
+                        (
+                            score /
+                            totalAttempts
+                        ) *
+                        100
+                    );
+
+
+            document
+                .getElementById(
+                    'stat-acc'
+                )
+                .innerText =
+                `${acc}%`;
+
+
+            const trialMins =
+                Math.floor(
+                    trialTimeRemaining /
+                    60
+                )
+                    .toString()
+                    .padStart(
+                        2,
+                        '0'
+                    );
+
+
+            const trialSecs =
+                Math.floor(
+                    trialTimeRemaining %
+                    60
+                )
+                    .toString()
+                    .padStart(
+                        2,
+                        '0'
+                    );
+
+
+            document
+                .getElementById(
+                    'stat-timer'
+                )
+                .innerText =
+                `${trialMins}:${trialSecs}`;
+
+            document
+                .getElementById(
+                    'stat-diff'
+                )
+                .innerText =
+                `Lv. ${adaptiveLevel}`;
+
+            // Visual Timer Bar Update
+            const timerFill = document.getElementById('timer-bar-fill');
+            if (timerFill) {
+                const totalTrialTime = getDifficultySettings().trialSeconds;
+                const percentage = Math.max(0, (trialTimeRemaining / totalTrialTime) * 100);
+                timerFill.style.width = `${percentage}%`;
+
+                // Shift color states to add pressure
+                timerFill.classList.remove('timer-warning', 'timer-danger');
+                if (percentage <= 25) {
+                    timerFill.classList.add('timer-danger');
+                } else if (percentage <= 50) {
+                    timerFill.classList.add('timer-warning');
+                }
+            }
+
+
+            const sessionMins =
+                Math.floor(
+                    sessionTimeRemaining /
+                    60
+                )
+                    .toString()
+                    .padStart(
+                        2,
+                        '0'
+                    );
+
+
+            const sessionSecs =
+                Math.floor(
+                    sessionTimeRemaining %
+                    60
+                )
+                    .toString()
+                    .padStart(
+                        2,
+                        '0'
+                    );
+
+
+            document
+                .getElementById(
+                    'stat-trial'
+                )
+                .innerText =
+                `#${trialNumber} • ${sessionMins}:${sessionSecs}`;
+        }
+
+
+        // ============================================================
+        // ROTATION SPEED
+        // ============================================================
+
+        function updateRotationSpeedLabel() {
+
+            const slider =
+                document.getElementById(
+                    'rotation-speed'
+                );
+
+
+            baseRotationMultiplier =
+                Number(
+                    slider.value
+                ) /
+                100;
+
+
+            document
+                .getElementById(
+                    'rotation-speed-value'
+                )
+                .innerText =
+                `${slider.value}%`;
+        }
+
+
+        // ============================================================
+        // START SESSION
+        // ============================================================
+
+        function startSession() {
+
+            /*
+             * This must happen inside the user's button click
+             * for browsers that require a user gesture to resume
+             * Web Audio.
+             */
+
+            AudioEngine.init();
+
+
+            sessionActive =
+                true;
+
+
+            score =
+                0;
+
+
+            totalAttempts =
+                0;
+
+
+            trialNumber =
+                0;
+
+
+            adaptiveLevel =
+                0;
+
+            consecutiveWins = 0;
+            
+            consecutiveLosses = 0;
+
+            timeModifier = 0;
+
+
+            adaptiveHistory =
+                [];
+
+
+            currentTrialResolved =
+                false;
+
+
+            clearInterval(
+                trialTimer
+            );
+
+
+            clearInterval(
+                sessionTimer
+            );
+
+
+            clearTimeout(
+                roundTransitionTimeout
+            );
+
+
+            const minutesInput =
+                document.getElementById(
+                    'session-minutes'
+                );
+
+
+            let minutes =
+                Number(
+                    minutesInput.value
+                );
+
+
+            if (
+                !Number.isFinite(
+                    minutes
+                )
+            ) {
+
+                minutes = 2;
+
+            }
+
+
+            minutes =
+                Math.max(
+                    1,
+                    Math.min(
+                        60,
+                        Math.round(
+                            minutes
+                        )
+                    )
+                );
+
+
+            minutesInput.value =
+                minutes;
+
+
+            sessionTimeRemaining =
+                minutes * 60;
+
+
+            /*
+             * Make absolutely certain the layout is current before
+             * generating the first round.
+             */
+
+            updateResponsiveLayout();
+
+
+            updateDashboard();
+
+
+            document
+                .getElementById(
+                    'start-overlay'
+                )
+                .style.display =
+                'none';
+
+
+            document
+                .getElementById(
+                    'end-overlay'
+                )
+                .style.display =
+                'none';
+
+
+            document
+                .getElementById(
+                    'btn-session-toggle'
+                )
+                .innerText =
+                'Stop Session';
+
+
+            startSessionTimer();
+
+
+            advanceTrial();
+        }
+
+
+        // ============================================================
+        // STOP SESSION
+        // ============================================================
+
+        function stopSession() {
+
+            if (
+                !sessionActive
+            ) {
+
+                return;
+
+            }
+
+
+            endSession();
+        }
+
+
+        // ============================================================
+        // END SESSION
+        // ============================================================
+
+        function endSession() {
+
+            sessionActive =
+                false;
+
+
+            clearInterval(
+                trialTimer
+            );
+
+
+            clearInterval(
+                sessionTimer
+            );
+
+
+            clearTimeout(
+                roundTransitionTimeout
+            );
+
+
+            clearShapes();
+
+
+            const acc =
+                totalAttempts === 0
+
+                    ? 0
+
+                    : Math.round(
+                        (
+                            score /
+                            totalAttempts
+                        ) *
+                        100
+                    );
+
+
+            const minutesInput =
+                document.getElementById(
+                    'session-minutes'
+                );
+
+
+            const configuredMinutes =
+                Math.max(
+                    1,
+                    Math.min(
+                        60,
+                        Number(
+                            minutesInput.value
+                        ) || 2
+                    )
+                );
+
+
+            const completedSeconds =
+                configuredMinutes *
+                    60 -
+                sessionTimeRemaining;
+
+
+            const completedMins =
+                Math.floor(
+                    Math.max(
+                        0,
+                        completedSeconds
+                    ) /
+                    60
+                );
+
+
+            const completedSecs =
+                Math.floor(
+                    Math.max(
+                        0,
+                        completedSeconds
+                    ) %
+                    60
+                )
+                    .toString()
+                    .padStart(
+                        2,
+                        '0'
+                    );
+
+
+            document
+                .getElementById(
+                    'end-summary'
+                )
+                .innerText =
+                `Total Solved: ${score} | Accuracy: ${acc}% | Trials: ${totalAttempts} | Time: ${completedMins}:${completedSecs}`;
+
+
+            document
+                .getElementById(
+                    'end-overlay'
+                )
+                .style.display =
+                'flex';
+
+
+            document
+                .getElementById(
+                    'btn-session-toggle'
+                )
+                .innerText =
+                'Start Session';
+        }
+
+
+        // ============================================================
+        // ROTATION
+        // ============================================================
+
+        const enableRotationChk =
+            document.getElementById(
+                'chk-speed'
+            );
+
+
+        // ============================================================
+        // RENDER LOOP
+        // ============================================================
+
+        function animate() {
+
+            requestAnimationFrame(
+                animate
+            );
+
+
+            /*
+             * Continuous shape rotation.
+             */
+
+            if (
+                enableRotationChk.checked
+            ) {
+
+                const currentSpeedMultiplier =
+                    Number(
+                        document
+                            .getElementById(
+                                'rotation-speed'
+                            )
+                            .value
+                    ) /
+                    100;
+
+
+                shapesData.forEach(
+                    item => {
+
+                        item.innerGroup
+                            .rotation.x +=
+                            item.rotVelocity.x *
+                            currentSpeedMultiplier;
+
+
+                        item.innerGroup
+                            .rotation.y +=
+                            item.rotVelocity.y *
+                            currentSpeedMultiplier;
+
+
+                        item.innerGroup
+                            .rotation.z +=
+                            item.rotVelocity.z *
+                            currentSpeedMultiplier;
+
+                    }
+                );
+            }
+
+
+            /*
+             * Required because damping is enabled.
+             */
+
+            controls.update();
+
+
+            renderer.render(
+                scene,
+                camera
+            );
+        }
+
+
+        // ============================================================
+        // RESIZE
+        // ============================================================
+
+        function handleResize() {
+
+            updateResponsiveLayout();
+
+
+            /*
+             * Keep currently active shapes attached to their new
+             * responsive grid positions.
+             */
+
+            shapesData.forEach(
+                (item, index) => {
+
+                    const pos =
+                        gridPositions[
+                            index
+                        ];
+
+
+                    if (
+                        pos
+                    ) {
+
+                        item
+                            .containerGroup
+                            .position.set(
+
+                                pos.x,
+
+                                pos.y,
+
+                                pos.z
+
+                            );
+
+                    }
+                }
+            );
+        }
+
+
+        window.addEventListener(
+            'resize',
+            handleResize
+        );
+
+
+        /*
+         * visualViewport catches mobile browser viewport changes,
+         * including some address-bar/orientation changes that do not
+         * behave exactly like a normal desktop resize.
+         */
+
+        if (
+            window.visualViewport
+        ) {
+
+            window.visualViewport.addEventListener(
+                'resize',
+                handleResize
+            );
+
+        }
+
+
+        // ============================================================
+        // POINTER EVENTS
+        // ============================================================
+
+        renderer.domElement.addEventListener(
+            'pointerdown',
+            onPointerDown,
+            {
+                passive: true
+            }
+        );
+
+
+        renderer.domElement.addEventListener(
+            'pointermove',
+            onPointerMove,
+            {
+                passive: true
+            }
+        );
+
+
+        renderer.domElement.addEventListener(
+            'pointerup',
+            onPointerUp,
+            {
+                passive: true
+            }
+        );
+
+
+        renderer.domElement.addEventListener(
+            'pointercancel',
+            () => {
+
+                pointerDownPosition =
+                    null;
+
+                pointerDragged =
+                    false;
+
+            },
+            {
+                passive: true
+            }
+        );
+
+
+        // ============================================================
+        // BUTTONS
+        // ============================================================
+
+        document
+            .getElementById(
+                'btn-start'
+            )
+            .addEventListener(
+                'click',
+                startSession
+            );
+
+
+        document
+            .getElementById(
+                'btn-restart'
+            )
+            .addEventListener(
+                'click',
+                startSession
+            );
+
+
+        document
+            .getElementById(
+                'btn-session-toggle'
+            )
+            .addEventListener(
+                'click',
+                () => {
+
+                    if (
+                        sessionActive
+                    ) {
+
+                        stopSession();
+
+                    } else {
+
+                        startSession();
+
+                    }
+
+                }
+            );
+
+
+        // ============================================================
+        // SETTINGS
+        // ============================================================
+
+        document
+            .getElementById(
+                'rotation-speed'
+            )
+            .addEventListener(
+                'input',
+                updateRotationSpeedLabel
+            );
+
+
+        document
+            .getElementById(
+                'session-minutes'
+            )
+            .addEventListener(
+                'change',
+                event => {
+
+                    let value =
+                        Number(
+                            event.target.value
+                        );
+
+
+                    if (
+                        !Number.isFinite(
+                            value
+                        )
+                    ) {
+
+                        value = 2;
+
+                    }
+
+
+                    value =
+                        Math.max(
+                            1,
+                            Math.min(
+                                60,
+                                Math.round(
+                                    value
+                                )
+                            )
+                        );
+
+
+                    event.target.value =
+                        value;
+
+                }
+            );
+
+
+        // ============================================================
+        // INITIAL STATE
+        // ============================================================
+
+        updateRotationSpeedLabel();
+
+        updateDashboard();
+
+        updateResponsiveLayout();
+
+
+        // ============================================================
+        // START RENDERING
+        // ============================================================
+
+        animate();
+
+    </script>
+
+</body>
+
+</html>
