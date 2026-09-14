@@ -129,6 +129,7 @@ function startBlock() {
   clearTimeout(state.cueTimer);
   $('retroCue').classList.remove('show');
   state.sessionStart = Date.now();
+  state.activeMs = 0;
   state.running = true;
 
   if (cfg.streams.glyph === 'relational' && !state.glyphMap) ensureGlyphMap();
@@ -162,9 +163,24 @@ function stopBlock(silent) {
   clearCells();
   hideLagCue();
   hideMoveArrow();
-  if (state.sessionStart) {
-    addMinutes(Date.now() - state.sessionStart);
+  /*
+   * Active time, not elapsed time.
+   *
+   * This used to bank `Date.now() - sessionStart`, which is the whole wall
+   * clock from the first trial to the last — every pause inside it included.
+   * The HUD already knew better and froze its readout while paused, so the
+   * screen and the record disagreed and the record was the wrong one: pause
+   * for ten minutes and the display would not move, then the block would end
+   * and those ten minutes would land in the daily total anyway.
+   *
+   * It matters more than a tidy number, because `visibilitychange` pauses the
+   * block. Switching tabs mid-block and coming back an hour later banked the
+   * hour.
+   */
+  if (state.sessionStart || state.activeMs) {
+    addMinutes(state.activeMs + (state.sessionStart ? Date.now() - state.sessionStart : 0));
     state.sessionStart = null;
+    state.activeMs = 0;
   }
   if (!silent) { state.judgments = []; updateHUD(); }
 }

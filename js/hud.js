@@ -61,9 +61,11 @@ function updateHUD() {
    while you play instead of jumping only when a block ends. */
 function minutesToday() {
   const banked = progress.dailyMinutes[today()] || 0;
-  const live = state.sessionStart && !state.paused
-    ? (Date.now() - state.sessionStart) / 60000 : 0;
-  return banked + live;
+  /* Segments already closed by a pause, plus the one running now. Previously
+     only the running one, which meant the readout fell back to zero across a
+     pause and then climbed again from there. */
+  const open = state.sessionStart && !state.paused ? Date.now() - state.sessionStart : 0;
+  return banked + (state.activeMs + open) / 60000;
 }
 
 function renderDailyTimer() {

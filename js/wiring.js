@@ -443,6 +443,12 @@ function pauseBlock(why) {
   clearTimeout(state.cueTimer);
   clearTimeout(state.buzzTimer);
   state.lastSnap = null; state.tickAt = 0;
+  /* Close the running segment before the clock stops counting, so the time up
+     to this moment is kept and the pause itself is not. */
+  if (state.sessionStart) {
+    state.activeMs += Date.now() - state.sessionStart;
+    state.sessionStart = null;
+  }
   state.paused = true;
   state.interrupted = true;
   /* The trial on screen was not seen for its proper duration, so it must not be
@@ -460,6 +466,7 @@ function pauseBlock(why) {
 function resumeFromPause() {
   if (!state.paused) return;
   state.paused = false;
+  state.sessionStart = Date.now();          // a new segment opens
   $('pauseVeil').classList.remove('show');
   state.stimAt = 0; state.tickAt = 0; state.lastSnap = null;
   tick();
