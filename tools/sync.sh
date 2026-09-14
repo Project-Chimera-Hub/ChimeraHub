@@ -61,7 +61,11 @@ case "$cmd" in
   push)
     apps "$@" | while read -r name prefix repo branch; do
       echo "── $name → $repo"
-      git subtree push --prefix="$prefix" "$(remote_for "$repo")" "$branch"
+      # `git subtree push` prints a progress counter per commit — a thousand of
+      # them, carriage-returned onto one line, which scrolls the actual result
+      # off the top of anything capturing the output.
+      git subtree push --prefix="$prefix" "$(remote_for "$repo")" "$branch" 2>&1 \
+        | tr '\r' '\n' | grep -vE '^[0-9]+/[0-9]+ ' || true
     done
     ;;
 
