@@ -25,6 +25,7 @@ import gate as G
 # would silently be about whatever window was focused when it ran. Unreadable is
 # the neutral default; `focus()` below says otherwise per test.
 G.active_window_title = lambda: None
+G.activate_hub_window = lambda cfg: False
 
 cases = []
 def test(fn): cases.append(fn); return fn
@@ -56,10 +57,6 @@ class FakeGate(G.Gate):
         self.closed = False
         self.why = why
 
-    # `held_too_long` checks `self.window`, which stays None here.
-    def held_too_long(self):
-        cap = float(self.cfg.get("max_hold_minutes") or 0)
-        return bool(self.closed and cap > 0 and (time.time() - self.shown_at) / 60 >= cap)
 
 
 def gate_with(minutes, **over):
@@ -113,7 +110,7 @@ def the_hold_cap_releases_regardless_of_the_count():
                   active_from="00:00", active_to="23:59")
     g.evaluate()
     assert g.closed
-    g.shown_at = time.time() - 31 * 60
+    g.locked_since = time.time() - 31 * 60
     g.evaluate()
     assert not g.closed, "the gate held past max_hold_minutes on a count of zero"
 
@@ -228,7 +225,7 @@ def focus(value):
 @test
 def a_trainer_in_front_of_you_stands_the_panel_down():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild — Mozilla Firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed, "the panel stayed up while a trainer had focus"
 
@@ -238,7 +235,7 @@ def switching_to_anything_else_brings_it_straight_back():
     """The whole point. No grace, no fuse — the other application is the thing
     being blocked, and it is in front of you now."""
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed
     with focus('_NET_WM_NAME(UTF8_STRING) = "Inbox (12) — Mozilla Thunderbird"'):
@@ -261,7 +258,7 @@ def focus_overrules_a_live_heartbeat():
 def focus_overrules_a_lagging_disk():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
     g.counter.last_progress = time.time() - 3600      # trained an hour ago
-    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Mozilla Firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed, "a stale disk figure overruled the trainer on screen"
 
@@ -280,7 +277,7 @@ def an_unreadable_display_never_blocks_on_its_own():
 @test
 def the_patterns_are_matched_case_insensitively_anywhere_in_the_title():
     c = cfg(training_window_patterns=["mindbuild"])
-    with focus('_NET_WM_NAME(UTF8_STRING) = "CCT — MINDBUILD"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "CCT — MINDBUILD"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         assert G.focused_on_training(c) is True
     with focus('_NET_WM_NAME(UTF8_STRING) = "something else"'):
         assert G.focused_on_training(c) is False
@@ -298,7 +295,7 @@ def grace_ends_the_moment_a_trainer_has_focus():
     with focus('_NET_WM_NAME(UTF8_STRING) = "Something else"'):
         g.evaluate()
     assert not g.closed, "grace did not cover the browser still opening"
-    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert g.launched_at == 0.0, "grace survived a trainer taking focus"
     with focus('_NET_WM_NAME(UTF8_STRING) = "Steam"'):
@@ -315,6 +312,68 @@ def the_panels_own_title_is_not_a_training_window():
     with focus(title):
         assert G.focused_on_training(cfg()) is False, \
             "the gate's own panel matches training_window_patterns"
+
+
+FIREFOX = '\nWM_CLASS(STRING) = "Navigator", "firefox"'
+
+
+@test
+def switching_away_during_grace_is_not_excused_once_settled():
+    """The old exit: press Train, switch to anything, keep the grace."""
+    g = gate_with(0, required_minutes=20, grace_seconds=15, settle_seconds=3,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time() - 5
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Discord | Friends — Mozilla Firefox"' + FIREFOX):
+        g.evaluate()
+    assert g.closed, "a Discord tab during grace was excused"
+
+
+@test
+def a_browser_still_loading_is_excused_during_grace():
+    g = gate_with(0, required_minutes=20, grace_seconds=15, settle_seconds=3,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time() - 5
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Mozilla Firefox"' + FIREFOX):
+        g.evaluate()
+    assert not g.closed, "the hub window was blocked while it was still loading"
+
+
+@test
+def a_mindbuild_title_in_another_browser_is_not_training():
+    """Its storage is not the one the counter reads."""
+    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Google Chrome"\nWM_CLASS(STRING) = "google-chrome", "Google-chrome"'):
+        assert G.focused_on_training(cfg()) is False
+
+
+@test
+def a_trainer_name_alone_is_no_longer_a_training_window():
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Synthwave mix — YouTube — Mozilla Firefox"' + FIREFOX):
+        assert G.focused_on_training(cfg()) is False
+
+
+@test
+def the_hold_cap_counts_the_whole_lock_not_each_panel():
+    """Going back to training used to restart the cap, so it never fired."""
+    g = gate_with(0, required_minutes=20, max_hold_minutes=30,
+                  active_from="00:00", active_to="23:59")
+    g.evaluate()
+    started = g.locked_since
+    assert started
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"' + FIREFOX):
+        g.evaluate()
+    assert not g.closed and g.locked_since == started, "training restarted the lock clock"
+
+
+@test
+def the_cap_releases_for_the_rest_of_the_day():
+    g = gate_with(0, required_minutes=20, max_hold_minutes=30,
+                  active_from="00:00", active_to="23:59")
+    g.evaluate()
+    g.locked_since = time.time() - 31 * 60
+    g.evaluate()
+    assert not g.closed
+    g.evaluate()
+    assert not g.closed, "the cap released and then re-locked on the next tick"
 
 
 # ---- when the heartbeat never arrives ------------------------------------- #

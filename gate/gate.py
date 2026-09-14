@@ -81,6 +81,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
 
 # GTK is imported only when a window is actually going to be drawn. `--check`
 # and `--status` are the two things you want to run over SSH, from a cron job,
@@ -142,28 +143,28 @@ DEFAULTS = {
     # Short, because with the focus check doing the real work this is no longer
     # a licence to do something else for two minutes: it only has to outlast a
     # window appearing.
-    "grace_seconds": 20,
+    "grace_seconds": 15,
+    # The first moments of grace, when focus is still falling back to whatever
+    # had it before the panel and has not reached the browser yet. Anything is
+    # excused here; after it, only a browser window that is still loading is.
+    "settle_seconds": 3,
     # No sign of training for this long and the panel comes back. "Sign" is a
     # heartbeat from the hub or a rising disk count — see `training_live`.
     "stall_seconds": 180,
-    # What a training window is called. The gate stands down only while one of
-    # these has focus, so this is the list that decides what "blocking other
-    # applications" means in practice.
+    # What a training window is. Both must hold: the title contains one of the
+    # patterns, and the window belongs to `training_window_class`.
     #
-    # The hub puts "mindbuild" in every title it sets, framed trainer included,
-    # which is why training through the hub is the path that works best. The
-    # rest are the trainers' own titles, for a tab opened directly.
-    "training_window_patterns": [
-        "mindbuild",
-        "Relational N-Back",
-        "CCT",
-        "Syllogimous",
-        "Precision N-Back",
-        "Spatial Rotation",
-        "Attentional Shield",
-        "Synth",
-        "Training archive",
-    ],
+    # Only "mindbuild", because the hub puts it in every title it sets — framed
+    # trainer and archive included. The trainers' own titles used to be here
+    # too, and "CCT" or "Synth" are substrings of half the internet: a YouTube
+    # tab called "Synthwave mix" was a training window. The class check is the
+    # other half of the same fix — a page titled "mindbuild" in some other
+    # browser trains into storage the counter never reads.
+    "training_window_patterns": ["mindbuild"],
+    "training_window_class": "firefox",
+    # How often the gate looks at what is in front of you. Leaving the trainer
+    # is visible for at most this long before the panel is back.
+    "check_every_ms": 500,
     # The same, for a machine where the heartbeat never arrives at all.
     #
     # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
@@ -296,6 +297,38 @@ def active_window_title():
         return None
 
 
+def window_info():
+    """(title, class) of the focused window, or None if it cannot be read."""
+    raw = active_window_title()
+    if raw is None:
+        return None
+    name = cls = ""
+    for line in raw.splitlines():
+        if line.startswith("_NET_WM_NAME"):
+            name = line.split("=", 1)[-1].strip()
+            if len(name) >= 2 and name[0] == name[-1] == '"':
+                name = name[1:-1]
+        elif line.startswith("WM_CLASS"):
+            cls = line.split("=", 1)[-1].strip()
+    return name, cls
+
+
+def hub_host(cfg):
+    return (urlparse(str(cfg.get("hub_url") or "")).hostname or "").lower()
+
+
+def classify_focus(cfg, info):
+    """True, False, or None when the display cannot be read."""
+    if info is None:
+        return None
+    name, cls = info
+    want = str(cfg.get("training_window_class") or "").lower()
+    if want and want not in cls.lower():
+        return False
+    low = name.lower()
+    return any(str(p).lower() in low for p in (cfg.get("training_window_patterns") or []))
+
+
 def focused_on_training(cfg):
     """True, False, or None when the display cannot be read.
 
@@ -304,12 +337,65 @@ def focused_on_training(cfg):
     this says what you are doing *now*, which is the only question a thing
     claiming to block other applications is actually asking.
     """
-    title = active_window_title()
-    if title is None:
-        return None
-    patterns = cfg.get("training_window_patterns") or []
-    low = title.lower()
-    return any(str(p).lower() in low for p in patterns)
+    return classify_focus(cfg, window_info())
+
+
+def is_handoff_placeholder(cfg, info):
+    """Is this the browser still arriving, rather than somewhere else?
+
+    Grace used to excuse whatever had focus, which made Train the way out:
+    press it, switch to anything, and the panel stayed away for the whole
+    grace period, as often as you liked. Now it excuses only what a hand-off
+    actually looks like — the panel's own window, or a browser window that has
+    not finished loading the hub.
+    """
+    if info is None:
+        return True
+    name, cls = info
+    if not name or name == PANEL_TITLE:
+        return True
+    want = str(cfg.get("training_window_class") or "").lower()
+    if want and want not in cls.lower():
+        return False
+    low = name.lower()
+    host = hub_host(cfg)
+    return low in ("mozilla firefox", "new tab — mozilla firefox", "new tab - mozilla firefox") \
+        or bool(host and host in low)
+
+
+def activate_hub_window(cfg):
+    """Put the hub's window in front, if one exists.
+
+    GNOME's focus-stealing prevention will often not hand focus to a window
+    that another process opened, and leaves it behind a notification instead.
+    Without this the hub would open behind the panel, never be focused, and the
+    gate would sit over the only application it is willing to let you use.
+    """
+    try:
+        out = subprocess.run(["wmctrl", "-lx"], capture_output=True, text=True, timeout=2).stdout
+    except Exception:                               # noqa: BLE001
+        return False
+    want = str(cfg.get("training_window_class") or "").lower()
+    patterns = [str(p).lower() for p in (cfg.get("training_window_patterns") or [])]
+    host = hub_host(cfg)
+    best = None
+    for line in out.splitlines():
+        parts = line.split(None, 4)
+        if len(parts) < 4:
+            continue
+        wid, cls = parts[0], parts[2].lower()
+        title = (parts[4] if len(parts) > 4 else "").lower()
+        if want and want not in cls:
+            continue
+        if any(p in title for p in patterns) or (host and host in title) or title == "mozilla firefox":
+            best = wid                              # wmctrl lists oldest first
+    if not best:
+        return False
+    try:
+        subprocess.run(["wmctrl", "-i", "-a", best], capture_output=True, timeout=2)
+    except Exception:                               # noqa: BLE001
+        return False
+    return True
 
 
 # --------------------------------------------------------------------------- #
@@ -431,6 +517,15 @@ class Gate:
         self.seat = None
         self.shown_at = 0.0
         self.launched_at = 0.0
+        # The lock, as distinct from the panel. The panel comes and goes as you
+        # move between the trainer and everything else; the lock lasts from the
+        # first moment you owe minutes until you no longer do. The hold cap is
+        # measured against this, not against the panel — measured against the
+        # panel it restarted every time you went back to training and so never
+        # once fired.
+        self.lock_day = None
+        self.locked_since = 0.0
+        self.released = False
         # Set at startup from `capabilities()`. Shown on the panel, because a
         # gate that cannot block should not look like one that can.
         self.degraded = False
@@ -531,8 +626,12 @@ class Gate:
         self._ungrab()
         browser = str(self.cfg.get("browser") or "firefox")
         url = str(self.cfg.get("hub_url") or "")
+        # A new window rather than a tab in whatever window happens to be open.
+        # A tab joins a window full of other tabs, and the moment the gate
+        # activates that window it activates all of them.
+        args = [browser, "--new-window", url] if "firefox" in os.path.basename(browser) else [browser, url]
         try:
-            subprocess.Popen([browser, url],
+            subprocess.Popen(args,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except (OSError, ValueError) as e:
             # Never leave the panel up with a dead button: say so on the panel
@@ -613,48 +712,39 @@ class Gate:
 
     def held_too_long(self):
         cap = float(self.cfg.get("max_hold_minutes") or 0)
-        return bool(self.window and cap > 0 and
-                    (time.time() - self.shown_at) / 60 >= cap)
+        return bool(cap > 0 and self.locked_since and
+                    (time.time() - self.locked_since) / 60 >= cap)
 
     def training_live(self):
         """Is training happening right now?
 
-        Three signals, and they are not equals.
+        **Focus** is what makes this a gate: a trainer window is in front of
+        you, or something else is, and nothing else describes the present
+        tense. **The heartbeat** and **the disk figure rising** are the fallback
+        for a display that cannot be read, and only that.
 
-        **Focus** is what makes this a gate. It is the only one that describes
-        the present tense: a trainer window is in front of you, or something
-        else is. Everything below it can only say that training happened
-        recently, and "recently" is exactly the loophole — a grace period long
-        enough not to interrupt a real session is long enough to read your
-        email in.
-
-        **The heartbeat** says the hub is open and posting. It exists because
-        Firefox writes localStorage lazily, so the disk can be minutes behind a
-        session in progress, and a panel that reappears over a page you are
-        answering is one that gets uninstalled the same afternoon.
-
-        **The disk figure rising** is the slowest and the only one that
-        survives a browser which will not let the page post at all.
-
-        The last two are the fallback for a display that cannot be read. They
-        are not the normal path.
+        Grace covers the hand-off after Train and nothing more. It ends the
+        moment the hub has focus, and after the first few seconds it excuses
+        only a browser window still loading — so switching elsewhere during it
+        brings the panel back like switching elsewhere at any other time.
         """
         now = time.time()
-        in_grace = bool(self.launched_at and
-                        now - self.launched_at < float(self.cfg.get("grace_seconds") or 0))
+        since_launch = now - self.launched_at if self.launched_at else None
+        in_grace = since_launch is not None and \
+            since_launch < float(self.cfg.get("grace_seconds") or 0)
 
-        # What is on screen beats everything else. Read first, because grace is
-        # only meant to cover the browser appearing — and the moment it has, the
-        # grace must end, which it cannot do if it is checked before focus is.
-        focus = focused_on_training(self.cfg)
+        info = window_info()
+        focus = classify_focus(self.cfg, info)
         if focus is True:
             self.launched_at = 0.0
             return True
         if focus is False:
-            # Something else in front of you. Excused only while the browser
-            # you just asked for may still be opening; never after a trainer
-            # has had focus, because that cleared `launched_at` above.
-            return in_grace
+            if not in_grace:
+                return False
+            activate_hub_window(self.cfg)
+            if since_launch < float(self.cfg.get("settle_seconds") or 0):
+                return True
+            return is_handoff_placeholder(self.cfg, info)
         if in_grace:
             return True
 
@@ -663,31 +753,44 @@ class Gate:
         beat = self.counter.last_beat
         if beat and now - beat < float(self.cfg.get("stall_seconds") or 0):
             return True
-
-        # No heartbeat has ever arrived, so this machine has no fast signal and
-        # the disk scan is all there is. Judge it on the scan's own timescale.
         fuse = float(self.cfg.get("stall_seconds") or 0) if beat \
             else float(self.cfg.get("stall_seconds_no_beat") or 0)
         progress = self.counter.last_progress
         return bool(progress and now - progress < fuse)
 
+    def unlock(self, why):
+        self.locked_since = 0.0
+        self.hide(why)
+        return True
+
     def evaluate(self):
         """Called on a timer. The only place the panel is raised or dropped."""
         self.counter.roll_day()
+        today = self.counter.day
+        if self.lock_day != today:
+            self.lock_day, self.locked_since, self.released = today, 0.0, False
+
         need = float(self.cfg["required_minutes"])
         have = self.counter.minutes
 
-        if self.held_too_long():
-            self.hide("held %s min, the cap" % self.cfg["max_hold_minutes"])
+        if self.released:
+            self.hide("released for today")
             return True
         if not self.cfg.get("armed"):
-            self.hide("disarmed")
-            return True
+            return self.unlock("disarmed")
         if have >= need:
-            self.hide("%.0f of %.0f min done" % (have, need))
-            return True
+            return self.unlock("%.0f of %.0f min done" % (have, need))
         if not within_active_hours(self.cfg):
-            self.hide("outside active hours")
+            return self.unlock("outside active hours")
+
+        # Locked from here until one of the above is true.
+        if not self.locked_since:
+            self.locked_since = time.time()
+        if self.held_too_long():
+            # For the rest of the day, not for five seconds. Released and then
+            # re-locked on the next tick is a cap that does nothing.
+            self.released = True
+            self.hide("locked %s min, the cap — released for today" % self.cfg["max_hold_minutes"])
             return True
         if self.training_live():
             self.hide("training in progress")
@@ -770,6 +873,8 @@ def state(cfg, counter, gate):
         "focusedOnTraining": focused_on_training(cfg),
         "activeWindow": (active_window_title() or "").strip()[:200] or None,
         "trainingLive": gate.training_live() if gate else None,
+        "lockedMinutes": round((time.time() - gate.locked_since) / 60, 1) if gate and gate.locked_since else 0,
+        "releasedForToday": bool(gate and gate.released),
         "error": counter.error,
     }
 
@@ -832,7 +937,7 @@ def main():
         return False
     GLib.timeout_add_seconds(5, settle_and_report)
 
-    GLib.timeout_add_seconds(5, gate.evaluate)
+    GLib.timeout_add(max(200, int(cfg.get("check_every_ms") or 500)), gate.evaluate)
     # The panel shows a number that the scan thread keeps changing underneath
     # it; without this it would show whatever was true when it opened.
     GLib.timeout_add_seconds(5, lambda: (gate.refresh(), True)[1])

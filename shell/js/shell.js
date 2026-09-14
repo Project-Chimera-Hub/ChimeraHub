@@ -316,6 +316,34 @@
     beatTimer = setTimeout(function () { heartbeat(); scheduleHeartbeat(); }, delay);
   }
 
+  /* The gate's config is the quota. The page kept a default of its own, so
+     setting 120 minutes in gate.json locked the machine for 120 while the hub
+     went on saying 20 — two answers to the one question this page exists to
+     answer. Whatever the gate reports wins, and is remembered, so the hub still
+     shows it on a visit when the gate cannot be reached. */
+  function adoptGateSettings(state) {
+    if (!state) return;
+    var changed = false;
+    try {
+      var req = Number(state.required);
+      if (isFinite(req) && req > 0 && String(req) !== localStorage.getItem(QUOTA_KEY)) {
+        localStorage.setItem(QUOTA_KEY, String(req));
+        changed = true;
+      }
+      if (state.caps && typeof state.caps === "object") {
+        var c = JSON.stringify(state.caps);
+        if (c !== localStorage.getItem(CAPS_KEY)) {
+          localStorage.setItem(CAPS_KEY, c);
+          changed = true;
+        }
+      }
+    } catch (e) { /* storage off: the page just keeps its defaults */ }
+    if (changed) {
+      invalidate();
+      if (!$("hub").hidden) renderToday();
+    }
+  }
+
   function heartbeat() {
     var applied = currentCount();
 
@@ -325,6 +353,7 @@
       body: JSON.stringify({ day: Today.utcDay(), minutes: applied.total, bySource: applied.counted }),
     }).then(function (r) { return r.json(); }).then(function (state) {
       beatMisses = 0;
+      adoptGateSettings(state);
       $("gate-state").textContent = state.armed
         ? "Armed. " + fmt(state.required) + " min required; the lock lifts when the day's total reaches it."
         : "Installed, not armed.";
