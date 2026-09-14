@@ -204,6 +204,68 @@ def meeting_the_quota_still_wins_over_a_live_session():
     assert not g.closed
 
 
+# ---- when the heartbeat never arrives ------------------------------------- #
+#
+# Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
+# content. If it does, the fast signal simply does not exist on that machine and
+# the gate has to stay usable on the disk scan alone.
+
+@test
+def a_rising_disk_count_counts_as_training():
+    g = gate_with(5, required_minutes=20, stall_seconds_no_beat=900,
+                  active_from="00:00", active_to="23:59")
+    g.counter.last_progress = time.time()
+    g.evaluate()
+    assert not g.closed, "the panel ignored a disk count that had just gone up"
+
+
+@test
+def with_no_heartbeat_the_fuse_is_the_long_one():
+    """Three minutes is far too short to judge a stall by a signal that lags by
+    minutes; on a scan-only machine that would put the panel over a live page."""
+    g = gate_with(5, required_minutes=20, stall_seconds=180,
+                  stall_seconds_no_beat=900, active_from="00:00", active_to="23:59")
+    g.counter.last_progress = time.time() - 300      # past the short fuse
+    g.evaluate()
+    assert not g.closed, "the short fuse was used on a machine with no heartbeat"
+
+    g.counter.last_progress = time.time() - 901      # past the long one
+    g.evaluate()
+    assert g.closed, "the long fuse never burned down"
+
+
+@test
+def once_a_heartbeat_exists_the_short_fuse_applies():
+    g = gate_with(5, required_minutes=20, stall_seconds=180,
+                  stall_seconds_no_beat=900, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time() - 600          # heard from, but a while ago
+    g.counter.last_progress = time.time() - 300
+    g.evaluate()
+    assert g.closed, "a machine with a working heartbeat used the scan-only fuse"
+
+
+@test
+def a_scan_that_repeats_the_same_total_is_not_progress():
+    """Otherwise every scan renews the lease and the panel never returns."""
+    c = cfg()
+    counter = G.Counter(c)
+    counter.disk = 10.0
+    counter.last_progress = 0.0
+
+    # Stand in for the subprocesses: the bookkeeping under test is what scan()
+    # does with the figure it gets back, not how it gets it.
+    def fake(day_total):
+        with counter._lock:
+            if day_total > counter.disk + 1e-9:
+                counter.last_progress = time.time()
+            counter.disk = day_total
+
+    fake(10.0)
+    assert counter.last_progress == 0.0, "an unchanged total was treated as progress"
+    fake(12.0)
+    assert counter.last_progress > 0, "a rising total was not treated as progress"
+
+
 # ---- active hours -------------------------------------------------------- #
 
 @test

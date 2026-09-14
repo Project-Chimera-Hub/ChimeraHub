@@ -137,6 +137,16 @@ DEFAULTS = {
     # No sign of training for this long and the panel comes back. "Sign" is a
     # heartbeat from the hub or a rising disk count — see `training_live`.
     "stall_seconds": 180,
+    # The same, for a machine where the heartbeat never arrives at all.
+    #
+    # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
+    # content, and if it does there is no fast signal to be had — only the disk
+    # scan, which lags a session by minutes because Firefox writes localStorage
+    # lazily. Judging a stall on that timescale with a three-minute fuse would
+    # put the panel back over a page being actively answered, so when no
+    # heartbeat has ever been seen the fuse is much longer and the scan is the
+    # only thing being watched.
+    "stall_seconds_no_beat": 900,
     # Per-source ceilings, as a share of the counted day. Synth is too easy to
     # be training and CCT was never meant to be the bulk of it, so neither can
     # satisfy a quota alone however long you spend — see shared/quota.js for
@@ -204,6 +214,9 @@ class Counter:
         # measure of a page being open and posting, which is the only
         # fast-moving signal there is while the disk lags behind.
         self.last_beat = 0.0
+        # When the figure on disk last went up. Slow, and the only liveness
+        # signal that survives a browser which will not let the page post.
+        self.last_progress = 0.0
         self.error = None
         self._lock = threading.Lock()
 
@@ -264,7 +277,13 @@ class Counter:
             return
         else:
             with self._lock:
-                self.disk = float(data.get("minutes") or 0)
+                fresh = float(data.get("minutes") or 0)
+                # Strictly greater: a scan that merely confirms the same total
+                # is evidence of nothing, and treating it as progress would
+                # mean the panel never came back.
+                if fresh > self.disk + 1e-9:
+                    self.last_progress = time.time()
+                self.disk = fresh
                 self.by_source = data.get("bySource") or {}
                 self.raw = data.get("raw") or {}
                 self.capped = data.get("capped") or []
@@ -453,8 +472,17 @@ class Gate:
         now = time.time()
         if self.launched_at and now - self.launched_at < float(self.cfg.get("grace_seconds") or 0):
             return True
+
         beat = self.counter.last_beat
-        return bool(beat and now - beat < float(self.cfg.get("stall_seconds") or 0))
+        if beat and now - beat < float(self.cfg.get("stall_seconds") or 0):
+            return True
+
+        # No heartbeat has ever arrived, so this machine has no fast signal and
+        # the disk scan is all there is. Judge it on the scan's own timescale.
+        fuse = float(self.cfg.get("stall_seconds") or 0) if beat \
+            else float(self.cfg.get("stall_seconds_no_beat") or 0)
+        progress = self.counter.last_progress
+        return bool(progress and now - progress < fuse)
 
     def evaluate(self):
         """Called on a timer. The only place the panel is raised or dropped."""
@@ -548,6 +576,8 @@ def state(cfg, counter, gate):
         "withinActiveHours": within_active_hours(cfg),
         "lastScanAgo": round(time.time() - counter.last_scan) if counter.last_scan else None,
         "lastBeatAgo": round(time.time() - counter.last_beat) if counter.last_beat else None,
+        "lastProgressAgo": round(time.time() - counter.last_progress) if counter.last_progress else None,
+        "heartbeatEverSeen": bool(counter.last_beat),
         "trainingLive": gate.training_live() if gate else None,
         "error": counter.error,
     }
@@ -587,10 +617,14 @@ def main():
     def scan_loop():
         while True:
             counter.scan()
-            time.sleep(max(30, int(cfg["scan_every_seconds"])))
+            # While the panel is down the assumption is that training is
+            # happening, and that is exactly when the figure needs to be
+            # current — both to notice the quota being met and, on a machine
+            # with no heartbeat, to notice that it is still moving at all.
+            quick = gate.window is None and counter.minutes < float(cfg["required_minutes"])
+            time.sleep(60 if quick else max(30, int(cfg["scan_every_seconds"])))
 
     threading.Thread(target=scan_loop, daemon=True).start()
-
     server = make_server(cfg, counter, gate)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print("gate: listening on 127.0.0.1:%s, mode=%s, quota=%s min"

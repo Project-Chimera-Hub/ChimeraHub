@@ -92,6 +92,7 @@ quota that could be met by tidying is a quota that will be.
 | `browser` | `firefox` | Must be one `firefox-storage.py` can read, or nothing you do will count. |
 | `grace_seconds` | `120` | After the button, how long before the panel expects to see anything. |
 | `stall_seconds` | `180` | No sign of training for this long and the panel returns. |
+| `stall_seconds_no_beat` | `900` | The same, on a machine where the heartbeat never arrives. |
 | `caps` | `synth 5%`, `cct 20%` | Per-source ceilings as a share of the counted day. `{}` removes them. |
 | `port` | `8787` | Heartbeat listener, bound to `127.0.0.1` only. |
 
@@ -122,6 +123,17 @@ buys is the couple of minutes until that scan lands.
 
 Without it the panel would reappear over a page you were actively answering,
 which is the kind of thing that gets a gate uninstalled the same afternoon.
+
+**The heartbeat may not reach it at all.** Firefox can refuse an `https://`
+page's POST to `http://127.0.0.1` as mixed content. If that is happening here,
+`heartbeatEverSeen` in `curl 127.0.0.1:8787/` stays `false` and there is no fast
+signal to be had. The gate notices and falls back: it watches the disk figure
+rising instead, scans every 60s while the panel is down, and judges a stall on
+`stall_seconds_no_beat` (15 minutes) rather than `stall_seconds` (3), because
+three minutes is far too short a fuse for a signal that lags by minutes.
+
+Scan-only works. It is just coarser — a finished session takes a minute or two
+to register, so the panel can appear briefly after you stop.
 
 One consequence worth knowing: the heartbeat comes from the **hub**. Train
 through `mindbuild/#/rnb` and the panel knows. Open `mindbuild/rnb/` directly in
