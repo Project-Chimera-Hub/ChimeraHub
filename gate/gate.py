@@ -111,6 +111,9 @@ CONFIG = os.path.expanduser("~/.config/mindbuild/gate.json")
 
 TARGET_LABELS = {"mindbuild": "mindbuild", "anki": "Anki"}
 
+# How long a raised window has to actually take focus before the panel returns.
+RAISE_SECONDS = 3.0
+
 # Must not contain any string in `training_window_patterns`. See `show`.
 PANEL_TITLE = "Training required"
 
@@ -236,6 +239,49 @@ def anki_minutes_on(day):
             records = records[0]
         total += float(ae.minutes_per_day(records).get(day, 0.0))
     return total
+
+
+NOTIFY_STATE = os.path.expanduser("~/.config/mindbuild/banners-before-lock")
+
+
+def quiet_notifications(on):
+    """Turn GNOME's notification banners off for the length of a lock.
+
+    A banner is drawn by GNOME Shell above every client window, fullscreen
+    panel included, and the Shell takes the pointer when you hover it — which
+    broke the grab and let a click open whatever sent the notification. They
+    are only banners: notifications still arrive in the message list, and the
+    setting goes back to what it was when the lock lifts.
+
+    What it was is written to a file before it is changed, so a gate that dies
+    mid-lock restores it on its next start rather than leaving you without
+    notifications for good.
+    """
+    try:
+        if on:
+            if os.path.exists(NOTIFY_STATE):
+                return
+            before = subprocess.run(
+                ["gsettings", "get", "org.gnome.desktop.notifications", "show-banners"],
+                capture_output=True, text=True, timeout=3).stdout.strip()
+            if before not in ("true", "false"):
+                return
+            os.makedirs(os.path.dirname(NOTIFY_STATE), exist_ok=True)
+            with open(NOTIFY_STATE, "w") as fh:
+                fh.write(before)
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.notifications",
+                            "show-banners", "false"], capture_output=True, timeout=3)
+        else:
+            if not os.path.exists(NOTIFY_STATE):
+                return
+            with open(NOTIFY_STATE) as fh:
+                before = fh.read().strip()
+            if before in ("true", "false"):
+                subprocess.run(["gsettings", "set", "org.gnome.desktop.notifications",
+                                "show-banners", before], capture_output=True, timeout=3)
+            os.remove(NOTIFY_STATE)
+    except Exception:                               # noqa: BLE001
+        pass
 
 
 def load_config():
@@ -418,12 +464,12 @@ def is_handoff_placeholder(cfg, info):
         or bool(host and host in low)
 
 
-def _activate_matching(score):
-    """Raise the best-scoring window. `score(cls, title)` is 0 for no match."""
+def _find_matching(score):
+    """The best-scoring window id, or None. `score(cls, title)` is 0 for no match."""
     try:
         out = subprocess.run(["wmctrl", "-lx"], capture_output=True, text=True, timeout=2).stdout
     except Exception:                               # noqa: BLE001
-        return False
+        return None
     best, best_score = None, 0
     for line in out.splitlines():
         parts = line.split(None, 4)
@@ -432,18 +478,57 @@ def _activate_matching(score):
         n = score(parts[2].lower(), (parts[4] if len(parts) > 4 else "").lower())
         if n and n >= best_score:                   # ties go to the newest
             best, best_score = parts[0], n
-    if not best:
-        return False
+    return best
+
+
+def activate_window(wid):
     try:
-        subprocess.run(["wmctrl", "-i", "-a", best], capture_output=True, timeout=2)
+        subprocess.run(["wmctrl", "-i", "-a", wid], capture_output=True, timeout=2)
+        return True
     except Exception:                               # noqa: BLE001
         return False
-    return True
+
+
+def _activate_matching(score):
+    wid = _find_matching(score)
+    return bool(wid) and activate_window(wid)
+
+
+def start_application(args):
+    """Start an application as the session would, not as a child of the gate.
+
+    Through the user manager, so it lands in a unit of its own: it does not
+    inherit anything this service is restricted by, and it is not in this
+    service's cgroup — where `systemctl --user restart mindbuild-gate` would
+    kill it along with the gate, taking a Firefox window or an Anki session
+    with it.
+    """
+    passthrough = []
+    for var in ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS",
+                "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "XDG_RUNTIME_DIR", "PATH", "LANG"):
+        if os.environ.get(var):
+            passthrough += ["-E", "%s=%s" % (var, os.environ[var])]
+    if shutil.which("systemd-run"):
+        cmd = ["systemd-run", "--user", "--collect", "--quiet"] + passthrough + ["--"] + list(args)
+    else:
+        cmd = list(args)
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+        return True
+    except (OSError, ValueError) as e:
+        print("gate: could not start %s (%s)" % (args[0], e), file=sys.stderr, flush=True)
+        return False
 
 
 def activate_anki_window(cfg):
+    wid = find_target_window(cfg, "anki")
+    return bool(wid) and activate_window(wid)
+
+
+def _anki_score(cfg):
     want = str(anki_cfg(cfg).get("window_class") or "").lower()
-    return bool(want) and _activate_matching(lambda cls, title: 1 if want in cls else 0)
+    return lambda cls, title: 1 if want and want in cls else 0
 
 
 def classify_anki(cfg, info):
@@ -464,6 +549,11 @@ def activate_hub_window(cfg):
     several windows, and an empty one titled only "Mozilla Firefox" is the
     worst of them to bring forward.
     """
+    wid = find_target_window(cfg, "mindbuild")
+    return bool(wid) and activate_window(wid)
+
+
+def _hub_score(cfg):
     want = str(cfg.get("training_window_class") or "").lower()
     patterns = [str(p).lower() for p in (cfg.get("training_window_patterns") or [])]
     host = hub_host(cfg)
@@ -477,7 +567,11 @@ def activate_hub_window(cfg):
             return 2
         return 1 if title == "mozilla firefox" else 0
 
-    return _activate_matching(score)
+    return score
+
+
+def find_target_window(cfg, target):
+    return _find_matching(_anki_score(cfg) if target == "anki" else _hub_score(cfg))
 
 
 def activate_target_window(cfg, target):
@@ -632,6 +726,10 @@ class Gate:
         # once fired.
         self.launched_target = "mindbuild"
         self.launch_error = None
+        # When the chosen window was last raised; see `training_live`.
+        self.raised_at = 0.0
+        # The focus read by the last decision, for `show` to act on.
+        self.last_info = None
         # When the focused window was last readable. See `training_live`.
         self.focus_seen_at = 0.0
         self.buttons = {}
@@ -646,8 +744,19 @@ class Gate:
 
     def show(self):
         if self.window:
+            # Something other than the panel has focus while the panel should
+            # be in front: a notification clicked, a window raised by its
+            # application. Showing a window that already exists did nothing,
+            # so the panel sat behind whatever came forward. Take the screen,
+            # and the input, back.
+            info = self.last_info
+            if info is not None and info[0] != PANEL_TITLE:
+                self.window.present()
+                if self.cfg.get("mode") == "grab" and not self.seat:
+                    self._grab_soon()
             self.refresh()
             return
+        quiet_notifications(True)
         self.shown_at = time.time()
 
         # Deliberately not "mindbuild". The panel's own title is matched against
@@ -696,6 +805,9 @@ class Gate:
             win.fullscreen()
 
         self.window = win
+        # Another client taking the grab — GNOME Shell does, for a notification
+        # under the pointer — used to end it for good.
+        win.connect("grab-broken-event", lambda *_: self._grab_lost())
         if self.cfg.get("mode") == "grab":
             # Not straight after show_all(). A window that has been asked to
             # appear is not yet a window on screen, and X refuses a grab on it
@@ -727,6 +839,8 @@ class Gate:
         text = "<big>%s</big>" % "\n".join(lines)
         if self.launch_error:
             text += "\n<b>%s</b>" % GLib.markup_escape_text(self.launch_error)
+        elif self.launched_at:
+            text += "\n<i>Opening %s\u2026</i>" % TARGET_LABELS.get(self.launched_target, "")
         if self.counter.capped:
             text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
                 ", ".join(self.counter.capped))
@@ -748,22 +862,24 @@ class Gate:
     # -- the hand-off ----------------------------------------------------- #
 
     def launch(self, target="mindbuild"):
-        """Bring the chosen application forward, opening it only if it is not.
+        """Bring the chosen application forward, starting it only if it is not open.
 
-        The panel goes first — grab and window both. A gate still holding the
-        keyboard hands over a window nobody can type into, and a fullscreen
-        panel still on top is exactly what a window being raised ends up behind.
-
-        An open window is reused rather than another one started. Each press
-        used to open a fresh Firefox window, and three presses left three hubs,
-        one of them empty.
+        The panel stays up until there is a window to hand over to. It used to
+        step aside on the press, and when nothing then appeared — every Anki
+        press, while snap-confine was failing — you were left free for the
+        whole grace period. Now waiting happens behind the panel, and it steps
+        aside only for a window that exists.
         """
         self.launched_at = time.time()
         self.launched_target = target
         self.launch_error = None
-        self.hide("handing off to %s" % target)
+        self.raised_at = 0.0
 
-        if activate_target_window(self.cfg, target):
+        wid = find_target_window(self.cfg, target)
+        if wid:
+            self.hide("handing off to %s" % target)
+            activate_window(wid)
+            self.raised_at = time.time()
             return
 
         if target == "anki":
@@ -775,16 +891,19 @@ class Gate:
             args = [command, "--new-window", url] if "firefox" in os.path.basename(command) \
                 else [command, url]
             key = '"browser"'
-        try:
-            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except (OSError, ValueError) as e:
-            # The panel will be back on the next tick; say why on it, rather
-            # than in a log nobody has open.
-            print("gate: could not start %s (%s)" % (command, e), file=sys.stderr, flush=True)
+        if not start_application(args):
             self.launch_error = "Could not start %s. Set %s in %s" % (command, key, CONFIG)
             self.launched_at = 0.0
+        print("gate: starting %s" % " ".join(args), flush=True)
+        self.refresh()
 
     # -- the grab --------------------------------------------------------- #
+
+    def _grab_lost(self):
+        self.seat = None
+        if self.window and self.cfg.get("mode") == "grab":
+            self._grab_soon()
+        return False
 
     def _grab_soon(self, attempts=20):
         """Retry the grab every 250ms until it holds or the window is gone."""
@@ -887,6 +1006,7 @@ class Gate:
         in_grace = bool(self.launched_at and now - self.launched_at < grace)
 
         info = window_info()
+        self.last_info = info
         if info is not None:
             self.focus_seen_at = now
         pending = self.unmet()
@@ -896,17 +1016,29 @@ class Gate:
         for name in pending:
             if classifiers[name](self.cfg, info) is True:
                 self.launched_at = 0.0
+                self.raised_at = 0.0
+                self.launch_error = None
                 return True
 
-        if in_grace:
-            # The chosen application is still on its way. Rather than judge
-            # whatever happens to have focus meanwhile — which put the panel
-            # back over Anki while its window was still being created — keep
-            # pulling the application forward until it arrives. That also
-            # makes grace useless as an exit: anything else you switch to is
-            # replaced by the application you picked within half a second.
-            activate_target_window(self.cfg, self.launched_target)
-            return True
+        if self.launched_at:
+            if in_grace:
+                wid = find_target_window(self.cfg, self.launched_target)
+                if not wid:
+                    # Still starting. The panel stays where it is — up, and
+                    # holding input — so waiting is not an exit.
+                    return False
+                if not self.raised_at:
+                    self.raised_at = now
+                # A few seconds to take focus once raised. If the window exists
+                # and still will not come forward, the panel returns rather
+                # than leaving you wherever you were.
+                if now - self.raised_at < RAISE_SECONDS:
+                    activate_window(wid)
+                    return True
+            elif not self.launch_error and not find_target_window(self.cfg, self.launched_target):
+                self.launch_error = "%s did not open." % TARGET_LABELS.get(self.launched_target, "It")
+            self.launched_at = 0.0
+            self.raised_at = 0.0
 
         if info is not None:
             return False
@@ -933,6 +1065,7 @@ class Gate:
     def unlock(self, why):
         self.locked_since = 0.0
         self.hide(why)
+        quiet_notifications(False)
         return True
 
     def evaluate(self):
@@ -960,6 +1093,7 @@ class Gate:
             # re-locked on the next tick is a cap that does nothing.
             self.released = True
             self.hide("locked %s min, the cap — released for today" % self.cfg["max_hold_minutes"])
+            quiet_notifications(False)
             return True
         if self.training_live():
             self.hide("training in progress")
@@ -1078,6 +1212,9 @@ def main():
         return
 
     load_gtk()
+    # A previous run that died mid-lock left banners off. Put them back; the
+    # next lock turns them off again if it is still owed.
+    quiet_notifications(False)
     gate = Gate(cfg, counter)
 
     # The scan shells out to two processes and takes seconds; on the GTK thread
@@ -1113,12 +1250,19 @@ def main():
     # The panel shows a number that the scan thread keeps changing underneath
     # it; without this it would show whatever was true when it opened.
     GLib.timeout_add_seconds(5, lambda: (gate.refresh(), True)[1])
+    # `systemctl --user stop` sends SIGTERM, and Python's default for that is to
+    # die on the spot — past the `finally` below, leaving notification banners
+    # off. Quit the loop instead, so the cleanup runs.
+    import signal
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, sig, lambda *_: (Gtk.main_quit(), False)[1])
     try:
         Gtk.main()
     finally:
         # Whatever brought the loop down — Ctrl-C, a systemd stop, an exception
-        # — the input devices go back.
+        # — the input devices and the notifications go back.
         gate._ungrab()
+        quiet_notifications(False)
 
 
 if __name__ == "__main__":

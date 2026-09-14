@@ -19,10 +19,12 @@ WorkingDirectory=%h/mindbuild
 Restart=on-failure
 RestartSec=30
 
-# The counting shells out to Firefox's own storage and to node; neither needs
-# any privilege this session does not already have.
-NoNewPrivileges=yes
-PrivateTmp=yes
+# No NoNewPrivileges, no PrivateTmp. Both were here "because nothing needs
+# them", and the gate launches applications: a snap starts through snap-confine,
+# which needs privileges no_new_privs forbids, so every Anki button press failed
+# with "snap-confine is packaged without necessary permissions" into a log
+# nobody could see. Applications are started outside this unit anyway — see
+# start_application in gate.py.
 
 [Install]
 WantedBy=graphical-session.target

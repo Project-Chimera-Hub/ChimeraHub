@@ -25,9 +25,16 @@ import gate as G
 # would silently be about whatever window was focused when it ran. Unreadable is
 # the neutral default; `focus()` below says otherwise per test.
 G.active_window_title = lambda: None
-ACTIVATED = []
-G.activate_hub_window = lambda cfg: ACTIVATED.append("mindbuild") or False
-G.activate_anki_window = lambda cfg: ACTIVATED.append("anki") or False
+# Nothing in the suite may act on the real desktop: no windows raised, no
+# applications started, and above all no notification setting changed — the
+# gate may be mid-lock on the machine running these tests.
+ACTIVATED, STARTED = [], []
+WINDOWS = {"mindbuild": "0xHUB", "anki": "0xANKI"}
+_real_quiet = G.quiet_notifications
+G.quiet_notifications = lambda on: None
+G.find_target_window = lambda cfg, target: WINDOWS.get(target)
+G.activate_window = lambda wid: ACTIVATED.append({"0xHUB": "mindbuild", "0xANKI": "anki"}.get(wid, wid)) or True
+G.start_application = lambda args: STARTED.append(list(args)) or True
 
 cases = []
 def test(fn): cases.append(fn); return fn
@@ -332,6 +339,7 @@ def during_grace_the_chosen_application_is_pulled_back_in_front():
     with focus('_NET_WM_NAME(UTF8_STRING) = "Discord | Friends — Mozilla Firefox"' + FIREFOX):
         g.evaluate()
     assert ACTIVATED == ["mindbuild"], "grace did not pull the hub back in front"
+    assert not g.closed
 
 
 @test
@@ -498,16 +506,89 @@ def an_unreadable_blip_does_not_flap_the_panel():
 @test
 def pressing_a_button_reuses_an_open_window():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    started = []
-    original_popen, original_hub = G.subprocess.Popen, G.activate_hub_window
-    G.subprocess.Popen = lambda *a, **k: started.append(a)
-    G.activate_hub_window = lambda cfg: True          # a hub window exists
+    g.show()
+    del STARTED[:], ACTIVATED[:]
+    g.launch("mindbuild")
+    assert STARTED == [], "a new window was opened although one was already there"
+    assert ACTIVATED == ["mindbuild"] and not g.closed
+
+
+@test
+def with_nothing_open_the_panel_waits_up_rather_than_setting_you_free():
+    """Every failed Anki press used to leave a minute of doing anything."""
+    g = gate_with_anki(5, 5)
+    g.show()
+    del STARTED[:]
+    WINDOWS.pop("anki")
     try:
-        g.launch("mindbuild")
+        g.launch("anki")
+        assert STARTED and STARTED[0][0] == "anki-desktop", "Anki was not started"
+        assert g.closed, "the panel stepped aside before there was a window"
+        with focus('_NET_WM_NAME(UTF8_STRING) = "Cowboy Bebop - YouTube"' + FIREFOX):
+            g.evaluate()
+        assert g.closed, "waiting for Anki let you out"
     finally:
-        G.subprocess.Popen, G.activate_hub_window = original_popen, original_hub
-    assert started == [], "a new window was opened although one was already there"
-    assert g.launched_at and not g.closed
+        WINDOWS["anki"] = "0xANKI"
+
+
+@test
+def the_panel_steps_aside_once_the_window_exists():
+    g = gate_with_anki(5, 5)
+    g.show()
+    g.launched_at, g.launched_target, g.raised_at = time.time() - 8, "anki", 0.0
+    del ACTIVATED[:]
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Claude"\nWM_CLASS(STRING) = "com.anthropic.claude", "x"'):
+        g.evaluate()
+    assert not g.closed and ACTIVATED == ["anki"]
+
+
+@test
+def a_window_that_will_not_take_focus_brings_the_panel_back():
+    g = gate_with_anki(5, 5)
+    g.launched_at, g.launched_target = time.time() - 8, "anki"
+    g.raised_at = time.time() - (G.RAISE_SECONDS + 1)
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Claude"\nWM_CLASS(STRING) = "com.anthropic.claude", "x"'):
+        g.evaluate()
+    assert g.closed, "a raise that never took left the panel down"
+
+
+@test
+def an_application_that_never_opens_says_so():
+    g = gate_with_anki(5, 5)
+    g.launched_at, g.launched_target = time.time() - 61, "anki"
+    WINDOWS.pop("anki")
+    try:
+        g.evaluate()
+    finally:
+        WINDOWS["anki"] = "0xANKI"
+    assert g.closed and g.launch_error and "Anki" in g.launch_error
+
+
+@test
+def banners_are_restored_exactly_as_they_were():
+    import tempfile
+    calls, state = [], {"value": "true"}
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        class R:                                    # noqa: D401
+            stdout = state["value"] + "\n"
+        if cmd[1] == "set":
+            state["value"] = cmd[-1]
+        return R()
+
+    real_run, real_path = G.subprocess.run, G.NOTIFY_STATE
+    G.subprocess.run = run
+    G.NOTIFY_STATE = os.path.join(tempfile.mkdtemp(), "banners")
+    try:
+        _real_quiet(True)
+        assert state["value"] == "false"
+        _real_quiet(True)                           # a second lock tick
+        assert open(G.NOTIFY_STATE).read() == "true", "the saved value was overwritten by the lock's own"
+        _real_quiet(False)
+        assert state["value"] == "true" and not os.path.exists(G.NOTIFY_STATE)
+    finally:
+        G.subprocess.run, G.NOTIFY_STATE = real_run, real_path
 
 
 # ---- when the heartbeat never arrives ------------------------------------- #
