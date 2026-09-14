@@ -86,6 +86,46 @@
   }
 
   /* ---------------------------------------------------------------- *
+   * Counting, at most once per change                                *
+   * ---------------------------------------------------------------- */
+
+  /*
+   * `Today.minutesOn()` runs every adapter over the whole of localStorage.
+   * On a real account that is ~30ms of synchronous main-thread work — one
+   * Syllogimous history of a thousand items is half of it on its own.
+   *
+   * Thirty milliseconds is nothing on a hub that is sitting still. It is not
+   * nothing inside a frame presenting stimuli on a fixed interval, and this
+   * shell was doing it every thirty seconds *while a trainer was playing*,
+   * because the heartbeat recounted on a timer and the timer did not care what
+   * was on screen. The two trainers that suffer are exactly the two that are
+   * timing-critical — an n-back with millisecond pacing and an arithmetic task
+   * that adapts to your response time — and a stall lands as a mistimed
+   * stimulus or a dropped response rather than as anything that looks like a
+   * bug in the shell.
+   *
+   * So: count when the answer can have changed, and never on a clock. A
+   * trainer writing its progress raises a storage event in every other frame
+   * on this origin, which is precisely the moment the number is stale and no
+   * other moment is.
+   */
+  var counted = null;
+
+  function currentCount() {
+    if (counted) return counted;
+    var raw = Today.minutesOn(), by = {};
+    /* Only trainers reach the policy. The archive cannot appear in `raw` — it
+       has no adapter pointed at its own storage — but the filter keeps that
+       true of anything added later without someone having to remember. */
+    TRAINERS.forEach(function (t) { if (raw[t.id]) by[t.id] = raw[t.id]; });
+    counted = QuotaPolicy.apply(by, caps());
+    return counted;
+  }
+
+  /** The next read recounts. Cheap, and the only way the count goes stale. */
+  function invalidate() { counted = null; }
+
+  /* ---------------------------------------------------------------- *
    * Rendering                                                        *
    * ---------------------------------------------------------------- */
 
@@ -95,14 +135,7 @@
   }
 
   function renderToday() {
-    var raw = Today.minutesOn();
-    /* Only trainers reach the policy. The archive cannot appear in `raw` — it
-       has no adapter pointed at its own storage — but the filter is here so
-       that stays true of anything added later without someone remembering. */
-    var by = {};
-    TRAINERS.forEach(function (t) { if (raw[t.id]) by[t.id] = raw[t.id]; });
-
-    var q = QuotaPolicy.apply(by, caps());
+    var q = currentCount();
     var total = q.total;
 
     $("fig").innerHTML = fmt(total) + "<small> min today</small>";
@@ -204,6 +237,10 @@
     $("stage").hidden = true;
     $("hub").hidden = false;
     document.title = "mindbuild";
+    /* Recount here rather than on a timer: returning to the hub is both the
+       moment the number is worth having and a moment when nothing is being
+       timed, so this is the one place the sweep is free. */
+    invalidate();
     renderToday();
   }
 
@@ -264,21 +301,35 @@
      showing as one. */
   var GATE = "http://127.0.0.1:8787";
 
+  /* No gate on most machines, so the common case is a request that fails. Two
+     things follow: it must not recount to build a body nobody reads, and it
+     must stop asking so often — an unreachable localhost POST every thirty
+     seconds is a console full of network errors and a wakeup for nothing. */
+  var beatMisses = 0;
+  var beatTimer = null;
+
+  function scheduleHeartbeat() {
+    clearTimeout(beatTimer);
+    /* 30s while a gate is answering; backing off to five minutes once it is
+       clear there is not one. Any success resets it. */
+    var delay = beatMisses >= 3 ? 300000 : 30000;
+    beatTimer = setTimeout(function () { heartbeat(); scheduleHeartbeat(); }, delay);
+  }
+
   function heartbeat() {
-    var raw = Today.minutesOn(), by = {};
-    TRAINERS.forEach(function (t) { if (raw[t.id]) by[t.id] = raw[t.id]; });
-    var applied = QuotaPolicy.apply(by, caps());
-    var total = applied.total;
+    var applied = currentCount();
 
     fetch(GATE + "/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ day: Today.utcDay(), minutes: total, bySource: applied.counted }),
+      body: JSON.stringify({ day: Today.utcDay(), minutes: applied.total, bySource: applied.counted }),
     }).then(function (r) { return r.json(); }).then(function (state) {
+      beatMisses = 0;
       $("gate-state").textContent = state.armed
         ? "Armed. " + fmt(state.required) + " min required; the lock lifts when the day's total reaches it."
         : "Installed, not armed.";
     }).catch(function () {
+      beatMisses++;
       $("gate-state").textContent =
         "Not running on this machine. The quota above is advice only until the gate is installed.";
     });
@@ -321,9 +372,18 @@
     handOffToArchive(files);
   });
 
-  window.addEventListener("storage", function () { if (!$("hub").hidden) renderToday(); });
-  setInterval(function () { if (!$("hub").hidden) renderToday(); }, 15000);
+  /* The one signal that the day's total has moved. It fires in this document
+     because the write happened in the frame, which is a different browsing
+     context on the same origin — so the meter follows a session without the
+     shell polling for it and without the trainer reporting anything. */
+  window.addEventListener("storage", function () {
+    invalidate();
+    if (!$("hub").hidden) renderToday();
+  });
+
+  /* Coming back to the hub is the other moment the number is worth having, and
+     it is a moment when nothing is being timed. */
   setInterval(tick, 1000);
-  setInterval(heartbeat, 30000);
+  scheduleHeartbeat();
   heartbeat();
 })();
