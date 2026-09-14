@@ -177,6 +177,81 @@ test("every key the shell watches is one an adapter recognises", () => {
   }
 });
 
+/* ------------------------------------------------------------------ *
+ * The quota's caps                                                    *
+ * ------------------------------------------------------------------ *
+ *
+ * A cap is a share of the *counted* day, not the raw one. Every case below
+ * turns on that distinction, and getting it backwards is the difference
+ * between "synth can never carry a quota" and "synth can carry one slowly".
+ */
+
+const Q = require("../shared/quota.js");
+const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.01, `${what}: ${a} ≠ ${b}`);
+
+test("an uncapped day counts every minute of itself", () => {
+  near(Q.apply({ rnb: 12, rotation: 8 }).total, 20, "uncapped total");
+});
+
+test("synth alone can never satisfy a quota, however long it runs", () => {
+  near(Q.apply({ synth: 600 }).total, 0, "ten hours of synth");
+});
+
+test("cct alone can never satisfy a quota either", () => {
+  near(Q.apply({ cct: 600 }).total, 0, "ten hours of cct");
+});
+
+test("a capped source under its ceiling is counted whole", () => {
+  const r = Q.apply({ rnb: 20, synth: 1 });
+  near(r.total, 21, "total");
+  near(r.counted.synth, 1, "synth");
+  assert.deepStrictEqual(r.capped, [], "an uncapped source was reported as capped");
+});
+
+test("both caps at their ceiling supply a quarter of the day", () => {
+  /* 15 uncapped, both capped sources effectively unlimited: the fixed point is
+     15 / (1 - 0.25) = 20, of which synth may be 5% and cct 20%. */
+  const r = Q.apply({ rnb: 15, synth: 600, cct: 600 });
+  near(r.total, 20, "total");
+  near(r.counted.synth, 1, "synth at 5% of 20");
+  near(r.counted.cct, 4, "cct at 20% of 20");
+});
+
+test("a capped source keeps its raw figure alongside the counted one", () => {
+  const r = Q.apply({ rnb: 15, cct: 600 });
+  near(r.raw.cct, 600, "raw cct");
+  assert.ok(r.counted.cct < r.raw.cct, "counted was not below raw");
+  assert.deepStrictEqual(r.capped, ["cct"]);
+});
+
+test("capping never invents time", () => {
+  for (const day of [{ rnb: 3, cct: 99 }, { synth: 7, cct: 7 }, { rotation: 1, synth: 40 }]) {
+    const r = Q.apply(day);
+    const rawTotal = Object.values(day).reduce((a, b) => a + b, 0);
+    assert.ok(r.total <= rawTotal + 1e-9, `counted ${r.total} exceeded raw ${rawTotal}`);
+    for (const s of Object.keys(r.counted)) {
+      assert.ok(r.counted[s] <= day[s] + 1e-9, `${s} counted above its raw minutes`);
+    }
+  }
+});
+
+test("an empty day survives the policy", () => {
+  const r = Q.apply({});
+  near(r.total, 0, "total");
+  assert.deepStrictEqual(r.capped, []);
+});
+
+test("removing the caps counts everything", () => {
+  near(Q.apply({ synth: 50, cct: 50 }, {}).total, 100, "uncapped by configuration");
+});
+
+test("the archive cannot be rescued by a cap it is not in", () => {
+  /* The archive never reaches the policy, but if it ever did it must not add
+     minutes: it is not in the caps and would be treated as uncapped training. */
+  const r = Q.apply({ rnb: 10 });
+  assert.ok(!("archive" in r.counted), "the archive appeared in a counted day");
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {

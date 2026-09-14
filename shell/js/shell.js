@@ -42,8 +42,22 @@
       what: "Grapheme–colour association" },
   ];
 
+  /* Stageable, but never a trainer.
+   *
+   * The archive was in neither list to begin with, so `#/archive` matched the
+   * route and then found nothing to open, fell through to the hub, and the only
+   * way in was the sidebar link — which is a full page navigation out of the
+   * shell, to a page with no way back. That is the whole of "you cannot get
+   * back to the menu": not a missing button, a missing entry.
+   *
+   * It stays out of TRAINERS because TRAINERS is what the meter sums. Being
+   * openable and being training are different things, and this is the one app
+   * where they come apart. */
+  var ARCHIVE = { id: "archive", name: "Training archive", path: "archive/",
+                  colour: "var(--dim)", what: "The record. Not training." };
+
   var byId = {};
-  TRAINERS.forEach(function (t) { byId[t.id] = t; });
+  TRAINERS.concat([ARCHIVE]).forEach(function (t) { byId[t.id] = t; });
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -60,6 +74,17 @@
     return isFinite(n) && n > 0 ? n : 20;
   }
 
+  var CAPS_KEY = "mindbuild.quota.caps";
+
+  /** Per-source ceilings as a share of the counted day. See shared/quota.js. */
+  function caps() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CAPS_KEY) || "null");
+      if (c && typeof c === "object") return c;
+    } catch (e) { /* fall through to the defaults */ }
+    return QuotaPolicy.DEFAULT_CAPS;
+  }
+
   /* ---------------------------------------------------------------- *
    * Rendering                                                        *
    * ---------------------------------------------------------------- */
@@ -70,9 +95,15 @@
   }
 
   function renderToday() {
-    var by = Today.minutesOn();
-    var total = 0;
-    TRAINERS.forEach(function (t) { total += by[t.id] || 0; });
+    var raw = Today.minutesOn();
+    /* Only trainers reach the policy. The archive cannot appear in `raw` — it
+       has no adapter pointed at its own storage — but the filter is here so
+       that stays true of anything added later without someone remembering. */
+    var by = {};
+    TRAINERS.forEach(function (t) { if (raw[t.id]) by[t.id] = raw[t.id]; });
+
+    var q = QuotaPolicy.apply(by, caps());
+    var total = q.total;
 
     $("fig").innerHTML = fmt(total) + "<small> min today</small>";
 
@@ -86,7 +117,7 @@
     var bar = $("bar");
     bar.textContent = "";
     TRAINERS.forEach(function (t) {
-      var m = by[t.id] || 0;
+      var m = q.counted[t.id] || 0;
       if (m <= 0) return;
       var seg = document.createElement("div");
       seg.className = "bar__seg";
@@ -97,19 +128,32 @@
     });
 
     var need = quota() - total;
-    var q = $("quota");
-    q.className = "quota" + (need <= 0 ? " met" : "");
-    q.innerHTML = need <= 0
+    var el = $("quota");
+    el.className = "quota" + (need <= 0 ? " met" : "");
+    el.innerHTML = need <= 0
       ? "<b>Quota met.</b> " + fmt(quota()) + " min was the ask."
       : "<b>" + fmt(need) + " min</b> to go of " + fmt(quota()) + ".";
+
+    /* Said out loud, because a capped day is otherwise a day where the number
+       is smaller than the time and nothing on the page explains why. */
+    var why = QuotaPolicy.explain(q, caps());
+    if (why) {
+      var span = document.createElement("span");
+      span.className = "dim";
+      span.textContent = why;
+      el.appendChild(span);
+    }
 
     /* Cards carry their own share, so the grid answers "what have I neglected"
        without a second pass over the page. */
     TRAINERS.forEach(function (t) {
       var el = document.getElementById("today-" + t.id);
       if (!el) return;
-      var m = by[t.id] || 0;
-      el.innerHTML = m > 0 ? "<b>" + fmt(m) + " min</b> today" : "—";
+      var m = q.counted[t.id] || 0, was = q.raw[t.id] || 0;
+      el.innerHTML = was <= 0 ? "—"
+        : m < was - 0.5
+          ? "<b>" + fmt(m) + " min</b> counted of " + fmt(was)
+          : "<b>" + fmt(m) + " min</b> today";
     });
   }
 
@@ -177,6 +221,40 @@
   }
 
   /* ---------------------------------------------------------------- *
+   * Files dropped on the shell                                       *
+   * ---------------------------------------------------------------- */
+
+  /**
+   * Open the archive and give it the files.
+   *
+   * Same origin, so the archive's own `takeFiles` is callable directly — no
+   * postMessage protocol, and nothing added to the archive for the shell's
+   * benefit. If it is not ready yet the drop waits for its load rather than
+   * being dropped on the floor, because a file the user has already let go of
+   * cannot be asked for again.
+   */
+  function handOffToArchive(files) {
+    var wasOpen = current === "archive";
+    location.hash = "#/archive";
+
+    var tries = 0;
+    (function give() {
+      var frame = $("frame");
+      var win = null;
+      try { win = frame.contentWindow; } catch (e) { /* not ready */ }
+
+      if (win && typeof win.takeFiles === "function") {
+        win.takeFiles(files);
+        if (!wasOpen) win.focus();
+        return;
+      }
+      /* Twenty seconds at 250ms. The archive is a local page; if it has not
+         come up by then something is wrong that retrying will not fix. */
+      if (++tries < 80) setTimeout(give, 250);
+    })();
+  }
+
+  /* ---------------------------------------------------------------- *
    * The gate                                                         *
    * ---------------------------------------------------------------- */
 
@@ -187,13 +265,15 @@
   var GATE = "http://127.0.0.1:8787";
 
   function heartbeat() {
-    var by = Today.minutesOn(), total = 0;
-    TRAINERS.forEach(function (t) { total += by[t.id] || 0; });
+    var raw = Today.minutesOn(), by = {};
+    TRAINERS.forEach(function (t) { if (raw[t.id]) by[t.id] = raw[t.id]; });
+    var applied = QuotaPolicy.apply(by, caps());
+    var total = applied.total;
 
     fetch(GATE + "/heartbeat", {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ day: Today.utcDay(), minutes: total, bySource: by }),
+      body: JSON.stringify({ day: Today.utcDay(), minutes: total, bySource: applied.counted }),
     }).then(function (r) { return r.json(); }).then(function (state) {
       $("gate-state").textContent = state.armed
         ? "Armed. " + fmt(state.required) + " min required; the lock lifts when the day's total reaches it."
@@ -210,7 +290,7 @@
 
   renderGrid();
   route();
-  $("archive-link").href = BASE + "archive/";
+  $("archive-link").href = "#/archive";
   $("back").addEventListener("click", function () { location.hash = ""; });
   window.addEventListener("hashchange", route);
 
@@ -218,6 +298,29 @@
      this origin but its own — so the meter follows a session as it happens,
      without the shell having to ask the trainer anything. The interval is the
      fallback for the apps that batch their writes. */
+  /* A file dropped on any page the browser has not been told to expect one on
+     is a navigation: the window leaves for the JSON and the shell is gone,
+     which reads exactly like "it would not take the file". The archive guards
+     its own drop zone, but the hub, the stage bar and every trainer are all
+     fair game, and the target is small on a page this size.
+     
+     So the shell catches the whole window, and rather than merely refusing the
+     drop it does the obvious thing with it — opens the archive and hands the
+     file over. Dropping an export anywhere in the app now imports it. */
+  window.addEventListener("dragover", function (e) {
+    if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  });
+
+  window.addEventListener("drop", function (e) {
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    e.preventDefault();
+    handOffToArchive(files);
+  });
+
   window.addEventListener("storage", function () { if (!$("hub").hidden) renderToday(); });
   setInterval(function () { if (!$("hub").hidden) renderToday(); }, 15000);
   setInterval(tick, 1000);

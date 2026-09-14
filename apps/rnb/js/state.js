@@ -194,7 +194,10 @@ const state = {
   lastSnap: null,         // the interval just closed, still open to a late press
   buzzTimer: null,
   glyphMap: null, cells: [],
-  sessionStart: null, keyIndex: {}, traceUntil: null, moveArrowAxis: null,
+  /* `sessionStart` opens the segment running now; `activeMs` is every segment
+     already closed by a pause. A block's time is the sum, never the wall clock
+     between its start and its end — see `stopBlock`. */
+  sessionStart: null, activeMs: 0, keyIndex: {}, traceUntil: null, moveArrowAxis: null,
   autoTimer: null, autoAt: 0,
 };
 

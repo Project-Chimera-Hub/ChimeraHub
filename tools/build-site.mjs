@@ -108,6 +108,10 @@ for (const f of SHARED_FROM_ARCHIVE) {
   fs.copyFileSync(path.join(ROOT, "apps", "archive", "js", f),
                   path.join(DIST, "shared", f));
 }
+/* Code that is the shell's and the gate's but nobody's app. The quota policy
+   lives here rather than in the archive because the archive must never apply
+   it: one records what happened, the other decides what it was worth. */
+copyDir(path.join(ROOT, "shared"), path.join(DIST, "shared"));
 
 log("[copy] shell");
 copyDir(path.join(ROOT, "shell"), DIST);

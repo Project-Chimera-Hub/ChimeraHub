@@ -105,6 +105,11 @@ DEFAULTS = {
     "max_hold_minutes": 180,
     "scan_every_seconds": 120,
     "port": 8787,
+    # Per-source ceilings, as a share of the counted day. Synth is too easy to
+    # be training and CCT was never meant to be the bulk of it, so neither can
+    # satisfy a quota alone however long you spend — see shared/quota.js for
+    # what that means arithmetically. `{}` removes every cap.
+    "caps": {"synth": 0.05, "cct": 0.20},
 }
 
 
@@ -160,6 +165,8 @@ class Counter:
         self.disk = 0.0
         self.beat = 0.0
         self.by_source = {}
+        self.raw = {}
+        self.capped = []
         self.last_scan = 0.0
         self.error = None
         self._lock = threading.Lock()
@@ -188,7 +195,8 @@ class Counter:
         today = utc_day()
         with self._lock:
             if today != self.day:
-                self.day, self.disk, self.beat, self.by_source = today, 0.0, 0.0, {}
+                self.day, self.disk, self.beat = today, 0.0, 0.0
+            self.by_source, self.raw, self.capped = {}, {}, []
 
     def scan(self, roll=True):
         """firefox-storage.py into a temp dir, count.js over the result."""
@@ -202,7 +210,8 @@ class Counter:
                  "--outdir", tmp],
                 check=True, capture_output=True, timeout=120)
             out = subprocess.run(
-                ["node", os.path.join(HERE, "count.js"), tmp, self.day],
+                ["node", os.path.join(HERE, "count.js"), tmp, self.day,
+                 json.dumps(self.cfg.get("caps") or {})],
                 check=True, capture_output=True, timeout=60, text=True)
             data = json.loads(out.stdout)
         except Exception as e:                      # noqa: BLE001
@@ -215,6 +224,8 @@ class Counter:
             with self._lock:
                 self.disk = float(data.get("minutes") or 0)
                 self.by_source = data.get("bySource") or {}
+                self.raw = data.get("raw") or {}
+                self.capped = data.get("capped") or []
                 self.beat = 0.0     # the scan is now the authority
                 self.error = None
         finally:
@@ -396,6 +407,9 @@ def state(cfg, counter, gate):
         "required": cfg["required_minutes"],
         "minutes": round(counter.minutes, 1),
         "bySource": counter.by_source,
+        "raw": counter.raw,
+        "capped": counter.capped,
+        "caps": cfg.get("caps") or {},
         "closed": bool(gate.window) if gate else False,
         "activeHours": "%s–%s" % (cfg["active_from"], cfg["active_to"]),
         "withinActiveHours": within_active_hours(cfg),
