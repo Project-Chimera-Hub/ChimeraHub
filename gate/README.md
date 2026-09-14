@@ -106,6 +106,16 @@ the heartbeat claimed, so inflating it buys two minutes and nothing else.
 **The archive is never counted.** Sorting your record is not training, and a
 quota that could be met by tidying is a quota that will be.
 
+## If the heartbeat never arrives, check your extensions
+
+A privacy extension can block it before Firefox's own rules are even consulted.
+**Port Authority** does exactly this, and says so in a notification: *"blocked
+gagafutzi.github.io from port scanning your private network"*. It is right to be
+suspicious of a website posting to `127.0.0.1` — that is what a port scan looks
+like — so the fix is an exception, not uninstalling it: add `gagafutzi.github.io`
+to its allowed domains. uBlock Origin's "Block Outsider Intrusion into LAN" list
+does the same thing and wants the same exception.
+
 ## Settings
 
 `~/.config/mindbuild/gate.json`:

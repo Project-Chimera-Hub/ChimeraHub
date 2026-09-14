@@ -142,7 +142,7 @@ DEFAULTS = {
     # Short, because with the focus check doing the real work this is no longer
     # a licence to do something else for two minutes: it only has to outlast a
     # window appearing.
-    "grace_seconds": 60,
+    "grace_seconds": 20,
     # No sign of training for this long and the panel comes back. "Sign" is a
     # heartbeat from the hub or a rising disk count — see `training_live`.
     "stall_seconds": 180,
@@ -500,7 +500,7 @@ class Gate:
         if self.counter.capped:
             text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
                 ", ".join(self.counter.capped))
-        if self.degraded:
+        if session_kind() != "x11" or active_window_title() is None:
             text += ("\n<small>This session cannot be blocked — log in via "
                      "Ubuntu on Xorg for that.</small>")
         self.label.set_markup(text)
@@ -611,18 +611,23 @@ class Gate:
         are not the normal path.
         """
         now = time.time()
-        if self.launched_at and now - self.launched_at < float(self.cfg.get("grace_seconds") or 0):
-            return True
+        in_grace = bool(self.launched_at and
+                        now - self.launched_at < float(self.cfg.get("grace_seconds") or 0))
 
-        # What is on screen beats everything else, in both directions. On a
-        # trainer: training, whatever the lagging disk thinks. On something
-        # else: not training, however recently you were — which is the whole of
-        # blocking other applications, and the part no grace period can express.
+        # What is on screen beats everything else. Read first, because grace is
+        # only meant to cover the browser appearing — and the moment it has, the
+        # grace must end, which it cannot do if it is checked before focus is.
         focus = focused_on_training(self.cfg)
         if focus is True:
+            self.launched_at = 0.0
             return True
         if focus is False:
-            return False
+            # Something else in front of you. Excused only while the browser
+            # you just asked for may still be opening; never after a trainer
+            # has had focus, because that cleared `launched_at` above.
+            return in_grace
+        if in_grace:
+            return True
 
         # The display could not be read. Fall back to the slower evidence
         # rather than blocking a machine the gate cannot see.
@@ -786,8 +791,17 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print("gate: listening on 127.0.0.1:%s, mode=%s, quota=%s min"
           % (cfg["port"], cfg["mode"], cfg["required_minutes"]), flush=True)
-    caps = report_capabilities(cfg)
-    gate.degraded = not (caps["canGrab"] and caps["canReadFocus"])
+    # At login the window manager may not have published _NET_ACTIVE_WINDOW
+    # yet, and a probe that early reports "cannot see focus" on a session where
+    # it plainly can — which is what this printed on the first Xorg login. So
+    # an X11 session gets a few seconds to settle before the verdict.
+    def settle_and_report(tries=[0]):
+        tries[0] += 1
+        if session_kind() == "x11" and active_window_title() is None and tries[0] < 6:
+            return True                     # ask again in 5s
+        report_capabilities(cfg)
+        return False
+    GLib.timeout_add_seconds(5, settle_and_report)
 
     GLib.timeout_add_seconds(5, gate.evaluate)
     # The panel shows a number that the scan thread keeps changing underneath

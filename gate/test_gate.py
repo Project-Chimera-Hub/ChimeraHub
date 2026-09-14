@@ -20,6 +20,12 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gate as G
 
+# The suite must not read the desktop it happens to run on. Under an X11 login
+# the real `xprop` answers, and every test that does not say what has focus
+# would silently be about whatever window was focused when it ran. Unreadable is
+# the neutral default; `focus()` below says otherwise per test.
+G.active_window_title = lambda: None
+
 cases = []
 def test(fn): cases.append(fn); return fn
 
@@ -280,6 +286,24 @@ def the_patterns_are_matched_case_insensitively_anywhere_in_the_title():
         assert G.focused_on_training(c) is False
     with focus(None):
         assert G.focused_on_training(c) is None
+
+
+@test
+def grace_ends_the_moment_a_trainer_has_focus():
+    """Otherwise Train is a free pass: press it, glance at the trainer, and
+    spend the rest of the grace period somewhere else."""
+    g = gate_with(0, required_minutes=20, grace_seconds=600,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time()             # Train pressed, long grace
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Something else"'):
+        g.evaluate()
+    assert not g.closed, "grace did not cover the browser still opening"
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"'):
+        g.evaluate()
+    assert g.launched_at == 0.0, "grace survived a trainer taking focus"
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Steam"'):
+        g.evaluate()
+    assert g.closed, "switching away after the trainer appeared was still excused"
 
 
 @test
