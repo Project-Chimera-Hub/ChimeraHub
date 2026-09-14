@@ -225,6 +225,55 @@ def within_active_hours(cfg, now=None):
 # What has focus                                                               #
 # --------------------------------------------------------------------------- #
 
+def session_kind():
+    """"x11", "wayland", or "unknown"."""
+    kind = (os.environ.get("XDG_SESSION_TYPE") or "").lower()
+    if kind in ("x11", "wayland"):
+        return kind
+    if os.environ.get("WAYLAND_DISPLAY"):
+        return "wayland"
+    if os.environ.get("DISPLAY"):
+        return "x11"
+    return "unknown"
+
+
+def capabilities():
+    """What this session actually permits, as opposed to what is configured.
+
+    On GNOME under Wayland the answer is: not much, and not by accident. A
+    normal application cannot take a global input grab and cannot ask what has
+    focus — both are things a keylogger would want, and the compositor does not
+    distinguish a keylogger from a training gate. `_NET_ACTIVE_WINDOW` reads
+    0x0 because GTK is talking to Wayland directly and XWayland's root window
+    has no window manager behind it, and GNOME Shell's own Introspect API
+    answers `GetWindows is not allowed`.
+
+    So on Wayland this program can put a window on the screen and nothing more.
+    It says so at startup rather than presenting itself as a gate and quietly
+    being a suggestion.
+    """
+    kind = session_kind()
+    can_grab = kind == "x11"
+    can_read_focus = active_window_title() is not None
+    return {"session": kind, "canGrab": can_grab, "canReadFocus": can_read_focus}
+
+
+def report_capabilities(cfg):
+    caps = capabilities()
+    if caps["canGrab"] and caps["canReadFocus"]:
+        return caps
+    print("gate: this is a %s session." % caps["session"], file=sys.stderr, flush=True)
+    if not caps["canReadFocus"]:
+        print("gate:   cannot see which window has focus, so it cannot tell "
+              "training from anything else you do.", file=sys.stderr, flush=True)
+    if not caps["canGrab"] and cfg.get("mode") == "grab":
+        print("gate:   cannot grab input, so mode=grab behaves as mode=nag.",
+              file=sys.stderr, flush=True)
+    print("gate:   log in via 'Ubuntu on Xorg' at the login screen for a gate "
+          "that actually blocks.", file=sys.stderr, flush=True)
+    return caps
+
+
 def active_window_title():
     """The focused window's title and class, or None if it cannot be read.
 
@@ -382,6 +431,9 @@ class Gate:
         self.seat = None
         self.shown_at = 0.0
         self.launched_at = 0.0
+        # Set at startup from `capabilities()`. Shown on the panel, because a
+        # gate that cannot block should not look like one that can.
+        self.degraded = False
 
     # -- lifecycle -------------------------------------------------------- #
 
@@ -448,6 +500,9 @@ class Gate:
         if self.counter.capped:
             text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
                 ", ".join(self.counter.capped))
+        if self.degraded:
+            text += ("\n<small>This session cannot be blocked — log in via "
+                     "Ubuntu on Xorg for that.</small>")
         self.label.set_markup(text)
 
     def hide(self, why):
@@ -676,6 +731,8 @@ def state(cfg, counter, gate):
         "lastBeatAgo": round(time.time() - counter.last_beat) if counter.last_beat else None,
         "lastProgressAgo": round(time.time() - counter.last_progress) if counter.last_progress else None,
         "heartbeatEverSeen": bool(counter.last_beat),
+        "session": session_kind(),
+        "canGrab": session_kind() == "x11",
         "focusedOnTraining": focused_on_training(cfg),
         "activeWindow": (active_window_title() or "").strip()[:200] or None,
         "trainingLive": gate.training_live() if gate else None,
@@ -729,6 +786,8 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print("gate: listening on 127.0.0.1:%s, mode=%s, quota=%s min"
           % (cfg["port"], cfg["mode"], cfg["required_minutes"]), flush=True)
+    caps = report_capabilities(cfg)
+    gate.degraded = not (caps["canGrab"] and caps["canReadFocus"])
 
     GLib.timeout_add_seconds(5, gate.evaluate)
     # The panel shows a number that the scan thread keeps changing underneath

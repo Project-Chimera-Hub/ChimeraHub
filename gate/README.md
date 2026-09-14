@@ -24,6 +24,35 @@ the storage it reads have to be the same browser or the loop does not close —
 which is why `browser` defaults to `firefox`, and why pointing it at something
 `firefox-storage.py` cannot read breaks the quota rather than just the look.
 
+## It cannot block a Wayland session
+
+Check which you are on:
+
+```bash
+echo $XDG_SESSION_TYPE
+```
+
+If that says `wayland`, this program can put a window on your screen and nothing
+else. Not a limitation of the code — a normal application on GNOME/Wayland
+cannot take a global input grab and cannot ask which window has focus. Both are
+things a keylogger would want, and the compositor does not distinguish a
+keylogger from a training gate. `_NET_ACTIVE_WINDOW` reads `0x0` because GTK
+talks to Wayland directly and XWayland's root has no window manager behind it,
+and GNOME Shell's own `Introspect.GetWindows` answers `not allowed`.
+
+So on Wayland the gate is a reminder, `mode: "grab"` silently behaves as
+`"nag"`, and it cannot tell training from anything else you do. It says all of
+this at startup and on the panel rather than presenting itself as a gate.
+
+**For a gate that actually blocks, log out and pick "Ubuntu on Xorg"** — the
+gear icon on the GDM password screen. Everything works there: the grab holds,
+focus is readable, and the panel returns the moment another application takes
+the screen.
+
+The other route is a GNOME Shell extension, which runs inside the compositor and
+is the only thing on Wayland allowed to do this. That is a different program to
+the one in this directory.
+
 ## Get out of it
 
 Before anything else, because this is the part that matters:
