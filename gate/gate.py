@@ -109,6 +109,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CONFIG = os.path.expanduser("~/.config/mindbuild/gate.json")
 
+TARGET_LABELS = {"mindbuild": "mindbuild", "anki": "Anki"}
+
 # Must not contain any string in `training_window_patterns`. See `show`.
 PANEL_TITLE = "Training required"
 
@@ -162,6 +164,14 @@ DEFAULTS = {
     # browser trains into storage the counter never reads.
     "training_window_patterns": ["mindbuild"],
     "training_window_class": "firefox",
+    # A second quota, counted from Anki's own review log. Off unless
+    # required_minutes is above zero. Every Anki window counts as being in
+    # Anki; only reviews count as minutes, because only reviews are in the log.
+    "anki": {
+        "required_minutes": 0,
+        "command": "anki-desktop",
+        "window_class": "anki",
+    },
     # How often the gate looks at what is in front of you. Leaving the trainer
     # is visible for at most this long before the panel is back.
     "check_every_ms": 500,
@@ -181,6 +191,52 @@ DEFAULTS = {
     # what that means arithmetically. `{}` removes every cap.
     "caps": {"synth": 0.05, "cct": 0.20},
 }
+
+
+def anki_cfg(cfg):
+    """The anki block with defaults filled in.
+
+    `load_config` merges one level deep, so a user's `"anki": {...}` replaces
+    the default block wholesale, and a config that names only the quota would
+    otherwise have no command to launch.
+    """
+    merged = dict(DEFAULTS["anki"])
+    merged.update(cfg.get("anki") or {})
+    return merged
+
+
+_anki_export = None
+
+
+def anki_export():
+    """The archive's own Anki reader, loaded by path — its filename has a hyphen.
+
+    One reader for both. The archive's copy is the one that has had to be
+    right about review types, the sixty-second clamp and the day boundary, and
+    a second implementation here would be a second answer to how long you
+    studied.
+    """
+    global _anki_export
+    if _anki_export is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "anki_export", os.path.join(ROOT, "apps", "archive", "tools", "anki-export.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _anki_export = module
+    return _anki_export
+
+
+def anki_minutes_on(day):
+    """Minutes of Anki review on one UTC day, across every profile."""
+    ae = anki_export()
+    total = 0.0
+    for path in ae.find_collections():
+        records = ae.read_reviews(path)
+        if isinstance(records, tuple):
+            records = records[0]
+        total += float(ae.minutes_per_day(records).get(day, 0.0))
+    return total
 
 
 def load_config():
@@ -363,6 +419,39 @@ def is_handoff_placeholder(cfg, info):
         or bool(host and host in low)
 
 
+def _activate_matching(match):
+    try:
+        out = subprocess.run(["wmctrl", "-lx"], capture_output=True, text=True, timeout=2).stdout
+    except Exception:                               # noqa: BLE001
+        return False
+    best = None
+    for line in out.splitlines():
+        parts = line.split(None, 4)
+        if len(parts) < 4:
+            continue
+        if match(parts[2].lower(), (parts[4] if len(parts) > 4 else "").lower()):
+            best = parts[0]                         # wmctrl lists oldest first
+    if not best:
+        return False
+    try:
+        subprocess.run(["wmctrl", "-i", "-a", best], capture_output=True, timeout=2)
+    except Exception:                               # noqa: BLE001
+        return False
+    return True
+
+
+def activate_anki_window(cfg):
+    want = str(anki_cfg(cfg).get("window_class") or "").lower()
+    return bool(want) and _activate_matching(lambda cls, title: want in cls)
+
+
+def classify_anki(cfg, info):
+    if info is None:
+        return None
+    want = str(anki_cfg(cfg).get("window_class") or "").lower()
+    return bool(want and want in info[1].lower())
+
+
 def activate_hub_window(cfg):
     """Put the hub's window in front, if one exists.
 
@@ -421,6 +510,9 @@ class Counter:
         # When the figure on disk last went up. Slow, and the only liveness
         # signal that survives a browser which will not let the page post.
         self.last_progress = 0.0
+        self.anki_minutes = 0.0
+        self.anki_last_progress = 0.0
+        self.anki_error = None
         self.error = None
         self._lock = threading.Lock()
 
@@ -453,14 +545,32 @@ class Counter:
         with self._lock:
             if today != self.day:
                 self.day, self.disk, self.beat = today, 0.0, 0.0
-            self.by_source, self.raw, self.capped = {}, {}, []
-            # `last_beat` deliberately survives: midnight passing is not a
-            # reason to conclude that the session in front of you stopped.
+                self.by_source, self.raw, self.capped = {}, {}, []
+                self.anki_minutes = 0.0
+                # `last_beat` deliberately survives: midnight passing is not a
+                # reason to conclude that the session in front of you stopped.
+
+    def scan_anki(self):
+        """Anki's review log, separately: its failure must not cost the other."""
+        if float(anki_cfg(self.cfg).get("required_minutes") or 0) <= 0:
+            return
+        try:
+            fresh = anki_minutes_on(self.day)
+        except Exception as e:                      # noqa: BLE001
+            with self._lock:
+                self.anki_error = str(e)[:200]
+            return
+        with self._lock:
+            if fresh > self.anki_minutes + 1e-9:
+                self.anki_last_progress = time.time()
+            self.anki_minutes = fresh
+            self.anki_error = None
 
     def scan(self, roll=True):
         """firefox-storage.py into a temp dir, count.js over the result."""
         if roll:
             self.roll_day()
+        self.scan_anki()
         tmp = tempfile.mkdtemp(prefix="mindbuild-gate-")
         try:
             subprocess.run(
@@ -523,6 +633,8 @@ class Gate:
         # measured against this, not against the panel — measured against the
         # panel it restarted every time you went back to training and so never
         # once fired.
+        self.launched_target = "mindbuild"
+        self.buttons = {}
         self.lock_day = None
         self.locked_since = 0.0
         self.released = False
@@ -557,15 +669,22 @@ class Gate:
         self.label.set_justify(Gtk.Justification.CENTER)
         box.pack_start(self.label, False, False, 0)
 
-        button = Gtk.Button(label="Train")
-        button.connect("clicked", lambda *_: self.launch())
-        box.pack_start(button, False, False, 0)
+        # One button per quota. A quota already met loses its button: once
+        # Anki is done, the way out of the panel is mindbuild and nothing else.
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        row.set_halign(Gtk.Align.CENTER)
+        self.buttons = {}
+        for name, _req, _have in self.targets():
+            button = Gtk.Button(label=TARGET_LABELS.get(name, name))
+            button.connect("clicked", lambda _b, n=name: self.launch(n))
+            row.pack_start(button, False, False, 0)
+            self.buttons[name] = button
+        box.pack_start(row, False, False, 0)
 
         hint = Gtk.Label()
         hint.set_markup(
-            '<small>Opens the hub in {}. This panel steps aside while you train.\n'
-            'Ctrl-Alt-F3 \u2192 systemctl --user stop mindbuild-gate</small>'
-            .format(GLib.markup_escape_text(str(self.cfg.get("browser") or "your browser"))))
+            '<small>This panel steps aside while you are in the one you pick.\n'
+            'Ctrl-Alt-F3 \u2192 systemctl --user stop mindbuild-gate</small>')
         hint.set_justify(Gtk.Justification.CENTER)
         box.pack_start(hint, False, False, 0)
 
@@ -588,15 +707,24 @@ class Gate:
         win.show_all()
         self.refresh()
 
-        print("gate: up — %.0f of %s min" %
-              (self.counter.minutes, self.cfg["required_minutes"]), flush=True)
+        # What was in front of you when it closed. Also how a new application's
+        # window class is found out, rather than guessed at.
+        info = window_info()
+        print("gate: up — %s — focus was %s" % (
+            self.summary(), "%r (%s)" % info if info else "unreadable"), flush=True)
 
     def refresh(self):
         """Keep the figure on the panel current while it sits there."""
         if not self.label:
             return
-        have, need = self.counter.minutes, float(self.cfg["required_minutes"])
-        text = "<big><b>%.0f of %.0f minutes</b></big>" % (have, need)
+        lines = []
+        for name, need, have in self.targets():
+            lines.append("<b>%s</b>  %.0f of %.0f min%s" % (
+                TARGET_LABELS.get(name, name), have, need, "  \u2713" if have >= need else ""))
+            button = self.buttons.get(name)
+            if button:
+                button.set_visible(have < need)
+        text = "<big>%s</big>" % "\n".join(lines)
         if self.counter.capped:
             text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
                 ", ".join(self.counter.capped))
@@ -612,38 +740,45 @@ class Gate:
         self.window.destroy()
         self.window = None
         self.label = None
+        self.buttons = {}
         print("gate: down — %s" % why, flush=True)
 
     # -- the hand-off ----------------------------------------------------- #
 
-    def launch(self):
-        """Open the hub in the browser the counter reads, then step aside.
+    def launch(self, target="mindbuild"):
+        """Open the chosen quota's application, then step aside.
 
         The grab has to go first. A gate still holding the keyboard hands the
-        browser a window nobody can type into, which on a page whose whole
-        purpose is answering questions is the same as not opening it at all.
+        application a window nobody can type into, which is the same as not
+        opening it at all.
         """
         self._ungrab()
-        browser = str(self.cfg.get("browser") or "firefox")
-        url = str(self.cfg.get("hub_url") or "")
-        # A new window rather than a tab in whatever window happens to be open.
-        # A tab joins a window full of other tabs, and the moment the gate
-        # activates that window it activates all of them.
-        args = [browser, "--new-window", url] if "firefox" in os.path.basename(browser) else [browser, url]
+        if target == "anki":
+            command = str(anki_cfg(self.cfg).get("command") or "anki")
+            args, key = [command], '"anki": {"command": ...}'
+        else:
+            command = str(self.cfg.get("browser") or "firefox")
+            url = str(self.cfg.get("hub_url") or "")
+            # A new window rather than a tab in whatever window happens to be
+            # open. A tab joins a window full of other tabs, and the moment the
+            # gate activates that window it activates all of them.
+            args = [command, "--new-window", url] if "firefox" in os.path.basename(command) \
+                else [command, url]
+            key = '"browser"'
         try:
-            subprocess.Popen(args,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except (OSError, ValueError) as e:
             # Never leave the panel up with a dead button: say so on the panel
             # rather than in a log nobody has open.
-            print("gate: could not start %s (%s)" % (browser, e), file=sys.stderr, flush=True)
+            print("gate: could not start %s (%s)" % (command, e), file=sys.stderr, flush=True)
             if self.label:
                 self.label.set_markup(
-                    "<b>Could not start %s.</b>\n<small>Set \"browser\" in %s</small>"
-                    % (GLib.markup_escape_text(browser), GLib.markup_escape_text(CONFIG)))
+                    "<b>Could not start %s.</b>\n<small>Set %s in %s</small>"
+                    % tuple(GLib.markup_escape_text(x) for x in (command, key, CONFIG)))
             return
         self.launched_at = time.time()
-        self.hide("handed off to %s" % browser)
+        self.launched_target = target
+        self.hide("handed off to %s" % target)
 
     # -- the grab --------------------------------------------------------- #
 
@@ -710,6 +845,20 @@ class Gate:
 
     # -- the decision ----------------------------------------------------- #
 
+    def targets(self):
+        """[(name, required, have)] for every quota that is switched on."""
+        out = [("mindbuild", float(self.cfg["required_minutes"]), self.counter.minutes)]
+        anki_required = float(anki_cfg(self.cfg).get("required_minutes") or 0)
+        if anki_required > 0:
+            out.append(("anki", anki_required, self.counter.anki_minutes))
+        return out
+
+    def unmet(self):
+        return [name for name, need, have in self.targets() if have < need]
+
+    def summary(self):
+        return ", ".join("%s %.0f of %.0f min" % (n, have, need) for n, need, have in self.targets())
+
     def held_too_long(self):
         cap = float(self.cfg.get("max_hold_minutes") or 0)
         return bool(cap > 0 and self.locked_since and
@@ -734,28 +883,38 @@ class Gate:
             since_launch < float(self.cfg.get("grace_seconds") or 0)
 
         info = window_info()
-        focus = classify_focus(self.cfg, info)
-        if focus is True:
-            self.launched_at = 0.0
-            return True
-        if focus is False:
+        pending = self.unmet()
+        # Only the applications whose quota is still owed. Anki done and
+        # mindbuild not means an Anki window is now "something else".
+        classifiers = {"mindbuild": classify_focus, "anki": classify_anki}
+        for name in pending:
+            if classifiers[name](self.cfg, info) is True:
+                self.launched_at = 0.0
+                return True
+        if info is not None:
             if not in_grace:
                 return False
-            activate_hub_window(self.cfg)
+            if self.launched_target == "anki":
+                activate_anki_window(self.cfg)
+                arriving = not info[0] or info[0] == PANEL_TITLE
+            else:
+                activate_hub_window(self.cfg)
+                arriving = is_handoff_placeholder(self.cfg, info)
             if since_launch < float(self.cfg.get("settle_seconds") or 0):
                 return True
-            return is_handoff_placeholder(self.cfg, info)
+            return arriving
         if in_grace:
             return True
 
         # The display could not be read. Fall back to the slower evidence
         # rather than blocking a machine the gate cannot see.
+        stall = float(self.cfg.get("stall_seconds") or 0)
         beat = self.counter.last_beat
-        if beat and now - beat < float(self.cfg.get("stall_seconds") or 0):
+        if "mindbuild" in pending and beat and now - beat < stall:
             return True
-        fuse = float(self.cfg.get("stall_seconds") or 0) if beat \
-            else float(self.cfg.get("stall_seconds_no_beat") or 0)
-        progress = self.counter.last_progress
+        fuse = stall if beat else float(self.cfg.get("stall_seconds_no_beat") or 0)
+        progress = max(self.counter.last_progress if "mindbuild" in pending else 0.0,
+                       self.counter.anki_last_progress if "anki" in pending else 0.0)
         return bool(progress and now - progress < fuse)
 
     def unlock(self, why):
@@ -770,16 +929,13 @@ class Gate:
         if self.lock_day != today:
             self.lock_day, self.locked_since, self.released = today, 0.0, False
 
-        need = float(self.cfg["required_minutes"])
-        have = self.counter.minutes
-
         if self.released:
             self.hide("released for today")
             return True
         if not self.cfg.get("armed"):
             return self.unlock("disarmed")
-        if have >= need:
-            return self.unlock("%.0f of %.0f min done" % (have, need))
+        if not self.unmet():
+            return self.unlock("every quota met — " + self.summary())
         if not within_active_hours(self.cfg):
             return self.unlock("outside active hours")
 
@@ -875,6 +1031,9 @@ def state(cfg, counter, gate):
         "trainingLive": gate.training_live() if gate else None,
         "lockedMinutes": round((time.time() - gate.locked_since) / 60, 1) if gate and gate.locked_since else 0,
         "releasedForToday": bool(gate and gate.released),
+        "targets": [{"name": n, "required": need, "minutes": round(have, 1), "met": have >= need}
+                    for n, need, have in (gate.targets() if gate else [])],
+        "ankiError": counter.anki_error,
         "error": counter.error,
     }
 
@@ -917,7 +1076,7 @@ def main():
             # happening, and that is exactly when the figure needs to be
             # current — both to notice the quota being met and, on a machine
             # with no heartbeat, to notice that it is still moving at all.
-            quick = gate.window is None and counter.minutes < float(cfg["required_minutes"])
+            quick = gate.window is None and bool(gate.unmet())
             time.sleep(60 if quick else max(30, int(cfg["scan_every_seconds"])))
 
     threading.Thread(target=scan_loop, daemon=True).start()

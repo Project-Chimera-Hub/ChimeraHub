@@ -106,6 +106,30 @@ the heartbeat claimed, so inflating it buys two minutes and nothing else.
 **The archive is never counted.** Sorting your record is not training, and a
 quota that could be met by tidying is a quota that will be.
 
+## Anki, as a second quota
+
+```json
+"anki": { "required_minutes": 120, "command": "anki-desktop", "window_class": "anki" }
+```
+
+With that set, the panel has two buttons and the lock holds until **both** quotas
+are met. Anki minutes come from its review log, read by the archive's own
+`tools/anki-export.py` — the same sixty-second clamp per review, the same UTC
+day, every profile summed. Only reviews count; time in the browser or editing
+cards is being in Anki without being minutes.
+
+A quota already met stops being a way out. Once Anki is done its button goes
+and an Anki window is just another application; the same for mindbuild.
+
+The review log is read with its write-ahead log. While Anki is open, everything
+since its last checkpoint lives in `collection.anki2-wal`, and a reader that
+copied only the main file saw none of today's reviews until Anki closed.
+
+**Raise `max_hold_minutes` with the quotas.** The cap is wall-clock time locked,
+and two 120-minute quotas are 240 minutes of counted training — which takes
+longer than 240 minutes to do. A cap below the total releases you before it can
+be met, every day.
+
 ## If the heartbeat never arrives, check your extensions
 
 A privacy extension can block it before Firefox's own rules are even consulted.

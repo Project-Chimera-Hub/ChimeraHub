@@ -26,6 +26,7 @@ import gate as G
 # the neutral default; `focus()` below says otherwise per test.
 G.active_window_title = lambda: None
 G.activate_hub_window = lambda cfg: False
+G.activate_anki_window = lambda cfg: False
 
 cases = []
 def test(fn): cases.append(fn); return fn
@@ -374,6 +375,90 @@ def the_cap_releases_for_the_rest_of_the_day():
     assert not g.closed
     g.evaluate()
     assert not g.closed, "the cap released and then re-locked on the next tick"
+
+
+@test
+def an_ordinary_tick_does_not_wipe_the_counts():
+    """roll_day runs on every evaluation. Only a new day may clear anything."""
+    c = cfg()
+    counter = G.Counter(c)
+    counter.capped, counter.by_source, counter.anki_minutes = ["cct"], {"cct": 3}, 12.0
+    counter.roll_day()
+    assert counter.capped == ["cct"] and counter.by_source == {"cct": 3} \
+        and counter.anki_minutes == 12.0, "a same-day roll_day wiped the counts"
+
+
+# ---- two quotas ------------------------------------------------------------ #
+
+ANKI = '_NET_WM_NAME(UTF8_STRING) = "Benutzer 1 - Anki"\nWM_CLASS(STRING) = "anki", "Anki"'
+HUB = '_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"' + FIREFOX
+
+
+def gate_with_anki(mind, anki, **over):
+    g = gate_with(mind, required_minutes=20, anki={"required_minutes": 20},
+                  active_from="00:00", active_to="23:59", **over)
+    g.counter.anki_minutes = float(anki)
+    return g
+
+
+@test
+def the_lock_holds_until_both_quotas_are_met():
+    g = gate_with_anki(25, 5)
+    g.evaluate()
+    assert g.closed, "mindbuild alone unlocked a machine that still owes Anki"
+    g.counter.anki_minutes = 20.0
+    g.evaluate()
+    assert not g.closed, "both quotas met and still locked"
+
+
+@test
+def anki_is_a_training_window_while_anki_is_owed():
+    g = gate_with_anki(5, 5)
+    with focus(ANKI):
+        g.evaluate()
+    assert not g.closed
+
+
+@test
+def anki_is_just_another_application_once_its_quota_is_met():
+    g = gate_with_anki(5, 25)
+    with focus(ANKI):
+        g.evaluate()
+    assert g.closed, "Anki excused a day that still owes mindbuild"
+    with focus(HUB):
+        g.evaluate()
+    assert not g.closed
+
+
+@test
+def mindbuild_is_just_another_application_once_its_quota_is_met():
+    g = gate_with_anki(25, 5)
+    with focus(HUB):
+        g.evaluate()
+    assert g.closed, "the hub excused a day that still owes Anki"
+
+
+@test
+def with_anki_off_there_is_one_quota_and_one_button():
+    g = gate_with(5, required_minutes=20)
+    assert [n for n, _, _ in g.targets()] == ["mindbuild"]
+
+
+@test
+def a_partial_anki_block_keeps_the_default_command():
+    c = cfg(anki={"required_minutes": 120})
+    a = G.anki_cfg(c)
+    assert a["required_minutes"] == 120 and a["command"] and a["window_class"], \
+        "naming only the quota lost the rest of the anki block"
+
+
+@test
+def grace_after_choosing_anki_does_not_excuse_a_browser():
+    g = gate_with_anki(5, 5, grace_seconds=15, settle_seconds=3)
+    g.launched_at, g.launched_target = time.time() - 5, "anki"
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Mozilla Firefox"' + FIREFOX):
+        g.evaluate()
+    assert g.closed, "choosing Anki excused a loading browser window"
 
 
 # ---- when the heartbeat never arrives ------------------------------------- #

@@ -160,11 +160,24 @@ def profile_name(path):
 def read_reviews(path, label_profile=False):
     """Every review, as archive records."""
     profile = profile_name(path)
-    tmp = os.path.join(tempfile.gettempdir(), "training-archive-anki.anki2")
+    # A directory of its own per read. The fixed filename this used to copy to
+    # was shared by every caller, so the gate scanning every minute and an
+    # export run by hand could each read half of the other's copy.
+    workdir = tempfile.mkdtemp(prefix="training-archive-anki-")
+    tmp = os.path.join(workdir, "collection.anki2")
     shutil.copy2(path, tmp)
+    # The write-ahead log too. While Anki is open, everything since its last
+    # checkpoint lives in `collection.anki2-wal` and not in the main file — so
+    # a copy of the main file alone is a copy of the collection as it stood
+    # when Anki last closed. Today's reviews were exactly the part it missed.
+    if os.path.exists(path + "-wal"):
+        shutil.copy2(path + "-wal", tmp + "-wal")
 
     try:
-        con = sqlite3.connect("file:%s?mode=ro" % tmp, uri=True)
+        # Not mode=ro. Reading a WAL database needs a shared-memory index next
+        # to it, which a read-only connection is not allowed to create; this is
+        # a private copy, so opening it writable costs nothing.
+        con = sqlite3.connect(tmp)
         decks = deck_names(con)
 
         rows = con.execute("""
@@ -174,10 +187,7 @@ def read_reviews(path, label_profile=False):
         """).fetchall()
         con.close()
     finally:
-        try:
-            os.remove(tmp)
-        except OSError:
-            pass
+        shutil.rmtree(workdir, ignore_errors=True)
 
     records = []
 
