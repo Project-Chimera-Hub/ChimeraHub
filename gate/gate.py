@@ -481,12 +481,17 @@ class Gate:
         if self.cfg.get("mode") == "grab":
             win.fullscreen()
 
-        win.show_all()
         self.window = win
-        self.refresh()
-
         if self.cfg.get("mode") == "grab":
-            self._grab()
+            # Not straight after show_all(). A window that has been asked to
+            # appear is not yet a window on screen, and X refuses a grab on it
+            # with GrabNotViewable — which is what every grab so far did, so
+            # mode=grab has never once held. Wait for the map, then keep trying
+            # briefly, since the compositor can hold a grab of its own for a
+            # moment while it animates the window in.
+            win.connect("map-event", lambda *_: self._grab_soon())
+        win.show_all()
+        self.refresh()
 
         print("gate: up — %.0f of %s min" %
               (self.counter.minutes, self.cfg["required_minutes"]), flush=True)
@@ -543,7 +548,23 @@ class Gate:
 
     # -- the grab --------------------------------------------------------- #
 
-    def _grab(self):
+    def _grab_soon(self, attempts=20):
+        """Retry the grab every 250ms until it holds or the window is gone."""
+        state = {"left": attempts}
+
+        def attempt():
+            if not self.window or self.seat:
+                return False
+            status = self._grab(quiet=state["left"] > 1)
+            if status == "ok" or status == "unsupported":
+                return False
+            state["left"] -= 1
+            return state["left"] > 0
+
+        GLib.timeout_add(250, attempt)
+        return False
+
+    def _grab(self, quiet=False):
         """Keyboard and pointer, so Alt-Tab and the Super key stop working.
 
         X11 only, and checked rather than assumed: on Wayland the grab silently
@@ -557,18 +578,26 @@ class Gate:
                os.environ.get("XDG_SESSION_TYPE") != "x11":
                 print("gate: not X11 — grab unavailable, holding as a nag",
                       file=sys.stderr, flush=True)
-                return
+                return "unsupported"
+            gdk_window = self.window.get_window() if self.window else None
+            if gdk_window is None:
+                return "retry"
             seat = display.get_default_seat()
-            status = seat.grab(self.window.get_window(),
-                               Gdk.SeatCapabilities.ALL, True, None, None, None, None)
+            status = seat.grab(gdk_window, Gdk.SeatCapabilities.ALL, True,
+                               None, None, None, None)
             if status == Gdk.GrabStatus.SUCCESS:
                 self.seat = seat
-            else:
+                self.window.present()
+                print("gate: grab held", flush=True)
+                return "ok"
+            if not quiet:
                 print("gate: grab refused (%s) — holding as a nag" % status,
                       file=sys.stderr, flush=True)
+            return "retry"
         except Exception as e:                      # noqa: BLE001
             print("gate: grab failed (%s) — holding as a nag" % e,
                   file=sys.stderr, flush=True)
+            return "unsupported"
 
     def _ungrab(self):
         # Unconditionally, and before anything else that might raise: a grab
