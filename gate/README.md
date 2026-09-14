@@ -85,7 +85,7 @@ quota that could be met by tidying is a quota that will be.
 |---|---|---|
 | `required_minutes` | `20` | The day's quota. Keep it to something you would have done anyway. |
 | `armed` | `true` | `false` disables the gate without uninstalling it. |
-| `mode` | `"nag"` | `nag` is fullscreen and on top; Alt-Tab still works. `grab` takes keyboard and pointer. |
+| `mode` | `"nag"` | `nag` is a panel kept on top; Alt-Tab still works. `grab` is fullscreen and takes keyboard and pointer. |
 | `active_from` / `active_to` | `09:00`–`23:00` | **Local** time. Outside these hours the gate never appears, whatever the count. |
 | `max_hold_minutes` | `180` | The gate lets go after this long regardless of the count. No override. |
 | `hub_url` | Pages URL | What the button opens. |
@@ -93,6 +93,7 @@ quota that could be met by tidying is a quota that will be.
 | `grace_seconds` | `120` | After the button, how long before the panel expects to see anything. |
 | `stall_seconds` | `180` | No sign of training for this long and the panel returns. |
 | `stall_seconds_no_beat` | `900` | The same, on a machine where the heartbeat never arrives. |
+| `training_window_patterns` | hub + trainer titles | A focused window matching any of these is training. Case-insensitive substrings. |
 | `caps` | `synth 5%`, `cct 20%` | Per-source ceilings as a share of the counted day. `{}` removes them. |
 | `port` | `8787` | Heartbeat listener, bound to `127.0.0.1` only. |
 
@@ -109,7 +110,23 @@ after three hours. Do not raise it to something you cannot wait out.
 
 ## How it knows you are training
 
-Two signals, doing different jobs.
+Three signals, and they are not equals.
+
+**Focus is what makes it a gate.** The panel stands down only while a window
+whose title matches `training_window_patterns` has focus, and comes back the
+moment anything else does — no grace, no fuse. That is what "blocking other
+applications" means here, and it is the only signal in the present tense. The
+other two can say training happened *recently*, and "recently" is the loophole:
+a grace period long enough not to interrupt a real session is long enough to
+read your email in.
+
+If the display cannot be read — `activeWindow` comes back `null` — the gate
+falls back to the two below rather than blocking a machine it cannot see.
+
+The hub puts `mindbuild` in every title it sets, framed trainer included, which
+is why training through the hub is the path that works best.
+
+The remaining two are that fallback.
 
 The **disk scan** is the authority on how much you did. It is also slow: Firefox
 writes localStorage lazily, so a scan can be minutes behind a session in

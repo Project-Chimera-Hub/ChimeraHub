@@ -72,6 +72,7 @@ not be escaped would be a worse thing to own.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CONFIG = os.path.expanduser("~/.config/mindbuild/gate.json")
 
+# Must not contain any string in `training_window_patterns`. See `show`.
+PANEL_TITLE = "Training required"
+
 DEFAULTS = {
     # Minutes of training the day needs. Keep it to something you would have
     # done anyway; a quota you resent is a quota you disable.
@@ -132,11 +136,34 @@ DEFAULTS = {
     # this rewrite exists to remove.
     "browser": "firefox",
     # After the button is pressed, how long to stay away before expecting to
-    # see anything. A browser has to start and a page has to load.
-    "grace_seconds": 120,
+    # see anything. A browser has to start and a page has to load — and until
+    # one of them has focus there is nothing for the focus check to find.
+    #
+    # Short, because with the focus check doing the real work this is no longer
+    # a licence to do something else for two minutes: it only has to outlast a
+    # window appearing.
+    "grace_seconds": 60,
     # No sign of training for this long and the panel comes back. "Sign" is a
     # heartbeat from the hub or a rising disk count — see `training_live`.
     "stall_seconds": 180,
+    # What a training window is called. The gate stands down only while one of
+    # these has focus, so this is the list that decides what "blocking other
+    # applications" means in practice.
+    #
+    # The hub puts "mindbuild" in every title it sets, framed trainer included,
+    # which is why training through the hub is the path that works best. The
+    # rest are the trainers' own titles, for a tab opened directly.
+    "training_window_patterns": [
+        "mindbuild",
+        "Relational N-Back",
+        "CCT",
+        "Syllogimous",
+        "Precision N-Back",
+        "Spatial Rotation",
+        "Attentional Shield",
+        "Synth",
+        "Training archive",
+    ],
     # The same, for a machine where the heartbeat never arrives at all.
     #
     # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
@@ -192,6 +219,48 @@ def within_active_hours(cfg, now=None):
     if start <= end:
         return start <= t <= end
     return t >= start or t <= end          # a window that crosses midnight
+
+
+# --------------------------------------------------------------------------- #
+# What has focus                                                               #
+# --------------------------------------------------------------------------- #
+
+def active_window_title():
+    """The focused window's title and class, or None if it cannot be read.
+
+    None is not "nothing is focused" — it is "this question could not be
+    answered", and the two must not be confused. A gate that treats an
+    unreadable display as "you are not training" would block a machine it
+    cannot see, which is the failure mode that ends with someone holding down
+    the power button.
+    """
+    try:
+        root = subprocess.run(["xprop", "-root", "_NET_ACTIVE_WINDOW"],
+                              capture_output=True, text=True, timeout=3).stdout
+        match = re.search(r"0x[0-9a-f]+", root)
+        if not match or int(match.group(0), 16) == 0:
+            return None
+        info = subprocess.run(["xprop", "-id", match.group(0), "_NET_WM_NAME", "WM_CLASS"],
+                              capture_output=True, text=True, timeout=3).stdout
+        return info or None
+    except Exception:                               # noqa: BLE001
+        return None
+
+
+def focused_on_training(cfg):
+    """True, False, or None when the display cannot be read.
+
+    This is the signal that makes the gate a gate. The heartbeat says a page
+    exists somewhere; the disk says something was trained at some point. Only
+    this says what you are doing *now*, which is the only question a thing
+    claiming to block other applications is actually asking.
+    """
+    title = active_window_title()
+    if title is None:
+        return None
+    patterns = cfg.get("training_window_patterns") or []
+    low = title.lower()
+    return any(str(p).lower() in low for p in patterns)
 
 
 # --------------------------------------------------------------------------- #
@@ -322,7 +391,11 @@ class Gate:
             return
         self.shown_at = time.time()
 
-        win = Gtk.Window(title="mindbuild")
+        # Deliberately not "mindbuild". The panel's own title is matched against
+        # `training_window_patterns` like any other window, and a gate named
+        # after the thing it is gating would read its own window as a trainer,
+        # hide, immediately see no trainer, and show again — forever.
+        win = Gtk.Window(title=PANEL_TITLE)
         win.set_decorated(False)
         win.set_keep_above(True)
         win.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
@@ -460,19 +533,44 @@ class Gate:
                     (time.time() - self.shown_at) / 60 >= cap)
 
     def training_live(self):
-        """Is there any sign of training happening right now?
+        """Is training happening right now?
 
-        Two signs, and the first is why the hub posts a heartbeat at all.
-        Firefox writes localStorage to disk lazily, so a scan can be minutes
-        behind a session in progress — and a gate that reappears over a page
-        you are actively answering is a gate that gets uninstalled the same
-        afternoon. The heartbeat closes that window; the scan remains the
-        authority on how much was done.
+        Three signals, and they are not equals.
+
+        **Focus** is what makes this a gate. It is the only one that describes
+        the present tense: a trainer window is in front of you, or something
+        else is. Everything below it can only say that training happened
+        recently, and "recently" is exactly the loophole — a grace period long
+        enough not to interrupt a real session is long enough to read your
+        email in.
+
+        **The heartbeat** says the hub is open and posting. It exists because
+        Firefox writes localStorage lazily, so the disk can be minutes behind a
+        session in progress, and a panel that reappears over a page you are
+        answering is one that gets uninstalled the same afternoon.
+
+        **The disk figure rising** is the slowest and the only one that
+        survives a browser which will not let the page post at all.
+
+        The last two are the fallback for a display that cannot be read. They
+        are not the normal path.
         """
         now = time.time()
         if self.launched_at and now - self.launched_at < float(self.cfg.get("grace_seconds") or 0):
             return True
 
+        # What is on screen beats everything else, in both directions. On a
+        # trainer: training, whatever the lagging disk thinks. On something
+        # else: not training, however recently you were — which is the whole of
+        # blocking other applications, and the part no grace period can express.
+        focus = focused_on_training(self.cfg)
+        if focus is True:
+            return True
+        if focus is False:
+            return False
+
+        # The display could not be read. Fall back to the slower evidence
+        # rather than blocking a machine the gate cannot see.
         beat = self.counter.last_beat
         if beat and now - beat < float(self.cfg.get("stall_seconds") or 0):
             return True
@@ -578,6 +676,8 @@ def state(cfg, counter, gate):
         "lastBeatAgo": round(time.time() - counter.last_beat) if counter.last_beat else None,
         "lastProgressAgo": round(time.time() - counter.last_progress) if counter.last_progress else None,
         "heartbeatEverSeen": bool(counter.last_beat),
+        "focusedOnTraining": focused_on_training(cfg),
+        "activeWindow": (active_window_title() or "").strip()[:200] or None,
         "trainingLive": gate.training_live() if gate else None,
         "error": counter.error,
     }

@@ -204,6 +204,95 @@ def meeting_the_quota_still_wins_over_a_live_session():
     assert not g.closed
 
 
+# ---- focus: the signal that makes it a gate -------------------------------- #
+
+import contextlib
+
+@contextlib.contextmanager
+def focus(value):
+    """Stand in for the X server. `value` is what xprop would have told us."""
+    original = G.active_window_title
+    G.active_window_title = lambda: value
+    try:
+        yield
+    finally:
+        G.active_window_title = original
+
+
+@test
+def a_trainer_in_front_of_you_stands_the_panel_down():
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild — Mozilla Firefox"'):
+        g.evaluate()
+    assert not g.closed, "the panel stayed up while a trainer had focus"
+
+
+@test
+def switching_to_anything_else_brings_it_straight_back():
+    """The whole point. No grace, no fuse — the other application is the thing
+    being blocked, and it is in front of you now."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild"'):
+        g.evaluate()
+    assert not g.closed
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Inbox (12) — Mozilla Thunderbird"'):
+        g.evaluate()
+    assert g.closed, "the panel did not come back when another application took focus"
+
+
+@test
+def focus_overrules_a_live_heartbeat():
+    """A hub open in a background tab is not training. Without this the gate is
+    satisfied by leaving a tab open, which is no gate at all."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time()
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Steam"'):
+        g.evaluate()
+    assert g.closed, "an open hub tab excused whatever was actually on screen"
+
+
+@test
+def focus_overrules_a_lagging_disk():
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_progress = time.time() - 3600      # trained an hour ago
+    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Mozilla Firefox"'):
+        g.evaluate()
+    assert not g.closed, "a stale disk figure overruled the trainer on screen"
+
+
+@test
+def an_unreadable_display_never_blocks_on_its_own():
+    """None means "could not be answered", not "you are not training". A gate
+    that blocks a machine it cannot see is one you fix with the power button."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time()
+    with focus(None):
+        g.evaluate()
+    assert not g.closed, "an unreadable display was treated as proof of not training"
+
+
+@test
+def the_patterns_are_matched_case_insensitively_anywhere_in_the_title():
+    c = cfg(training_window_patterns=["mindbuild"])
+    with focus('_NET_WM_NAME(UTF8_STRING) = "CCT — MINDBUILD"'):
+        assert G.focused_on_training(c) is True
+    with focus('_NET_WM_NAME(UTF8_STRING) = "something else"'):
+        assert G.focused_on_training(c) is False
+    with focus(None):
+        assert G.focused_on_training(c) is None
+
+
+@test
+def the_panels_own_title_is_not_a_training_window():
+    """Otherwise the gate reads its own window as a trainer, hides, sees no
+    trainer, shows, and does that for as long as you let it."""
+    assert G.focused_on_training(cfg()) is not None or True   # shape check only
+    title = '_NET_WM_NAME(UTF8_STRING) = "%s"' % G.PANEL_TITLE
+    with focus(title):
+        assert G.focused_on_training(cfg()) is False, \
+            "the gate's own panel matches training_window_patterns"
+
+
 # ---- when the heartbeat never arrives ------------------------------------- #
 #
 # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
