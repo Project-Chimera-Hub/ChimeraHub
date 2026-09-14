@@ -153,7 +153,7 @@ does the same thing and wants the same exception.
 | `max_hold_minutes` | `180` | The gate lets go after this long regardless of the count. No override. |
 | `hub_url` | Pages URL | What the button opens. |
 | `browser` | `firefox` | Must be one `firefox-storage.py` can read, or nothing you do will count. |
-| `grace_seconds` | `120` | After the button, how long before the panel expects to see anything. |
+| `grace_seconds` | `15` | After a button, how long the gate keeps pulling that application forward before judging focus. `anki.grace_seconds` (60) covers Anki's slower start. |
 | `stall_seconds` | `180` | No sign of training for this long and the panel returns. |
 | `stall_seconds_no_beat` | `900` | The same, on a machine where the heartbeat never arrives. |
 | `training_window_patterns` | hub + trainer titles | A focused window matching any of these is training. Case-insensitive substrings. |

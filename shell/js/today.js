@@ -80,7 +80,7 @@ var Today = (function () {
           found = true;
         }
       }
-      if (found && syl.SYL_HISTORY) take(readOne(JSON.stringify(syl)));
+      if (found && (syl.SYL_HISTORY || syl.SYL_HISTORY_IDX)) take(readOne(JSON.stringify(syl)));
     } catch (e) { /* storage off */ }
 
     for (var s = 0; s < SINGLE_KEY.length; s++) {

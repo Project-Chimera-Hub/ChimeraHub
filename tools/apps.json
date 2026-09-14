@@ -12,7 +12,7 @@
     { "prefix": "apps/syllogimous", "repo": "LooshSyllogimous",                     "branch": "main" },
     { "prefix": "apps/rnb",         "repo": "relationalNback---intuitive-progression", "branch": "main" },
     { "prefix": "apps/precision",   "repo": "Precision-N-back",                     "branch": "main" },
-    { "prefix": "apps/rotation",    "repo": "3D-Spatial-Rotation",                  "branch": "main" },
+    { "prefix": "apps/rotation",    "repo": "3D-Spatial-Rotation",                  "branch": "molecule-mode" },
     { "prefix": "apps/cct",         "repo": "CCT",                                  "branch": "main" },
     { "prefix": "apps/synth",       "repo": "Synth-v2",                             "branch": "main" },
     { "prefix": "apps/ewmt",        "repo": "eWMTurp",                              "branch": "main" },

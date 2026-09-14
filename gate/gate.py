@@ -146,10 +146,6 @@ DEFAULTS = {
     # a licence to do something else for two minutes: it only has to outlast a
     # window appearing.
     "grace_seconds": 15,
-    # The first moments of grace, when focus is still falling back to whatever
-    # had it before the panel and has not reached the browser yet. Anything is
-    # excused here; after it, only a browser window that is still loading is.
-    "settle_seconds": 3,
     # No sign of training for this long and the panel comes back. "Sign" is a
     # heartbeat from the hub or a rising disk count — see `training_live`.
     "stall_seconds": 180,
@@ -171,6 +167,9 @@ DEFAULTS = {
         "required_minutes": 0,
         "command": "anki-desktop",
         "window_class": "anki",
+        # A cold start of the Anki snap, with its web engine, takes ten seconds
+        # or more before there is a window to bring forward.
+        "grace_seconds": 60,
     },
     # How often the gate looks at what is in front of you. Leaving the trainer
     # is visible for at most this long before the panel is back.
@@ -419,18 +418,20 @@ def is_handoff_placeholder(cfg, info):
         or bool(host and host in low)
 
 
-def _activate_matching(match):
+def _activate_matching(score):
+    """Raise the best-scoring window. `score(cls, title)` is 0 for no match."""
     try:
         out = subprocess.run(["wmctrl", "-lx"], capture_output=True, text=True, timeout=2).stdout
     except Exception:                               # noqa: BLE001
         return False
-    best = None
+    best, best_score = None, 0
     for line in out.splitlines():
         parts = line.split(None, 4)
         if len(parts) < 4:
             continue
-        if match(parts[2].lower(), (parts[4] if len(parts) > 4 else "").lower()):
-            best = parts[0]                         # wmctrl lists oldest first
+        n = score(parts[2].lower(), (parts[4] if len(parts) > 4 else "").lower())
+        if n and n >= best_score:                   # ties go to the newest
+            best, best_score = parts[0], n
     if not best:
         return False
     try:
@@ -442,7 +443,7 @@ def _activate_matching(match):
 
 def activate_anki_window(cfg):
     want = str(anki_cfg(cfg).get("window_class") or "").lower()
-    return bool(want) and _activate_matching(lambda cls, title: want in cls)
+    return bool(want) and _activate_matching(lambda cls, title: 1 if want in cls else 0)
 
 
 def classify_anki(cfg, info):
@@ -456,35 +457,31 @@ def activate_hub_window(cfg):
     """Put the hub's window in front, if one exists.
 
     GNOME's focus-stealing prevention will often not hand focus to a window
-    that another process opened, and leaves it behind a notification instead.
-    Without this the hub would open behind the panel, never be focused, and the
-    gate would sit over the only application it is willing to let you use.
+    another process opened, and leaves it behind a notification instead.
+    Without this the hub opens behind the panel and is never reachable.
+
+    Ranked, because a Firefox that has been handed the hub several times has
+    several windows, and an empty one titled only "Mozilla Firefox" is the
+    worst of them to bring forward.
     """
-    try:
-        out = subprocess.run(["wmctrl", "-lx"], capture_output=True, text=True, timeout=2).stdout
-    except Exception:                               # noqa: BLE001
-        return False
     want = str(cfg.get("training_window_class") or "").lower()
     patterns = [str(p).lower() for p in (cfg.get("training_window_patterns") or [])]
     host = hub_host(cfg)
-    best = None
-    for line in out.splitlines():
-        parts = line.split(None, 4)
-        if len(parts) < 4:
-            continue
-        wid, cls = parts[0], parts[2].lower()
-        title = (parts[4] if len(parts) > 4 else "").lower()
+
+    def score(cls, title):
         if want and want not in cls:
-            continue
-        if any(p in title for p in patterns) or (host and host in title) or title == "mozilla firefox":
-            best = wid                              # wmctrl lists oldest first
-    if not best:
-        return False
-    try:
-        subprocess.run(["wmctrl", "-i", "-a", best], capture_output=True, timeout=2)
-    except Exception:                               # noqa: BLE001
-        return False
-    return True
+            return 0
+        if any(p in title for p in patterns):
+            return 3
+        if host and host in title:
+            return 2
+        return 1 if title == "mozilla firefox" else 0
+
+    return _activate_matching(score)
+
+
+def activate_target_window(cfg, target):
+    return activate_anki_window(cfg) if target == "anki" else activate_hub_window(cfg)
 
 
 # --------------------------------------------------------------------------- #
@@ -634,6 +631,9 @@ class Gate:
         # panel it restarted every time you went back to training and so never
         # once fired.
         self.launched_target = "mindbuild"
+        self.launch_error = None
+        # When the focused window was last readable. See `training_live`.
+        self.focus_seen_at = 0.0
         self.buttons = {}
         self.lock_day = None
         self.locked_since = 0.0
@@ -725,6 +725,8 @@ class Gate:
             if button:
                 button.set_visible(have < need)
         text = "<big>%s</big>" % "\n".join(lines)
+        if self.launch_error:
+            text += "\n<b>%s</b>" % GLib.markup_escape_text(self.launch_error)
         if self.counter.capped:
             text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
                 ", ".join(self.counter.capped))
@@ -746,39 +748,41 @@ class Gate:
     # -- the hand-off ----------------------------------------------------- #
 
     def launch(self, target="mindbuild"):
-        """Open the chosen quota's application, then step aside.
+        """Bring the chosen application forward, opening it only if it is not.
 
-        The grab has to go first. A gate still holding the keyboard hands the
-        application a window nobody can type into, which is the same as not
-        opening it at all.
+        The panel goes first — grab and window both. A gate still holding the
+        keyboard hands over a window nobody can type into, and a fullscreen
+        panel still on top is exactly what a window being raised ends up behind.
+
+        An open window is reused rather than another one started. Each press
+        used to open a fresh Firefox window, and three presses left three hubs,
+        one of them empty.
         """
-        self._ungrab()
+        self.launched_at = time.time()
+        self.launched_target = target
+        self.launch_error = None
+        self.hide("handing off to %s" % target)
+
+        if activate_target_window(self.cfg, target):
+            return
+
         if target == "anki":
             command = str(anki_cfg(self.cfg).get("command") or "anki")
             args, key = [command], '"anki": {"command": ...}'
         else:
             command = str(self.cfg.get("browser") or "firefox")
             url = str(self.cfg.get("hub_url") or "")
-            # A new window rather than a tab in whatever window happens to be
-            # open. A tab joins a window full of other tabs, and the moment the
-            # gate activates that window it activates all of them.
             args = [command, "--new-window", url] if "firefox" in os.path.basename(command) \
                 else [command, url]
             key = '"browser"'
         try:
             subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except (OSError, ValueError) as e:
-            # Never leave the panel up with a dead button: say so on the panel
-            # rather than in a log nobody has open.
+            # The panel will be back on the next tick; say why on it, rather
+            # than in a log nobody has open.
             print("gate: could not start %s (%s)" % (command, e), file=sys.stderr, flush=True)
-            if self.label:
-                self.label.set_markup(
-                    "<b>Could not start %s.</b>\n<small>Set %s in %s</small>"
-                    % tuple(GLib.markup_escape_text(x) for x in (command, key, CONFIG)))
-            return
-        self.launched_at = time.time()
-        self.launched_target = target
-        self.hide("handed off to %s" % target)
+            self.launch_error = "Could not start %s. Set %s in %s" % (command, key, CONFIG)
+            self.launched_at = 0.0
 
     # -- the grab --------------------------------------------------------- #
 
@@ -878,11 +882,13 @@ class Gate:
         brings the panel back like switching elsewhere at any other time.
         """
         now = time.time()
-        since_launch = now - self.launched_at if self.launched_at else None
-        in_grace = since_launch is not None and \
-            since_launch < float(self.cfg.get("grace_seconds") or 0)
+        grace = float((anki_cfg(self.cfg) if self.launched_target == "anki" else self.cfg)
+                      .get("grace_seconds") or 0)
+        in_grace = bool(self.launched_at and now - self.launched_at < grace)
 
         info = window_info()
+        if info is not None:
+            self.focus_seen_at = now
         pending = self.unmet()
         # Only the applications whose quota is still owed. Anki done and
         # mindbuild not means an Anki window is now "something else".
@@ -891,20 +897,27 @@ class Gate:
             if classifiers[name](self.cfg, info) is True:
                 self.launched_at = 0.0
                 return True
-        if info is not None:
-            if not in_grace:
-                return False
-            if self.launched_target == "anki":
-                activate_anki_window(self.cfg)
-                arriving = not info[0] or info[0] == PANEL_TITLE
-            else:
-                activate_hub_window(self.cfg)
-                arriving = is_handoff_placeholder(self.cfg, info)
-            if since_launch < float(self.cfg.get("settle_seconds") or 0):
-                return True
-            return arriving
+
         if in_grace:
+            # The chosen application is still on its way. Rather than judge
+            # whatever happens to have focus meanwhile — which put the panel
+            # back over Anki while its window was still being created — keep
+            # pulling the application forward until it arrives. That also
+            # makes grace useless as an exit: anything else you switch to is
+            # replaced by the application you picked within half a second.
+            activate_target_window(self.cfg, self.launched_target)
             return True
+
+        if info is not None:
+            return False
+
+        # Unreadable, on a display that was readable a moment ago. GNOME
+        # reports no active window while the panel itself has focus, and
+        # treating that as "cannot tell" let the heartbeat hide the panel,
+        # which handed focus back, which raised the panel — once a second.
+        # A blip is not evidence of anything: leave the panel as it is.
+        if self.focus_seen_at and now - self.focus_seen_at < 120:
+            return self.window is None
 
         # The display could not be read. Fall back to the slower evidence
         # rather than blocking a machine the gate cannot see.

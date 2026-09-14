@@ -115,6 +115,15 @@ test("garbage under a trainer's key does not take the day down with it", () => {
   assert.strictEqual(Today.totalMinutes(DAY), 0);
 });
 
+test("a chunked Syllogimous history reaches the meter", () => {
+  reset();
+  const q = { answeredAt: at(9), createdAt: at(9) - 30000, answered: true, type: "Syllogism" };
+  store.SYL_HISTORY_IDX = JSON.stringify([0]);
+  store["SYL_HISTORY_C:0"] = JSON.stringify([q, { ...q, answeredAt: at(9) + 60000, createdAt: at(9) + 30000 }]);
+  assert.strictEqual(Math.round(Today.minutesOn(DAY).syllogimous * 60), 60,
+    "the meter still asked for SYL_HISTORY and saw no Syllogimous");
+});
+
 /* ------------------------------------------------------------------ *
  * What the quota may not include                                      *
  * ------------------------------------------------------------------ */

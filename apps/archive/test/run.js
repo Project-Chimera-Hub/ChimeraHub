@@ -30,6 +30,44 @@ const cases = [];
 function test(name, fn) { cases.push([name, fn]); }
 
 /* ------------------------------------------------------------------ *
+ * Syllogimous, chunked                                                *
+ * ------------------------------------------------------------------ */
+
+const sylQ = (at) => ({ answeredAt: at, createdAt: at - 20000, answered: true, type: "Syllogism", correctness: "right" });
+
+test("syllogimous: a chunked history is read, not reported as empty", () => {
+  const snap = {
+    SYL_HISTORY_IDX: JSON.stringify([1, 0]),
+    "SYL_HISTORY_C:1": JSON.stringify([sylQ(Date.UTC(2026, 8, 14, 10, 2)), sylQ(Date.UTC(2026, 8, 14, 10, 1))]),
+    "SYL_HISTORY_C:0": JSON.stringify([sylQ(Date.UTC(2026, 8, 14, 10, 0))]),
+  };
+  const r = readSyllogimous(snap);
+  assert.ok(r, "a current install's storage read as no Syllogimous at all");
+  assert.strictEqual(r.records.length, 3);
+  assert.ok(Math.abs(r.minutes["2026-09-14"] - 1) < 1e-9, "three 20s answers are not one minute");
+});
+
+test("syllogimous: chunks win over a leftover legacy key, so nothing counts twice", () => {
+  const q = sylQ(Date.UTC(2026, 8, 14, 10, 0));
+  const snap = {
+    SYL_HISTORY: JSON.stringify([q]),
+    SYL_HISTORY_IDX: JSON.stringify([0]),
+    "SYL_HISTORY_C:0": JSON.stringify([q]),
+  };
+  assert.ok(Math.abs(readSyllogimous(snap).minutes["2026-09-14"] - 20 / 60) < 1e-9, "one answer counted twice");
+});
+
+test("syllogimous: the legacy single key still reads", () => {
+  const snap = { SYL_HISTORY: JSON.stringify([sylQ(Date.UTC(2026, 8, 1, 9))]) };
+  assert.strictEqual(readSyllogimous(snap).records.length, 1);
+});
+
+test("syllogimous: a missing chunk is skipped, not fatal", () => {
+  const snap = { SYL_HISTORY_IDX: JSON.stringify([2, 1]), "SYL_HISTORY_C:1": JSON.stringify([sylQ(Date.UTC(2026, 8, 1, 9))]) };
+  assert.strictEqual(readSyllogimous(snap).records.length, 1);
+});
+
+/* ------------------------------------------------------------------ *
  * The merge                                                           *
  * ------------------------------------------------------------------ */
 

@@ -284,7 +284,7 @@ function importNeighbours() {
         syl[key] = localStorage.getItem(key);
       }
     }
-    if (syl.SYL_HISTORY) { importText(JSON.stringify(syl), "syllogimous (this browser)"); found++; }
+    if (syl.SYL_HISTORY || syl.SYL_HISTORY_IDX) { importText(JSON.stringify(syl), "syllogimous (this browser)"); found++; }
   } catch (e) { /* storage off */ }
 
   /* Sources that keep everything under a single localStorage key. The first two

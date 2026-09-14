@@ -25,8 +25,9 @@ import gate as G
 # would silently be about whatever window was focused when it ran. Unreadable is
 # the neutral default; `focus()` below says otherwise per test.
 G.active_window_title = lambda: None
-G.activate_hub_window = lambda cfg: False
-G.activate_anki_window = lambda cfg: False
+ACTIVATED = []
+G.activate_hub_window = lambda cfg: ACTIVATED.append("mindbuild") or False
+G.activate_anki_window = lambda cfg: ACTIVATED.append("anki") or False
 
 cases = []
 def test(fn): cases.append(fn); return fn
@@ -53,10 +54,12 @@ class FakeGate(G.Gate):
         if not self.closed:
             self.shown_at = time.time()
         self.closed = True
+        self.window = True          # stands in for a GTK window existing
 
     def hide(self, why):
         self.closed = False
         self.why = why
+        self.window = None
 
 
 
@@ -319,14 +322,26 @@ FIREFOX = '\nWM_CLASS(STRING) = "Navigator", "firefox"'
 
 
 @test
-def switching_away_during_grace_is_not_excused_once_settled():
-    """The old exit: press Train, switch to anything, keep the grace."""
-    g = gate_with(0, required_minutes=20, grace_seconds=15, settle_seconds=3,
+def during_grace_the_chosen_application_is_pulled_back_in_front():
+    """Grace used to excuse whatever had focus — an exit. Now it spends itself
+    raising the application you picked, so switching away does not stick."""
+    g = gate_with(0, required_minutes=20, grace_seconds=15,
                   active_from="00:00", active_to="23:59")
     g.launched_at = time.time() - 5
+    del ACTIVATED[:]
     with focus('_NET_WM_NAME(UTF8_STRING) = "Discord | Friends — Mozilla Firefox"' + FIREFOX):
         g.evaluate()
-    assert g.closed, "a Discord tab during grace was excused"
+    assert ACTIVATED == ["mindbuild"], "grace did not pull the hub back in front"
+
+
+@test
+def after_grace_switching_away_brings_the_panel_back():
+    g = gate_with(0, required_minutes=20, grace_seconds=15,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time() - 16
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Discord | Friends — Mozilla Firefox"' + FIREFOX):
+        g.evaluate()
+    assert g.closed
 
 
 @test
@@ -453,12 +468,46 @@ def a_partial_anki_block_keeps_the_default_command():
 
 
 @test
-def grace_after_choosing_anki_does_not_excuse_a_browser():
-    g = gate_with_anki(5, 5, grace_seconds=15, settle_seconds=3)
-    g.launched_at, g.launched_target = time.time() - 5, "anki"
+def choosing_anki_gives_it_time_to_start_and_raises_it_not_the_hub():
+    """A cold Anki start takes ten seconds and more. The panel came back over it
+    after three, and Anki opened behind a fullscreen window."""
+    g = gate_with_anki(5, 5)
+    g.launched_at, g.launched_target = time.time() - 30, "anki"
+    del ACTIVATED[:]
     with focus('_NET_WM_NAME(UTF8_STRING) = "Mozilla Firefox"' + FIREFOX):
         g.evaluate()
-    assert g.closed, "choosing Anki excused a loading browser window"
+    assert not g.closed, "the panel came back while Anki was still starting"
+    assert ACTIVATED == ["anki"], "the wrong application was pulled forward"
+
+
+@test
+def an_unreadable_blip_does_not_flap_the_panel():
+    """GNOME reports no active window while the panel has focus. Read as "cannot
+    tell", that let the heartbeat hide the panel, focus went back, the panel
+    came up — once a second."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time()               # the hub is posting
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Mozilla Firefox"' + FIREFOX):
+        g.evaluate()
+    assert g.closed
+    with focus(None):
+        g.evaluate()
+    assert g.closed, "a moment of unreadable focus hid the panel"
+
+
+@test
+def pressing_a_button_reuses_an_open_window():
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    started = []
+    original_popen, original_hub = G.subprocess.Popen, G.activate_hub_window
+    G.subprocess.Popen = lambda *a, **k: started.append(a)
+    G.activate_hub_window = lambda cfg: True          # a hub window exists
+    try:
+        g.launch("mindbuild")
+    finally:
+        G.subprocess.Popen, G.activate_hub_window = original_popen, original_hub
+    assert started == [], "a new window was opened although one was already there"
+    assert g.launched_at and not g.closed
 
 
 # ---- when the heartbeat never arrives ------------------------------------- #

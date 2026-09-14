@@ -195,7 +195,21 @@ def syllogimous_from(store):
     """The keys its own backup writes, so its own adapter reads the result."""
     out = {k: v for k, v in store.items()
            if k.startswith("SYL_") or k.startswith("syllogimous-")}
-    return out if out.get("SYL_HISTORY") else None
+    # The history is chunked in current builds — SYL_HISTORY_C:<n>, indexed by
+    # SYL_HISTORY_IDX — and asking only for the old single key skipped every
+    # current install as though it held nothing.
+    return out if (out.get("SYL_HISTORY") or out.get("SYL_HISTORY_IDX")) else None
+
+
+def syllogimous_items(syl):
+    """How many questions a snapshot holds, chunked or not."""
+    try:
+        index = json.loads(syl.get("SYL_HISTORY_IDX") or "null")
+        if isinstance(index, list):
+            return sum(len(json.loads(syl.get("SYL_HISTORY_C:%s" % n) or "[]")) for n in index)
+        return len(json.loads(syl.get("SYL_HISTORY") or "[]"))
+    except (ValueError, TypeError):
+        return 0
 
 
 def syllogimous_v3_from(store):
@@ -401,7 +415,7 @@ def main():
                 path = os.path.join(args.outdir, "syllogimous-%s.json" % safe)
                 with open(path, "w", encoding="utf-8") as fh:
                     json.dump(syl, fh)
-                items = len(json.loads(syl["SYL_HISTORY"]))
+                items = syllogimous_items(syl)
                 print("  syllogimous  %-52s %5d items" % (label, items))
                 written.append(path)
 

@@ -43,9 +43,53 @@ var MAX_ITEM_SECONDS = 300;
  * the ability model's own numbers but no times at all, so it cannot be placed
  * on a calendar and is left where it is.
  */
+/**
+ * The history, whichever way this build stored it.
+ *
+ * Syllogimous moved its history out of one `SYL_HISTORY` key and into chunks —
+ * `SYL_HISTORY_C:<n>`, fifty questions each, listed newest first in
+ * `SYL_HISTORY_IDX` — so that answering a question rewrites one small chunk
+ * rather than the whole history. Every reader here kept asking for
+ * `SYL_HISTORY`, found nothing, and reported no Syllogimous at all: not in the
+ * archive's import, not in "Read this browser", not in the hub's meter and not
+ * in the gate. Nothing errored, because a missing key looked exactly like an
+ * app that had never been used.
+ *
+ * Chunks win when both exist. The app migrates the old key into chunks on
+ * load, and a backup caught mid-migration would otherwise count every answer
+ * twice — records fold by id, but day minutes are summed.
+ */
+function syllogimousHistory(data) {
+  if (!data || typeof data !== "object") return null;
+
+  if (typeof data.SYL_HISTORY_IDX === "string") {
+    var index;
+    try { index = JSON.parse(data.SYL_HISTORY_IDX); } catch (e) { index = null; }
+    if (Array.isArray(index)) {
+      var out = [];
+      for (var i = 0; i < index.length; i++) {
+        var raw = data["SYL_HISTORY_C:" + index[i]];
+        if (typeof raw !== "string") continue;
+        var chunk;
+        try { chunk = JSON.parse(raw); } catch (e) { continue; }
+        if (Array.isArray(chunk)) out.push.apply(out, chunk);
+      }
+      return out;
+    }
+  }
+
+  if (typeof data.SYL_HISTORY === "string") {
+    try {
+      var legacy = JSON.parse(data.SYL_HISTORY);
+      return Array.isArray(legacy) ? legacy : null;
+    } catch (e) { return null; }
+  }
+  return null;
+}
+
 function readSyllogimous(data) {
-  var raw = data && typeof data === "object" ? data.SYL_HISTORY : null;
-  if (typeof raw !== "string") return null;
+  var history = syllogimousHistory(data);
+  if (!history) return null;
 
   /* Which build these came from, when whatever produced the file knows.
      The original v4, a fork, a dev server and the deployed copy all write
@@ -53,10 +97,6 @@ function readSyllogimous(data) {
      because the day counting should not fragment, and carry the origin so an
      analysis that needs them apart can have them apart. */
   var origin = typeof data.__origin === "string" ? data.__origin : null;
-
-  var history;
-  try { history = JSON.parse(raw); } catch (e) { return null; }
-  if (!Array.isArray(history)) return null;
 
   var records = [];
   var minutes = {};
@@ -1067,6 +1107,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     readFile: readFile,
     readSyllogimous: readSyllogimous,
+    syllogimousHistory: syllogimousHistory,
     readRnb: readRnb,
     readCct: readCct,
     readEwmt: readEwmt,
