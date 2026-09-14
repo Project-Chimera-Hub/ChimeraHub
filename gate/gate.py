@@ -7,9 +7,31 @@
 
 WHAT IT DOES
 ------------
-Every couple of minutes it counts how long you trained today, and if that is
-under the day's quota it puts a window over the screen with the trainers in it.
-Meet the quota and the window goes away and stays away until tomorrow.
+Every couple of minutes it counts how long you trained today. Under the day's
+quota it puts a panel in front of you with one button on it, and that button
+opens the hub in Firefox. While you are training it gets out of the way; when
+you stop it comes back. Meet the quota and it is gone until tomorrow.
+
+WHY IT DOES NOT SHOW THE TRAINERS ITSELF
+----------------------------------------
+It used to. The panel was a WebKitGTK window with the hub loaded into it, and
+that was wrong twice over.
+
+The first is that WebKitGTK is not the browser the trainers are used in, and it
+shows: `transform-style: preserve-3d` flattens, so RNB's cube renders as its
+front face alone, and `speechSynthesis` reports no voices, so CCT — which is
+audio only — has nothing to say.
+
+The second is worse and is the reason this is a rewrite rather than a patch.
+The counter reads Firefox's storage off disk. A WebKit window keeps its own,
+in ~/.cache, where nothing here looks. So training done inside the gate's own
+window was invisible to the gate's own counter, and the quota could never be
+met from the window the gate put in front of you. It would have sat there
+saying `0 of 20 min` for as long as you cared to train at it.
+
+So the gate does not host anything. It interrupts, and it hands off to the
+browser whose storage it reads. Those two have to be the same browser or the
+loop does not close.
 
 WHERE THE NUMBER COMES FROM
 ---------------------------
@@ -63,11 +85,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # and `--status` are the two things you want to run over SSH, from a cron job,
 # or on a machine with no display at all, and importing GTK would make all three
 # fail for no reason.
-Gdk = GLib = Gtk = WebKit2 = None
+Gdk = GLib = Gtk = None
 
 
 def load_gtk():
-    global Gdk, GLib, Gtk, WebKit2
+    global Gdk, GLib, Gtk
     if Gtk is not None:
         return
     import gi
@@ -78,9 +100,8 @@ def load_gtk():
     # for.
     gi.require_version("Gdk", "3.0")
     gi.require_version("Gtk", "3.0")
-    gi.require_version("WebKit2", "4.0")
-    from gi.repository import Gdk as _Gdk, GLib as _GLib, Gtk as _Gtk, WebKit2 as _WK
-    Gdk, GLib, Gtk, WebKit2 = _Gdk, _GLib, _Gtk, _WK
+    from gi.repository import Gdk as _Gdk, GLib as _GLib, Gtk as _Gtk
+    Gdk, GLib, Gtk = _Gdk, _GLib, _Gtk
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -105,6 +126,17 @@ DEFAULTS = {
     "max_hold_minutes": 180,
     "scan_every_seconds": 120,
     "port": 8787,
+    # The browser the counter can actually see. Not xdg-open's default, unless
+    # that default happens to be Firefox: opening Chrome here would train you
+    # into a store `firefox-storage.py` never reads, which is the exact bug
+    # this rewrite exists to remove.
+    "browser": "firefox",
+    # After the button is pressed, how long to stay away before expecting to
+    # see anything. A browser has to start and a page has to load.
+    "grace_seconds": 120,
+    # No sign of training for this long and the panel comes back. "Sign" is a
+    # heartbeat from the hub or a rising disk count — see `training_live`.
+    "stall_seconds": 180,
     # Per-source ceilings, as a share of the counted day. Synth is too easy to
     # be training and CCT was never meant to be the bulk of it, so neither can
     # satisfy a quota alone however long you spend — see shared/quota.js for
@@ -168,6 +200,10 @@ class Counter:
         self.raw = {}
         self.capped = []
         self.last_scan = 0.0
+        # When the hub last said anything. Not a measure of training — a
+        # measure of a page being open and posting, which is the only
+        # fast-moving signal there is while the disk lags behind.
+        self.last_beat = 0.0
         self.error = None
         self._lock = threading.Lock()
 
@@ -188,6 +224,10 @@ class Counter:
         with self._lock:
             if day != self.day:
                 return
+            # Stamped even when the figure has not moved: a page posting the
+            # same number every thirty seconds is still a page that is open,
+            # and between two blocks the total genuinely does not change.
+            self.last_beat = time.time()
             if minutes > self.beat:
                 self.beat = float(minutes)
 
@@ -197,6 +237,8 @@ class Counter:
             if today != self.day:
                 self.day, self.disk, self.beat = today, 0.0, 0.0
             self.by_source, self.raw, self.capped = {}, {}, []
+            # `last_beat` deliberately survives: midnight passing is not a
+            # reason to conclude that the session in front of you stopped.
 
     def scan(self, roll=True):
         """firefox-storage.py into a temp dir, count.js over the result."""
@@ -238,39 +280,83 @@ class Counter:
 # --------------------------------------------------------------------------- #
 
 class Gate:
+    """The panel, and the decision about whether it is up.
+
+    It draws no web content and never will. See the module docstring: the
+    browser it hands off to has to be the one whose storage the counter reads.
+    """
+
     def __init__(self, cfg, counter):
         self.cfg = cfg
         self.counter = counter
         self.window = None
+        self.label = None
         self.seat = None
         self.shown_at = 0.0
+        self.launched_at = 0.0
 
     # -- lifecycle -------------------------------------------------------- #
 
     def show(self):
         if self.window:
+            self.refresh()
             return
         self.shown_at = time.time()
 
         win = Gtk.Window(title="mindbuild")
         win.set_decorated(False)
         win.set_keep_above(True)
-        win.fullscreen()
+        win.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         # Closing it is not a way out; the gate decides when it goes.
         win.connect("delete-event", lambda *_: True)
 
-        view = WebKit2.WebView()
-        view.load_uri(self.cfg["hub_url"])
-        win.add(view)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        box.set_margin_top(28); box.set_margin_bottom(28)
+        box.set_margin_start(36); box.set_margin_end(36)
+
+        self.label = Gtk.Label()
+        self.label.set_justify(Gtk.Justification.CENTER)
+        box.pack_start(self.label, False, False, 0)
+
+        button = Gtk.Button(label="Train")
+        button.connect("clicked", lambda *_: self.launch())
+        box.pack_start(button, False, False, 0)
+
+        hint = Gtk.Label()
+        hint.set_markup(
+            '<small>Opens the hub in {}. This panel steps aside while you train.\n'
+            'Ctrl-Alt-F3 \u2192 systemctl --user stop mindbuild-gate</small>'
+            .format(GLib.markup_escape_text(str(self.cfg.get("browser") or "your browser"))))
+        hint.set_justify(Gtk.Justification.CENTER)
+        box.pack_start(hint, False, False, 0)
+
+        win.add(box)
+
+        # Fullscreen only in grab mode; a nagging panel that covers the screen
+        # while refusing to host anything would just be in the way.
+        if self.cfg.get("mode") == "grab":
+            win.fullscreen()
 
         win.show_all()
         self.window = win
+        self.refresh()
 
         if self.cfg.get("mode") == "grab":
             self._grab()
 
-        print("gate: closed — %.0f of %s min" %
+        print("gate: up — %.0f of %s min" %
               (self.counter.minutes, self.cfg["required_minutes"]), flush=True)
+
+    def refresh(self):
+        """Keep the figure on the panel current while it sits there."""
+        if not self.label:
+            return
+        have, need = self.counter.minutes, float(self.cfg["required_minutes"])
+        text = "<big><b>%.0f of %.0f minutes</b></big>" % (have, need)
+        if self.counter.capped:
+            text += "\n<small>capped: %s</small>" % GLib.markup_escape_text(
+                ", ".join(self.counter.capped))
+        self.label.set_markup(text)
 
     def hide(self, why):
         if not self.window:
@@ -278,7 +364,35 @@ class Gate:
         self._ungrab()
         self.window.destroy()
         self.window = None
-        print("gate: open — %s" % why, flush=True)
+        self.label = None
+        print("gate: down — %s" % why, flush=True)
+
+    # -- the hand-off ----------------------------------------------------- #
+
+    def launch(self):
+        """Open the hub in the browser the counter reads, then step aside.
+
+        The grab has to go first. A gate still holding the keyboard hands the
+        browser a window nobody can type into, which on a page whose whole
+        purpose is answering questions is the same as not opening it at all.
+        """
+        self._ungrab()
+        browser = str(self.cfg.get("browser") or "firefox")
+        url = str(self.cfg.get("hub_url") or "")
+        try:
+            subprocess.Popen([browser, url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, ValueError) as e:
+            # Never leave the panel up with a dead button: say so on the panel
+            # rather than in a log nobody has open.
+            print("gate: could not start %s (%s)" % (browser, e), file=sys.stderr, flush=True)
+            if self.label:
+                self.label.set_markup(
+                    "<b>Could not start %s.</b>\n<small>Set \"browser\" in %s</small>"
+                    % (GLib.markup_escape_text(browser), GLib.markup_escape_text(CONFIG)))
+            return
+        self.launched_at = time.time()
+        self.hide("handed off to %s" % browser)
 
     # -- the grab --------------------------------------------------------- #
 
@@ -287,7 +401,7 @@ class Gate:
 
         X11 only, and checked rather than assumed: on Wayland the grab silently
         does nothing and the gate would claim a hold it does not have. A failed
-        grab is reported and the window stays up as a nag, which is the honest
+        grab is reported and the panel stays up as a nag, which is the honest
         degradation.
         """
         try:
@@ -326,8 +440,24 @@ class Gate:
         return bool(self.window and cap > 0 and
                     (time.time() - self.shown_at) / 60 >= cap)
 
+    def training_live(self):
+        """Is there any sign of training happening right now?
+
+        Two signs, and the first is why the hub posts a heartbeat at all.
+        Firefox writes localStorage to disk lazily, so a scan can be minutes
+        behind a session in progress — and a gate that reappears over a page
+        you are actively answering is a gate that gets uninstalled the same
+        afternoon. The heartbeat closes that window; the scan remains the
+        authority on how much was done.
+        """
+        now = time.time()
+        if self.launched_at and now - self.launched_at < float(self.cfg.get("grace_seconds") or 0):
+            return True
+        beat = self.counter.last_beat
+        return bool(beat and now - beat < float(self.cfg.get("stall_seconds") or 0))
+
     def evaluate(self):
-        """Called on a timer. The only place the window is opened or closed."""
+        """Called on a timer. The only place the panel is raised or dropped."""
         self.counter.roll_day()
         need = float(self.cfg["required_minutes"])
         have = self.counter.minutes
@@ -343,6 +473,9 @@ class Gate:
             return True
         if not within_active_hours(self.cfg):
             self.hide("outside active hours")
+            return True
+        if self.training_live():
+            self.hide("training in progress")
             return True
 
         self.show()
@@ -414,6 +547,8 @@ def state(cfg, counter, gate):
         "activeHours": "%s–%s" % (cfg["active_from"], cfg["active_to"]),
         "withinActiveHours": within_active_hours(cfg),
         "lastScanAgo": round(time.time() - counter.last_scan) if counter.last_scan else None,
+        "lastBeatAgo": round(time.time() - counter.last_beat) if counter.last_beat else None,
+        "trainingLive": gate.training_live() if gate else None,
         "error": counter.error,
     }
 
@@ -462,6 +597,9 @@ def main():
           % (cfg["port"], cfg["mode"], cfg["required_minutes"]), flush=True)
 
     GLib.timeout_add_seconds(5, gate.evaluate)
+    # The panel shows a number that the scan thread keeps changing underneath
+    # it; without this it would show whatever was true when it opened.
+    GLib.timeout_add_seconds(5, lambda: (gate.refresh(), True)[1])
     try:
         Gtk.main()
     finally:

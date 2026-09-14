@@ -129,9 +129,79 @@ def the_day_rolls_and_takes_the_count_with_it():
     counter = G.Counter(c)
     counter.disk, counter.beat = 40.0, 40.0
     counter.day = "1999-01-01"
+    counter.last_beat = time.time()
     counter.roll_day()
     assert counter.day == G.utc_day()
     assert counter.minutes == 0.0, "yesterday's minutes survived into today"
+    assert counter.last_beat > 0, \
+        "midnight passing was treated as the session having stopped"
+
+
+# ---- stepping aside while you train --------------------------------------- #
+
+@test
+def a_recent_heartbeat_keeps_the_panel_down():
+    """The hub is open and posting, so something is being trained at."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.evaluate()
+    assert g.closed, "the panel was not up to begin with"
+    g.counter.last_beat = time.time()
+    g.evaluate()
+    assert not g.closed, "the panel stayed up while the hub was posting"
+
+
+@test
+def a_stale_heartbeat_brings_it_back():
+    g = gate_with(0, required_minutes=20, stall_seconds=180,
+                  active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time() - 181
+    g.evaluate()
+    assert g.closed, "a session that stopped three minutes ago still held the panel off"
+
+
+@test
+def the_grace_period_covers_a_browser_starting():
+    """Between the button and the first heartbeat there is nothing to see, and
+    reappearing in that gap would fight the browser for the screen."""
+    g = gate_with(0, required_minutes=20, grace_seconds=120,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time()
+    g.evaluate()
+    assert not g.closed, "the panel came back while the browser was still starting"
+
+
+@test
+def grace_runs_out_if_nothing_follows_it():
+    g = gate_with(0, required_minutes=20, grace_seconds=120, stall_seconds=180,
+                  active_from="00:00", active_to="23:59")
+    g.launched_at = time.time() - 121          # browser opened, never trained in
+    g.evaluate()
+    assert g.closed, "pressing Train and walking away kept the gate off for good"
+
+
+@test
+def a_heartbeat_stamps_liveness_even_when_the_figure_has_not_moved():
+    """Between two blocks the total does not change, and that is not a stall."""
+    c = cfg()
+    counter = G.Counter(c)
+    counter.heartbeat(G.utc_day(), 0)
+    assert counter.last_beat > 0, "a heartbeat carrying no new minutes was ignored"
+
+
+@test
+def a_heartbeat_for_another_day_does_not_stamp_liveness():
+    c = cfg()
+    counter = G.Counter(c)
+    counter.heartbeat("1999-01-01", 50)
+    assert counter.last_beat == 0, "a stale day's heartbeat counted as a live session"
+
+
+@test
+def meeting_the_quota_still_wins_over_a_live_session():
+    g = gate_with(25, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time()
+    g.evaluate()
+    assert not g.closed
 
 
 # ---- active hours -------------------------------------------------------- #

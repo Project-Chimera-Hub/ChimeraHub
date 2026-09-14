@@ -22,15 +22,23 @@ for cmd in python3 node; do
   command -v "$cmd" >/dev/null || { echo "missing: $cmd" >&2; exit 1; }
 done
 
-python3 - <<'PY' || { echo "missing: python3-gi with GTK 3 and WebKit2 4.0" >&2
+python3 - <<'PY' || { echo "missing: python3-gi with GTK 3" >&2
 import gi
 gi.require_version("Gdk", "3.0"); gi.require_version("Gtk", "3.0")
-gi.require_version("WebKit2", "4.0")
-from gi.repository import Gtk, WebKit2  # noqa
+from gi.repository import Gtk  # noqa
 PY
-  echo "  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.0" >&2
+  echo "  sudo apt install python3-gi gir1.2-gtk-3.0" >&2
   exit 1
 }
+
+# The gate hands off to a browser and counts what that browser wrote. If those
+# are not the same browser the quota can never be met, so it is checked here
+# rather than discovered after twenty minutes of uncounted training.
+if ! command -v firefox >/dev/null; then
+  echo "warning: firefox not found. The counter reads Firefox's storage and" >&2
+  echo "         nothing else; point \"browser\" only at something" >&2
+  echo "         firefox-storage.py can also read." >&2
+fi
 
 mkdir -p "$config_dir" "$units_dir"
 
@@ -48,7 +56,11 @@ if [ ! -f "$config_dir/gate.json" ]; then
   "active_to": "23:00",
   "max_hold_minutes": 180,
   "scan_every_seconds": 120,
-  "port": 8787
+  "port": 8787,
+  "browser": "firefox",
+  "grace_seconds": 120,
+  "stall_seconds": 180,
+  "caps": { "synth": 0.05, "cct": 0.20 }
 }
 JSON
   echo "wrote $config_dir/gate.json"
