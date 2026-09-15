@@ -591,6 +591,34 @@ def banners_are_restored_exactly_as_they_were():
         G.subprocess.run, G.NOTIFY_STATE = real_run, real_path
 
 
+@test
+def sustained_unreadable_focus_is_not_training_once_focus_was_readable():
+    """The Activities overview, a fullscreen game: no active window for as long
+    as you like, excused by an open hub tab's heartbeat. No longer."""
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.counter.last_beat = time.time()
+    g.focus_seen_at = time.time() - (G.BLIP_SECONDS + 1)
+    with focus(None):
+        g.evaluate()
+    assert g.closed, "unreadable focus plus an open hub tab kept the panel down"
+
+
+@test
+def a_short_unreadable_blip_while_training_is_tolerated():
+    g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
+    g.focus_seen_at = time.time() - 0.5
+    with focus(None):
+        g.evaluate()
+    assert not g.closed
+
+
+@test
+def a_private_hub_window_is_not_training():
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild — Mozilla Firefox Private Browsing"' + FIREFOX):
+        assert G.focused_on_training(cfg()) is False, \
+            "a private window, whose training is never saved, counted"
+
+
 # ---- when the heartbeat never arrives ------------------------------------- #
 #
 # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed

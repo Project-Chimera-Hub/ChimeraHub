@@ -114,6 +114,10 @@ TARGET_LABELS = {"mindbuild": "mindbuild", "anki": "Anki"}
 # How long a raised window has to actually take focus before the panel returns.
 RAISE_SECONDS = 3.0
 
+# How long an unreadable focus is tolerated, on a display that was readable,
+# before it counts as not training.
+BLIP_SECONDS = 2.0
+
 # Must not contain any string in `training_window_patterns`. See `show`.
 PANEL_TITLE = "Training required"
 
@@ -427,6 +431,10 @@ def classify_focus(cfg, info):
     if want and want not in cls.lower():
         return False
     low = name.lower()
+    # A private window keeps no localStorage past its own lifetime, so nothing
+    # trained in one ever reaches the disk the counter reads.
+    if "private browsing" in low:
+        return False
     return any(str(p).lower() in low for p in (cfg.get("training_window_patterns") or []))
 
 
@@ -560,6 +568,8 @@ def _hub_score(cfg):
 
     def score(cls, title):
         if want and want not in cls:
+            return 0
+        if "private browsing" in title:
             return 0
         if any(p in title for p in patterns):
             return 3
@@ -878,7 +888,15 @@ class Gate:
         wid = find_target_window(self.cfg, target)
         if wid:
             self.hide("handing off to %s" % target)
-            activate_window(wid)
+            # Not immediately. The panel's unmap is still on its way to the
+            # window manager, and a raise that lands first is undone when the
+            # panel goes: focus falls back to whatever was under it — the video
+            # the panel had just closed over — and the hand-off looks as though
+            # it never happened.
+            if GLib is not None:
+                GLib.timeout_add(150, lambda: (activate_window(wid), False)[1])
+            else:
+                activate_window(wid)
             self.raised_at = time.time()
             return
 
@@ -968,6 +986,12 @@ class Gate:
 
     # -- the decision ----------------------------------------------------- #
 
+    def note(self, message):
+        """Log a reason once, not twice a second."""
+        if message != getattr(self, "_last_note", None):
+            self._last_note = message
+            print("gate: %s" % message, flush=True)
+
     def targets(self):
         """[(name, required, have)] for every quota that is switched on."""
         out = [("mindbuild", float(self.cfg["required_minutes"]), self.counter.minutes)]
@@ -1035,6 +1059,9 @@ class Gate:
                 if now - self.raised_at < RAISE_SECONDS:
                     activate_window(wid)
                     return True
+                self.note("raised %s (%s) for %.0fs but focus stayed on %s" % (
+                    self.launched_target, wid, now - self.raised_at,
+                    "%r (%s)" % info if info else "an unreadable window"))
             elif not self.launch_error and not find_target_window(self.cfg, self.launched_target):
                 self.launch_error = "%s did not open." % TARGET_LABELS.get(self.launched_target, "It")
             self.launched_at = 0.0
@@ -1048,11 +1075,25 @@ class Gate:
         # treating that as "cannot tell" let the heartbeat hide the panel,
         # which handed focus back, which raised the panel — once a second.
         # A blip is not evidence of anything: leave the panel as it is.
-        if self.focus_seen_at and now - self.focus_seen_at < 120:
-            return self.window is None
+        #
+        # But only a blip. This used to hold for two minutes and then fall back
+        # to the heartbeat — and anything that reports no active window for
+        # longer (the Activities overview, some fullscreen applications) was
+        # then excused for as long as a hub tab sat open somewhere posting. On
+        # a display the gate has been able to read, sustained unreadability is
+        # not training.
+        if self.focus_seen_at:
+            if self.window is not None:
+                return False
+            if now - self.focus_seen_at < BLIP_SECONDS:
+                return True
+            self.note("focus unreadable for %.0fs — treating as not training"
+                      % (now - self.focus_seen_at))
+            return False
 
-        # The display could not be read. Fall back to the slower evidence
-        # rather than blocking a machine the gate cannot see.
+        # A display that has never been readable this run — Wayland. Fall back
+        # to the slower evidence rather than blocking a machine the gate cannot
+        # see.
         stall = float(self.cfg.get("stall_seconds") or 0)
         beat = self.counter.last_beat
         if "mindbuild" in pending and beat and now - beat < stall:
@@ -1240,7 +1281,7 @@ def main():
     # an X11 session gets a few seconds to settle before the verdict.
     def settle_and_report(tries=[0]):
         tries[0] += 1
-        if session_kind() == "x11" and active_window_title() is None and tries[0] < 6:
+        if session_kind() == "x11" and active_window_title() is None and tries[0] < 24:
             return True                     # ask again in 5s
         report_capabilities(cfg)
         return False
