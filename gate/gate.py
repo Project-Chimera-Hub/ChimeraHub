@@ -181,6 +181,10 @@ DEFAULTS = {
     # How often the gate looks at what is in front of you. Leaving the trainer
     # is visible for at most this long before the panel is back.
     "check_every_ms": 500,
+    # No input for this long and the machine counts as unattended: the hold cap
+    # stops running down. A panel sitting in front of an empty chair is not the
+    # thing the cap exists to protect you from.
+    "idle_seconds": 120,
     # The same, for a machine where the heartbeat never arrives at all.
     #
     # Firefox may refuse an https:// page's POST to http://127.0.0.1 as mixed
@@ -330,6 +334,49 @@ def within_active_hours(cfg, now=None):
 # --------------------------------------------------------------------------- #
 # What has focus                                                               #
 # --------------------------------------------------------------------------- #
+
+_idle_cache = {"at": 0.0, "value": False}
+
+
+def session_idle(cfg):
+    """Is nobody at the machine?
+
+    Asked of GNOME rather than guessed: the idle monitor counts since the last
+    input, and the screen shield says whether it is locked. Unknown counts as
+    present — the cap is a guard, and pausing it on a question nobody answered
+    would be the wrong way to be wrong.
+
+    Cached for a few seconds: this is asked twice a second and each answer is
+    two processes.
+    """
+    now = time.time()
+    if now - _idle_cache["at"] < 5:
+        return _idle_cache["value"]
+
+    idle_after = float(cfg.get("idle_seconds") or 0)
+    value = False
+    try:
+        out = subprocess.run(
+            ["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.IdleMonitor",
+             "--object-path", "/org/gnome/Mutter/IdleMonitor/Core",
+             "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime"],
+            capture_output=True, text=True, timeout=3).stdout
+        match = re.search(r"(\d+)", out)
+        if match and idle_after > 0:
+            value = int(match.group(1)) / 1000.0 >= idle_after
+        if not value:
+            locked = subprocess.run(
+                ["gdbus", "call", "--session", "--dest", "org.gnome.ScreenSaver",
+                 "--object-path", "/org/gnome/ScreenSaver",
+                 "--method", "org.gnome.ScreenSaver.GetActive"],
+                capture_output=True, text=True, timeout=3).stdout
+            value = "true" in locked
+    except Exception:                               # noqa: BLE001
+        value = False
+
+    _idle_cache.update(at=now, value=value)
+    return value
+
 
 def session_kind():
     """"x11", "wayland", or "unknown"."""
@@ -745,6 +792,11 @@ class Gate:
         self.buttons = {}
         self.lock_day = None
         self.locked_since = 0.0
+        # Seconds locked *with someone here*. The cap used to be wall clock
+        # since the lock began, so a morning away from the desk spent the whole
+        # of it: six hours of empty chair, and then the day released itself.
+        self.lock_seconds = 0.0
+        self.last_tick = 0.0
         self.released = False
         # Set at startup from `capabilities()`. Shown on the panel, because a
         # gate that cannot block should not look like one that can.
@@ -923,18 +975,22 @@ class Gate:
             self._grab_soon()
         return False
 
-    def _grab_soon(self, attempts=20):
-        """Retry the grab every 250ms until it holds or the window is gone."""
-        state = {"left": attempts}
+    def _grab_soon(self):
+        """Keep trying for as long as the panel is up.
+
+        It used to give up after five seconds and hold as a nag. Whatever else
+        holds the pointer — an open menu, the Shell's own grab during an
+        animation — does so for a moment, and the panel that gave up stayed
+        ungrabbed for as long as it was on screen.
+        """
+        state = {"said": False}
 
         def attempt():
             if not self.window or self.seat:
                 return False
-            status = self._grab(quiet=state["left"] > 1)
-            if status == "ok" or status == "unsupported":
-                return False
-            state["left"] -= 1
-            return state["left"] > 0
+            status = self._grab(quiet=state["said"])
+            state["said"] = True
+            return status not in ("ok", "unsupported")
 
         GLib.timeout_add(250, attempt)
         return False
@@ -966,8 +1022,8 @@ class Gate:
                 print("gate: grab held", flush=True)
                 return "ok"
             if not quiet:
-                print("gate: grab refused (%s) — holding as a nag" % status,
-                      file=sys.stderr, flush=True)
+                print("gate: grab refused (%s) — retrying while the panel is up"
+                      % status, file=sys.stderr, flush=True)
             return "retry"
         except Exception as e:                      # noqa: BLE001
             print("gate: grab failed (%s) — holding as a nag" % e,
@@ -1008,8 +1064,17 @@ class Gate:
 
     def held_too_long(self):
         cap = float(self.cfg.get("max_hold_minutes") or 0)
-        return bool(cap > 0 and self.locked_since and
-                    (time.time() - self.locked_since) / 60 >= cap)
+        return bool(cap > 0 and self.lock_seconds / 60 >= cap)
+
+    def tick_lock_clock(self):
+        """Add this tick to the cap, unless nobody is here to be locked out."""
+        now = time.time()
+        elapsed = now - self.last_tick if self.last_tick else 0.0
+        self.last_tick = now
+        # A gap longer than a minute is a suspend or a stopped service, not a
+        # minute anyone sat through.
+        if 0 < elapsed < 60 and not session_idle(self.cfg):
+            self.lock_seconds += elapsed
 
     def training_live(self):
         """Is training happening right now?
@@ -1105,6 +1170,7 @@ class Gate:
 
     def unlock(self, why):
         self.locked_since = 0.0
+        self.last_tick = 0.0
         self.hide(why)
         quiet_notifications(False)
         return True
@@ -1115,6 +1181,7 @@ class Gate:
         today = self.counter.day
         if self.lock_day != today:
             self.lock_day, self.locked_since, self.released = today, 0.0, False
+            self.lock_seconds, self.last_tick = 0.0, 0.0
 
         if self.released:
             self.hide("released for today")
@@ -1129,6 +1196,7 @@ class Gate:
         # Locked from here until one of the above is true.
         if not self.locked_since:
             self.locked_since = time.time()
+        self.tick_lock_clock()
         if self.held_too_long():
             # For the rest of the day, not for five seconds. Released and then
             # re-locked on the next tick is a cap that does nothing.
@@ -1217,7 +1285,8 @@ def state(cfg, counter, gate):
         "focusedOnTraining": focused_on_training(cfg),
         "activeWindow": (active_window_title() or "").strip()[:200] or None,
         "trainingLive": gate.training_live() if gate else None,
-        "lockedMinutes": round((time.time() - gate.locked_since) / 60, 1) if gate and gate.locked_since else 0,
+        "lockedMinutes": round(gate.lock_seconds / 60, 1) if gate else 0,
+        "idle": session_idle(cfg),
         "releasedForToday": bool(gate and gate.released),
         "targets": [{"name": n, "required": need, "minutes": round(have, 1), "met": have >= need}
                     for n, need, have in (gate.targets() if gate else [])],

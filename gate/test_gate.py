@@ -32,6 +32,8 @@ ACTIVATED, STARTED = [], []
 WINDOWS = {"mindbuild": "0xHUB", "anki": "0xANKI"}
 _real_quiet = G.quiet_notifications
 G.quiet_notifications = lambda on: None
+IDLE = {"value": False}
+G.session_idle = lambda cfg: IDLE["value"]
 G.find_target_window = lambda cfg, target: WINDOWS.get(target)
 G.activate_window = lambda wid: ACTIVATED.append({"0xHUB": "mindbuild", "0xANKI": "anki"}.get(wid, wid)) or True
 G.start_application = lambda args: STARTED.append(list(args)) or True
@@ -121,7 +123,7 @@ def the_hold_cap_releases_regardless_of_the_count():
                   active_from="00:00", active_to="23:59")
     g.evaluate()
     assert g.closed
-    g.locked_since = time.time() - 31 * 60
+    g.lock_seconds = 31 * 60
     g.evaluate()
     assert not g.closed, "the gate held past max_hold_minutes on a count of zero"
 
@@ -376,16 +378,45 @@ def a_trainer_name_alone_is_no_longer_a_training_window():
 
 
 @test
+def an_empty_chair_does_not_spend_the_cap():
+    """Six hours of panel in front of nobody used the whole cap and released the
+    day. The cap is there for the gate's own bugs, not for time away."""
+    g = gate_with(0, required_minutes=20, max_hold_minutes=30, idle_seconds=120,
+                  active_from="00:00", active_to="23:59")
+    g.evaluate()
+    g.last_tick = time.time() - 20                  # twenty seconds since the last tick
+    IDLE["value"] = True
+    try:
+        g.evaluate()
+    finally:
+        IDLE["value"] = False
+    assert g.lock_seconds < 1, "idle time was charged to the cap"
+
+    g.last_tick = time.time() - 20
+    g.evaluate()
+    assert g.lock_seconds >= 19, "attended time was not charged to the cap"
+
+
+@test
+def a_suspend_is_not_charged_to_the_cap():
+    g = gate_with(0, required_minutes=20, max_hold_minutes=30,
+                  active_from="00:00", active_to="23:59")
+    g.evaluate()
+    g.last_tick = time.time() - 4 * 3600            # the lid was shut
+    g.evaluate()
+    assert g.lock_seconds < 1, "four hours asleep were charged to the cap"
+
+
+@test
 def the_hold_cap_counts_the_whole_lock_not_each_panel():
     """Going back to training used to restart the cap, so it never fired."""
     g = gate_with(0, required_minutes=20, max_hold_minutes=30,
                   active_from="00:00", active_to="23:59")
     g.evaluate()
-    started = g.locked_since
-    assert started
+    g.lock_seconds = 5 * 60
     with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"' + FIREFOX):
         g.evaluate()
-    assert not g.closed and g.locked_since == started, "training restarted the lock clock"
+    assert not g.closed and g.lock_seconds >= 5 * 60, "training reset the lock clock"
 
 
 @test
@@ -393,7 +424,7 @@ def the_cap_releases_for_the_rest_of_the_day():
     g = gate_with(0, required_minutes=20, max_hold_minutes=30,
                   active_from="00:00", active_to="23:59")
     g.evaluate()
-    g.locked_since = time.time() - 31 * 60
+    g.lock_seconds = 31 * 60
     g.evaluate()
     assert not g.closed
     g.evaluate()

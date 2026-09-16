@@ -155,6 +155,7 @@ does the same thing and wants the same exception.
 | `browser` | `firefox` | Must be one `firefox-storage.py` can read, or nothing you do will count. |
 | `grace_seconds` | `15` | After a button, how long the gate keeps pulling that application forward before judging focus. `anki.grace_seconds` (60) covers Anki's slower start. |
 | `stall_seconds` | `180` | No sign of training for this long and the panel returns. |
+| `idle_seconds` | `120` | No input for this long and the hold cap stops running down. |
 | `stall_seconds_no_beat` | `900` | The same, on a machine where the heartbeat never arrives. |
 | `training_window_patterns` | hub + trainer titles | A focused window matching any of these is training. Case-insensitive substrings. |
 | `caps` | `synth 5%`, `cct 20%` | Per-source ceilings as a share of the counted day. `{}` removes them. |
@@ -166,6 +167,11 @@ Two of those are load-bearing and worth saying plainly:
 questions. The day the record is measured over is UTC because the record is
 UTC; the hours you are willing to be interrupted are hours on your own clock.
 Answering both with one timezone gets one of them wrong.
+
+The cap counts **attended** minutes: no input for `idle_seconds` (or a locked
+screen) and the clock stops. A panel in front of an empty chair used to spend
+the whole cap and release the day — six hours away from the desk, and the lock
+was gone by three in the afternoon.
 
 **`max_hold_minutes` is the guard against this program's own bugs.** If the
 count is ever wrong in the direction that locks you out, the gate still lets go
