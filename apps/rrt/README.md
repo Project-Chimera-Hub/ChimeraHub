@@ -40,6 +40,18 @@ working-memory training find far transfer weak at best. What the design can
 honestly claim is that it keeps the task at the edge of capacity and measures it
 cleanly.
 
+## The walkthrough
+
+The rules are three sentences long and still do not read well on paper, because
+what they describe is a thing that changes. So there is a walkthrough — "How it
+works" beside the start button, and offered by itself on a first visit.
+
+It shows the same cards the session deals, untimed, with the list drawn **before
+and after** each one and a sentence saying what moved and why. The list is
+visible while the idea is new, then taken away — which is the task itself. Then
+eight paced beats at 2.6 s, recorded nowhere, before the second and third
+dimensions arrive the same way.
+
 ## The ladder, and what holds you on it
 
 Difficulty moves on three fronts, and the controller drives them together:

@@ -328,6 +328,19 @@
     .example-step{font-family:var(--mono);font-size:.78rem;color:var(--text-dim);line-height:1.6}
     .example-step strong{color:var(--text)}
     .level-pill{font-family:var(--mono)}
+    /* The walkthrough's before/after pictures of the order being held. */
+    .strip{display:flex;gap:.9rem;align-items:flex-start;flex-wrap:wrap}
+    .strip-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.65rem .75rem}
+    .strip-cap{font-family:var(--mono);font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:.45rem}
+    .strip-grid{display:grid;gap:3px;align-items:center;justify-items:center}
+    .strip-cell{width:44px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--radius-sm)}
+    .strip-cell.is-new{background:var(--accent-dim);outline:1px solid var(--accent)}
+    .strip-cell.is-ref{outline:1px dashed var(--border2)}
+    .strip-cell.is-gone{opacity:.4}
+    .strip-lab{font-family:var(--mono);font-size:.62rem;color:var(--text-faint);min-width:14px;text-align:center}
+    .strip-tag{font-family:var(--mono);font-size:.52rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:2px}
+    .glyph.mini{stroke-width:3}
+    .tut-actions{display:flex;gap:.75rem;justify-content:flex-end;align-items:center}
   </style>
 </head>
 <body>
@@ -364,6 +377,14 @@
     <div class="home-hero">
       <h1 class="home-title">Running Order<br><span>Relational Reasoning Training</span></h1>
       <p class="home-subtitle" style="margin-top:.5rem">Hold a few symbols in order in your head. Each card places a new symbol next to one you hold, and the oldest one leaves. Answer where the new one now stands — before the next card arrives. Speed and load adapt to you.</p>
+    </div>
+
+    <div class="callout" id="firstRun" style="display:none;border-color:var(--accent)">
+      <p><strong>First time here?</strong> The rules are short but they do not read well on paper. The walkthrough shows the order changing, one card at a time, with nothing timed.</p>
+      <div style="display:flex;gap:8px;margin-top:.6rem">
+        <button class="btn btn-primary btn-sm" id="firstRunBtn">Take the walkthrough</button>
+        <button class="btn btn-ghost btn-sm" id="firstRunDismiss">No thanks</button>
+      </div>
     </div>
 
     <div class="callout">
@@ -502,11 +523,53 @@
 </div>
 
 <div class="sticky-start-bar" id="stickyStartBar">
-  <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
+    <button class="btn btn-ghost btn-sm" id="tutorialBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      How it works
+    </button>
+  </div>
   <button class="btn btn-primary" id="startBtn">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
     Start Training
   </button>
+</div>
+
+<!-- WALKTHROUGH -->
+<div class="page" id="pageTutorial">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><div class="brand-name">Walkthrough</div><div class="brand-tag" id="tutProgress"></div></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" id="tutExitBtn">Close</button>
+    </div>
+  </nav>
+  <div class="train-layout">
+    <div class="card">
+      <div class="card-head"><span class="card-title" id="tutTitle"></span></div>
+      <div class="card-body"><div id="tutText" style="font-size:.9rem;line-height:1.65;color:var(--text-dim)"></div></div>
+    </div>
+    <div class="stimulus-box" id="tutBox">
+      <div class="stimulus-bg"></div>
+      <div class="stimulus-instruction" id="tutHint" style="position:relative;z-index:2"></div>
+      <div class="arena" id="tutArena">
+        <div>
+          <div class="stage-wrap"><svg class="stage" id="tutStage" viewBox="0 0 300 300"></svg></div>
+          <div class="cue" id="tutCue"></div>
+        </div>
+        <div class="rank-pad" id="tutPad"></div>
+      </div>
+    </div>
+    <div class="strip" id="tutStrips"></div>
+    <div class="callout" id="tutNote" style="display:none"></div>
+    <div class="tut-actions">
+      <button class="btn btn-ghost btn-sm" id="tutBackBtn">Back</button>
+      <button class="btn btn-primary" id="tutNextBtn">Continue</button>
+    </div>
+  </div>
 </div>
 
 <!-- TRAINING SCREEN -->
@@ -632,7 +695,7 @@ const R = window.RunningOrder;
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const setPage = n => {
-  ['pageHome', 'pageTrain', 'pageResults'].forEach(p => $(p).classList.toggle('active', p === n));
+  ['pageHome', 'pageTrain', 'pageResults', 'pageTutorial'].forEach(p => $(p).classList.toggle('active', p === n));
   $('stickyStartBar').style.display = n === 'pageHome' ? 'flex' : 'none';
 };
 const fmtTime = s => {
@@ -648,7 +711,7 @@ const levelName = l => `${l.d}D · ${l.s}`;
    Everything under rrt_*. This page shares its origin with every other
    trainer in mindbuild, so nothing here may touch a key it does not own —
    which is why "Wipe data" removes these three and not localStorage. */
-const KEYS = { prog: 'rrt_prog', sett: 'rrt_sett', theme: 'rrt_theme' };
+const KEYS = { prog: 'rrt_prog', sett: 'rrt_sett', theme: 'rrt_theme', seen: 'rrt_seen' };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
@@ -848,27 +911,27 @@ function glyphEl(glyph, cx, cy, size, cls) {
   p.setAttribute('class', 'glyph ' + cls);
   return p;
 }
-function clearStage() { $('stage').replaceChildren(); }
+function clearStage(el) { (el || $('stage')).replaceChildren(); }
 
 /* The reference sits in the middle at a fixed size; the new symbol is offset
    one step along every axis in play. Height is always in play, so a 1D card is
    a plain stack. */
-function drawCard(glyph, refGlyph, dirs, d) {
+function drawCard(el, glyph, refGlyph, dirs, d) {
   const cx = MID + (d >= 2 ? dirs[1] * OFFSET : 0);
   const cy = MID + dirs[0] * OFFSET;
   const size = d >= 3 ? (dirs[2] < 0 ? BIG : SMALL) : BASE;
-  $('stage').replaceChildren(glyphEl(refGlyph, MID, MID, BASE, 'ref'), glyphEl(glyph, cx, cy, size, 'new'));
+  el.replaceChildren(glyphEl(refGlyph, MID, MID, BASE, 'ref'), glyphEl(glyph, cx, cy, size, 'new'));
 }
-function drawSeed(glyph) { $('stage').replaceChildren(glyphEl(glyph, MID, MID, BASE, 'ref')); }
+function drawSeed(el, glyph) { el.replaceChildren(glyphEl(glyph, MID, MID, BASE, 'ref')); }
 
 /* A backward mask: scattered strokes over the whole card, so the image does not
    linger on the retina after the card has gone. */
-function drawMask() {
+function drawMask(el) {
   const parts = [];
   for (let i = 0; i < 9; i++) {
     parts.push(glyphEl(R.makeGlyph(Math.random), 40 + Math.random() * 220, 40 + Math.random() * 220, 50 + Math.random() * 40, 'mask'));
   }
-  $('stage').replaceChildren(...parts);
+  el.replaceChildren(...parts);
 }
 
 const AXIS_CUE = [
@@ -879,34 +942,41 @@ const AXIS_CUE = [
 
 /* The pad takes the shape of the asked axis — a column for height, a row for
    width, shrinking dots for size — so pressing a rank is pointing at a place. */
-function renderPad() {
-  const pad = $('rankPad');
+function buildPad(pad, arena, o) {
   pad.replaceChildren();
-  const lvl = ctrl.levels[ctrl.level];
-  const axis = cur ? cur.axis : 0;
-  pad.className = 'rank-pad' + (axis === 0 ? ' vertical' : '');
-  $('arena').classList.toggle('side', axis === 0);
-  for (let r = 1; r <= lvl.s; r++) {
+  pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : '');
+  if (arena) arena.classList.toggle('side', o.axis === 0);
+  for (let r = 1; r <= o.s; r++) {
     const b = document.createElement('button');
     b.className = 'rank-btn';
     b.dataset.rank = r;
-    b.disabled = !cur || r > cur.k;
-    if (axis === 2) {
+    b.disabled = !o.enabled || r > o.k;
+    if (o.axis === 2) {
       const dot = document.createElement('span');
-      const px = Math.round(18 - (r - 1) * (12 / Math.max(1, lvl.s - 1)));
+      const px = Math.round(18 - (r - 1) * (12 / Math.max(1, o.s - 1)));
       dot.className = 'rank-dot';
       dot.style.width = dot.style.height = px + 'px';
       b.append(dot);
     }
     b.append(String(r));
-    b.addEventListener('pointerdown', e => { e.preventDefault(); answer(r); });
+    b.addEventListener('pointerdown', e => { e.preventDefault(); o.onPick(r); });
     pad.appendChild(b);
   }
 }
-function padButton(r) { return $('rankPad').querySelector(`[data-rank="${r}"]`); }
+function renderPad() {
+  const lvl = ctrl.levels[ctrl.level];
+  buildPad($('rankPad'), $('arena'), {
+    s: lvl.s, k: cur ? cur.k : 0, axis: cur ? cur.axis : 0,
+    enabled: !!cur && !cur.done, onPick: answer,
+  });
+}
+function padButton(pad, r) { return pad.querySelector(`[data-rank="${r}"]`); }
 
 /* ══ SESSION ══════════════════════════════════════════════════════════ */
 let active = false, ctrl = null, model = null, cur = null, trials = [];
+/* Set while the walkthrough is running its practice beats: a session with the
+   pace pinned, a beat budget instead of a clock, and no record kept. */
+let practice = null;
 let needEpisode = true, recentlyGone = [], peakLevel = 0, streak = 0;
 let beatTimer = null, stageTimers = [], clockTimer = null;
 let timerSec = 0, sessionDuration = 0;
@@ -939,7 +1009,12 @@ function resolve(t) {
     if (move) levelMoved(move);
   }
   paintStats();
+  /* Long enough after the feedback to be read, not so long that the next card
+     has already landed on top of it. */
+  if (practice && scoredTrials().length >= practice.beats) setTimeout(endSession, 650);
 }
+
+function scoredTrials() { return trials.filter(t => t.k >= 2); }
 
 function beat() {
   if (!active) return;
@@ -970,12 +1045,12 @@ function beat() {
     recentlyGone = [];
     R.seed(model, R.newGlyph([], Math.random));
     cur = null;
-    drawSeed(model.items[0].glyph);
+    drawSeed($('stage'), model.items[0].glyph);
     $('stimInstruction').textContent = `${levelName(lvl)} symbols · remember this one`;
     $('cue').innerHTML = '';
     renderPad();
     const hold = Math.max(1500, interval);
-    later(clearStage, Math.min(1500, hold * 0.6));
+    later(() => clearStage($('stage')), Math.min(1500, hold * 0.6));
     beatTimer = setTimeout(beat, hold);
     return;
   }
@@ -995,13 +1070,13 @@ function beat() {
     left: !!res.removed, t0: performance.now(), rt: null, done: false,
   };
 
-  drawCard(glyph, refGlyph, plan.dirs, lvl.d);
+  drawCard($('stage'), glyph, refGlyph, plan.dirs, lvl.d);
   $('stimInstruction').textContent = k < lvl.s ? `filling up · ${k} of ${lvl.s}` : 'where is it now?';
   $('cue').innerHTML = lvl.d > 1 ? AXIS_CUE[plan.axis] : '';
   renderPad();
 
   const exposure = Math.min(eff('exposure'), interval * 0.5);
-  later(() => { drawMask(); later(clearStage, MASK_MS); }, exposure);
+  later(() => { drawMask($('stage')); later(() => clearStage($('stage')), MASK_MS); }, exposure);
   beatTimer = setTimeout(beat, interval);
 }
 
@@ -1011,14 +1086,14 @@ function answer(rank) {
   cur.given = rank;
   cur.rt = Math.round(performance.now() - cur.t0);
   cur.ok = rank === cur.answer;
-  const btn = padButton(rank);
+  const btn = padButton($('rankPad'), rank);
   if (cur.ok) {
     if (btn) btn.classList.add('hit');
     $('feedbackBand').className = 'feedback-band correct';
     $('stimulusBox').classList.add('flash-correct');
   } else {
     if (btn) btn.classList.add('miss');
-    if (settings.showTruth) { const t = padButton(cur.answer); if (t) t.classList.add('truth'); }
+    if (settings.showTruth) { const t = padButton($('rankPad'), cur.answer); if (t) t.classList.add('truth'); }
     $('feedbackBand').className = 'feedback-band wrong';
     $('stimulusBox').classList.add('flash-wrong');
     signalError();
@@ -1028,7 +1103,12 @@ function answer(rank) {
 }
 
 function paintStats() {
-  const scored = trials.filter(t => t.k >= 2);
+  const scored = scoredTrials();
+  if (practice) {
+    const left = Math.max(0, practice.beats - scored.length);
+    $('timerDisplay').textContent = left + ' left';
+    $('progressFill').style.width = (left / practice.beats * 100) + '%';
+  }
   const correct = scored.filter(t => t.ok).length;
   $('tCorrect').textContent = correct;
   $('tTotal').textContent = scored.length;
@@ -1052,33 +1132,41 @@ function onKey(e) {
   if (/^[1-9]$/.test(e.key)) { e.preventDefault(); answer(+e.key); }
 }
 
-function startSession() {
-  const level = startingLevel();
+function startSession(opts) {
+  practice = (opts && opts.beats) ? opts : null;
+  const level = practice ? practice.level : startingLevel();
+  const pace = practice ? practice.interval : null;
   ctrl = R.createController({
-    maxD: settings.maxD, level,
-    start: eff('startISI'), floor: eff('isiFloor'), ceil: eff('isiCeil'),
-    target: eff('targetAcc') / 100, adaptLevel: eff('adaptLevel'),
+    maxD: Math.max(settings.maxD, level.d), level,
+    start: pace || eff('startISI'),
+    floor: pace || eff('isiFloor'),
+    ceil: pace || eff('isiCeil'),
+    target: eff('targetAcc') / 100, adaptLevel: practice ? false : eff('adaptLevel'),
   });
   active = true;
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
-  sessionDuration = eff('duration') * 60;
+  /* The practice run ends on its beat budget; the clock is only a backstop. */
+  sessionDuration = practice ? Math.ceil(practice.beats * practice.interval / 1000) + 60 : eff('duration') * 60;
   timerSec = sessionDuration;
 
-  $('trainSubStatus').textContent = eff('adaptLevel') ? 'adaptive pace · adaptive level' : 'adaptive pace · fixed level';
+  $('trainSubStatus').textContent = practice ? 'walkthrough · practice run'
+    : (eff('adaptLevel') ? 'adaptive pace · adaptive level' : 'adaptive pace · fixed level');
   $('levelMovePill').style.display = 'none';
   $('timerDisplay').textContent = fmtTime(timerSec);
   $('progressFill').style.width = '100%';
   $('stimInstruction').textContent = 'Get ready…';
   $('cue').innerHTML = '';
-  clearStage(); resetFeedback(); renderPad(); paintStats();
+  clearStage($('stage')); resetFeedback(); renderPad(); paintStats();
   setPage('pageTrain');
 
   clockTimer = setInterval(() => {
     if (!active) return;
     timerSec--;
-    $('timerDisplay').textContent = fmtTime(Math.max(0, timerSec));
-    $('progressFill').style.width = (timerSec / sessionDuration * 100) + '%';
+    if (!practice) {
+      $('timerDisplay').textContent = fmtTime(Math.max(0, timerSec));
+      $('progressFill').style.width = (timerSec / sessionDuration * 100) + '%';
+    }
     if (timerSec <= 0) endSession();
   }, 1000);
   document.addEventListener('keydown', onKey);
@@ -1091,6 +1179,7 @@ function endSession() {
   clearInterval(clockTimer); clearTimeout(beatTimer); clearStageTimers();
   document.removeEventListener('keydown', onKey);
   closeModal();
+  if (practice) { const done = practice.onDone; practice = null; done(); return; }
   showResults();
 }
 
@@ -1200,6 +1289,320 @@ function showResults() {
   });
   setPage('pageResults');
 }
+
+/* ══ WALKTHROUGH ══════════════════════════════════════════════════════
+   The rules are three sentences long and still do not read well on paper,
+   because what they describe is a thing that changes. So the walkthrough
+   shows the order changing: the same cards the session uses, untimed, with
+   the list drawn before and after — visible while the idea is new, then
+   taken away, which is the task itself.
+═══════════════════════════════════════════════════════════════════════ */
+
+const ORD = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - n % 10 !== 10) * (n % 10)] || 'th');
+const PLACED = [['above', 'below'], ['left of', 'right of'], ['bigger than', 'smaller than']];
+const AXIS_NAME = ['height, top to bottom', 'width, left to right', 'size, biggest first'];
+
+const TUT = [
+  { kind: 'setup', d: 1, s: 6, fill: 3 },
+  { kind: 'say', title: 'What you carry', strip: 'before',
+    html: `Between cards you hold a short list of symbols <strong>in order</strong> — here it is, top to bottom, with each symbol's rank beside it. That list is the whole of what has to be in your head.` },
+  { kind: 'demo', title: 'A card places a new symbol',
+    html: `Every card shows two symbols. The plain one is already on your list. The <span style="color:var(--accent)">coloured</span> one is new, and where it sits on the card is the rule: <strong>directly above or below</strong> the plain one. Watch where it lands.` },
+  { kind: 'ask', title: 'Your turn, with the list in view', reveal: true,
+    html: `Now you answer: press the rank the new symbol takes. The list stays on screen this time — read it off.` },
+  { kind: 'ask', title: 'Now from memory', reveal: false,
+    html: `Same card, but the list is gone. This is the real task: the card is on screen, the order is in your head.` },
+  { kind: 'setup', d: 1, s: 3, fill: 3 },
+  { kind: 'say', title: 'One in, one out', strip: 'before', ages: true,
+    html: `Your list never grows. Once it is full, every new symbol pushes out the one that has been there <strong>longest</strong> — tagged <em>oldest</em> below — and everything under it moves up a rank. Here the list is full at three.` },
+  { kind: 'ask', title: 'With one leaving', reveal: false,
+    html: `Two things at once now: where the new symbol goes in, and whether the departure moves it up. Take your time — nothing here is timed.` },
+  { kind: 'practice', beats: 8, interval: 2600, level: { d: 1, s: 3 }, title: 'Now the clock',
+    html: `That is the entire rule. What makes it hard is the pace: cards arrive on their own, answered or not. Eight of them, one every 2.6 seconds — slower than the real thing, and nothing is recorded.` },
+  { kind: 'setup', d: 2, s: 3, fill: 3 },
+  { kind: 'demo', title: 'A second direction',
+    html: `Further up the ladder, a card places the new symbol <strong>diagonally</strong>: above or below, <em>and</em> left or right. You keep two orders at once — one by height, one by width — and the label under the card says which rank it wants.` },
+  { kind: 'ask', title: 'Two orders, grid in view', reveal: true,
+    html: `The picture below is both orders at once: rows are height, columns are width. Answer the rank for the axis the label asks for.` },
+  { kind: 'ask', title: 'Two orders, from memory', reveal: false,
+    html: `The same, unseen. Note that it can ask for either axis, so both have to be kept — not just the one you were asked about last time.` },
+  { kind: 'setup', d: 3, s: 3, fill: 3 },
+  { kind: 'demo', title: 'And a third: size',
+    html: `In 3D the new symbol is also drawn <strong>bigger or smaller</strong> than the plain one. That is a third order, and in it rank 1 is the biggest. The pad shows shrinking dots when size is what is asked for.` },
+  { kind: 'ask', title: 'Three orders', reveal: true,
+    html: `With the picture in view: rows are height, columns are width, and the number under each symbol is its place in the size order.` },
+  { kind: 'end', title: 'That is all of it',
+    html: `The rest is the ladder. Speed adapts to your accuracy on every answer; when it has nowhere left to go, the level does instead — more symbols first, then another dimension. You do not pick any of it, and you are meant to be wrong about one answer in five.` },
+];
+
+const tutSteps = TUT.filter(t => t.kind !== 'setup');
+let tutAt = 0, tutModel = null, tutPhase = 'main', tutInfo = null;
+
+/* A frozen copy: the strips have to keep showing what was true before the card
+   was applied, and the model itself moves on. */
+function snapshot(m) {
+  return { d: m.d, s: m.s, items: m.items.map(it => ({ id: it.id, glyph: it.glyph, ranks: it.ranks.slice(), born: it.born })) };
+}
+
+function glyphMini(glyph, px, cls) {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', '-0.4 -0.4 2.8 2.8');
+  svg.setAttribute('width', px); svg.setAttribute('height', px);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('d', R.glyphPath(glyph));
+  path.setAttribute('class', 'glyph mini ' + (cls || 'ref'));
+  svg.appendChild(path);
+  return svg;
+}
+
+/**
+ * The list as a picture: a column in 1D, a grid of rows against columns in 2D,
+ * and in 3D the same grid with each symbol drawn at its size rank. One function
+ * for all three, so the step from one dimension to the next looks like what it
+ * is — the same picture with another axis in it.
+ */
+function drawStrip(snap, opts) {
+  opts = opts || {};
+  const box = document.createElement('div');
+  box.className = 'strip-box';
+  const cap = document.createElement('div');
+  cap.className = 'strip-cap';
+  cap.textContent = opts.caption || '';
+  box.appendChild(cap);
+
+  const n = snap.items.length, d = snap.d;
+  const cols = d >= 2 ? n : 1;
+  const grid = document.createElement('div');
+  grid.className = 'strip-grid';
+  grid.style.gridTemplateColumns = `auto repeat(${cols}, auto)`;
+
+  const lab = text => {
+    const el = document.createElement('div');
+    el.className = 'strip-lab';
+    el.textContent = text;
+    return el;
+  };
+  grid.appendChild(lab(d >= 2 ? '↕↔' : '↕'));
+  for (let c = 0; c < cols; c++) grid.appendChild(lab(d >= 2 ? String(c + 1) : ''));
+
+  for (let r = 0; r < n; r++) {
+    grid.appendChild(lab(String(r + 1)));
+    for (let c = 0; c < cols; c++) {
+      const item = snap.items.find(it => it.ranks[0] === r && (d < 2 || it.ranks[1] === c));
+      const cell = document.createElement('div');
+      cell.className = 'strip-cell';
+      if (item) {
+        if (item.id === opts.newId) cell.classList.add('is-new');
+        if (item.id === opts.refId) cell.classList.add('is-ref');
+        const px = d >= 3 ? 34 - item.ranks[2] * 5 : 32;
+        cell.appendChild(glyphMini(item.glyph, px, item.id === opts.newId ? 'new' : 'ref'));
+        if (d >= 3) {
+          const tag = document.createElement('div');
+          tag.className = 'strip-tag';
+          tag.textContent = 'size ' + (item.ranks[2] + 1);
+          cell.appendChild(tag);
+        }
+        if (opts.ages && item.born === Math.min.apply(null, snap.items.map(x => x.born))) {
+          const tag = document.createElement('div');
+          tag.className = 'strip-tag';
+          tag.style.color = 'var(--warn)';
+          tag.textContent = 'oldest';
+          cell.appendChild(tag);
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+  box.appendChild(grid);
+
+  if (opts.gone) {
+    const out = document.createElement('div');
+    out.className = 'strip-cell is-gone';
+    out.appendChild(glyphMini(opts.gone.glyph, 30, 'ref'));
+    const tag = document.createElement('div');
+    tag.className = 'strip-tag';
+    tag.textContent = 'left';
+    out.appendChild(tag);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:center;margin-top:.4rem;border-top:1px solid var(--border);padding-top:.4rem';
+    row.appendChild(out);
+    box.appendChild(row);
+  }
+  return box;
+}
+
+function tutSetup(st) {
+  tutModel = R.createModel(st.d, st.s);
+  R.seed(tutModel, R.newGlyph([], Math.random));
+  for (let i = 1; i < st.fill; i++) {
+    R.apply(tutModel, R.planCard(tutModel, Math.random), R.newGlyph(tutModel.items.map(it => it.glyph), Math.random));
+  }
+}
+
+/** One card, applied, with everything the explanation needs kept alongside. */
+function tutDealCard() {
+  const before = snapshot(tutModel);
+  const plan = R.planCard(tutModel, Math.random);
+  const refRank = plan.ref.ranks[plan.axis] + 1;
+  const landed = plan.dirs[plan.axis] < 0 ? refRank : refRank + 1;
+  const refGlyph = plan.ref.glyph;
+  const refId = plan.ref.id;
+  const res = R.apply(tutModel, plan, R.newGlyph(tutModel.items.map(it => it.glyph), Math.random));
+  return {
+    before, after: snapshot(tutModel), plan, refRank, landed, refId, refGlyph,
+    newId: res.item.id, glyph: res.item.glyph, answer: res.answer,
+    gone: res.removed, goneRank: res.removed ? res.removed.ranks[plan.axis] + 1 : null,
+    k: tutModel.items.length, given: null,
+  };
+}
+
+function tutSentence(i) {
+  const axis = i.plan.axis;
+  const word = PLACED[axis][i.plan.dirs[axis] < 0 ? 0 : 1];
+  const head = tutModel.d > 1 ? `The card asks for the rank by <strong>${AXIS_NAME[axis]}</strong>. ` : '';
+  let out = `${head}The new symbol went <strong>${word}</strong> the dashed one, which was ${ORD(i.refRank)}, so it goes in ${ORD(i.landed)}`;
+  if (i.gone == null) return out + '.';
+  if (i.goneRank < i.landed) {
+    return out + `. Then the oldest symbol left from ${ORD(i.goneRank)} — above it — so everything below moved up one, and the answer is <strong>${i.answer}</strong>.`;
+  }
+  return out + `, and the oldest symbol left from ${ORD(i.goneRank)}, below it, so nothing above it moved: the answer is <strong>${i.answer}</strong>.`;
+}
+
+function tutStrips(parts) { $('tutStrips').replaceChildren(...parts); }
+
+function tutShowExplanation(st) {
+  const i = tutInfo;
+  tutStrips([
+    drawStrip(i.before, { caption: 'before · dashed = the one on the card', refId: i.refId }),
+    drawStrip(i.after, { caption: 'after · the new symbol', newId: i.newId, gone: i.gone }),
+  ]);
+  const note = $('tutNote');
+  note.style.display = '';
+  const verdict = i.given == null ? '' :
+    (i.given === i.answer ? '<strong style="color:var(--accent)">Right.</strong> ' : `<strong style="color:var(--danger)">Not quite — it was ${i.answer}.</strong> `);
+  note.innerHTML = `<p>${verdict}${tutSentence(i)}</p>`;
+}
+
+function renderTut() {
+  while (TUT[tutAt] && TUT[tutAt].kind === 'setup') { tutSetup(TUT[tutAt]); tutAt++; }
+  const st = TUT[tutAt];
+  if (!st) { tutFinish(); return; }
+
+  $('tutTitle').textContent = st.title;
+  $('tutText').innerHTML = st.html;
+  $('tutProgress').textContent = `step ${tutSteps.indexOf(st) + 1} of ${tutSteps.length}`;
+  $('tutNote').style.display = 'none';
+  $('tutStrips').replaceChildren();
+  $('tutCue').innerHTML = '';
+  $('tutBackBtn').style.visibility = tutAt > 0 ? '' : 'hidden';
+  $('tutNextBtn').textContent = 'Continue';
+  $('tutNextBtn').style.display = '';
+  clearStage($('tutStage'));
+  $('tutPad').replaceChildren();
+  $('tutBox').style.display = (st.kind === 'say' || st.kind === 'practice' || st.kind === 'end') ? 'none' : '';
+  $('tutHint').textContent = '';
+
+  if (st.kind === 'say') {
+    if (st.strip) tutStrips([drawStrip(snapshot(tutModel), { caption: 'what you are holding', ages: st.ages })]);
+    return;
+  }
+  if (st.kind === 'practice') {
+    $('tutNextBtn').textContent = 'Start the practice run';
+    return;
+  }
+  if (st.kind === 'end') {
+    $('tutNextBtn').textContent = 'Start training';
+    return;
+  }
+
+  /* demo and ask both deal a card; only ask hands over the pad. */
+  tutInfo = tutDealCard();
+  tutPhase = 'card';
+  drawCard($('tutStage'), tutInfo.glyph, tutInfo.refGlyph, tutInfo.plan.dirs, tutModel.d);
+  if (tutModel.d > 1) $('tutCue').innerHTML = AXIS_CUE[tutInfo.plan.axis];
+  buildPad($('tutPad'), $('tutArena'), {
+    s: tutInfo.k, k: tutInfo.k, axis: tutInfo.plan.axis,
+    enabled: st.kind === 'ask', onPick: tutPick,
+  });
+  if (st.kind === 'ask') {
+    $('tutHint').textContent = 'press the rank';
+    $('tutNextBtn').style.display = 'none';
+    if (st.reveal) tutStrips([drawStrip(tutInfo.before, { caption: 'what you are holding · dashed = the one on the card', refId: tutInfo.refId })]);
+  } else {
+    $('tutHint').textContent = 'watch where it lands';
+  }
+}
+
+function tutPick(rank) {
+  if (tutPhase !== 'card') return;
+  tutPhase = 'done';
+  tutInfo.given = rank;
+  const hit = rank === tutInfo.answer;
+  const btn = padButton($('tutPad'), rank);
+  if (btn) btn.classList.add(hit ? 'hit' : 'miss');
+  if (!hit) { const t = padButton($('tutPad'), tutInfo.answer); if (t) t.classList.add('truth'); }
+  $('tutPad').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  $('tutHint').textContent = hit ? '✓' : '✗';
+  tutShowExplanation(TUT[tutAt]);
+  $('tutNextBtn').style.display = '';
+}
+
+function tutNext() {
+  const st = TUT[tutAt];
+  if (!st) { tutFinish(); return; }
+  if (st.kind === 'demo' && tutPhase === 'card') { tutPhase = 'done'; tutShowExplanation(st); return; }
+  if (st.kind === 'practice') {
+    startSession({
+      beats: st.beats, interval: st.interval, level: st.level,
+      onDone: () => { tutAt++; setPage('pageTutorial'); renderTut(); },
+    });
+    return;
+  }
+  if (st.kind === 'end') { tutFinish(true); return; }
+  tutAt++;
+  renderTut();
+}
+
+function tutFinish(startTraining) {
+  store.set(KEYS.seen, '1');
+  paintFirstRun();
+  if (startTraining) { paintLevel(); startSession(); return; }
+  paintLevel();
+  setPage('pageHome');
+}
+
+function openTutorial() {
+  tutAt = 0; tutModel = null; tutInfo = null;
+  setPage('pageTutorial');
+  renderTut();
+}
+
+$('tutNextBtn').addEventListener('click', tutNext);
+$('tutBackBtn').addEventListener('click', () => {
+  let back = tutAt - 1;
+  while (back > 0 && TUT[back].kind === 'setup') back--;
+  if (back < 0) return;
+  /* The model has moved on since that step ran, so the stretch it belongs to is
+     built again from its setup — with new symbols, which costs nothing here and
+     keeps the strips honest. */
+  let from = back;
+  while (from >= 0 && TUT[from].kind !== 'setup') from--;
+  if (from >= 0) tutSetup(TUT[from]);
+  tutAt = back;
+  renderTut();
+});
+$('tutExitBtn').addEventListener('click', () => tutFinish(false));
+$('tutorialBtn').addEventListener('click', openTutorial);
+$('firstRunBtn').addEventListener('click', openTutorial);
+$('firstRunDismiss').addEventListener('click', () => { store.set(KEYS.seen, '1'); paintFirstRun(); });
+
+/* The nudge shows until it has been taken or waved off, and never again once a
+   session has been recorded. */
+function paintFirstRun() {
+  const fresh = !store.get(KEYS.seen) && !(loadProgress().history || []).length;
+  $('firstRun').style.display = fresh ? '' : 'none';
+}
+paintFirstRun();
 </script>
 </body>
 </html>
