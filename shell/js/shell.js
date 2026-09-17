@@ -38,6 +38,8 @@
       what: "Spoken arithmetic against the clock" },
     { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
       what: "Attentional shield n-back" },
+    { id: "rrt", name: "Running Order", path: "rrt/", colour: "#ffa657",
+      what: "A running order of symbols, against the clock" },
     { id: "synth", name: "Synaesthesia colours", path: "synth/", colour: "#56d4dd",
       what: "Grapheme–colour association" },
   ];

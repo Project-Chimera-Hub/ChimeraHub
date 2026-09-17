@@ -32,6 +32,7 @@ var Today = (function () {
      change about once a year. */
   var SINGLE_KEY = [
     { key: "mp_prog", source: "cct" },
+    { key: "rrt_prog", source: "rrt" },
     { key: "attentional_shield_v2", source: "ewmt" },
     { key: "synth5_en", source: "synth" },
     { key: "nback-performance", source: "precision" },

@@ -21,7 +21,7 @@ const path = require("path");
 const { mergeRecords, hashRow, makeRecord } = require("../js/record.js");
 const insight = require("../js/insight.js");
 const N = require("../js/notes.js");
-const { readFile, readSyllogimous, readRnb, readCct, readEwmt, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
+const { readFile, readSyllogimous, readRnb, readCct, readRrt, readEwmt, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
 const { execFileSync } = require("child_process");
 const A = require("../js/archive.js");
 
@@ -697,6 +697,59 @@ test("neither new adapter claims a file belonging to another source", () => {
   assert.strictEqual(readCct({ mp_prog: "not json" }), null);
   assert.strictEqual(readEwmt({ attentional_shield_v2: "{}" }), null);
 });
+
+/* ------------------------------------------------------------------ *
+ * Running Order                                                       *
+ * ------------------------------------------------------------------ */
+
+const rrtDump = (history, extra) => ({
+  rrt_prog: JSON.stringify(Object.assign({
+    sessions: history.length, totalQ: 100, totalCorrect: 70, bestBits: 3.1,
+    level: { d: 2, s: 4 }, history,
+  }, extra)),
+});
+
+const rrtSession = (over) => Object.assign({
+  ts: Date.parse("2026-09-15T09:00:00Z"), durationSec: 900, total: 200, correct: 150,
+  acc: 75, corrected: 0.66, bits: 1.8, peakBits: 2.4, lowestISI: 850,
+  d: 2, s: 3, peakD: 2, peakS: 4,
+}, over);
+
+test("rrt: a session becomes one block, dated and counted in minutes", () => {
+  const out = readRrt(rrtDump([rrtSession()]));
+  assert.strictEqual(out.source, "rrt");
+  assert.strictEqual(out.records.length, 1);
+  const r = out.records[0];
+  assert.strictEqual(r.kind, "block");
+  assert.strictEqual(r.seconds, 900);
+  assert.strictEqual(r.day, "2026-09-15");
+  assert.strictEqual(r.correct, 0.75);
+  assert.strictEqual(out.minutes["2026-09-15"], 15);
+});
+
+test("rrt: difficulty is peak throughput, in its own unit, and rises with the level", () => {
+  const easy = readRrt(rrtDump([rrtSession({ peakBits: 1.2 })])).records[0];
+  const hard = readRrt(rrtDump([rrtSession({ peakBits: 4.8, peakD: 3, peakS: 5 })])).records[0];
+  assert.strictEqual(easy.unit, "rrt-peak-bits-per-s");
+  assert.ok(hard.difficulty > easy.difficulty);
+  assert.strictEqual(hard.label, "3d5");
+});
+
+test("rrt: the ladder position survives as state, not as a record", () => {
+  const out = readRrt(rrtDump([rrtSession()]));
+  assert.deepStrictEqual(out.state.level, { d: 2, s: 4 });
+  assert.strictEqual(out.state.lifetimeTrials, 100);
+});
+
+test("rrt: nothing of its own is claimed by another reader, or it by theirs", () => {
+  assert.strictEqual(readRrt(cctDump([])), null);
+  assert.strictEqual(readCct(rrtDump([rrtSession()])), null);
+  assert.strictEqual(readRrt({ rrt_prog: "not json" }), null);
+  assert.strictEqual(readRrt({ rrt_prog: "{}" }), null);
+  const found = readFile(JSON.stringify(rrtDump([rrtSession()])));
+  assert.strictEqual(found.source, "rrt", found.error || "");
+});
+
 
 test("dispatch routes each snapshot to its own adapter", () => {
   const cct = readFile(JSON.stringify(cctDump([

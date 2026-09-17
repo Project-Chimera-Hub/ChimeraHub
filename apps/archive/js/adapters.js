@@ -514,6 +514,102 @@ function readCct(data) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Running Order — relational reasoning training                       *
+ * ------------------------------------------------------------------ */
+
+/**
+ * A storage snapshot, like CCT's: `rrt_prog` holds the whole record and the
+ * app has no export of its own, so this arrives by way of
+ * `tools/firefox-storage.py`.
+ *
+ * Unlike CCT it keeps a thousand sessions rather than a hundred, so the cap is
+ * unlikely to bite before a snapshot is taken.
+ *
+ * Its difficulty is one number by design. The task adapts on three fronts at
+ * once — how fast the cards come, how many symbols are held, how many axes they
+ * are ordered on — so no single one of them says whether a session was hard.
+ * `peakBits` is what it carried at its best: symbols and axes together, in
+ * bits, discounted for guessing, over the time it took. It rises with all three.
+ */
+function readRrt(data) {
+  var raw = data && typeof data === "object" ? data.rrt_prog : null;
+  if (typeof raw !== "string") return null;
+
+  var prog;
+  try { prog = JSON.parse(raw); } catch (e) { return null; }
+  if (!prog || !Array.isArray(prog.history)) return null;
+
+  var origin = typeof data.__origin === "string" ? data.__origin : null;
+  var records = [];
+  var minutes = {};
+
+  for (var i = 0; i < prog.history.length; i++) {
+    var h = prog.history[i];
+    if (!h || !h.ts) continue;
+
+    /* No id on a session, so the row is its own key, as in the CCT reader. */
+    var id = _hashRow(h.ts + "|" + h.total + "|" + h.correct);
+    var seconds = Math.max(0, Number(h.durationSec) || 0);
+    var total = Number(h.total) || 0;
+
+    /* Raw accuracy, for comparability with every other source. What the app
+       itself watches is `corrected`, which takes the guessing out — with three
+       to seven answers on offer, raw accuracy has a floor that moves with the
+       level. Both are carried. */
+    var correct = total ? Number(h.correct) / total : null;
+    var peak = Number(h.peakBits);
+
+    records.push(_makeRecord({
+      source: "rrt",
+      id: id,
+      at: h.ts,
+      kind: "block",
+      seconds: seconds,
+      correct: correct,
+      difficulty: isFinite(peak) ? Math.round(peak * 100) / 100 : null,
+      unit: "rrt-peak-bits-per-s",
+      label: (h.peakD == null ? "?" : h.peakD) + "d" + (h.peakS == null ? "?" : h.peakS),
+      raw: {
+        origin: origin,
+        correct: h.correct == null ? null : Number(h.correct),
+        total: total || null,
+        acc: h.acc == null ? null : Number(h.acc),
+        corrected: h.corrected == null ? null : Number(h.corrected),
+        bits: h.bits == null ? null : Number(h.bits),
+        peakBits: isFinite(peak) ? peak : null,
+        lowestISI: h.lowestISI == null ? null : Number(h.lowestISI),
+        dimensions: h.peakD == null ? null : Number(h.peakD),
+        symbols: h.peakS == null ? null : Number(h.peakS),
+        endLevel: h.d == null ? null : { d: Number(h.d), s: Number(h.s) },
+        durationSec: seconds,
+      },
+    }));
+
+    var day = new Date(h.ts).toISOString().slice(0, 10);
+    minutes[day] = (minutes[day] || 0) + seconds / 60;
+  }
+
+  if (!records.length) return null;
+
+  var state = {};
+  if (prog.sessions != null) state.lifetimeSessions = Number(prog.sessions);
+  if (prog.totalQ != null) state.lifetimeTrials = Number(prog.totalQ);
+  if (prog.totalCorrect != null) state.lifetimeCorrect = Number(prog.totalCorrect);
+  if (prog.bestBits != null) state.bestPeakBits = Number(prog.bestBits);
+  if (prog.longestStreak != null) state.longestStreak = Number(prog.longestStreak);
+  /* Where the ladder stands. Not a record — it has no date — but it is the one
+     thing a reinstall would otherwise cost. */
+  if (prog.level) state.level = prog.level;
+
+  return {
+    source: "rrt",
+    records: records,
+    minutes: minutes,
+    state: Object.keys(state).length ? state : null,
+  };
+}
+
+/* ------------------------------------------------------------------ *
  * eWMT — the Attentional Shield n-back                                *
  * ------------------------------------------------------------------ */
 
@@ -1064,6 +1160,7 @@ var ADAPTERS = [
   { name: "syllogimous", read: readSyllogimous },
   { name: "rnb", read: readRnb },
   { name: "cct", read: readCct },
+  { name: "rrt", read: readRrt },
   { name: "ewmt", read: readEwmt },
   { name: "precision", read: readPrecision },
   { name: "rotation", read: readRotation },
@@ -1110,6 +1207,7 @@ if (typeof module !== "undefined") {
     syllogimousHistory: syllogimousHistory,
     readRnb: readRnb,
     readCct: readCct,
+    readRrt: readRrt,
     readEwmt: readEwmt,
     readPrecision: readPrecision,
     readRotation: readRotation,

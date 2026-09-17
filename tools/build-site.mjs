@@ -70,7 +70,7 @@ fs.mkdirSync(DIST, { recursive: true });
 
 /* The six that are already a website. They use relative paths throughout —
    checked, not assumed — so they run at whatever depth they are put. */
-for (const name of ["rnb", "rotation", "cct", "synth", "ewmt", "archive"]) {
+for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
 }

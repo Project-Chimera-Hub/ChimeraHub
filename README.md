@@ -1,9 +1,10 @@
 # mindbuild
 
-Seven trainers, one record, one day's total — and a quota the desktop enforces.
+Eight trainers, one record, one day's total — and a quota the desktop enforces.
 
 ```
-apps/       the eight, grafted in with git subtree, histories intact
+apps/       the eight grafted in with git subtree, histories intact — and rrt,
+            which was written here
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
 tools/      the build

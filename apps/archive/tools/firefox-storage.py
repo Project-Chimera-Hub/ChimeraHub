@@ -301,6 +301,24 @@ def cct_from(store):
     return {"mp_prog": raw}
 
 
+def rrt_from(store):
+    """Running Order keeps its whole record under one key, and exports nothing.
+
+    It holds a thousand sessions rather than CCT's hundred, so the window is
+    unlikely to close on anything before a snapshot is taken.
+    """
+    raw = store.get("rrt_prog")
+    if not raw:
+        return None
+    try:
+        prog = json.loads(raw)
+    except ValueError:
+        return None
+    if not prog.get("history"):
+        return None
+    return {"rrt_prog": raw}
+
+
 def ewmt_from(store):
     """Likewise the one key, and likewise the only copy: eWMT exports nothing."""
     raw = store.get("attentional_shield_v2")
@@ -445,6 +463,16 @@ def main():
                 n = len(json.loads(cct["mp_prog"])["history"])
                 print("  cct          %-52s %5d sessions%s"
                       % (label, n, " (at the 100 cap)" if n >= 100 else ""))
+                written.append(path)
+
+            rrt = rrt_from(store)
+            if rrt:
+                rrt["__origin"] = label
+                path = os.path.join(args.outdir, "rrt-%s.json" % safe)
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(rrt, fh)
+                n = len(json.loads(rrt["rrt_prog"])["history"])
+                print("  rrt          %-52s %5d sessions" % (label, n))
                 written.append(path)
 
             ewmt = ewmt_from(store)

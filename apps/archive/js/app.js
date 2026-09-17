@@ -301,6 +301,7 @@ function importNeighbours() {
   try {
     var singles = [
       { key: "mp_prog", label: "cct" },
+      { key: "rrt_prog", label: "rrt" },
       { key: "attentional_shield_v2", label: "ewmt" },
       { key: "synth5_en", label: "synth" },
       { key: "nback-performance", label: "precision" },
