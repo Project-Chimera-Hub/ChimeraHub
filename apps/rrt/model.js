@@ -22,6 +22,12 @@
    - The symbols are generated, not drawn from a set, so no symbol ever comes to
      mean anything. A task whose stimuli keep a fixed meaning automatises, and a
      task that has automatised has stopped loading what it was chosen to load.
+
+   What goes on the cards is nonetheless a choice — see "Stimulus sets" below.
+   Generated marks are the default and the honest one; a fixed pool of named
+   animals encodes in a word, which spends the beat on the order instead of on
+   the symbol, at the cost of the paragraph above. The model never looks inside
+   a stimulus, so it does not care which.
 */
 
 (function (root) {
@@ -144,6 +150,67 @@
       return "M" + (s[0] % 3) + " " + ((s[0] / 3) | 0) + "L" + (s[1] % 3) + " " + ((s[1] / 3) | 0);
     }).join("");
   }
+
+  /* ------------------------------------------------------------------ *
+   * Stimulus sets                                                       *
+   * ------------------------------------------------------------------ */
+
+  /* What goes on the cards, and it is a real trade rather than a skin.
+
+     GENERATED MARKS are the default and the reason the task was built this way:
+     a mark that never repeats cannot come to mean anything, so nothing about it
+     can be learned instead of the order, and encoding it costs what it costs.
+
+     ANIMALS are the other end. A picture with a name is encoded in one word, so
+     almost none of the beat is spent taking the symbol in and almost all of it
+     is spent on the order — which is the point, and which is also why it is
+     easier. The pool is fixed and small, so the stimuli DO recur, and a fixed
+     set is exactly the consistent mapping that automatises: what it measures
+     drifts away from relational load and toward how good a verbal chain you can
+     build. Sessions are recorded with the set they used, because bits per
+     second is not comparable across the two.
+
+     A set is one function: the next stimulus, given what must not be confused
+     with it (what is held, plus what has only just left — a symbol that has
+     only just gone is still in the head). A generated mark is an array of
+     stroke indices; an animal is `{char, name}`. Nothing in the model looks
+     inside either. */
+  var ANIMALS = [
+    { char: "\uD83D\uDC18", name: "elephant" }, { char: "\uD83E\uDD92", name: "giraffe" },
+    { char: "\uD83E\uDD93", name: "zebra" },    { char: "\uD83D\uDC2A", name: "camel" },
+    { char: "\uD83D\uDC0E", name: "horse" },    { char: "\uD83D\uDC04", name: "cow" },
+    { char: "\uD83D\uDC16", name: "pig" },      { char: "\uD83D\uDC11", name: "sheep" },
+    { char: "\uD83D\uDC15", name: "dog" },      { char: "\uD83D\uDC08", name: "cat" },
+    { char: "\uD83D\uDC07", name: "rabbit" },   { char: "\uD83D\uDC01", name: "mouse" },
+    { char: "\uD83D\uDC12", name: "monkey" },   { char: "\uD83E\uDD94", name: "hedgehog" },
+    { char: "\uD83E\uDD8C", name: "deer" },     { char: "\uD83D\uDC3F", name: "squirrel" },
+    { char: "\uD83D\uDC0A", name: "crocodile" },{ char: "\uD83D\uDC22", name: "turtle" },
+    { char: "\uD83D\uDC0D", name: "snake" },    { char: "\uD83D\uDC38", name: "frog" },
+    { char: "\uD83D\uDC1F", name: "fish" },     { char: "\uD83D\uDC19", name: "octopus" },
+    { char: "\uD83E\uDD80", name: "crab" },     { char: "\uD83D\uDC33", name: "whale" },
+    { char: "\uD83E\uDD85", name: "eagle" },    { char: "\uD83E\uDD89", name: "owl" },
+    { char: "\uD83D\uDC27", name: "penguin" },  { char: "\uD83E\uDD86", name: "duck" },
+    { char: "\uD83E\uDD8B", name: "butterfly" },{ char: "\uD83D\uDC1D", name: "bee" },
+    { char: "\uD83D\uDC0C", name: "snail" },    { char: "\uD83E\uDD87", name: "bat" },
+  ];
+
+  /** An animal that is not one of `avoid`, uniformly among those that are left. */
+  function newAnimal(avoid, rnd) {
+    rnd = rnd || Math.random;
+    var taken = {};
+    (avoid || []).forEach(function (a) { if (a && a.name) taken[a.name] = true; });
+    var free = ANIMALS.filter(function (a) { return !taken[a.name]; });
+    var pool = free.length ? free : ANIMALS;
+    return pool[Math.floor(rnd() * pool.length)];
+  }
+
+  var SETS = {
+    glyphs: { id: "glyphs", label: "Generated marks", next: newGlyph },
+    animals: { id: "animals", label: "Animals", next: newAnimal },
+  };
+
+  /** The named set, or the generated marks for anything unrecognised. */
+  function stimulusSet(id) { return SETS[id] || SETS.glyphs; }
 
   /* ------------------------------------------------------------------ *
    * The model                                                           *
@@ -367,8 +434,9 @@
   }
 
   var api = {
-    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES,
+    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, SETS: SETS,
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
+    newAnimal: newAnimal, stimulusSet: stimulusSet,
     createModel: createModel, seed: seed, planCard: planCard, apply: apply, simulate: simulate,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,

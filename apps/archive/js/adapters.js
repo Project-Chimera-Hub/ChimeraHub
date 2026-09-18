@@ -530,6 +530,12 @@ function readCct(data) {
  * are ordered on — so no single one of them says whether a session was hard.
  * `peakBits` is what it carried at its best: symbols and axes together, in
  * bits, discounted for guessing, over the time it took. It rises with all three.
+ *
+ * It also has two stimulus sets, and they are not comparable: generated marks
+ * that never repeat, and a fixed pool of named animals that encode in a word
+ * and so leave nearly the whole beat for the order. `raw.stimuli` says which
+ * one a session used — rows before the sets existed were all generated marks,
+ * and `bestPeakBits` is that set's record.
  */
 function readRrt(data) {
   var raw = data && typeof data === "object" ? data.rrt_prog : null;
@@ -581,6 +587,7 @@ function readRrt(data) {
         dimensions: h.peakD == null ? null : Number(h.peakD),
         symbols: h.peakS == null ? null : Number(h.peakS),
         endLevel: h.d == null ? null : { d: Number(h.d), s: Number(h.s) },
+        stimuli: h.set === "animals" ? "animals" : "glyphs",
         durationSec: seconds,
       },
     }));

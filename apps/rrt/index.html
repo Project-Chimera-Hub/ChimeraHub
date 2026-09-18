@@ -157,9 +157,11 @@
     .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .6s ease;box-shadow:0 0 8px var(--accent-glow)}
 
     .stimulus-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.25rem 1rem;gap:1rem;position:relative;overflow:hidden;min-height:170px}
-    .stimulus-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--accent-dim) 0%,transparent 65%);opacity:0;transition:opacity .35s}
+    /* Decoration, and it fills the whole box: without this it takes the taps
+       meant for the rank pad, which shares the box with it. */
+    .stimulus-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--accent-dim) 0%,transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
     .stimulus-box.pulse .stimulus-bg{opacity:1}
-    .coyote-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--warn-dim) 0%,transparent 65%);opacity:0;transition:opacity .3s}
+    .coyote-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--warn-dim) 0%,transparent 65%);opacity:0;transition:opacity .3s;pointer-events:none}
     .stimulus-box.coyote-active .coyote-bg{opacity:1}
     .stimulus-instruction{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;color:var(--text-faint);text-transform:uppercase}
     .stimulus-number{font-family:var(--mono);font-size:5rem;font-weight:300;color:var(--accent);line-height:1;letter-spacing:-0.02em;text-shadow:0 0 40px var(--accent-glow);transition:transform .12s,color .15s}
@@ -311,6 +313,12 @@
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
     .glyph.mask{stroke:var(--text-faint);stroke-width:3}
+    /* Animal stimuli. Their colour is the font's, so "new" cannot be said in
+       colour the way a stroked mark says it — a ring says it instead. */
+    .pic{text-anchor:middle;dominant-baseline:central;user-select:none}
+    .pic.mask{opacity:.35}
+    .pic-ring{fill:none;stroke:var(--accent);stroke-width:2;opacity:.85}
+    .pic-mini{line-height:1;user-select:none}
     .cue{font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--text-dim);min-height:1.2rem;text-align:center;position:relative;z-index:2}
     .cue b{color:var(--text);font-size:1rem;font-weight:500}
     .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem}
@@ -388,13 +396,8 @@
     </div>
 
     <div class="callout">
-      <p><strong>How a card works.</strong> The <span style="color:var(--accent)">coloured</span> symbol is new; the plain one is one you already hold. The new symbol goes <em>directly</em> next to it — above or below, and in higher levels also left or right, and bigger or smaller. If that makes one too many, the <strong>oldest</strong> symbol leaves. Press the new symbol's rank with the number keys (1 = top, left, or biggest) or tap it.</p>
-      <div class="example">
-        <div class="example-step">Holding (top → bottom)<br><strong>● ▲ ■</strong> &nbsp;(● is oldest)</div>
-        <div class="example-step">Card: <strong style="color:var(--accent)">★</strong> above <strong>▲</strong><br>→ ● ★ ▲ ■</div>
-        <div class="example-step">● leaves<br>→ <strong>★ ▲ ■</strong></div>
-        <div class="example-step">Answer<br><strong style="color:var(--accent);font-size:1rem">1</strong></div>
-      </div>
+      <p id="cardHowText"></p>
+      <div class="example" id="cardExample"></div>
       <p class="hint" style="margin-top:.6rem">With two or three dimensions every card places the symbol on every axis at once, and a label says which rank to report: <b>↕ height</b>, <b>↔ width</b> or <b>● size</b>. Keep all of them — the next card may ask any.</p>
     </div>
 
@@ -463,6 +466,14 @@
       </div>
       <div class="card-body">
         <div class="field">
+          <label class="label">Symbols</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
+          </div>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> come from a fixed pool of 32 and have names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
           <label class="label">Highest dimension</label>
           <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
@@ -719,11 +730,15 @@ const store = {
 };
 const loadProgress = () => { try { return JSON.parse(store.get(KEYS.prog)) || {}; } catch { return {}; } };
 const saveProgress = p => store.set(KEYS.prog, JSON.stringify(p));
+/* The best peak throughput on one stimulus set. Records from before the sets
+   existed were all generated marks, which is where `bestBits` came from. */
+const bestFor = (prog, set) => Math.max(
+  (prog.best && prog.best[set]) || 0, set === 'glyphs' ? (prog.bestBits || 0) : 0);
 
 /* Standard mode is these, fixed. Custom mode is whatever the sliders say. */
 const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, adaptLevel: true };
 const DEFAULTS = Object.assign({
-  mode: 'standard', maxD: 3, resumeLevel: true, startD: 1, startS: 3,
+  mode: 'standard', maxD: 3, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
 }, STANDARD);
 
@@ -824,6 +839,9 @@ document.querySelectorAll('#modeTabBar .tab-btn').forEach(b => b.addEventListene
 document.querySelectorAll('input[name="maxD"]').forEach(r => r.addEventListener('change', () => {
   settings.maxD = +r.value; saveSettings(); paintLevel();
 }));
+document.querySelectorAll('input[name="stimset"]').forEach(r => r.addEventListener('change', () => {
+  settings.stimset = R.stimulusSet(r.value).id; saveSettings(); paintStimset();
+}));
 $('startLevelSelect').addEventListener('change', () => {
   const [d, s] = $('startLevelSelect').value.split('-').map(Number);
   settings.startD = d; settings.startS = s; saveSettings();
@@ -853,6 +871,71 @@ function paintLevel() {
   $('savedLevelPill').textContent = 'next: ' + levelName(startingLevel()) + (saved && settings.resumeLevel ? ' (resumed)' : '');
 }
 
+/**
+ * The worked example on the home page, dealt from the set that is actually in
+ * play. Written out in fixed symbols it would be a picture of a game nobody
+ * plays: the marks are generated per card and the animals come from a pool, so
+ * the only honest example is a real one.
+ *
+ * The order it shows is the one in the README: holding three, the new symbol
+ * goes in above the second, the oldest leaves, and the answer is 1.
+ */
+function exampleStep(caption, cells) {
+  const box = document.createElement('div');
+  box.className = 'example-step';
+  const cap = document.createElement('div');
+  cap.innerHTML = caption;
+  box.appendChild(cap);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:.45rem;align-items:flex-start;margin-top:.35rem';
+  cells.forEach(c => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:1px';
+    if (c.faded) cell.style.opacity = '.4';
+    cell.appendChild(stimMini(c.stim, 30, c.cls || 'ref'));
+    if (c.tag) {
+      const t = document.createElement('div');
+      t.className = 'strip-tag';
+      if (c.tagColor) t.style.color = c.tagColor;
+      t.textContent = c.tag;
+      cell.appendChild(t);
+    }
+    row.appendChild(cell);
+  });
+  box.appendChild(row);
+  return box;
+}
+
+function paintStimset() {
+  const set = R.stimulusSet(settings.stimset);
+  document.querySelectorAll('input[name="stimset"]').forEach(r => { r.checked = r.value === set.id; });
+
+  const a = set.next([], Math.random), b = set.next([a], Math.random);
+  const c = set.next([a, b], Math.random), x = set.next([a, b, c], Math.random);
+  const mark = set.id === 'animals'
+    ? 'the <span style="color:var(--accent)">ringed</span> one is new. They come from a fixed pool of animals, so you can name them — which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    : 'the <span style="color:var(--accent)">coloured</span> one is new. Every mark is generated on the spot and never comes back, so there is nothing about it to learn — only where it goes.';
+  $('cardHowText').innerHTML = `<strong>How a card works.</strong> Every card shows two symbols: the plain one is one you already hold, and ${mark}`
+    + ` The new symbol goes <em>directly</em> next to the plain one — above or below, and in higher levels also left or right, and bigger or smaller.`
+    + ` If that makes one too many, the <strong>oldest</strong> symbol leaves and the ranks close up.`
+    + ` Press the new symbol's rank with the number keys (1 = top, left, or biggest) or tap it.`;
+
+  $('cardExample').replaceChildren(
+    exampleStep('Holding (top → bottom)', [
+      { stim: a, tag: 'oldest', tagColor: 'var(--warn)' }, { stim: b }, { stim: c },
+    ]),
+    exampleStep('Card: the new one <strong>above</strong> the 2nd', [
+      { stim: x, cls: 'new', tag: 'new', tagColor: 'var(--accent)' }, { stim: b, tag: '2nd' },
+    ]),
+    exampleStep('It goes in 2nd; the oldest leaves', [
+      { stim: a, faded: true, tag: 'left' }, { stim: x, cls: 'new' }, { stim: b }, { stim: c },
+    ]),
+    exampleStep('Now holding — so the answer is <strong style="color:var(--accent)">1</strong>', [
+      { stim: x, cls: 'new', tag: '1', tagColor: 'var(--accent)' }, { stim: b, tag: '2' }, { stim: c, tag: '3' },
+    ]),
+  );
+}
+
 function buildBeepTypeList() {
   const list = $('beepTypeList'); list.innerHTML = '';
   BEEP_TYPES.forEach(bt => {
@@ -874,8 +957,9 @@ function buildBeepTypeList() {
   });
 }
 
-function paintAll() { painters.forEach(p => p()); paintMode(); paintLevel(); buildBeepTypeList(); }
-paintAll();
+function paintAll() { painters.forEach(p => p()); paintMode(); paintLevel(); paintStimset(); buildBeepTypeList(); }
+/* Called from the tail of the file: the worked example is drawn with the same
+   helpers the cards use, and those are defined below. */
 
 /* ══ MODAL ══ */
 function openModal(title, body, onConfirm, confirmLabel, danger = true) {
@@ -911,6 +995,35 @@ function glyphEl(glyph, cx, cy, size, cls) {
   p.setAttribute('class', 'glyph ' + cls);
   return p;
 }
+
+/* An animal, drawn as its character at the size the card asks for, with a ring
+   round it when it is the new one — the accent stroke that marks a generated
+   mark as new has nothing to colour here. */
+function picEl(stim, cx, cy, size, cls) {
+  const g = document.createElementNS(SVGNS, 'g');
+  if (cls.includes('new')) {
+    const ring = document.createElementNS(SVGNS, 'circle');
+    ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
+    ring.setAttribute('r', size * 0.66);
+    ring.setAttribute('class', 'pic-ring');
+    g.appendChild(ring);
+  }
+  const t = document.createElementNS(SVGNS, 'text');
+  t.setAttribute('x', cx); t.setAttribute('y', cy);
+  t.setAttribute('font-size', size);
+  t.setAttribute('class', 'pic ' + cls);
+  t.textContent = stim.char;
+  g.appendChild(t);
+  return g;
+}
+
+/* The one place that knows the difference: a generated mark is an array of
+   stroke indices, an animal is an object. Everything above this draws cards
+   without caring which set is in play. */
+const isPic = stim => !Array.isArray(stim);
+function stimEl(stim, cx, cy, size, cls) {
+  return isPic(stim) ? picEl(stim, cx, cy, size, cls) : glyphEl(stim, cx, cy, size, cls);
+}
 function clearStage(el) { (el || $('stage')).replaceChildren(); }
 
 /* The reference sits in the middle at a fixed size; the new symbol is offset
@@ -920,16 +1033,19 @@ function drawCard(el, glyph, refGlyph, dirs, d) {
   const cx = MID + (d >= 2 ? dirs[1] * OFFSET : 0);
   const cy = MID + dirs[0] * OFFSET;
   const size = d >= 3 ? (dirs[2] < 0 ? BIG : SMALL) : BASE;
-  el.replaceChildren(glyphEl(refGlyph, MID, MID, BASE, 'ref'), glyphEl(glyph, cx, cy, size, 'new'));
+  el.replaceChildren(stimEl(refGlyph, MID, MID, BASE, 'ref'), stimEl(glyph, cx, cy, size, 'new'));
 }
-function drawSeed(el, glyph) { el.replaceChildren(glyphEl(glyph, MID, MID, BASE, 'ref')); }
+function drawSeed(el, glyph) { el.replaceChildren(stimEl(glyph, MID, MID, BASE, 'ref')); }
 
-/* A backward mask: scattered strokes over the whole card, so the image does not
-   linger on the retina after the card has gone. */
-function drawMask(el) {
+/* A backward mask: scattered stimuli of the same kind over the whole card, so
+   the image does not linger on the retina after the card has gone. Strokes for
+   strokes and animals for animals — a mask has to be made of what it masks. */
+function drawMask(el, setId) {
+  const pic = R.stimulusSet(setId).id === 'animals';
   const parts = [];
   for (let i = 0; i < 9; i++) {
-    parts.push(glyphEl(R.makeGlyph(Math.random), 40 + Math.random() * 220, 40 + Math.random() * 220, 50 + Math.random() * 40, 'mask'));
+    const stim = pic ? R.newAnimal([], Math.random) : R.makeGlyph(Math.random);
+    parts.push(stimEl(stim, 40 + Math.random() * 220, 40 + Math.random() * 220, 50 + Math.random() * 40, 'mask'));
   }
   el.replaceChildren(...parts);
 }
@@ -974,6 +1090,10 @@ function padButton(pad, r) { return pad.querySelector(`[data-rank="${r}"]`); }
 
 /* ══ SESSION ══════════════════════════════════════════════════════════ */
 let active = false, ctrl = null, model = null, cur = null, trials = [];
+/* Which stimuli the cards are made of. Fixed when a session or the walkthrough
+   starts, not read live, so a record always says what it was earned on. */
+let sessionSet = 'glyphs';
+const nextStim = avoid => R.stimulusSet(sessionSet).next(avoid, Math.random);
 /* Set while the walkthrough is running its practice beats: a session with the
    pace pinned, a beat budget instead of a clock, and no record kept. */
 let practice = null;
@@ -1043,7 +1163,7 @@ function beat() {
     needEpisode = false;
     model = R.createModel(lvl.d, lvl.s);
     recentlyGone = [];
-    R.seed(model, R.newGlyph([], Math.random));
+    R.seed(model, nextStim([]));
     cur = null;
     drawSeed($('stage'), model.items[0].glyph);
     $('stimInstruction').textContent = `${levelName(lvl)} symbols · remember this one`;
@@ -1057,7 +1177,7 @@ function beat() {
 
   const plan = R.planCard(model, Math.random);
   const refGlyph = plan.ref.glyph;
-  const glyph = R.newGlyph(model.items.map(it => it.glyph).concat(recentlyGone), Math.random);
+  const glyph = nextStim(model.items.map(it => it.glyph).concat(recentlyGone));
   const res = R.apply(model, plan, glyph);
   if (res.removed) {
     recentlyGone.push(res.removed.glyph);
@@ -1076,7 +1196,7 @@ function beat() {
   renderPad();
 
   const exposure = Math.min(eff('exposure'), interval * 0.5);
-  later(() => { drawMask($('stage')); later(() => clearStage($('stage')), MASK_MS); }, exposure);
+  later(() => { drawMask($('stage'), sessionSet); later(() => clearStage($('stage')), MASK_MS); }, exposure);
   beatTimer = setTimeout(beat, interval);
 }
 
@@ -1144,6 +1264,7 @@ function startSession(opts) {
     target: eff('targetAcc') / 100, adaptLevel: practice ? false : eff('adaptLevel'),
   });
   active = true;
+  sessionSet = R.stimulusSet(settings.stimset).id;
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
   /* The practice run ends on its beat budget; the clock is only a backstop. */
@@ -1212,7 +1333,12 @@ function showResults() {
     prog.sessions = (prog.sessions || 0) + 1;
     prog.totalQ = (prog.totalQ || 0) + total;
     prog.totalCorrect = (prog.totalCorrect || 0) + correct;
-    prog.bestBits = Math.max(prog.bestBits || 0, peakBits);
+    /* Bits per second is not comparable across stimulus sets — a named animal
+       is encoded in a word — so the record is kept per set. `bestBits` stays
+       the generated-marks record, which is what the archive already reads. */
+    prog.best = prog.best || {};
+    prog.best[sessionSet] = Math.max(bestFor(prog, sessionSet), peakBits);
+    if (sessionSet === 'glyphs') prog.bestBits = prog.best.glyphs;
     const today = new Date().toDateString();
     if (prog.lastDate !== today) {
       const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -1229,6 +1355,7 @@ function showResults() {
       bits: Math.round(bits * 1000) / 1000,
       peakBits: Math.round(peakBits * 1000) / 1000,
       lowestISI, d: endLevel.d, s: endLevel.s, peakD: topLevel.d, peakS: topLevel.s,
+      set: sessionSet,
     });
     if (prog.history.length > 1000) prog.history.length = 1000;
     saveProgress(prog);
@@ -1248,7 +1375,8 @@ function showResults() {
     mkStat('Sessions', prog.sessions || 0) +
     mkStat('Total trials', (prog.totalQ || 0).toLocaleString('en')) +
     mkStat('Raw accuracy', lifetimeAcc + '%') +
-    mkStat('Best peak bits / s', (prog.bestBits || 0).toFixed(2), 'accent-val');
+    mkStat('Best peak bits / s' + (sessionSet === 'glyphs' ? '' : ' · ' + R.stimulusSet(sessionSet).label.toLowerCase()),
+      bestFor(prog, sessionSet).toFixed(2), 'accent-val');
 
   $('accBarFill').style.width = '0%'; $('accBarPct').textContent = pct + '%';
   setTimeout(() => { $('accBarFill').style.width = pct + '%'; }, 120);
@@ -1268,6 +1396,7 @@ function showResults() {
       <span style="flex:1;font-size:.72rem">${when}${i === 0 && total > 0 ? ' <span style="color:var(--accent);font-size:.6rem">← this session</span>' : ''}</span>
       <span style="color:var(--text-dim);font-size:.7rem">${mins ? mins + 'min' : ''}</span>
       <span style="color:var(--text-dim);font-size:.7rem;min-width:52px;text-align:right">${s.peakD}D·${s.peakS}</span>
+      <span style="color:var(--text-faint);font-size:.6rem;min-width:46px;text-align:right">${s.set === 'animals' ? 'animals' : ''}</span>
       <span style="color:var(--accent);min-width:64px;text-align:right">${(s.peakBits || 0).toFixed(2)} b/s</span>
       <span style="color:var(--text-faint);font-size:.65rem;min-width:52px;text-align:right">${s.correct}/${s.total}</span>`;
     histLog.appendChild(el);
@@ -1275,7 +1404,7 @@ function showResults() {
 
   const log = $('trialLog');
   log.innerHTML = '';
-  $('logCount').textContent = scored.length + ' trials';
+  $('logCount').textContent = scored.length + ' trials · ' + R.stimulusSet(sessionSet).label.toLowerCase();
   scored.forEach((t, i) => {
     const dirs = t.dirs.map((v, a) => DIR_GLYPHS[a][v < 0 ? 0 : 1]).join('');
     const el = document.createElement('div');
@@ -1355,6 +1484,18 @@ function glyphMini(glyph, px, cls) {
   return svg;
 }
 
+/* The small version, for the strips and the worked example on the home page.
+   An animal is just text at that size — no SVG needed. */
+function stimMini(stim, px, cls) {
+  if (!isPic(stim)) return glyphMini(stim, px, cls);
+  const span = document.createElement('span');
+  span.className = 'pic-mini';
+  span.style.fontSize = Math.round(px * 0.85) + 'px';
+  span.textContent = stim.char;
+  span.title = stim.name;
+  return span;
+}
+
 /**
  * The list as a picture: a column in 1D, a grid of rows against columns in 2D,
  * and in 3D the same grid with each symbol drawn at its size rank. One function
@@ -1395,7 +1536,7 @@ function drawStrip(snap, opts) {
         if (item.id === opts.newId) cell.classList.add('is-new');
         if (item.id === opts.refId) cell.classList.add('is-ref');
         const px = d >= 3 ? 34 - item.ranks[2] * 5 : 32;
-        cell.appendChild(glyphMini(item.glyph, px, item.id === opts.newId ? 'new' : 'ref'));
+        cell.appendChild(stimMini(item.glyph, px, item.id === opts.newId ? 'new' : 'ref'));
         if (d >= 3) {
           const tag = document.createElement('div');
           tag.className = 'strip-tag';
@@ -1418,7 +1559,7 @@ function drawStrip(snap, opts) {
   if (opts.gone) {
     const out = document.createElement('div');
     out.className = 'strip-cell is-gone';
-    out.appendChild(glyphMini(opts.gone.glyph, 30, 'ref'));
+    out.appendChild(stimMini(opts.gone.glyph, 30, 'ref'));
     const tag = document.createElement('div');
     tag.className = 'strip-tag';
     tag.textContent = 'left';
@@ -1433,9 +1574,9 @@ function drawStrip(snap, opts) {
 
 function tutSetup(st) {
   tutModel = R.createModel(st.d, st.s);
-  R.seed(tutModel, R.newGlyph([], Math.random));
+  R.seed(tutModel, nextStim([]));
   for (let i = 1; i < st.fill; i++) {
-    R.apply(tutModel, R.planCard(tutModel, Math.random), R.newGlyph(tutModel.items.map(it => it.glyph), Math.random));
+    R.apply(tutModel, R.planCard(tutModel, Math.random), nextStim(tutModel.items.map(it => it.glyph)));
   }
 }
 
@@ -1447,7 +1588,7 @@ function tutDealCard() {
   const landed = plan.dirs[plan.axis] < 0 ? refRank : refRank + 1;
   const refGlyph = plan.ref.glyph;
   const refId = plan.ref.id;
-  const res = R.apply(tutModel, plan, R.newGlyph(tutModel.items.map(it => it.glyph), Math.random));
+  const res = R.apply(tutModel, plan, nextStim(tutModel.items.map(it => it.glyph)));
   return {
     before, after: snapshot(tutModel), plan, refRank, landed, refId, refGlyph,
     newId: res.item.id, glyph: res.item.glyph, answer: res.answer,
@@ -1572,6 +1713,7 @@ function tutFinish(startTraining) {
 }
 
 function openTutorial() {
+  sessionSet = R.stimulusSet(settings.stimset).id;
   tutAt = 0; tutModel = null; tutInfo = null;
   setPage('pageTutorial');
   renderTut();
@@ -1602,6 +1744,8 @@ function paintFirstRun() {
   const fresh = !store.get(KEYS.seen) && !(loadProgress().history || []).length;
   $('firstRun').style.display = fresh ? '' : 'none';
 }
+
+paintAll();
 paintFirstRun();
 </script>
 </body>

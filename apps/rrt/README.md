@@ -10,8 +10,14 @@ where the new symbol now stands, on the axis the card asks about, before the
 next card arrives.
 
 ```
-holding  ● ▲ ■   (● oldest)     card: ★ above ▲     ● leaves     answer: 1
+holding  1st 2nd 3rd  (1st oldest)   card: new above the 2nd
+  → the new symbol goes in 2nd, the oldest leaves, everything closes up
+  → answer: 1
 ```
+
+The home page shows that example with real symbols, dealt from whichever set is
+in play, because written out in fixed shapes it would be a picture of a game
+nobody plays.
 
 ## Why this shape
 
@@ -27,7 +33,8 @@ insertion and departure before it. Each symbol carries two bindings — where it
 is, and how old it is — and both change every beat; keeping them straight is the
 work, and discarding the stale ones is part of it. The symbols themselves are
 generated stroke by stroke and never repeat, so none of them can come to mean
-anything.
+anything. The animal set trades that away on purpose — see "What is on the
+cards" below, which says what it buys and what it costs.
 
 What that leaves is close to what the literature says predicts fluid
 intelligence best: relational integration and binding, held under time pressure
@@ -39,6 +46,29 @@ relationship between working memory and reasoning).
 working-memory training find far transfer weak at best. What the design can
 honestly claim is that it keeps the task at the edge of capacity and measures it
 cleanly.
+
+## What is on the cards
+
+Two stimulus sets, and the choice is a real trade rather than a skin.
+
+**Generated marks** are the default. Each is three or four strokes on a 3×3
+lattice, connected, spanning the lattice both ways, and at least two strokes from
+anything held or just departed — measured up to all eight turns and mirrors, so a
+mirrored twin never appears beside its twin. They never repeat, which is the
+argument in the section above: nothing about a mark can be learned in place of
+the order.
+
+**Animals** are a fixed pool of 32, named and instantly recognisable. A picture
+with a name is encoded in one word, so almost none of the beat goes on taking the
+symbol in and almost all of it on the order — which is the point, and also why it
+is easier. It is the way in when the marks are the part that defeats you, and it
+is honest about what it costs: the pool is small, so stimuli recur, and a fixed
+set is exactly the consistent mapping that automatises. What it measures drifts
+from relational load toward how good a verbal chain you can build.
+
+So bits per second is **not comparable between the sets**. Every session record
+carries the set it used, the best-ever figure is kept per set, and the archive
+reads it as `raw.stimuli`.
 
 ## The walkthrough
 
@@ -58,7 +88,7 @@ Difficulty moves on three fronts, and the controller drives them together:
 
 - **Pace.** The interval moves on every answer toward a target accuracy, stated
   above chance so it means the same at every size.
-- **Symbols.** 3 to 7 of them.
+- **Symbols.** 3 to 7 of them — how many are held, not which set they come from.
 - **Dimensions.** Height, then width, then size — 1D, 2D, 3D.
 
 When the pace is at its floor and you are still above target, speed has nowhere
@@ -82,8 +112,9 @@ test/run.js   node apps/rrt/test/run.js
 
 `model.js` is separate so the parts that must be right can be tested without a
 browser: that ranks stay a permutation on every axis, that the oldest symbol is
-the one that leaves, that answers come out even across the ranks, and that
-pressing one key forever scores exactly chance.
+the one that leaves, that answers come out even across the ranks, that pressing
+one key forever scores exactly chance, and that the model is indifferent to which
+stimulus set fills the cards.
 
 ## Storage
 

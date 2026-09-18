@@ -25,20 +25,21 @@ function assertPermutations(model) {
   }
 }
 
-function run(d, s, beats, rnd) {
+function run(d, s, beats, rnd, setId) {
+  const set = R.stimulusSet(setId);
   const m = R.createModel(d, s);
-  R.seed(m, R.newGlyph([], rnd));
+  R.seed(m, set.next([], rnd));
   const out = [];
   for (let i = 0; i < beats; i++) {
     const plan = R.planCard(m, rnd);
-    const res = R.apply(m, plan, R.newGlyph(m.items.map(it => it.glyph), rnd));
+    const res = R.apply(m, plan, set.next(m.items.map(it => it.glyph), rnd));
     out.push({ plan, res, size: m.items.length });
     assertPermutations(m);
   }
   return { m, out };
 }
 
-test("the worked example: ★ above ▲ in ● ▲ ■ answers 1", () => {
+test("the worked example: new above the 2nd of three answers 1", () => {
   const m = R.createModel(1, 3);
   const dot = R.seed(m, [0]);
   const tri = { id: 90, glyph: [1], ranks: [1], born: ++m.clock };
@@ -140,6 +141,43 @@ test("a glyph is zero from its own mirror image", () => {
   const a = [R.SEGMENTS.findIndex(s => s[0] === 0 && s[1] === 1)];
   const b = [R.SEGMENTS.findIndex(s => s[0] === 1 && s[1] === 2)];
   assert.strictEqual(R.glyphDistance(a, b), 0);
+});
+
+test("an animal is never one that is held or has only just left", () => {
+  const rnd = lcg(29);
+  const m = R.createModel(1, 5);
+  R.seed(m, R.newAnimal([], rnd));
+  const gone = [];
+  for (let i = 0; i < 400; i++) {
+    const avoid = m.items.map(it => it.glyph).concat(gone);
+    const next = R.newAnimal(avoid, rnd);
+    assert.ok(!avoid.some(a => a.name === next.name), next.name);
+    const res = R.apply(m, R.planCard(m, rnd), next);
+    if (res.removed) { gone.push(res.removed.glyph); if (gone.length > 3) gone.shift(); }
+  }
+});
+
+test("every animal is drawn, and the pool is big enough to hold plus recent", () => {
+  const rnd = lcg(31);
+  const seen = new Set();
+  for (let i = 0; i < 4000; i++) seen.add(R.newAnimal([], rnd).name);
+  assert.strictEqual(seen.size, R.ANIMALS.length);
+  assert.strictEqual(new Set(R.ANIMALS.map(a => a.char)).size, R.ANIMALS.length);
+  /* The largest level holds 7 and three departures stay in mind after that. */
+  assert.ok(R.ANIMALS.length > 10, R.ANIMALS.length);
+});
+
+test("the model does not care which set the stimuli come from", () => {
+  for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
+  const { m } = run(3, 5, 50, lcg(37), "animals");
+  m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.char === "string", JSON.stringify(it.glyph)));
+});
+
+test("an unknown set id falls back to the generated marks", () => {
+  assert.strictEqual(R.stimulusSet("nonsense").id, "glyphs");
+  assert.strictEqual(R.stimulusSet(undefined).id, "glyphs");
+  assert.strictEqual(R.stimulusSet("animals").id, "animals");
+  assert.ok(Array.isArray(R.stimulusSet("glyphs").next([], lcg(41))));
 });
 
 test("the ladder rises in carried bits", () => {
