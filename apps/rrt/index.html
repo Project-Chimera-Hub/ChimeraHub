@@ -415,7 +415,7 @@
       </div>
       <div class="card-body">
         <div class="tab-panel active" id="tab-standard">
-          <p style="font-size:.85rem">15 minutes. Cards start 3 s apart and are visible for 0.4 s. The pace moves on every answer toward 80% above chance, between 0.8 s and 6 s. When the pace is at 0.8 s and you are still above target, the level rises and the pace relaxes; when it is at 6 s and you are still below, the level falls.</p>
+          <p style="font-size:.85rem">15 minutes. Cards start 3 s apart and are visible for 0.4 s, each wiped by a masking screen the moment it goes; an episode opens with its first symbol alone for 1.5 s. The pace moves on every answer toward 80% above chance, between 0.8 s and 6 s. When the pace is at 0.8 s and you are still above target, the level rises and the pace relaxes; when it is at 6 s and you are still below, the level falls.</p>
         </div>
         <div class="tab-panel" id="tab-custom">
           <div class="settings-grid">
@@ -443,14 +443,25 @@
               <label class="label">Card visible for</label>
               <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="exposureSlider"></div><span class="slider-val" id="exposureVal"></span></div>
             </div>
+            <div class="field">
+              <label class="label">Encoding period</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="encodingSlider"></div><span class="slider-val" id="encodingVal"></span></div>
+            </div>
           </div>
           <p class="hint">Accuracy above chance: 0% is guessing, 100% is perfect — so the target means the same at every size. The card is never shown for more than half the interval. The floor is where speed stops and the level takes over.</p>
+          <p class="hint" style="margin-top:.35rem">The <strong>encoding period</strong> is the beat that opens an episode: the first symbol alone, with nothing to place it against, before the cards start. It is never shorter than one interval, and the symbol itself goes at 60% of it, so the gap before the first card is real however long the period is.</p>
           <hr class="div">
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="adaptLevelToggle"><div class="toggle-track"></div></label>
             <span class="toggle-label"><strong>Adaptive level</strong> — raise or lower the level when the pace reaches its floor or ceiling</span>
           </div>
           <p class="hint">Off: the level stays where it starts and only the pace adapts.</p>
+          <hr class="div">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="maskToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Masking screen</strong> — a scatter of symbols over the card the moment it goes</span>
+          </div>
+          <p class="hint">On, the card is wiped by a scatter of the same kind of symbols, so the image does not linger on the retina and the order has to be in your head rather than in your eyes. Off, the card simply goes and a short afterimage is yours to use — easier, and a session run that way is not comparable with one that was masked.</p>
         </div>
       </div>
     </div>
@@ -738,7 +749,7 @@ const bestFor = (prog, set) => Math.max(
   (prog.best && prog.best[set]) || 0, set === 'glyphs' ? (prog.bestBits || 0) : 0);
 
 /* Standard mode is these, fixed. Custom mode is whatever the sliders say. */
-const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, adaptLevel: true };
+const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, encoding: 1500, mask: true, adaptLevel: true };
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 3, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
@@ -821,8 +832,10 @@ const painters = [
   wireSlider('ceilSlider', 'ceilVal', 'isiCeil', 1000, 10000, 250, fmtMs),
   wireSlider('targetSlider', 'targetVal', 'targetAcc', 50, 95, 1, v => v + '%'),
   wireSlider('exposureSlider', 'exposureVal', 'exposure', 100, 1500, 50, fmtMs),
+  wireSlider('encodingSlider', 'encodingVal', 'encoding', 500, 6000, 100, fmtMs),
   wireSlider('beepVolSlider', 'beepVolVal', 'beepVol', 0, 1, 0.05, v => Math.round(v * 100) + '%'),
   wireToggle('adaptLevelToggle', 'adaptLevel'),
+  wireToggle('maskToggle', 'mask'),
   wireToggle('resumeToggle', 'resumeLevel', null, paintLevel),
   wireToggle('truthToggle', 'showTruth'),
   wireToggle('beepToggle', 'beepEnabled', 'beepOpts'),
@@ -1166,8 +1179,13 @@ function beat() {
     $('stimInstruction').textContent = `${levelName(lvl)} symbols · remember this one`;
     $('cue').innerHTML = '';
     renderPad();
-    const hold = Math.max(1500, interval);
-    later(() => clearStage($('stage')), Math.min(1500, hold * 0.6));
+    /* The encoding period: long enough to take the symbol in with nothing to
+       place it against. Never shorter than one interval — an episode that
+       opened faster than the cards arrive would be a card in all but name —
+       and the symbol goes at 60% of the beat, so the gap before the first card
+       is real however long the period is. */
+    const hold = Math.max(eff('encoding'), interval);
+    later(() => clearStage($('stage')), Math.min(eff('encoding'), hold * 0.6));
     beatTimer = setTimeout(beat, hold);
     return;
   }
@@ -1193,7 +1211,13 @@ function beat() {
   renderPad();
 
   const exposure = Math.min(eff('exposure'), interval * 0.5);
-  later(() => { drawMask($('stage'), sessionSet); later(() => clearStage($('stage')), MASK_MS); }, exposure);
+  /* Masked, the card is overwritten by the scatter and then cleared; unmasked,
+     it simply goes and whatever the eye keeps of it is the reader's to use. */
+  later(() => {
+    if (!eff('mask')) { clearStage($('stage')); return; }
+    drawMask($('stage'), sessionSet);
+    later(() => clearStage($('stage')), MASK_MS);
+  }, exposure);
   beatTimer = setTimeout(beat, interval);
 }
 

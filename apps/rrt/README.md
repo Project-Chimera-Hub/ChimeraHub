@@ -86,6 +86,29 @@ visible while the idea is new, then taken away — which is the task itself. The
 eight paced beats at 2.6 s, recorded nowhere, before the second and third
 dimensions arrive the same way.
 
+## The beat
+
+A card is on screen for a slice of the interval — never more than half of it —
+and then a **masking screen** takes its place: a scatter of the same kind of
+symbols over the whole card, strokes for strokes and animals for animals,
+because a mask has to be made of what it masks. It is there so the card does
+not sit on the retina after it has gone, which is what keeps the order
+something you hold rather than something you are still looking at.
+
+An episode opens differently. The first symbol arrives on its own, with nothing
+to place it against, and the **encoding period** is how long that beat lasts —
+never shorter than one interval, since a beat faster than the cards arrive
+would be a card in all but name. The symbol itself goes at 60% of it, so there
+is a real gap before the first card whatever the period.
+
+Standard mode fixes all three: 0.4 s visible, masked, and 1.5 s to take the
+first symbol in. Custom mode puts the exposure and the encoding period on
+sliders and lets the mask be turned off. Both are worth knowing about when
+reading a figure: an unmasked card is worth an afterimage, and a long encoding
+period is a head start, so neither kind of session is comparable with one run
+the standard way — the same caution the two stimulus sets come with, and for
+the same reason.
+
 ## The ladder, and what holds you on it
 
 Difficulty moves on three fronts, and the controller drives them together:
