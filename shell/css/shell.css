@@ -338,9 +338,62 @@ h2::after {
   font-size: .85rem;
   flex: none;
 }
+#stage.bar-hidden .stagebar { display: none; }
+
 .stagebar__name { color: var(--ink-strong); font-weight: 600; letter-spacing: .01em; }
 .stagebar__spacer { flex: 1; }
 .stagebar__clock { font-variant-numeric: tabular-nums; color: var(--dim); }
+
+/* Square, so the two chevrons do not read as a third and fourth word in a row
+   of labelled buttons. */
+.btn--icon {
+  padding: .5rem;
+  inline-size: 2rem;
+  line-height: 1;
+  text-align: center;
+}
+
+/*
+ * What is left of the bar once it is minimized.
+ *
+ * It overlays the frame rather than reserving a strip of it: a trainer sized
+ * to the viewport is the reason to minimize at all, and giving back 38 pixels
+ * only to keep 20 would be most of the way to keeping the bar. Kept quiet
+ * until it is pointed at — the point is to be out of the way, and the point of
+ * it existing at all is that there is always something to click.
+ */
+.stagetab {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 2;
+  font: inherit;
+  font-size: .85rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: .3rem .85rem .4rem;
+  border: 1px solid var(--line-soft);
+  border-block-start: 0;
+  border-inline-start: 0;
+  border-end-end-radius: 10px;
+  /* Opaque, and dark on its own account. This is the one element here that
+     sits over a page the shell did not write: six of the trainers are dark and
+     one is not, and a translucent chip that reads as a quiet notch on a black
+     background reads as a grey smudge on a white one. It brings its own
+     contrast rather than borrowing the trainer's. */
+  background: #12060c;
+  color: var(--accent-2);
+  opacity: .72;
+  transition: opacity .14s, color .14s, background .14s, border-color .14s;
+}
+.stagetab:hover, .stagetab:focus-visible {
+  opacity: 1;
+  color: var(--ink-strong);
+  background: var(--panel-hi);
+  border-color: var(--accent);
+  outline: none;
+}
+.stagetab[hidden] { display: none; }
 
 /* A trainer gets the whole window below the bar. Several of these draw a 3D
    scene sized to the viewport, and a frame that is not exactly the space left

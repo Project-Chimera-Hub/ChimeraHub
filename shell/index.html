@@ -49,12 +49,21 @@
      away an in-progress block, which is the one thing a training app must never
      do to you. -->
 <section id="stage" hidden>
+  <!-- Collapsed, the bar is replaced by the tab below rather than by nothing.
+       A trainer in an iframe takes the keyboard the moment it is clicked into,
+       so a shortcut to bring the bar back would work only until the user
+       started training — which is exactly when they would need it. The way out
+       has to be something visible and clickable, so it is. -->
+  <button class="stagetab" type="button" id="stage-show" hidden
+          title="Show the bar" aria-label="Show the trainer bar">⌄</button>
   <div class="stagebar">
     <button class="btn" type="button" id="back">← Hub</button>
     <span class="stagebar__name" id="stage-name"></span>
     <span class="stagebar__spacer"></span>
     <span class="stagebar__clock" id="clock"></span>
     <a class="btn" id="standalone" href="#" target="_blank" rel="noopener">Open on its own ↗</a>
+    <button class="btn btn--icon" type="button" id="stage-hide"
+            title="Minimize the bar" aria-label="Minimize the trainer bar">⌃</button>
   </div>
   <iframe id="frame" title="Trainer" allow="autoplay; fullscreen"></iframe>
 </section>
@@ -65,6 +74,6 @@
 <script src="shared/adapters.js?v=3"></script>
 <script src="shared/quota.js?v=3"></script>
 <script src="js/today.js?v=3"></script>
-<script src="js/shell.js?v=3"></script>
+<script src="js/shell.js?v=4"></script>
 </body>
 </html>

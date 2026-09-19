@@ -246,6 +246,34 @@
     renderToday();
   }
 
+  /* ---- the bar over a running trainer ---- *
+   *
+   * Minimizing it hands the trainer the whole window. Several of these draw a
+   * scene sized to the viewport and a couple are played close to the screen,
+   * and 38 pixels of someone else's chrome above them is the shell asserting
+   * itself over the thing it is supposed to be getting out of the way of.
+   *
+   * What is left behind is a tab, not nothing. The frame takes the keyboard as
+   * soon as it is clicked into, so a key to bring the bar back would stop
+   * working at the exact moment it was needed — the way out of a minimized bar
+   * has to be visible and clickable, and it is the same corner the Hub button
+   * was in.
+   *
+   * The choice is remembered, under the shell's own key. Someone who wants the
+   * bar gone wants it gone every evening, not once per visit. */
+  var BAR_KEY = "mindbuild.stagebar.hidden";
+
+  function setBar(hidden) {
+    $("stage").classList.toggle("bar-hidden", hidden);
+    $("stage-show").hidden = !hidden;
+    try { localStorage.setItem(BAR_KEY, hidden ? "1" : "0"); }
+    catch (e) { /* storage off: the bar simply does not remember */ }
+  }
+
+  function barHidden() {
+    try { return localStorage.getItem(BAR_KEY) === "1"; } catch (e) { return false; }
+  }
+
   function route() {
     var m = /^#\/([a-z0-9-]+)$/.exec(location.hash || "");
     if (m && byId[m[1]]) show(m[1]);
@@ -374,6 +402,14 @@
   route();
   $("archive-link").href = "#/archive";
   $("back").addEventListener("click", function () { location.hash = ""; });
+  $("stage-hide").addEventListener("click", function () { setBar(true); });
+  $("stage-show").addEventListener("click", function () {
+    setBar(false);
+    /* Focus the control that replaced the one just clicked, so the bar can be
+       put away again without reaching for the mouse a second time. */
+    $("stage-hide").focus();
+  });
+  setBar(barHidden());
   window.addEventListener("hashchange", route);
 
   /* A trainer writing its progress is a storage event in every other frame on
