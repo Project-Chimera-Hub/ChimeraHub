@@ -260,7 +260,13 @@ const STREAMS = {
     /* Second-order judgement: how this move relates to the PREVIOUS move, rather
        than where it went. Three channels, not six — you only need to hold the
        direction you derived n trials ago, so response load stays low while the
-       memory load is what actually rises. */
+       memory load is what actually rises.
+
+       Three channels for four relations, too. Oblique — neither aligned with the
+       previous move nor square to it — is answered by pressing nothing, so the
+       relation set can be widened without widening the deck. That is the only
+       direction this mode can grow in: at quaternary the buttons are already the
+       part of the task the player has least room for. */
     meta: [
       { id:'meta-same', glyph:'⇉', label:'Same direction',  key:'w', color:'#51cf66' },
       { id:'meta-opp',  glyph:'⇄', label:'Opposite',        key:'s', color:'#ff6b6b' },
@@ -281,6 +287,16 @@ const STREAMS = {
        * it would silently orphan every one of them.
        */
       { id:'meta-diff', glyph:'⤢', label:'Orthogonal',  key:'d', color:'#fcc419' },
+      /*
+       * The fourth relation, oblique, has no entry here on purpose — it is
+       * stated by pressing none of the three above.
+       *
+       * A button for it would be worse than useless: it would turn a derivation
+       * into a recognition, since "none of these" is the one answer you can
+       * reach by elimination rather than by holding the earlier move. Left off
+       * the deck, the only way to know an angle is neither 0°, 180° nor 90° is
+       * to have the earlier move to measure against.
+       */
     ],
     /* Screen-frame twins. Separate channels so "both frames" can ask for the same
        movement twice, once per reference frame. */

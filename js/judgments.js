@@ -64,18 +64,24 @@ const dot = (A, B) => A.reduce((s, v, i) => s + v * (B[i] || 0), 0);
 const norm = A => Math.sqrt(dot(A, A));
 
 /**
- * How one move stands to another: parallel, antiparallel, orthogonal, or none
- * of the three.
+ * How one move stands to another: parallel, antiparallel, orthogonal, or
+ * oblique — none of the three.
  *
- * `null` is the oblique case, and it is new. Single-axis moves have no oblique
- * relation — two axis-aligned vectors are always one of the three — so three
- * response options were exhaustive. Composite moves break that: (1,0,0) and
- * (1,1,0) are neither parallel nor perpendicular, and no button says so.
+ * Oblique is a relation, not a gap. Single-axis moves never produced one — two
+ * axis-aligned vectors are always parallel, antiparallel or perpendicular — so
+ * for as long as a move was one axis the three answers were exhaustive.
+ * Composite moves break that: (1,0,0) and (1,1,0) sit at 45°, which is a
+ * perfectly definite thing for two moves to do and was being thrown away.
  *
- * Rather than add a fourth answer, the generator only draws the three clean
- * relations. This returns null so that a trial which somehow arrives oblique
- * asks nothing instead of scoring a coin toss — and so the constraint is
- * enforced where the relation is computed rather than trusted upstream.
+ * It is returned as `'obl'` rather than suppressed, and answered by pressing
+ * nothing. That is the point of it: the selection pressure on this mode was
+ * always "only draw what a button can say", which quietly restricted the space
+ * to the special cases. A relation with no button widens the space at no
+ * response cost — and it is the one answer the deck cannot prompt you toward,
+ * so it has to be derived rather than recognised.
+ *
+ * `null` now means only that there is no relation to state at all: a missing
+ * move, or one that went nowhere.
  */
 function metaRelationOf(A, B) {
   if (!A || !B) return null;
@@ -89,7 +95,7 @@ function metaRelationOf(A, B) {
   const cos = d / (na * nb);
   if (cos > 1 - 1e-9) return 'same';
   if (cos < -1 + 1e-9) return 'opp';
-  return null;
+  return 'obl';
 }
 
 /** Every axis a move happened on, named — so a diagonal can be spelled out. */
@@ -139,11 +145,24 @@ function buildJudgments(a, b, extra) {
        */
       const A = moveVectorOf(prev[0], prev[1]), B = moveVectorOf(a, b);
       const rel = metaRelationOf(A, B);
-      /* Oblique asks nothing: no button says "neither", and the generator does
-         not draw it. See `metaRelationOf`. */
+      /*
+       * Oblique is asked, and answered by pressing nothing. The options list is
+       * unchanged — three buttons, as it has always been — so the fourth
+       * relation costs no response load, which is the only reason it can be
+       * added at all at a complexity the deck is already the bottleneck of.
+       *
+       * It also fixes the base rates. With three relations there was always
+       * exactly one correct answer, so a player who pressed nothing scored 0
+       * and a player who always pressed the modal answer scored ~2/3; now the
+       * empty answer is a real one and holding still has to be earned like the
+       * rest.
+       *
+       * `null` still asks nothing at all: that is a move that did not happen,
+       * not a relation.
+       */
       if (rel) {
         const id = { same: 'meta-same', opp: 'meta-opp', diff: 'meta-diff' }[rel];
-        push('position', ['meta-same', 'meta-opp', 'meta-diff'], [id]);
+        push('position', ['meta-same', 'meta-opp', 'meta-diff'], id ? [id] : []);
       }
     }
   } else if (mode('position') === 'identity') {
@@ -230,9 +249,11 @@ function applyInterval(snap, sign) {
     if (!j.correct.length) t.empty += sign;
     /* Histogram of correct-answer patterns. Chance is the best CONSTANT strategy,
        which is "always answer the most common thing" — that equals the never-press
-       rate only when a never-press answer exists. Meta-relations always has exactly
-       one correct answer, so its true chance is the modal answer's share (~2/3),
-       not 0. */
+       rate only when a never-press answer exists. Meta-relations had no empty
+       answer while it drew only the three relations a button names, so its true
+       chance was the modal answer's share (~2/3) rather than 0; with oblique
+       drawn as a fourth relation the empty pattern is one of the four and the
+       histogram picks up the change without being told. */
     const sig = j.correct.slice().sort().join('|');
     t.sigs[sig] = (t.sigs[sig] || 0) + sign;
     let exact = true;

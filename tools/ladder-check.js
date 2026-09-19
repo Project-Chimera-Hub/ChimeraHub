@@ -426,15 +426,39 @@ ok('and the axis-aligned case still is',
    g4(`metaRelationOf([1,0,0], [0,1,0])`) === 'diff');
 
 /*
- * The case three buttons cannot express, and the reason the generator draws only
- * the clean three. (1,0,0) against (1,1,0) is 45° — neither the same direction
- * nor a right angle.
+ * The fourth relation. (1,0,0) against (1,1,0) is 45° — neither the same
+ * direction, nor reversed, nor a right angle — and it is a relation rather than
+ * a gap: it is stated by pressing none of the three buttons.
+ *
+ * It used to come back null and be dropped by the generator, which restricted a
+ * mode built on composite moves to the three special cases where a composite
+ * move happens to behave like a single-axis one.
  */
-ok('oblique asks nothing rather than scoring a coin toss',
-   g4(`metaRelationOf([1,0,0], [1,1,0])`) === null,
-   'a 45-degree relation was given one of the three answers');
-ok('a move that goes nowhere states no relation',
-   g4(`metaRelationOf([1,0,0], [0,0,0])`) === null);
+ok('oblique is its own relation, not a missing one',
+   g4(`metaRelationOf([1,0,0], [1,1,0])`) === 'obl',
+   'a 45-degree relation did not come back as oblique');
+ok('a move that goes nowhere still states no relation',
+   g4(`metaRelationOf([1,0,0], [0,0,0])`) === null,
+   'a move of zero length was given a relation');
+
+/*
+ * And the deck does not grow to hold it — the whole reason it can be added at
+ * quaternary, where the buttons are the scarce resource. An oblique trial asks
+ * the same three options with no correct answer among them.
+ */
+ok('an oblique trial asks the same three buttons and wants none of them',
+   (function () {
+     vm.runInContext("cfg.coordAxes = []; cfg.meta = true; cfg.streams.position = 'relational';", geo);
+     const j = g4(`(function () {
+       var p0 = { cellIdx: idx(0,1,1) }, p1 = { cellIdx: idx(1,1,1) };
+       var b0 = { cellIdx: idx(1,1,1) }, b1 = { cellIdx: idx(2,2,1) };
+       return buildJudgments(b0, b1, { metaPrev: [p0, p1] })
+         .filter(function (x) { return x.stream === 'position'; })[0];
+     })()`);
+     return j && j.options.length === 3 && j.correct.length === 0;
+   })(),
+   'an oblique trial did not come out as a three-option question with an empty answer');
+vm.runInContext("cfg.meta = false;", geo);
 
 /* The count that makes the mode less slow: how many directions are orthogonal
    to a given move, once a move may combine axes. */
@@ -560,10 +584,65 @@ const rels = g4(`(function () {
   }
   return Object.keys(seen).sort();
 })()`);
-ok('no trial is drawn oblique, which has no answer',
+ok('no trial is drawn with no relation at all',
    rels.indexOf('null') < 0, `drew ${rels.join(', ')}`);
-ok('and all three answers do get drawn',
-   ['same', 'opp', 'diff'].every(r => rels.indexOf(r) >= 0), `drew ${rels.join(', ')}`);
+ok('and all four relations do get drawn, oblique among them',
+   ['same', 'opp', 'diff', 'obl'].every(r => rels.indexOf(r) >= 0),
+   `drew ${rels.join(', ')}`);
+
+/*
+ * How often each relation actually comes up, from random positions against
+ * random previous moves — which is the block, rather than the one start cell
+ * the checks above use.
+ *
+ * This is what the weights are for, and the reason to measure rather than
+ * assert the weights themselves: `chanceOf` scores a block against its own
+ * modal answer, so the base rates ARE the difficulty. Two ways to get this
+ * wrong, and both are silent. Oblique is the biggest bucket once the space is
+ * wide, so drawing uniformly over destinations rather than over types would
+ * make "press nothing" the usual answer and reward sitting the block out. And
+ * same and opposite are each a single direction out of the whole space, so a
+ * wall blocks them equally — leaving opposite at weight 1 while same carried 3
+ * starved it to under a tenth of trials.
+ */
+const relShare = (axes) => {
+  vm.runInContext(`cfg.coordAxes = ${JSON.stringify(axes)};`, geo);
+  return g4(`(function () {
+    var axes = ${JSON.stringify(axes)}, dims = 3 + axes.length;
+    var n = { same: 0, opp: 0, diff: 0, obl: 0 }, total = 0;
+    for (var t = 0; t < 2000; t++) {
+      var ci = randInt(state.cells.length);
+      var from = { cellIdx: ci };
+      axes.forEach(function (k) { from[k] = randInt(poolFor(k).length); });
+      /* A random previous move, composite as often as the task makes them. */
+      var A = [];
+      for (var i = 0; i < dims; i++) A.push(randInt(3) - 1);
+      if (A.every(function (c) { return c === 0; })) continue;
+      var m = pickMetaMove(ci, from, A, -1);
+      if (!m) continue;
+      var b = { cellIdx: m.cellIdx };
+      axes.forEach(function (k) { b[k] = m.levels[k]; });
+      var r = metaRelationOf(A, moveVectorOf(from, b));
+      if (n[r] == null) continue;
+      n[r]++; total++;
+    }
+    Object.keys(n).forEach(function (k) { n[k] = n[k] / total; });
+    return n;
+  })()`);
+};
+
+[[], ['pitch'], ['pitch', 'color']].forEach(axes => {
+  const n = relShare(axes);
+  const where = axes.length ? axes.join(' + ') : 'the cube alone';
+  const shown = Object.keys(n).map(k => `${k} ${Math.round(n[k] * 100)}%`).join(', ');
+  /* Chance on this stream is the modal answer's share. Half would put it back
+     where three relations and one forced answer had it. */
+  ok(`no one relation owns the block with ${where}`,
+     Math.max(...Object.values(n)) < 0.45, shown);
+  ok(`and every relation is askable with ${where}`,
+     Math.min(...Object.values(n)) > 0.08, shown);
+});
+vm.runInContext("cfg.coordAxes = ['pitch', 'size'];", geo);
 vm.runInContext("cfg.coordAxes = ['pitch']; cfg.magnitudeCap = 2;", geo);
 
 /* ------------------------------------------------------------------ *
