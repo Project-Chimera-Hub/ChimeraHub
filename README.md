@@ -8,6 +8,7 @@ apps/       the eight grafted in with git subtree, histories intact — and rrt,
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
 tools/      the build
+sketches/   probes rather than trainers: one page, one question, a number
 ```
 
 ## Why it is a shell and not a rewrite
