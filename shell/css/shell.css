@@ -1,34 +1,93 @@
-/* Deliberately the archive's stylesheet, token for token. The eight apps do not
-   look alike and are not going to — reskinning seven working trainers is how a
-   merge turns into a rewrite — so the shell is the one surface that carries the
-   family resemblance, and it borrows it from the app that already had one.
-   No build step and no webfont, for the same reason the archive has neither. */
+/* The hub's theme is Syllogimous's "Loosh", ported by hand.
+   -------------------------------------------------------------------------
+   It used to be the archive's stylesheet token for token, on the reasoning
+   that the shell should carry a family resemblance and should borrow it from
+   the app that already had one. That reasoning still holds; only the source
+   has changed. Loosh is the look this project is actually kept in, it is the
+   one theme here that was designed rather than defaulted to, and the hub is
+   the first screen of an evening — it should look like the thing it opens.
+
+   Ported, not imported. Syllogimous drives Loosh through a theme service that
+   writes --th-* variables onto <html> at runtime, because it has eight presets
+   and an appearance page to switch between them. The hub has one look and no
+   settings, so the palette is spelled out here as plain tokens: same colours,
+   same shapes, none of the machinery.
+
+   Still no build step and still no webfont, for the same reason the archive has
+   neither — a page that renders identically on a plane is worth more than one
+   that renders slightly better online. Cinzel leads the display stack so a
+   machine that has it (the Syllogimous look installs it) gets the real thing,
+   and every other machine gets Georgia, which is the same idea in a font that
+   has been on every computer for twenty years. */
 
 :root {
-  --bg: #0b0e14;
-  --panel: #131924;
-  --panel-hi: #171e2b;
-  --line: #232c3b;
-  --line-soft: #1b2230;
-  --ink: #dce4f0;
-  --ink-strong: #f2f6fc;
-  --dim: #8494ad;
-  --accent: #6cb6ff;
-  --ok: #3fb950;
-  --bad: #f85149;
+  /* ---- palette: Loosh, one family from pink through to near-black ---- */
+  --bg:         #07030a;
+  --bg-2:       #12060c;
+  --panel:      #1b060e;   /* blacker than the palette suggests: pink on
+                              near-black is the idea, and this is the black
+                              half of it. At #2b0a14 it reads mauve. */
+  --panel-hi:   #260a15;
+  --ink:        #f6e6ea;
+  --ink-strong: #fff4f7;
+  --dim:        #c09aa6;
 
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  /* Crimson measures about 3.9:1 against the panel, so it carries emphasis,
+     borders and fills — never small text that has to be read. The pale pink
+     clears 9:1 and does that job, which is why Loosh has two accents and not
+     one. Anything below that is a decision, not a default. */
+  --accent:     #ff2d6f;
+  --accent-2:   #ff8fab;
+  --accent-rgb: 255, 45, 111;
+
+  /* Crimson for yes, dried blood for no. Red already means "accent" on every
+     other surface here, so a red "false" would read as the emphasis. */
+  --ok:         #ff8fab;
+  --bad:        #3d0a17;
+
+  --line:      rgba(var(--accent-rgb), .26);
+  --line-soft: rgba(var(--accent-rgb), .12);
+
+  /* Corners well rounded, since the objection to the old look was that it was
+     rectangular and a card is the largest rectangle on the screen. */
+  --radius: 16px;
+  --bloom:  0 0 24px rgba(var(--accent-rgb), .13);
+  --shadow: 0 1px 2px rgba(0,0,0,.55), 0 18px 44px -22px rgba(0,0,0,.9);
+
+  --font-display: "Cinzel", "Trajan Pro", Georgia, "Times New Roman", serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 
+/*
+ * The backdrop: tendrils, an eye, and the light it is lit by.
+ *
+ * Drawn rather than composed out of gradients, and inline rather than shipped
+ * as a file — a gradient can only be concentric and straight-edged, and an
+ * asset is a thing that can 404. No width or height on the root so the SVG
+ * scales to the viewport instead of tiling at some arbitrary size.
+ *
+ * Kept faint on purpose. It sits behind panels that are all but opaque, so it
+ * is weather at the edges of the screen and never something a number has to be
+ * read against.
+ */
 body {
   margin: 0;
-  background: var(--bg);
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='xMidYMid slice'> <g fill='none' stroke='%23ff2d6f' stroke-linecap='round'> <g opacity='.22'> <path d='M-40 90 C 210 140 330 260 430 430 C 500 550 560 700 540 950' stroke-width='2.5'/> <path d='M-40 90 C 150 120 240 200 300 300' stroke-width='1.2'/> <path d='M300 300 C 330 250 380 210 470 190' stroke-width='1'/> <path d='M430 430 C 350 470 300 540 280 640' stroke-width='1'/> <path d='M1480 60 C 1240 120 1120 250 1050 420 C 990 570 960 720 990 950' stroke-width='2.5'/> <path d='M1050 420 C 1140 470 1200 540 1230 650' stroke-width='1.2'/> <path d='M1480 300 C 1300 330 1200 420 1160 540' stroke-width='1'/> <path d='M-40 700 C 160 690 300 760 380 900' stroke-width='1.4'/> <path d='M1480 820 C 1300 790 1180 830 1090 900' stroke-width='1.2'/> </g> <g opacity='.16'> <path d='M700 -40 C 660 120 700 240 760 330' stroke-width='1.2'/> <path d='M760 940 C 720 800 740 690 800 600' stroke-width='1.2'/> </g> </g> <g transform='translate(720 400)'> <g fill='none' stroke='%23ff2d6f' opacity='.26'> <path d='M-300 0 C -170 -132 170 -132 300 0 C 170 132 -170 132 -300 0 Z' stroke-width='2'/> <path d='M-232 0 C -130 -96 130 -96 232 0 C 130 96 -130 96 -232 0 Z' stroke-width='.8' opacity='.55'/> <circle r='86' stroke-width='1.6'/> <circle r='54' stroke-width='.8' opacity='.6'/> </g> <circle r='30' fill='%23ff2d6f' opacity='.1'/> <g stroke='%23ff2d6f' stroke-width='.8' opacity='.16'> <path d='M0 -86 V -128'/><path d='M0 86 V 128'/> <path d='M-86 0 H -128'/><path d='M86 0 H 128'/> <path d='M-61 -61 L -92 -92'/><path d='M61 -61 L 92 -92'/> <path d='M-61 61 L -92 92'/><path d='M61 61 L 92 92'/> </g> </g> </svg>"),
+    radial-gradient(1000px 700px at 50% 38%, #3a0a1e 0%, transparent 64%),
+    radial-gradient(1300px 820px at 82% -14%, #2a0714 0%, transparent 58%),
+    radial-gradient(800px 800px at 8% 110%, #1c0411 0%, transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
   color: var(--ink);
-  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.6 var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -36,36 +95,40 @@ body {
 
 #hub {
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 5rem;
+  padding: 3rem 1.5rem 5rem;
   max-inline-size: 62rem;
-  background-image: radial-gradient(60rem 22rem at 50% -8rem, rgba(88,140,255,.10), transparent 70%);
-  background-repeat: no-repeat;
 }
 
 h1 {
-  font-size: 1.9rem;
-  line-height: 1.2;
-  margin: 0 0 .35rem;
-  letter-spacing: -.02em;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 .4rem;
+  font-weight: 600;
+  letter-spacing: .04em;
   color: var(--ink-strong);
+  text-shadow: 0 0 28px rgba(var(--accent-rgb), .38);
 }
 
 h2 {
   display: flex;
   align-items: center;
-  gap: .75rem;
-  font-size: .8rem;
+  gap: .9rem;
+  font-family: var(--font-display);
+  font-size: .82rem;
   text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--dim);
+  letter-spacing: .22em;
+  color: var(--accent-2);
   font-weight: 600;
-  margin: 2.5rem 0 1rem;
+  margin: 2.75rem 0 1rem;
 }
+/* The rule fades out rather than stopping, so the panel edges are the only
+   hard lines on the page. */
 h2::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--line-soft);
+  background: linear-gradient(90deg, var(--line), transparent);
 }
 
 .dim { color: var(--dim); }
@@ -74,11 +137,15 @@ h2::after {
 
 .today {
   margin-top: 1.75rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--panel);
+  padding: 1.4rem 1.6rem;
+  /* Nearly opaque on purpose: the backdrop is a crimson wash, and at the usual
+     translucency it bleeds through and turns a panel washed-out mauve. */
+  background: rgba(27, 6, 14, .93);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), var(--bloom);
 }
 
 .today__head {
@@ -90,13 +157,25 @@ h2::after {
 }
 
 .today__figure {
-  font-size: 2.1rem;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
   line-height: 1;
   color: var(--ink-strong);
-  letter-spacing: -.03em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  /* Georgia's default figures are old-style — a zero that sits below the
+     x-height reads as a mistake in a number this large. Lining figures are
+     in the font; they just have to be asked for. */
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  text-shadow: 0 0 22px rgba(var(--accent-rgb), .3);
 }
-.today__figure small { font-size: .9rem; color: var(--dim); letter-spacing: 0; }
+.today__figure small {
+  font-family: var(--font-body);
+  font-size: .9rem;
+  color: var(--dim);
+  letter-spacing: 0;
+  text-shadow: none;
+}
 
 /* One bar, because the question is one question: is the quota met. Segments are
    sources, so a day made of one trainer looks different from a balanced one at
@@ -104,17 +183,17 @@ h2::after {
 .bar {
   display: flex;
   height: 10px;
-  margin-top: 1rem;
+  margin-top: 1.1rem;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--line-soft);
+  background: rgba(0, 0, 0, .45);
   outline: 1px solid var(--line);
 }
 .bar__seg { height: 100%; min-width: 2px; }
-.bar__seg + .bar__seg { box-shadow: inset 1px 0 0 rgba(0,0,0,.45); }
+.bar__seg + .bar__seg { box-shadow: inset 1px 0 0 rgba(0,0,0,.55); }
 
 .quota {
-  margin-top: .75rem;
+  margin-top: .8rem;
   font-size: .85rem;
   color: var(--dim);
   display: flex;
@@ -123,14 +202,18 @@ h2::after {
   flex-wrap: wrap;
 }
 .quota b { color: var(--ink); font-weight: 600; }
-.quota.met b { color: var(--ok); }
+/* Met is the one thing on this page allowed to be lit. */
+.quota.met b {
+  color: var(--ok);
+  text-shadow: 0 0 16px rgba(var(--accent-rgb), .55);
+}
 
 /* ---- trainer grid ---- */
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: .875rem;
+  gap: .9rem;
 }
 
 .card {
@@ -138,37 +221,51 @@ h2::after {
   text-align: left;
   font: inherit;
   cursor: pointer;
-  padding: 1rem 1.125rem 1.125rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  padding: 1.05rem 1.2rem 1.2rem;
+  background: rgba(27, 6, 14, .9);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   color: var(--ink);
   text-decoration: none;
-  transition: border-color .12s, background .12s, transform .12s;
+  transition: border-color .14s, background .14s, transform .14s, box-shadow .14s;
 }
 .card:hover, .card:focus-visible {
   border-color: var(--accent);
-  background: var(--panel-hi);
+  background: rgba(38, 10, 21, .94);
   transform: translateY(-1px);
+  box-shadow: 0 0 26px -4px rgba(var(--accent-rgb), .35);
   outline: none;
 }
 
 .card__name {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .55rem;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
   color: var(--ink-strong);
   font-weight: 600;
-  letter-spacing: -.01em;
+  letter-spacing: .01em;
 }
 /* The source's colour, the same one it has in the bar above — the only thing
-   tying a card to its share of the day. */
-.card__dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; }
+   tying a card to its share of the day. Eight hues that stay eight hues: they
+   are deliberately not derived from the accent, because six colours rotated
+   off one accent are six colours that look alike, and telling them apart at a
+   glance is the entire job. */
+.card__dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 8px -1px currentColor;
+}
 
-.card__what { font-size: .85rem; color: var(--dim); margin-top: .3rem; }
+.card__what { font-size: .85rem; color: var(--dim); margin-top: .35rem; }
 
 .card__today {
-  margin-top: .7rem;
+  margin-top: .75rem;
   font-size: .85rem;
   font-variant-numeric: tabular-nums;
   color: var(--dim);
@@ -177,31 +274,48 @@ h2::after {
 
 /* The archive is not a trainer and its minutes are not training. Given its own
    section rather than a card in the grid, so that the rule the gate enforces is
-   visible in the layout before anyone has to read it. */
+   visible in the layout before anyone has to read it. The dashed border says
+   the same thing a second time. */
 .aside-card {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 1rem 1.125rem;
-  background: var(--panel);
+  padding: 1.05rem 1.2rem;
+  background: rgba(18, 6, 12, .8);
   border: 1px dashed var(--line);
   border-radius: var(--radius);
 }
 .aside-card p { margin: 0; font-size: .875rem; color: var(--dim); flex: 1 1 18rem; }
+.aside-card b { color: var(--accent-2); font-weight: 600; }
 
 .btn {
   font: inherit;
   cursor: pointer;
-  padding: .45rem .9rem;
-  border-radius: 8px;
+  padding: .5rem 1rem;
+  border-radius: 999px;
   border: 1px solid var(--line);
-  background: var(--panel-hi);
+  background: rgba(38, 10, 21, .85);
   color: var(--ink);
   text-decoration: none;
+  transition: border-color .14s, color .14s, box-shadow .14s, background .14s;
 }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #08111f; font-weight: 600; }
+.btn:hover, .btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--ink-strong);
+  box-shadow: 0 0 18px -4px rgba(var(--accent-rgb), .45);
+  outline: none;
+}
+/* Dark ink on the bright heart — the fill is the accent, so what sits on it
+   has to be the black half of the palette. */
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a0106;
+  font-weight: 600;
+  box-shadow: 0 0 20px -4px rgba(var(--accent-rgb), .6);
+}
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
 
 /* ---- the trainer view ---- */
 
@@ -210,17 +324,21 @@ h2::after {
 #stage { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 #stage[hidden] { display: none !important; }
 
+/* The bar above a running trainer stays plain. Seven of the eight apps bring
+   their own look and none of them is this one; a glowing frame around someone
+   else's palette is the shell asserting itself over the thing it is supposed to
+   be getting out of the way of. */
 .stagebar {
   display: flex;
   align-items: center;
   gap: .75rem;
-  padding: .4rem .75rem;
+  padding: .45rem .8rem;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   font-size: .85rem;
   flex: none;
 }
-.stagebar__name { color: var(--ink-strong); font-weight: 600; }
+.stagebar__name { color: var(--ink-strong); font-weight: 600; letter-spacing: .01em; }
 .stagebar__spacer { flex: 1; }
 .stagebar__clock { font-variant-numeric: tabular-nums; color: var(--dim); }
 
@@ -230,6 +348,15 @@ h2::after {
 #stage iframe { flex: 1; width: 100%; border: 0; display: block; background: var(--bg); }
 
 @media (max-width: 32rem) {
-  #hub { padding: 1.75rem 1rem 4rem; }
-  .today__figure { font-size: 1.7rem; }
+  #hub { padding: 2rem 1rem 4rem; }
+  h1 { font-size: 1.95rem; }
+  .today__figure { font-size: 1.9rem; }
+}
+
+/* The bloom and the lift are decoration; the backdrop is a drawing that does
+   not move. Nothing here animates on a timer, so this only has to stand down
+   the hover transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .card, .btn { transition: none; }
+  .card:hover, .card:focus-visible { transform: none; }
 }
