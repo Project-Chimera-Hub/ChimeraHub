@@ -102,3 +102,12 @@ It is the record, it is a file, and the file is the point — nothing a browser
 holds survives clearing site data. Time spent maintaining it is not training and
 is never counted toward the quota: a quota that could be met by tidying is a
 quota that will be.
+
+## Third-party art
+
+One thing here was not written here: the animal silhouettes in
+`apps/rrt/animals.js`, from [game-icons.net](https://game-icons.net) by
+Delapouite, Lorc, Skoll and Caro Asercion, used under
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). The credit is carried
+in that file, in [apps/rrt/README.md](apps/rrt/README.md), and beside the
+setting that turns them on. Everything else is the repository's own.

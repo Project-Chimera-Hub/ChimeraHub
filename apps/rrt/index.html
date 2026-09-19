@@ -313,12 +313,12 @@
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
     .glyph.mask{stroke:var(--text-faint);stroke-width:3}
-    /* Animal stimuli. Their colour is the font's, so "new" cannot be said in
-       colour the way a stroked mark says it — a ring says it instead. */
-    .pic{text-anchor:middle;dominant-baseline:central;user-select:none}
-    .pic.mask{opacity:.35}
-    .pic-ring{fill:none;stroke:var(--accent);stroke-width:2;opacity:.85}
-    .pic-mini{line-height:1;user-select:none}
+    /* Animal stimuli: filled silhouettes, so they take the same colours the
+       stroked marks do — accent for the new one, text for the one you hold. */
+    .pic{stroke:none}
+    .pic.new{fill:var(--accent)}
+    .pic.ref{fill:var(--text)}
+    .pic.mask{fill:var(--text-faint);opacity:.5}
     .cue{font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--text-dim);min-height:1.2rem;text-align:center;position:relative;z-index:2}
     .cue b{color:var(--text);font-size:1rem;font-weight:500}
     .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem}
@@ -471,7 +471,8 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
           </div>
-          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> come from a fixed pool of 32 and have names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set.</p>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set.</p>
+          <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
           <label class="label">Highest dimension</label>
@@ -699,6 +700,7 @@
   </div>
 </div>
 
+<script src="animals.js"></script>
 <script src="model.js"></script>
 <script>
 "use strict";
@@ -908,12 +910,13 @@ function exampleStep(caption, cells) {
 
 function paintStimset() {
   const set = R.stimulusSet(settings.stimset);
+  $('animalCount').textContent = R.ANIMALS.length;
   document.querySelectorAll('input[name="stimset"]').forEach(r => { r.checked = r.value === set.id; });
 
   const a = set.next([], Math.random), b = set.next([a], Math.random);
   const c = set.next([a, b], Math.random), x = set.next([a, b, c], Math.random);
   const mark = set.id === 'animals'
-    ? 'the <span style="color:var(--accent)">ringed</span> one is new. They come from a fixed pool of animals, so you can name them — which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    ? 'the <span style="color:var(--accent)">coloured</span> one is new. They are a fixed pool of animals you can put a name to, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
     : 'the <span style="color:var(--accent)">coloured</span> one is new. Every mark is generated on the spot and never comes back, so there is nothing about it to learn — only where it goes.';
   $('cardHowText').innerHTML = `<strong>How a card works.</strong> Every card shows two symbols: the plain one is one you already hold, and ${mark}`
     + ` The new symbol goes <em>directly</em> next to the plain one — above or below, and in higher levels also left or right, and bigger or smaller.`
@@ -996,25 +999,19 @@ function glyphEl(glyph, cx, cy, size, cls) {
   return p;
 }
 
-/* An animal, drawn as its character at the size the card asks for, with a ring
-   round it when it is the new one — the accent stroke that marks a generated
-   mark as new has nothing to colour here. */
+/* An animal: its silhouette, drawn on a 512 grid, scaled to the size the card
+   asks for and centred on the same point a mark would be. The set is drawn to a
+   consistent margin — every figure fills 89–95% of its grid and sits within 3%
+   of the centre — so the grid alone is enough to make "bigger than that one"
+   mean what it says, without normalising each drawing to its own box. */
+const PIC_GRID = 512;
 function picEl(stim, cx, cy, size, cls) {
-  const g = document.createElementNS(SVGNS, 'g');
-  if (cls.includes('new')) {
-    const ring = document.createElementNS(SVGNS, 'circle');
-    ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
-    ring.setAttribute('r', size * 0.66);
-    ring.setAttribute('class', 'pic-ring');
-    g.appendChild(ring);
-  }
-  const t = document.createElementNS(SVGNS, 'text');
-  t.setAttribute('x', cx); t.setAttribute('y', cy);
-  t.setAttribute('font-size', size);
-  t.setAttribute('class', 'pic ' + cls);
-  t.textContent = stim.char;
-  g.appendChild(t);
-  return g;
+  const p = document.createElementNS(SVGNS, 'path');
+  p.setAttribute('d', stim.path);
+  const k = size / PIC_GRID;
+  p.setAttribute('transform', `translate(${cx - size / 2} ${cy - size / 2}) scale(${k})`);
+  p.setAttribute('class', 'pic ' + cls);
+  return p;
 }
 
 /* The one place that knows the difference: a generated mark is an array of
@@ -1484,16 +1481,20 @@ function glyphMini(glyph, px, cls) {
   return svg;
 }
 
-/* The small version, for the strips and the worked example on the home page.
-   An animal is just text at that size — no SVG needed. */
+/* The small version, for the strips and the worked example on the home page. */
 function stimMini(stim, px, cls) {
   if (!isPic(stim)) return glyphMini(stim, px, cls);
-  const span = document.createElement('span');
-  span.className = 'pic-mini';
-  span.style.fontSize = Math.round(px * 0.85) + 'px';
-  span.textContent = stim.char;
-  span.title = stim.name;
-  return span;
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${PIC_GRID} ${PIC_GRID}`);
+  svg.setAttribute('width', px); svg.setAttribute('height', px);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('d', stim.path);
+  path.setAttribute('class', 'pic ' + (cls || 'ref'));
+  svg.appendChild(path);
+  const title = document.createElementNS(SVGNS, 'title');
+  title.textContent = stim.name;
+  svg.appendChild(title);
+  return svg;
 }
 
 /**

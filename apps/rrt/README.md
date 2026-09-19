@@ -58,10 +58,14 @@ mirrored twin never appears beside its twin. They never repeat, which is the
 argument in the section above: nothing about a mark can be learned in place of
 the order.
 
-**Animals** are a fixed pool of 32, named and instantly recognisable. A picture
-with a name is encoded in one word, so almost none of the beat goes on taking the
-symbol in and almost all of it on the order — which is the point, and also why it
-is easier. It is the way in when the marks are the part that defeats you, and it
+**Animals** are a fixed pool of 34 silhouettes, named and recognisable at a
+glance. A picture with a name is encoded in one word, so almost none of the beat
+goes on taking the symbol in and almost all of it on the order — which is the
+point, and also why it is easier. They are drawings, not characters from a font:
+SVG paths on the same kind of grid the marks use, so they scale with the size
+axis and take the accent colour when they are the new one, exactly as a mark
+does. Which also means they look the same on every machine, which an emoji
+does not. It is the way in when the marks are the part that defeats you, and it
 is honest about what it costs: the pool is small, so stimuli recur, and a fixed
 set is exactly the consistent mapping that automatises. What it measures drifts
 from relational load toward how good a verbal chain you can build.
@@ -107,6 +111,7 @@ not comparable.
 ```
 index.html    the page: settings, the stream, the results
 model.js      the model, the glyphs, the controller, the score — no DOM
+animals.js    the animal silhouettes, as path data, with their credit
 test/run.js   node apps/rrt/test/run.js
 ```
 
@@ -115,6 +120,17 @@ browser: that ranks stay a permutation on every axis, that the oldest symbol is
 the one that leaves, that answers come out even across the ranks, that pressing
 one key forever scores exactly chance, and that the model is indifferent to which
 stimulus set fills the cards.
+
+## Credits
+
+The animal drawings in `animals.js` are from
+[game-icons.net](https://game-icons.net) ([the
+repository](https://github.com/game-icons/icons)), by **Delapouite**, **Lorc**,
+**Skoll** and **Caro Asercion** — the comment above each row says which. Their
+path data is used unmodified under the [Creative Commons Attribution 3.0
+Unported licence](https://creativecommons.org/licenses/by/3.0/), and the same
+credit appears beside the setting in the app. Everything else here is the
+repository's own.
 
 ## Storage
 

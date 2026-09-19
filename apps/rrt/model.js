@@ -173,26 +173,12 @@
      A set is one function: the next stimulus, given what must not be confused
      with it (what is held, plus what has only just left — a symbol that has
      only just gone is still in the head). A generated mark is an array of
-     stroke indices; an animal is `{char, name}`. Nothing in the model looks
-     inside either. */
-  var ANIMALS = [
-    { char: "\uD83D\uDC18", name: "elephant" }, { char: "\uD83E\uDD92", name: "giraffe" },
-    { char: "\uD83E\uDD93", name: "zebra" },    { char: "\uD83D\uDC2A", name: "camel" },
-    { char: "\uD83D\uDC0E", name: "horse" },    { char: "\uD83D\uDC04", name: "cow" },
-    { char: "\uD83D\uDC16", name: "pig" },      { char: "\uD83D\uDC11", name: "sheep" },
-    { char: "\uD83D\uDC15", name: "dog" },      { char: "\uD83D\uDC08", name: "cat" },
-    { char: "\uD83D\uDC07", name: "rabbit" },   { char: "\uD83D\uDC01", name: "mouse" },
-    { char: "\uD83D\uDC12", name: "monkey" },   { char: "\uD83E\uDD94", name: "hedgehog" },
-    { char: "\uD83E\uDD8C", name: "deer" },     { char: "\uD83D\uDC3F", name: "squirrel" },
-    { char: "\uD83D\uDC0A", name: "crocodile" },{ char: "\uD83D\uDC22", name: "turtle" },
-    { char: "\uD83D\uDC0D", name: "snake" },    { char: "\uD83D\uDC38", name: "frog" },
-    { char: "\uD83D\uDC1F", name: "fish" },     { char: "\uD83D\uDC19", name: "octopus" },
-    { char: "\uD83E\uDD80", name: "crab" },     { char: "\uD83D\uDC33", name: "whale" },
-    { char: "\uD83E\uDD85", name: "eagle" },    { char: "\uD83E\uDD89", name: "owl" },
-    { char: "\uD83D\uDC27", name: "penguin" },  { char: "\uD83E\uDD86", name: "duck" },
-    { char: "\uD83E\uDD8B", name: "butterfly" },{ char: "\uD83D\uDC1D", name: "bee" },
-    { char: "\uD83D\uDC0C", name: "snail" },    { char: "\uD83E\uDD87", name: "bat" },
-  ];
+     stroke indices; an animal is `{name, path}`, a silhouette drawn on the
+     same kind of grid and coloured the same way. Nothing in the model looks
+     inside either. The drawings live in animals.js, with their credit. */
+  var ANIMALS = (typeof module !== "undefined" && module.exports)
+    ? require("./animals.js")
+    : (root.RunningOrderAnimals || []);
 
   /** An animal that is not one of `avoid`, uniformly among those that are left. */
   function newAnimal(avoid, rnd) {
@@ -209,8 +195,13 @@
     animals: { id: "animals", label: "Animals", next: newAnimal },
   };
 
-  /** The named set, or the generated marks for anything unrecognised. */
-  function stimulusSet(id) { return SETS[id] || SETS.glyphs; }
+  /** The named set, or the generated marks for anything unrecognised — and for
+      the animals when their drawings did not load, which beats a blank card. */
+  function stimulusSet(id) {
+    var set = SETS[id];
+    if (!set || (set === SETS.animals && !ANIMALS.length)) return SETS.glyphs;
+    return set;
+  }
 
   /* ------------------------------------------------------------------ *
    * The model                                                           *

@@ -162,15 +162,27 @@ test("every animal is drawn, and the pool is big enough to hold plus recent", ()
   const seen = new Set();
   for (let i = 0; i < 4000; i++) seen.add(R.newAnimal([], rnd).name);
   assert.strictEqual(seen.size, R.ANIMALS.length);
-  assert.strictEqual(new Set(R.ANIMALS.map(a => a.char)).size, R.ANIMALS.length);
   /* The largest level holds 7 and three departures stay in mind after that. */
   assert.ok(R.ANIMALS.length > 10, R.ANIMALS.length);
+});
+
+test("every animal is a named silhouette, and no two share either", () => {
+  assert.strictEqual(new Set(R.ANIMALS.map(a => a.name)).size, R.ANIMALS.length);
+  assert.strictEqual(new Set(R.ANIMALS.map(a => a.path)).size, R.ANIMALS.length);
+  R.ANIMALS.forEach(a => {
+    assert.ok(/^[a-z-]+$/.test(a.name), a.name);
+    /* Path data on the grid the drawings were made on: starts with a move, and
+       is long enough to be a figure rather than a stray stroke. */
+    assert.ok(/^[Mm]/.test(a.path), a.name + ": " + a.path.slice(0, 20));
+    assert.ok(a.path.length > 200, a.name + " is " + a.path.length + " chars");
+    assert.ok(!/[<>"]/.test(a.path), a.name + " has markup in its path");
+  });
 });
 
 test("the model does not care which set the stimuli come from", () => {
   for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
   const { m } = run(3, 5, 50, lcg(37), "animals");
-  m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.char === "string", JSON.stringify(it.glyph)));
+  m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.path === "string", JSON.stringify(it.glyph)));
 });
 
 test("an unknown set id falls back to the generated marks", () => {
