@@ -6,7 +6,6 @@ Eight trainers, one record, one day's total — and a quota the desktop enforces
 apps/       the eight grafted in with git subtree, histories intact — and rrt,
             which was written here
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
-            (and shell/open/, the same hub with no gate in it)
 gate/       the quota, and the window that holds you to it
 tools/      the build
 ```
@@ -131,9 +130,43 @@ one attribute, and `shell/js/shell.js` reads it.
 Same origin, so the same saved history. `mindbuild/` and `mindbuild/open/` are
 one localStorage between them — train in either and the other has counted it.
 
-The one thing it does not share is the sky. `shell/open/sky.css` puts a drawn
-starfield behind it, in the same inline-SVG idiom the hub's own background
-already uses: no request to anybody, nothing to license, nothing to go 404.
+The two are identical in every other respect, the look included.
+
+## The look, and the background
+
+Monospace throughout, wide-tracked caps for anything that announces itself,
+desaturated sage on near-black, and not one rounded corner. It replaced Loosh —
+Syllogimous's theme, ported by hand: crimson, 16px radii, a sigil behind it all.
+
+Still no build step and still no webfont. The display face is whatever monospace
+the machine already has, for the same reason the archive has neither: a page
+that renders identically on a plane is worth more than one that renders slightly
+better online.
+
+The hierarchy is type, not colour. A heading is a heading because it is tracked
+out to `.3em`, not because it is a different colour from the paragraph under it
+— which is why the background can be swapped for any photograph at all without
+the page falling apart.
+
+**Appearance → Background → Choose image** does exactly that, and it is the one
+setting here. The picture is downscaled to 2560px, re-encoded, and kept in
+**IndexedDB** — deliberately not in localStorage, because that is where every
+trainer's history lives and the quota there is shared between all of them. A
+couple of megabytes of wallpaper is exactly what would push a Syllogimous
+history of a thousand items over the edge. Nothing decorative gets to compete
+with a record.
+
+It never leaves the machine. There is nowhere for it to go: these are static
+pages, and the gate-free one does not make a request to anything.
+
+The default is drawn rather than photographed — three stands of firs, seeded and
+rejection-sampled onto a sloped ground, with fog between them, as an inline SVG.
+No request to anybody, nothing to license, nothing to go 404 in a year.
+
+One thing is deliberately not sage: the eight colour dots on the trainer cards.
+They are the same eight hues as the segments in the day's bar, and that pairing
+is the only thing tying a card to its share of the day. They are data, not
+decoration.
 
 ## The archive is not a trainer
 

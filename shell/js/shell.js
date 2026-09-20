@@ -217,7 +217,8 @@
       a.innerHTML =
         '<span class="card__name"><span class="card__dot"></span>' + t.name + "</span>" +
         '<div class="card__what"></div>' +
-        '<div class="card__today" id="today-' + t.id + '">—</div>';
+        '<div class="card__today" id="today-' + t.id + '">—</div>' +
+        '<span class="card__enter">Enter →</span>';
       a.querySelector(".card__dot").style.background = t.colour;
       a.querySelector(".card__what").textContent = t.what;
       grid.appendChild(a);
@@ -410,6 +411,112 @@
   }
 
   /* ---------------------------------------------------------------- *
+   * The background                                                   *
+   * ---------------------------------------------------------------- */
+
+  /* Kept in IndexedDB rather than in localStorage, and the reason is the whole
+     point of this origin: every trainer's history is in localStorage and the
+     quota there is shared between all of them. A background photograph is the
+     least important thing on this page, and a couple of megabytes of it is
+     exactly what would push a Syllogimous history of a thousand items over the
+     edge. IndexedDB has its own, far larger budget. Nothing decorative gets to
+     compete with a record. */
+
+  var BG_DB = "mindbuild.shell", BG_STORE = "bg", BG_KEY = "background";
+
+  /* Revoked before it is replaced: an object URL holds its blob in memory until
+     it is let go, and choosing four pictures in a row should not keep four. */
+  var bgUrl = null;
+
+  function bgNote(msg) {
+    var el = $("bg-note");
+    if (el) el.textContent = msg || "";
+  }
+
+  function withStore(mode, fn) {
+    var rq;
+    try {
+      rq = indexedDB.open(BG_DB, 1);
+    } catch (e) {
+      bgNote("This browser will not keep a background.");
+      return;
+    }
+    rq.onupgradeneeded = function () { rq.result.createObjectStore(BG_STORE); };
+    rq.onerror = function () { bgNote("This browser will not keep a background."); };
+    rq.onsuccess = function () {
+      var db = rq.result;
+      try {
+        var tx = db.transaction(BG_STORE, mode);
+        fn(tx.objectStore(BG_STORE));
+        tx.oncomplete = function () { db.close(); };
+        tx.onerror = function () { db.close(); bgNote("That could not be saved."); };
+      } catch (e) {
+        db.close();
+        bgNote("That could not be saved.");
+      }
+    };
+  }
+
+  /* The picture rides on <html> and the darkening on <body>, so setting this
+     one property swaps the background without taking the overlay that keeps
+     text readable on it with it. Removing the property falls back to the drawn
+     forest in the stylesheet. */
+  function applyBg(blob) {
+    if (bgUrl) { URL.revokeObjectURL(bgUrl); bgUrl = null; }
+    if (!blob) {
+      document.documentElement.style.removeProperty("--bg-image");
+      return;
+    }
+    bgUrl = URL.createObjectURL(blob);
+    document.documentElement.style.setProperty("--bg-image", 'url("' + bgUrl + '")');
+  }
+
+  /* Downscaled before it is stored. A phone photograph is 4000px across and
+     several megabytes; behind text, at cover size, it is indistinguishable from
+     the same picture at 2560 — and the smaller one is what gets written to disk
+     and decoded on every visit from now on. */
+  var BG_MAX = 2560;
+
+  function bgChoose(file) {
+    if (!file) return;
+    bgNote("Reading…");
+    var src = URL.createObjectURL(file);
+    var img = new Image();
+    img.onerror = function () {
+      URL.revokeObjectURL(src);
+      bgNote("That is not an image this browser can read.");
+    };
+    img.onload = function () {
+      URL.revokeObjectURL(src);
+      var scale = Math.min(1, BG_MAX / Math.max(img.width, img.height));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(function (blob) {
+        if (!blob) { bgNote("That image could not be converted."); return; }
+        applyBg(blob);
+        withStore("readwrite", function (st) { st.put(blob, BG_KEY); });
+        bgNote("Set. It stays in this browser, on this machine.");
+      }, "image/jpeg", 0.86);
+    };
+    img.src = src;
+  }
+
+  function bgClear() {
+    applyBg(null);
+    withStore("readwrite", function (st) { st["delete"](BG_KEY); });
+    bgNote("Back to the default.");
+  }
+
+  function bgLoad() {
+    withStore("readonly", function (st) {
+      var g = st.get(BG_KEY);
+      g.onsuccess = function () { if (g.result) applyBg(g.result); };
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
    * Wiring                                                           *
    * ---------------------------------------------------------------- */
 
@@ -466,6 +573,15 @@
   /* Coming back to the hub is the other moment the number is worth having, and
      it is a moment when nothing is being timed. */
   setInterval(tick, 1000);
+
+  $("bg-pick").addEventListener("click", function () { $("bg-file").click(); });
+  $("bg-file").addEventListener("change", function (e) {
+    bgChoose(e.target.files && e.target.files[0]);
+    /* Cleared so that picking the same file twice still fires a change. */
+    e.target.value = "";
+  });
+  $("bg-clear").addEventListener("click", bgClear);
+  bgLoad();
 
   /* The only thing on this page that speaks to the machine it is displayed on.
      A website POSTing to 127.0.0.1 is what a port scan looks like, and the

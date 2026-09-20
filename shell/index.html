@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindbuild</title>
-<link rel="stylesheet" href="css/shell.css?v=4">
+<link rel="stylesheet" href="css/shell.css?v=5">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -47,6 +47,17 @@
   </div>
   <!-- gate:end -->
 
+  <h2>Appearance</h2>
+  <div class="settings">
+    <span class="settings__label">Background</span>
+    <!-- A button rather than a styled <label for>, because a label is not
+         keyboard-operable: it takes a click but not Enter or Space. -->
+    <button class="btn" type="button" id="bg-pick">Choose image</button>
+    <input id="bg-file" type="file" accept="image/*" hidden>
+    <button class="btn ghost" type="button" id="bg-clear">Clear</button>
+    <span class="settings__note" id="bg-note"></span>
+  </div>
+
 </main>
 
 <!-- Built once and reused. Reloading the shell to leave a trainer would throw
@@ -78,6 +89,6 @@
 <script src="shared/adapters.js?v=3"></script>
 <script src="shared/quota.js?v=3"></script>
 <script src="js/today.js?v=3"></script>
-<script src="js/shell.js?v=4"></script>
+<script src="js/shell.js?v=5"></script>
 </body>
 </html>
