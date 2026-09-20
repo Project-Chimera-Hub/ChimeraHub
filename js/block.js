@@ -382,14 +382,12 @@ function endBlock() {
     }
     applyProgression();
   } else {
-    /* Free Play adapts N the classic way and leaves everything else alone. */
-    if (score >= advanceAt()) { freeCfg.n = Math.min(9, freeCfg.n + 1); verdict = 'up';
-      headline = `N rises to ${freeCfg.n}`; }
-    else if (score <= demoteAt()) { freeCfg.n = Math.max(1, freeCfg.n - 1); verdict = 'down';
-      headline = `N falls to ${freeCfg.n}`; }
-    else headline = `N holds at ${freeCfg.n}`;
-    cfg.n = freeCfg.n;
-    $('nValue').value = freeCfg.n;
+    /* Free Play changes nothing. Adapting N here moved a setting the player had
+       chosen and then had to put back by hand every block — the mode whose whole
+       point is that the task stays exactly as you set it. Progression is where the
+       task is allowed to adapt; here the report only says how the block went. */
+    headline = `N stays at ${cfg.n}`;
+    detail = 'Free Play leaves your settings alone — change them in Settings.';
   }
 
   if (score >= advanceAt()) progress.bestLoad = Math.max(progress.bestLoad || 0, load);
