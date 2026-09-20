@@ -1,3 +1,11 @@
 dist/
 node_modules/
 __pycache__/
+
+# The Android wrapper is generated, not authored: www/ is a copy of dist/,
+# android/ is scaffolded from capacitor.config.ts, and apk/ is the output.
+tools/apk/www/
+tools/apk/android/
+# Rooted. Unanchored, `apk/` matches a directory of that name at any depth —
+# including tools/apk/, which is the wrapper itself and has to be committed.
+/apk/

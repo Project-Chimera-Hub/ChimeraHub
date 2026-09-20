@@ -80,6 +80,38 @@ gate taken out. See below.
 own when it was grafted in; GitHub reads workflows from the root only, so those
 are inert history rather than eight competing deploys.
 
+## Android
+
+```bash
+tools/build-apk.sh              # → apk/mindbuild-debug.apk
+```
+
+A new version is that command again. There is no app source to update: the APK
+is `tools/build-site.mjs`'s output in a WebView, so rebuilding the site is
+rebuilding the app, and `tools/apk/` holds only what Capacitor needs to wrap it.
+Both generated directories there — `www/`, a copy of `dist/`, and `android/`,
+scaffolded from `capacitor.config.ts` — are ignored rather than checked in, for
+the same reason `dist/` is.
+
+It is not a browser pointed at the Pages site. The whole site is copied inside
+and it runs with the network off, which is the same promise the archive makes
+about a USB stick in five years and is worth more on a phone than anywhere
+else. It is also not gated: the build sets `APK=1`, which puts the **gate-free**
+hub at the root, because on a phone there is no daemon to answer `127.0.0.1`
+and no screen for one to hold.
+
+Building needs a JDK and an Android SDK. If you have neither, do not install
+them — push a `v*` tag, or press **Run workflow** on *Build APK* in the Actions
+tab, and let the runner hand you the file. That is the point of
+`.github/workflows/apk.yml`: it runs on request rather than on every push,
+because an APK is not something anyone wants forty of.
+
+The icon and splash are generated from `shell/favicon.svg`, so the mark on the
+home screen is the mark in the tab.
+
+The output is signed with the debug key: enough to install on your own phone,
+not enough for the Play Store.
+
 ## Test
 
 ```bash

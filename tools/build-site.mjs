@@ -143,29 +143,39 @@ fs.writeFileSync(idx, fs.readFileSync(idx, "utf8").replace("%BASE%", BASE));
  * copies the gated hub frames. Same origin, so the same saved history —
  * localStorage is per origin, not per path — and no second Angular build.
  */
-log("[copy] shell (gate-free, at open/)");
-{
-  const open = path.join(DIST, "open");
-  fs.mkdirSync(open, { recursive: true });
-
-  const src = path.join(ROOT, "shell", "index.html");
-  let html = fs.readFileSync(src, "utf8");
+/* `prefix` is what every relative asset gets in front of it: "../" for the copy
+ * served a directory down at open/, "" for one served at the root. The shell
+ * asks for `css/`, `js/`, `shared/` and its icon, and any <link> or <script>
+ * with a relative target is rewritten — naming the stylesheet and the script
+ * explicitly is what left the favicon pointing a directory too deep. */
+function gateFreeIndex(prefix) {
+  let html = fs.readFileSync(path.join(ROOT, "shell", "index.html"), "utf8");
 
   const before = html;
   html = html.replace(/[ \t]*<!-- gate:begin -->[\s\S]*?<!-- gate:end -->\n?/, "");
   if (html === before) throw new Error("shell/index.html: gate:begin/gate:end markers are gone");
 
-  /* Every asset is one level up. The shell asks for `css/`, `js/`, `shared/`
-     and its icon; it is being served a directory deeper than it is written for.
-     Any <link> or <script> with a relative target, rather than the stylesheet
-     alone — the favicon was the one that got missed when this named them. */
-  html = html.replace(/(<(?:script|link)\b[^>]*?\s(?:src|href)=")(?!\.\.\/|https?:|\/|data:|#)/g,
-                      "$1../");
+  if (prefix) {
+    html = html.replace(/(<(?:script|link)\b[^>]*?\s(?:src|href)=")(?!\.\.\/|https?:|\/|data:|#)/g,
+                        "$1" + prefix);
+  }
+  return html.replace('data-gate="on"', 'data-gate="off"').replace("%BASE%", BASE);
+}
 
-  html = html.replace('data-gate="on"', 'data-gate="off"')
-             .replace("%BASE%", BASE);
+log("[copy] shell (gate-free, at open/)");
+{
+  const open = path.join(DIST, "open");
+  fs.mkdirSync(open, { recursive: true });
+  fs.writeFileSync(path.join(open, "index.html"), gateFreeIndex("../"));
+}
 
-  fs.writeFileSync(path.join(open, "index.html"), html);
+/* The Android build wraps this directory in a WebView, where the gate is not
+ * merely absent but meaningless: there is no daemon to answer 127.0.0.1 and no
+ * screen for it to hold. So the app's front page is the gate-free one, served
+ * from the root rather than from open/. See tools/build-apk.sh. */
+if (process.env.APK) {
+  log("[apk]  gate-free hub at the root");
+  fs.writeFileSync(path.join(DIST, "index.html"), gateFreeIndex(""));
 }
 
 fs.writeFileSync(path.join(DIST, ".nojekyll"), "");
