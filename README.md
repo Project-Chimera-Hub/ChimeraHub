@@ -6,6 +6,7 @@ Eight trainers, one record, one day's total — and a quota the desktop enforces
 apps/       the eight grafted in with git subtree, histories intact — and rrt,
             which was written here
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
+            (and shell/open/, the same hub with no gate in it)
 gate/       the quota, and the window that holds you to it
 tools/      the build
 ```
@@ -73,6 +74,9 @@ node tools/build-site.mjs        # → dist/, based at /mindbuild/
 BASE=/ node tools/build-site.mjs # → dist/, at a domain root
 ```
 
+One run, two sites. `dist/` is the hub; `dist/open/` is the same hub with the
+gate taken out. See below.
+
 `.github/workflows/pages.yml` is the only workflow that runs. Each app kept its
 own when it was grafted in; GitHub reads workflows from the root only, so those
 are inert history rather than eight competing deploys.
@@ -95,6 +99,41 @@ about is not a rule.
 It never touches PAM or the greeter, so it is escapable, deliberately:
 **Ctrl-Alt-F3 → `systemctl --user stop mindbuild-gate`** always works. See
 [gate/README.md](gate/README.md) before installing it.
+
+## The hub without the gate, at `open/`
+
+The hub posts a heartbeat to `127.0.0.1:8787` so the gate knows a session is
+live. On a machine with no gate installed nothing answers it, and to a privacy
+extension a website reaching into the local network is a port scan — Port
+Authority and uBlock's LAN list both stop it and say so. They are right to. The
+request was never going to be answered on that machine anyway, so all it could
+produce there was the warning.
+
+So the build writes a second site beside the first:
+
+```
+dist/        the hub, gate wiring and all
+dist/open/   the same hub, and nothing that talks to this machine
+```
+
+No heartbeat, no gate card, and no quota line — nothing set that number and
+nothing is enforcing it, so a "12 min to go" would be a demand invented by the
+page making it. The figure, the bar, the streak and the caps stay, because what
+happened is true either way.
+
+It is one generated file. `tools/build-site.mjs` takes `shell/index.html`, cuts
+between the `gate:begin`/`gate:end` markers, sets `data-gate="off"`, and points
+every asset at the parent directory — the same stylesheet, the same scripts,
+the same adapters, the same eight trainers, not copies of any of them. Nothing
+here can drift from the site above it, because there is nothing here to drift:
+one attribute, and `shell/js/shell.js` reads it.
+
+Same origin, so the same saved history. `mindbuild/` and `mindbuild/open/` are
+one localStorage between them — train in either and the other has counted it.
+
+The one thing it does not share is the sky. `shell/open/sky.css` puts a drawn
+starfield behind it, in the same inline-SVG idiom the hub's own background
+already uses: no request to anybody, nothing to license, nothing to go 404.
 
 ## The archive is not a trainer
 

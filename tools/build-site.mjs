@@ -122,5 +122,57 @@ copyDir(path.join(ROOT, "shell"), DIST);
 const idx = path.join(DIST, "index.html");
 fs.writeFileSync(idx, fs.readFileSync(idx, "utf8").replace("%BASE%", BASE));
 
+/* The same hub with nothing in it that talks to this machine.
+ *
+ * The gate's heartbeat is a POST from the page to 127.0.0.1, and to a privacy
+ * extension that is indistinguishable from a port scan — Port Authority and
+ * uBlock's LAN list both stop it and say so in a notification. They are right
+ * to: a website reaching into the local network is exactly the shape of the
+ * thing they exist to stop. On a machine with no gate installed the request
+ * was never going to be answered anyway, so all it could ever produce there
+ * was that warning.
+ *
+ * So this is one generated file. It is the shell's own index.html with the gate
+ * card cut out and `data-gate="off"`, loading the same stylesheet, the same
+ * scripts and the same adapters from the parent directory — not copies of them.
+ * Nothing here can drift from the site above it, because there is nothing here
+ * to drift: one attribute, and the code reads it.
+ *
+ * The one thing it does not share is the sky. `shell/open/sky.css` arrives in
+ * this directory with the rest of shell/ and is added on top; the gated hub
+ * never links it.
+ *
+ * `data-base` points at the parent too, so the trainers it frames are the same
+ * copies the gated hub frames. Same origin, so the same saved history —
+ * localStorage is per origin, not per path — and no second Angular build.
+ */
+log("[copy] shell (gate-free, at open/)");
+{
+  const open = path.join(DIST, "open");
+  fs.mkdirSync(open, { recursive: true });
+
+  const src = path.join(ROOT, "shell", "index.html");
+  let html = fs.readFileSync(src, "utf8");
+
+  const before = html;
+  html = html.replace(/[ \t]*<!-- gate:begin -->[\s\S]*?<!-- gate:end -->\n?/, "");
+  if (html === before) throw new Error("shell/index.html: gate:begin/gate:end markers are gone");
+
+  /* Every asset is one level up. The shell asks for `css/`, `js/` and
+     `shared/`; it is being served a directory deeper than it is written for. */
+  html = html.replace(/(<(?:script src|link rel="stylesheet" href)=")(?!\.\.\/|https?:|\/)/g,
+                      "$1../");
+
+  /* Added after the rewrite above, so it stays local: the sky is the one asset
+     that lives in this directory rather than the parent. */
+  html = html.replace(/(<link rel="stylesheet"[^>]*>)/,
+                      '$1\n<link rel="stylesheet" href="sky.css?v=1">');
+
+  html = html.replace('data-gate="on"', 'data-gate="off"')
+             .replace("%BASE%", BASE);
+
+  fs.writeFileSync(path.join(open, "index.html"), html);
+}
+
 fs.writeFileSync(path.join(DIST, ".nojekyll"), "");
 log(`\nBuilt dist/ at base ${BASE}`);

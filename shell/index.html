@@ -6,7 +6,7 @@
 <title>mindbuild</title>
 <link rel="stylesheet" href="css/shell.css?v=4">
 </head>
-<body data-base="%BASE%">
+<body data-base="%BASE%" data-gate="on">
 
 <main id="hub">
 
@@ -38,10 +38,14 @@
     <a class="btn" id="archive-link" href="archive/">Open archive</a>
   </div>
 
+  <!-- gate:begin --><!-- Dropped wholesale by the gate-free build; see
+       tools/build-site.mjs. The markers are what it cuts between, so the card
+       and the heartbeat that fills it leave together or not at all. -->
   <h2>Gate</h2>
   <div class="aside-card">
     <p id="gate-state" class="dim">Checking for the gate…</p>
   </div>
+  <!-- gate:end -->
 
 </main>
 

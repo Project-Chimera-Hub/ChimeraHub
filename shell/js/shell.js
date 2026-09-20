@@ -20,6 +20,11 @@
 
   var BASE = document.body.dataset.base || "/";
 
+  /* Off in the gate-free build. Everything it turns off is something this page
+     does to the machine it is displayed on rather than for the person reading
+     it: a POST to 127.0.0.1, and a quota no installed program is enforcing. */
+  var GATE_ON = document.body.dataset.gate !== "off";
+
   /* Colour is per source and used twice: the segment in the day's bar and the
      dot on the card. Chosen to stay apart on a dark ground and to survive the
      common colour-blindness — the trainers include a grapheme-colour synaesthesia
@@ -147,7 +152,9 @@
 
     /* Segments are drawn against the quota, not against the day's total, so the
        bar fills up rather than just redistributing. Past the quota it is full
-       and the proportions stop mattering. */
+       and the proportions stop mattering. With no gate the same number is still
+       the floor the bar is drawn against — unnamed, and only so that four
+       minutes does not fill it. */
     var scale = Math.max(total, quota());
     var bar = $("bar");
     bar.textContent = "";
@@ -162,12 +169,20 @@
       bar.appendChild(seg);
     });
 
-    var need = quota() - total;
+    /* No gate, no quota. Nothing set the number and nothing is holding anyone
+       to it, so "12 min to go" would be a demand invented by the page making
+       it. What happened is true either way, so the figure, the bar and the
+       caps below stay. */
     var el = $("quota");
-    el.className = "quota" + (need <= 0 ? " met" : "");
-    el.innerHTML = need <= 0
-      ? "<b>Quota met.</b> " + fmt(quota()) + " min was the ask."
-      : "<b>" + fmt(need) + " min</b> to go of " + fmt(quota()) + ".";
+    el.className = "quota";
+    el.innerHTML = "";
+    if (GATE_ON) {
+      var need = quota() - total;
+      el.className = "quota" + (need <= 0 ? " met" : "");
+      el.innerHTML = need <= 0
+        ? "<b>Quota met.</b> " + fmt(quota()) + " min was the ask."
+        : "<b>" + fmt(need) + " min</b> to go of " + fmt(quota()) + ".";
+    }
 
     /* Said out loud, because a capped day is otherwise a day where the number
        is smaller than the time and nothing on the page explains why. */
@@ -451,6 +466,13 @@
   /* Coming back to the hub is the other moment the number is worth having, and
      it is a moment when nothing is being timed. */
   setInterval(tick, 1000);
-  scheduleHeartbeat();
-  heartbeat();
+
+  /* The only thing on this page that speaks to the machine it is displayed on.
+     A website POSTing to 127.0.0.1 is what a port scan looks like, and the
+     extensions that say so are right to — so the gate-free build does not
+     make the request and get refused, it does not make it. */
+  if (GATE_ON) {
+    scheduleHeartbeat();
+    heartbeat();
+  }
 })();
