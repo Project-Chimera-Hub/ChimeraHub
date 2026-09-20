@@ -155,9 +155,11 @@ log("[copy] shell (gate-free, at open/)");
   html = html.replace(/[ \t]*<!-- gate:begin -->[\s\S]*?<!-- gate:end -->\n?/, "");
   if (html === before) throw new Error("shell/index.html: gate:begin/gate:end markers are gone");
 
-  /* Every asset is one level up. The shell asks for `css/`, `js/` and
-     `shared/`; it is being served a directory deeper than it is written for. */
-  html = html.replace(/(<(?:script src|link rel="stylesheet" href)=")(?!\.\.\/|https?:|\/)/g,
+  /* Every asset is one level up. The shell asks for `css/`, `js/`, `shared/`
+     and its icon; it is being served a directory deeper than it is written for.
+     Any <link> or <script> with a relative target, rather than the stylesheet
+     alone — the favicon was the one that got missed when this named them. */
+  html = html.replace(/(<(?:script|link)\b[^>]*?\s(?:src|href)=")(?!\.\.\/|https?:|\/|data:|#)/g,
                       "$1../");
 
   html = html.replace('data-gate="on"', 'data-gate="off"')

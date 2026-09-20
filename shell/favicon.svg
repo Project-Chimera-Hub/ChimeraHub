@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="mindbuild">
+  <!--
+    The grid with one cell lit.
+
+    Every trainer here is some version of this picture: a position among others,
+    held and compared. It is RNB's lattice, eWMT's grid and Precision's spatial
+    stream, so it is the one mark that belongs to the whole collection rather
+    than to one app in it. The meter was the other candidate and it draws as a
+    bar chart, which is an analytics icon on every other tab in the row.
+
+    Square corners and the hub's two sage tones, because it has to look like
+    the page it opens.
+
+    Sized for 16px first. The dim cells sit at .52 rather than the .26 they
+    take on the page: at sixteen pixels a cell is three pixels across, and at
+    a quarter opacity the grid disappeared and left one bright dot on a dark
+    square. The 4px gaps are load-bearing for the same reason — closed up to
+    3px the whole thing reads as a solid block with a light corner.
+
+    The ground is painted rather than left transparent, so the mark keeps its
+    contrast on a light tab bar as well as a dark one.
+  -->
+  <rect width="64" height="64" fill="#080d0b"/>
+  <g fill="#8fbda4" opacity=".52">
+    <rect x="7"  y="7"  width="14" height="14"/>
+    <rect x="25" y="7"  width="14" height="14"/>
+    <rect x="7"  y="25" width="14" height="14"/>
+    <rect x="25" y="25" width="14" height="14"/>
+    <rect x="43" y="25" width="14" height="14"/>
+    <rect x="7"  y="43" width="14" height="14"/>
+    <rect x="25" y="43" width="14" height="14"/>
+    <rect x="43" y="43" width="14" height="14"/>
+  </g>
+  <!-- The lit one. Top right, so the mark reads as rising rather than centred. -->
+  <rect x="43" y="7" width="14" height="14" fill="#b7d8c5"/>
+</svg>
