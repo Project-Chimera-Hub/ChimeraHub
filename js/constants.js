@@ -238,9 +238,39 @@ function relationalComplexity(c) {
     if (m === 'relational') rc = Math.max(rc, 3);
     else if (m === 'identity') rc = Math.max(rc, 2);
   });
-  /* Two relations held at once across different spaces pushes past quaternary. */
-  if (c.meta && c.frame === 'both') rc = 5;
+  /*
+   * Two relations held at once across different spaces pushes past quaternary.
+   *
+   * Gated on position being relational, which is what it always meant and never
+   * said: `meta` and `frame` are both dead settings while position is off or
+   * judged as identity, and this used to report quinary for a configuration
+   * that asked no relational question at all.
+   *
+   * It is also, now, a claim the scoring backs, and one the cube has to earn by
+   * turning — see `dualFrameLive`. For as long as the meta branch of
+   * `buildJudgments` swallowed `frame` whole, this line named a tier that
+   * nothing measured: the HUD printed "quinary" over a block asking exactly the
+   * quaternary question. Both frames are asked and scored separately now, and a
+   * still cube — where the second answer is the first one restated — is named
+   * for the quaternary it is.
+   */
+  if (dualFrameLive(c)) rc = 5;
   return rc || 2;
+}
+
+/*
+ * Whether the two frames can actually disagree.
+ *
+ * A rotation preserves angles, so the relation between two moves is the SAME
+ * number in every frame that is related to the cube's by one — the screen answer
+ * only departs from the cube answer over a turn the cube made BETWEEN the two
+ * moves. With a still cube the second judgement is the first one copied out, and
+ * quinary would be quaternary charging twice for one binding.
+ */
+function dualFrameLive(c) {
+  c = c || cfg;
+  return !!(c.meta && c.streams.position === 'relational' &&
+            c.frame === 'both' && c.rotation);
 }
 
 const TARGET_RATE = 0.28;  // forced identity matches
@@ -297,6 +327,22 @@ const STREAMS = {
        * the deck, the only way to know an angle is neither 0°, 180° nor 90° is
        * to have the earlier move to measure against.
        */
+    ],
+    /*
+     * The meta relation asked in the screen frame — its own three buttons,
+     * because at quinary both frames are answered on the same trial and one
+     * shared set could not state two different relations.
+     *
+     * Screen-frame keys, matching `relationalScreen`'s cluster rather than the
+     * cube meta's WASD, so the hand that answers "what did it do on screen" is
+     * the same hand in both orders of the judgement.
+     *
+     * Oblique has no button here either, for the reason it has none there.
+     */
+    metaScreen: [
+      { id:'s-meta-same', glyph:'⇉', label:'Same direction',  key:'i', color:'#51cf66' },
+      { id:'s-meta-opp',  glyph:'⇄', label:'Opposite',        key:'k', color:'#ff6b6b' },
+      { id:'s-meta-diff', glyph:'⤢', label:'Orthogonal',      key:'l', color:'#fcc419' },
     ],
     /* Screen-frame twins. Separate channels so "both frames" can ask for the same
        movement twice, once per reference frame. */
@@ -383,8 +429,12 @@ const KEY_POOL = ('qwertyuiopasdfghjkl;zxcvbnm,./1234567890').split('');
 
 /* Every response channel in the app, tagged with the stream + mode slot it lives in.
    This is the list the keybind editor walks. */
+/* The meta modes belong here as much as the first-order ones: they are response
+   buttons with default keys, and leaving them out meant the keybind editor could
+   not see the only channels in the app that a quaternary block is answered on. */
+const CHANNEL_MODES = ['identity', 'relational', 'relationalScreen', 'meta', 'metaScreen'];
 const CHANNELS = STREAM_KEYS.flatMap(k =>
-  ['identity', 'relational', 'relationalScreen'].flatMap(mode =>
+  CHANNEL_MODES.flatMap(mode =>
     (STREAMS[k][mode] || []).map(c => ({ ...c, stream: k, mode }))));
 const CHANNEL_BY_ID = Object.fromEntries(CHANNELS.map(c => [c.id, c]));
 
@@ -396,8 +446,13 @@ function canCoOccur(a, b) {
   if (!a || !b) return false;
   if (a.stream !== b.stream) return true;
   if (a.mode === b.mode) return true;
+  /* The two pairs that are both live at once: first-order position in "both
+     frames", and — at quinary — the meta relation asked in both frames. Every
+     other pair is two modes of one stream, and a stream is in exactly one mode
+     at a time, so a shared default key there is deliberate. */
+  const pair = [a.mode, b.mode].sort().join('|');
   return a.stream === 'position' &&
-         [a.mode, b.mode].sort().join('|') === 'relational|relationalScreen';
+         (pair === 'relational|relationalScreen' || pair === 'meta|metaScreen');
 }
 
 let keyBinds = {};                                   // channelId -> key (persisted)

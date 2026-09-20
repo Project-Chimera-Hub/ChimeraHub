@@ -49,6 +49,7 @@
       <select id="rcTier">
         <option value="3">Ternary — report the direction</option>
         <option value="4">Quaternary — relate two directions</option>
+        <option value="5">Quinary — the same relation in two frames</option>
       </select>
       <div class="hint" id="rcHint"></div>
     </div>
@@ -71,6 +72,7 @@
           Quaternary is where that pays: relating two directions in a wider
           space carries more without asking memory to hold more.</div>
         <div class="hint" id="progCoordCount"></div>
+        <div class="hint" id="progCoordOwned"></div>
       </div>
       <div class="setting-group">
         <label>Furthest step</label>
@@ -82,9 +84,7 @@
       <div class="setting-group">
         <label class="row"><input type="checkbox" id="progPitchLoudness"> Deeper tones louder</label>
       </div>
-      <div class="hint">The ladder never moves these &mdash; a rung has to mean the
-        same thing each time you reach it. Changing them changes what your recorded
-        speed and N are about.</div>
+      <div class="hint" id="progCoordRule"></div>
       </div>
     </details>
 
@@ -387,8 +387,9 @@
           <option value="both">Both at once</option>
         </select>
         <div class="hint">Screen frame projects the movement through the cube's live
-          rotation — you answer in what you <em>see</em>. <b>Both</b> asks for the same
+          rotation &mdash; you answer in what you <em>see</em>. <b>Both</b> asks for the same
           movement in each frame simultaneously.</div>
+        <div class="hint" id="frameMetaHint"></div>
       </div>
       </div>
     </details>

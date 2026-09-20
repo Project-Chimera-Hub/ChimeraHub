@@ -60,6 +60,34 @@ function moveVectorOf(a, b) {
   return d;
 }
 
+/**
+ * The same move as the eye saw it: projected into the screen frame, then
+ * quantised to the six screen directions.
+ *
+ * Quantised, and at the same `EPS` the first-order screen judgement uses,
+ * because the relation has to be derivable from what the player can actually
+ * name. A projected vector is floats — two moves that are plainly "the same
+ * direction" on screen come back a degree or two apart, and an exact test would
+ * call almost every pair oblique. Rounding to the directions the screen deck
+ * already answers in makes the second-order question the same question as the
+ * first-order one, asked of two moves instead of one.
+ *
+ * `matrix` is the destination trial's own: the orientation the cube was at when
+ * that move was shown, which is the only frame the player could have read it in.
+ * The previous move is therefore projected through the previous trial's matrix,
+ * not through this one — re-projecting it now would ask about a picture nobody
+ * was ever shown.
+ *
+ * Spatial only. A coordinate axis is a property of the stimulus, not a place in
+ * the room, so there is nothing for a rotation to do to it — the cube frame is
+ * where those live.
+ */
+function screenVectorOf(a, b) {
+  const ca = state.cells[a.cellIdx], cb = state.cells[b.cellIdx];
+  const v = normalise(projectScreen([cb.x - ca.x, cb.y - ca.y, cb.z - ca.z], b.matrix));
+  return v.map(c => c > EPS ? 1 : c < -EPS ? -1 : 0);
+}
+
 const dot = (A, B) => A.reduce((s, v, i) => s + v * (B[i] || 0), 0);
 const norm = A => Math.sqrt(dot(A, A));
 
@@ -138,18 +166,10 @@ function buildJudgments(a, b, extra) {
     const prev = extra && extra.metaPrev;
     if (prev) {
       /*
-       * Vectors, not cardinals. A composite move has no single axis, and the
-       * relation between two of them is a dot product — which is what
-       * "orthogonal" meant all along and what a different axis was only ever a
-       * special case of.
-       */
-      const A = moveVectorOf(prev[0], prev[1]), B = moveVectorOf(a, b);
-      const rel = metaRelationOf(A, B);
-      /*
        * Oblique is asked, and answered by pressing nothing. The options list is
-       * unchanged — three buttons, as it has always been — so the fourth
-       * relation costs no response load, which is the only reason it can be
-       * added at all at a complexity the deck is already the bottleneck of.
+       * three buttons per frame, as it has always been — so the fourth relation
+       * costs no response load, which is the only reason it can be added at all
+       * at a complexity the deck is already the bottleneck of.
        *
        * It also fixes the base rates. With three relations there was always
        * exactly one correct answer, so a player who pressed nothing scored 0
@@ -157,12 +177,46 @@ function buildJudgments(a, b, extra) {
        * empty answer is a real one and holding still has to be earned like the
        * rest.
        *
-       * `null` still asks nothing at all: that is a move that did not happen,
-       * not a relation.
+       * `null` asks nothing at all: that is a move that did not happen, not a
+       * relation. In the screen frame it is also a move that went straight into
+       * the screen, which quantises to no direction and so has none to relate.
        */
-      if (rel) {
-        const id = { same: 'meta-same', opp: 'meta-opp', diff: 'meta-diff' }[rel];
-        push('position', ['meta-same', 'meta-opp', 'meta-diff'], id ? [id] : []);
+      const metaJ = (bucket, ids, A, B) => {
+        const rel = metaRelationOf(A, B);
+        if (!rel) return;
+        const id = { same: ids[0], opp: ids[1], diff: ids[2] }[rel];
+        push(bucket, ids, id ? [id] : []);
+      };
+
+      /*
+       * The frame is read here now, rather than thrown away.
+       *
+       * This branch used to be the first arm of the chain and `cfg.frame` was
+       * only consulted in the last one, so switching frames under meta changed
+       * nothing at all — "both frames" asked the single cube-frame question and
+       * the HUD called it quinary. Each frame that is on now asks its own
+       * relation and is scored in its own bucket.
+       */
+      if (cfg.frame === 'cube' || cfg.frame === 'both') {
+        /*
+         * Vectors, not cardinals. A composite move has no single axis, and the
+         * relation between two of them is a dot product — which is what
+         * "orthogonal" meant all along and what a different axis was only ever a
+         * special case of.
+         */
+        metaJ('position', ['meta-same', 'meta-opp', 'meta-diff'],
+              moveVectorOf(prev[0], prev[1]), moveVectorOf(a, b));
+      }
+      if (cfg.frame === 'screen' || cfg.frame === 'both') {
+        /*
+         * The same relation over the same two moves, read off the screen instead
+         * of off the cube — and a different answer only in so far as the cube
+         * turned between them. That is the whole of what the second frame costs:
+         * the cube-frame fact is no longer enough to recover it, so the picture
+         * has to be held as well as the move.
+         */
+        metaJ('position2', ['s-meta-same', 's-meta-opp', 's-meta-diff'],
+              screenVectorOf(prev[0], prev[1]), screenVectorOf(a, b));
       }
     }
   } else if (mode('position') === 'identity') {
