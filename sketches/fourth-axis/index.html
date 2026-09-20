@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fourth axis</title>
+
+<!--
+  A probe with a number at the end of it: three axes are real 3D position, the
+  fourth is a channel you choose, and the tally says whether that channel is
+  being read or skipped. model.js decides everything; this file only draws.
+
+  Self-contained on purpose — no build step, no webfont, no network, nothing
+  written to storage. The tokens are the shell's, because a sketch that looks
+  like the rest of the repository is a sketch you can read next to it.
+-->
+
+<style>
+:root {
+  --bg: #0b0e14;
+  --panel: #131924;
+  --panel-hi: #171e2b;
+  --line: #232c3b;
+  --line-soft: #1b2230;
+  --ink: #dce4f0;
+  --ink-strong: #f2f6fc;
+  --dim: #8494ad;
+  --accent: #6cb6ff;
+  --ok: #3fb950;
+  --bad: #f85149;
+  --radius: 10px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+header { padding: 1.5rem 1.25rem .75rem; max-inline-size: 78rem; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin: 0 0 .25rem; letter-spacing: -.02em; color: var(--ink-strong); }
+header p { margin: 0; color: var(--dim); max-inline-size: 46rem; }
+main {
+  display: grid; gap: 1rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 1fr);
+  padding: .75rem 1.25rem 3rem; max-inline-size: 78rem; margin: 0 auto;
+  align-items: start;
+}
+@media (max-width: 62rem) { main { grid-template-columns: minmax(0, 1fr); } }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+#stage { padding: .5rem; position: relative; }
+#table { overflow-x: auto; }
+canvas { display: block; inline-size: 100%; block-size: min(62vh, 34rem); touch-action: none; cursor: grab; }
+canvas.turning { cursor: grabbing; }
+#hint { position: absolute; inset-block-end: .9rem; inset-inline-end: 1.1rem; margin: 0; font-size: .75rem; color: var(--dim); pointer-events: none; }
+
+aside { display: flex; flex-direction: column; gap: 1rem; min-inline-size: 0; }
+section { padding: 1rem; }
+h2 { display: flex; align-items: center; gap: .6rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin: 0 0 .75rem; }
+h2::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+
+.row { display: flex; flex-wrap: wrap; gap: .4rem; }
+button {
+  font: inherit; color: var(--ink); background: var(--panel-hi);
+  border: 1px solid var(--line); border-radius: 8px; padding: .4rem .7rem; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"] { background: #1d2941; border-color: var(--accent); color: var(--ink-strong); }
+button.wide { flex: 1; padding: .6rem; font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; border-color: var(--line); }
+.note { font-size: .75rem; color: var(--dim); margin: .5rem 0 0; }
+
+#claim { font-size: 1.05rem; color: var(--ink-strong); margin: 0 0 .25rem; min-block-size: 3.4rem; }
+#claim b { color: var(--accent); font-weight: 600; }
+#verdict { margin: .6rem 0 0; min-block-size: 2.8rem; font-size: .88rem; }
+#verdict .good { color: var(--ok); font-weight: 600; }
+#verdict .bad { color: var(--bad); font-weight: 600; }
+
+table { inline-size: 100%; border-collapse: collapse; font-size: .78rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: .3rem .35rem; white-space: nowrap; border-block-end: 1px solid var(--line-soft); }
+th:first-child, td:first-child { text-align: left; color: var(--dim); }
+thead th { color: var(--dim); font-weight: 500; }
+tbody tr:last-child td { border-block-end: none; font-weight: 600; color: var(--ink-strong); }
+td small { display: block; color: var(--dim); font-weight: 400; font-size: .92em; }
+td.none { color: var(--line); }
+#tsv { inline-size: 100%; margin-block-start: .6rem; block-size: 7rem; display: none; background: var(--bg); color: var(--dim); border: 1px solid var(--line); border-radius: 8px; font: 12px/1.5 ui-monospace, monospace; padding: .5rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fourth axis</h1>
+  <p>Three axes are real position in a rotatable lattice. The fourth is a
+  channel you pick. Each trial claims one thing about two objects on all four
+  axes at once, and half the claims are false on exactly one of them — so the
+  table below says which axis you were actually reading.</p>
+</header>
+
+<main>
+  <div class="card" id="stage">
+    <canvas id="view"></canvas>
+    <p id="hint">drag to turn the scene</p>
+  </div>
+
+  <aside>
+    <section class="card">
+      <h2>The trial</h2>
+      <p id="claim"></p>
+      <div class="row">
+        <button class="wide" id="yes">True <small>(t)</small></button>
+        <button class="wide" id="no">False <small>(f)</small></button>
+      </div>
+      <p id="verdict"></p>
+      <div class="row">
+        <button id="next" disabled>Next trial <small>(space)</small></button>
+        <button id="discard">Discard, redraw</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Fourth axis as</h2>
+      <div class="row" id="encodings"></div>
+      <p class="note" id="encoding-note"></p>
+      <h2 style="margin-top:1rem">Objects</h2>
+      <div class="row" id="counts"></div>
+    </section>
+
+    <section class="card">
+      <h2>What you were reading</h2>
+      <div id="table"></div>
+      <div class="row" style="margin-top:.75rem">
+        <button id="copy">Show as TSV</button>
+        <button id="reset">Reset tally</button>
+      </div>
+      <textarea id="tsv" readonly spellcheck="false"></textarea>
+      <p class="note">Accuracy per lie, then mean time. Compare a ring row
+      against the <em>same</em> row under another encoding — never against the
+      x row beside it, because flipping “east” is a coarser lie than moving a
+      needle one step.</p>
+    </section>
+  </aside>
+</main>
+
+<script src="model.js"></script>
+<script>
+"use strict";
+
+var F = window.FourthAxis;
+
+/* The four candidates. `size` is here to lose: it encodes the axis as a
+   property of the object rather than a place, so a displaced object stops
+   looking like the same object — and on a ring it cannot even be monotonic,
+   since position 11 sits next to position 0. Keeping it measurable is better
+   than asserting it. */
+var ENCODINGS = [
+  { key: "needle", label: "Needle",       short: "Needle", note: "Angle against a drawn dial. The object is untouched; only its pointer turns." },
+  { key: "both",   label: "Needle + hue", short: "N + hue", note: "The same needle with hue as a redundant second reading of the same position." },
+  { key: "hue",    label: "Hue",          short: "Hue",    note: "Twelve hues stepped round a ring in OKLCH. The only ruler is the legend, off the object." },
+  { key: "size",   label: "Size",         short: "Size",   note: "The control. Size is a property of the object, and it cannot close into a loop." }
+];
+
+var BUCKET_LABEL = {
+  "x": "east / west",
+  "y": "above / below",
+  "z": "north / south",
+  "w-near": "ring, 1–2 out",
+  "w-far": "ring, 3+ out",
+  "true": "was true",
+  "all": "every trial"
+};
+
+var view = document.getElementById("view");
+var ctx = view.getContext("2d");
+
+var state = {
+  encoding: "needle",
+  count: 6,
+  yaw: -0.62,
+  pitch: 0.42,
+  rand: F.rng((Date.now() ^ (Math.random() * 0xffffffff)) >>> 0),
+  tally: F.newTally(),
+  trial: null
+};
+
+/* ------------------------------------------------------------------ *
+ * Projection                                                         *
+ * ------------------------------------------------------------------ */
+
+/* Orthographic, not perspective. Perspective would shrink the far objects,
+   and with `size` among the encodings under test that is a confound built into
+   the camera: the control would lose to the projection rather than to itself.
+   Depth is carried by the cage, the floor grid and the drop lines instead. */
+function makeCamera() {
+  var w = view.clientWidth, h = view.clientHeight;
+  var e = F.extent(state.count);
+  var scale = Math.min(w, h) / (2 * (e + 2.25));
+  var cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+  var cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+
+  return function (p) {
+    var x = p.x * cy - p.z * sy;
+    var z = p.x * sy + p.z * cy;
+    return {
+      x: w / 2 + x * scale,
+      y: h / 2 - (p.y * cp - z * sp) * scale,
+      depth: p.y * sp + z * cp
+    };
+  };
+}
+
+function line(cam, a, b, colour, dash) {
+  var p = cam(a), q = cam(b);
+  ctx.save();
+  ctx.strokeStyle = colour;
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  ctx.lineTo(q.x, q.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ *
+ * The scene                                                          *
+ * ------------------------------------------------------------------ */
+
+function drawCage(cam, e) {
+  ctx.lineWidth = 1;
+
+  /* The floor is the one surface that makes a height readable, so its lines run
+     through the object positions rather than between them. */
+  for (var t = -e; t <= e + 1e-9; t++) {
+    line(cam, { x: t, y: -e, z: -e }, { x: t, y: -e, z: e }, "#222c3e");
+    line(cam, { x: -e, y: -e, z: t }, { x: e, y: -e, z: t }, "#222c3e");
+  }
+
+  var corners = [-e, e];
+  for (var i = 0; i < 2; i++) {
+    for (var j = 0; j < 2; j++) {
+      line(cam, { x: corners[i], y: corners[j], z: -e }, { x: corners[i], y: corners[j], z: e }, "#232c3b");
+      line(cam, { x: corners[i], y: -e, z: corners[j] }, { x: corners[i], y: e, z: corners[j] }, "#232c3b");
+      line(cam, { x: -e, y: corners[i], z: corners[j] }, { x: e, y: corners[i], z: corners[j] }, "#232c3b");
+    }
+  }
+
+  /* The claim is worded in compass directions, so the compass has to be on
+     screen — otherwise "east of" is a coin toss about which way the scene is
+     currently turned. */
+  ctx.fillStyle = "#8494ad";
+  ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  var marks = [
+    ["EAST", { x: e + 0.75, y: -e, z: -e }],
+    ["NORTH", { x: -e, y: -e, z: e + 0.75 }],
+    ["UP", { x: -e, y: e + 0.7, z: -e }]
+  ];
+  for (var m = 0; m < marks.length; m++) {
+    var at = cam(marks[m][1]);
+    ctx.fillText(marks[m][0], at.x, at.y);
+  }
+}
+
+/* A dial drawn in screen space, never in the scene's.
+
+   This is the separability requirement made literal. A dial lying in the
+   lattice would foreshorten as the scene turned, so orbiting the three spatial
+   axes would change the fourth axis's reading — the two would be one integral
+   percept and the probe would be measuring the camera. Billboarded, the needle
+   says the same thing from every angle. */
+function drawDial(at, w, radius, faint, colour) {
+  var i, a;
+  ctx.save();
+  ctx.translate(at.x, at.y);
+
+  ctx.strokeStyle = faint ? "#232c3b" : "#3a4760";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  /* Twelve ticks, because a step has to be countable locally — "four round
+     from here" should not mean counting up from zero. Noon is longer so the
+     ring has an origin when an absolute position is wanted. */
+  for (i = 0; i < F.MODULUS; i++) {
+    a = -Math.PI / 2 + i * (Math.PI * 2 / F.MODULUS);
+    var inner = radius - (i === 0 ? 6 : 3);
+    ctx.strokeStyle = i === 0 ? (faint ? "#3a4760" : "#8494ad") : (faint ? "#232c3b" : "#3a4760");
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+    ctx.lineTo(Math.cos(a) * radius, Math.sin(a) * radius);
+    ctx.stroke();
+  }
+
+  a = -Math.PI / 2 + (w % F.MODULUS) * (Math.PI * 2 / F.MODULUS);
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(a) * (radius - 2), Math.sin(a) * (radius - 2));
+  ctx.stroke();
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.arc(Math.cos(a) * (radius - 2), Math.sin(a) * (radius - 2), 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function markOf(o, role) {
+  var enc = state.encoding;
+  var hue = F.hueFor(o.w);
+  return {
+    dial: enc === "needle" || enc === "both",
+    fill: enc === "hue" || enc === "both" ? hue : (role ? "#c9d4e6" : "#56637d"),
+    needle: enc === "both" ? hue
+      : role === "subject" ? "#6cb6ff"
+      : role ? "#f2f6fc" : "#7c8aa3",
+    radius: enc === "size" ? 4.5 + o.w * 1.25 : (role ? 7.5 : 6)
+  };
+}
+
+function drawObject(cam, o, role, reveal) {
+  var at = cam(o);
+  var e = F.extent(state.count);
+  var spec = markOf(o, role);
+
+  /* A drop line and its shadow: without them an object's height and its
+     position on the floor are the same pixel displacement, and no amount of
+     turning separates them. */
+  line(cam, o, { x: o.x, y: -e, z: o.z }, role ? "#3a4760" : "#232c3b", [2, 3]);
+  var foot = cam({ x: o.x, y: -e, z: o.z });
+  ctx.fillStyle = "#232c3b";
+  ctx.beginPath();
+  ctx.arc(foot.x, foot.y, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (spec.dial) drawDial(at, o.w, role ? 22 : 18, !role, spec.needle);
+
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, spec.radius, 0, Math.PI * 2);
+  ctx.fillStyle = spec.fill;
+  ctx.fill();
+  if (role) {
+    ctx.strokeStyle = role === "subject" ? "#6cb6ff" : "#f2f6fc";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  /* The claimed position, shown once the answer is in. A true claim puts the
+     ghost exactly where the needle already is; a lie shows the gap it asked you
+     to accept. */
+  if (reveal && role === "subject" && reveal.claimedW !== null && spec.dial) {
+    var a = -Math.PI / 2 + reveal.claimedW * (Math.PI * 2 / F.MODULUS);
+    ctx.save();
+    ctx.translate(at.x, at.y);
+    ctx.strokeStyle = "#f85149";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * 30, Math.sin(a) * 30);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.fillStyle = role ? "#f2f6fc" : "#8494ad";
+  ctx.font = (role ? "700 15px " : "500 12px ") + "ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(o.name, at.x + (spec.dial ? 26 : spec.radius + 5), at.y - (spec.dial ? 14 : 0));
+}
+
+function drawLegend() {
+  var enc = state.encoding;
+  var x = 54, y = view.clientHeight - 54;
+
+  ctx.fillStyle = "#8494ad";
+  ctx.font = "500 11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (enc === "needle" || enc === "both") {
+    drawDial({ x: x, y: y }, 0, 20, false, "#8494ad");
+    ctx.fillStyle = "#8494ad";
+    ctx.fillText("0", x, y - 30);
+    ctx.fillText("clockwise →", x + 4, y + 32);
+  }
+  if (enc === "hue" || enc === "both") {
+    var cx = enc === "both" ? x + 96 : x;
+    for (var i = 0; i < F.MODULUS; i++) {
+      var a = -Math.PI / 2 + i * (Math.PI * 2 / F.MODULUS);
+      ctx.fillStyle = F.hueFor(i);
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * 20, y + Math.sin(a) * 20, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#8494ad";
+    ctx.fillText("0", cx, y - 32);
+  }
+  if (enc === "size") {
+    for (var s = 0; s < F.MODULUS; s++) {
+      ctx.fillStyle = "#56637d";
+      ctx.beginPath();
+      ctx.arc(28 + s * 22, y, 2.2 + s * 0.62, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#8494ad";
+    ctx.textAlign = "left";
+    ctx.fillText("0 … 11, and then back to 0", 22, y + 26);
+  }
+}
+
+function draw() {
+  var dpr = window.devicePixelRatio || 1;
+  var w = view.clientWidth, h = view.clientHeight;
+  if (view.width !== Math.round(w * dpr) || view.height !== Math.round(h * dpr)) {
+    view.width = Math.round(w * dpr);
+    view.height = Math.round(h * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  var trial = state.trial;
+  if (!trial) return;
+  var cam = makeCamera();
+  var e = F.extent(state.count);
+
+  drawCage(cam, e);
+
+  var reveal = trial.answered === null ? null : {
+    claimedW: F.stepsRound(0, F.byName(trial.scene, trial.claim.reference).w + trial.claim.parts[3].steps)
+  };
+
+  /* Once answered, the pair is joined: the three spatial claims become
+     inspectable as one segment rather than three separate comparisons. */
+  if (reveal) {
+    line(cam, F.byName(trial.scene, trial.claim.reference), F.byName(trial.scene, trial.claim.subject),
+      "#3a4760", [5, 4]);
+  }
+
+  /* Far objects first, so nearer ones cover them. With billboarded dials this
+     is the only occlusion cue there is. */
+  var order = trial.scene.slice().sort(function (a, b) { return cam(a).depth - cam(b).depth; });
+  for (var i = 0; i < order.length; i++) {
+    var role = order[i].name === trial.claim.subject ? "subject"
+             : order[i].name === trial.claim.reference ? "reference" : null;
+    drawObject(cam, order[i], role, reveal);
+  }
+
+  drawLegend();
+}
+
+/* ------------------------------------------------------------------ *
+ * Trials                                                             *
+ * ------------------------------------------------------------------ */
+
+function newTrial() {
+  var scene = F.makeScene(state.count, state.rand);
+  state.trial = {
+    scene: scene,
+    claim: F.makeClaim(scene, state.rand),
+    started: performance.now(),
+    answered: null
+  };
+  var claim = state.trial.claim;
+  document.getElementById("claim").innerHTML = claim.text
+    .replace(claim.subject + " is", "<b>" + claim.subject + "</b> is")
+    .replace(new RegExp(" " + claim.reference + "\\.$"), " <b>" + claim.reference + "</b>.");
+  document.getElementById("verdict").textContent = "";
+  document.getElementById("next").disabled = true;
+  document.getElementById("yes").disabled = false;
+  document.getElementById("no").disabled = false;
+  draw();
+}
+
+function wordFor(axis, dir) {
+  for (var i = 0; i < F.STRAIGHT.length; i++) {
+    if (F.STRAIGHT[i].key === axis) return dir > 0 ? F.STRAIGHT[i].positive : F.STRAIGHT[i].negative;
+  }
+  return "";
+}
+
+function explain(claim) {
+  if (claim.truth) return "Every part of it was true.";
+  if (claim.lie === "w") {
+    return claim.subject + " is " + claim.trueSteps + (claim.trueSteps === 1 ? " step" : " steps") +
+      " clockwise from " + claim.reference + ", not " + claim.parts[3].steps + ".";
+  }
+  for (var i = 0; i < claim.parts.length; i++) {
+    if (claim.parts[i].axis !== claim.lie) continue;
+    return claim.subject + " is " + wordFor(claim.lie, -claim.parts[i].dir) + " " + claim.reference +
+      ", not " + wordFor(claim.lie, claim.parts[i].dir).replace(/ of$/, "") + ".";
+  }
+  return "";
+}
+
+function answer(said) {
+  var trial = state.trial;
+  if (!trial || trial.answered !== null) return;
+  var ms = performance.now() - trial.started;
+  trial.answered = said;
+  F.record(state.tally, state.encoding, trial.claim, said, ms);
+
+  var right = said === trial.claim.truth;
+  document.getElementById("verdict").innerHTML =
+    '<span class="' + (right ? "good" : "bad") + '">' + (right ? "Right" : "Wrong") + "</span> — it was " +
+    (trial.claim.truth ? "true" : "false") + ". " + explain(trial.claim) +
+    " <small>" + (ms / 1000).toFixed(1) + "s</small>";
+  document.getElementById("yes").disabled = true;
+  document.getElementById("no").disabled = true;
+  document.getElementById("next").disabled = false;
+  document.getElementById("next").focus();
+  renderTable();
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+ * The table                                                          *
+ * ------------------------------------------------------------------ */
+
+function withData() {
+  var out = [];
+  for (var i = 0; i < ENCODINGS.length; i++) {
+    var rows = F.rows(state.tally, ENCODINGS[i].key);
+    if (rows[rows.length - 1].attempts > 0) out.push(ENCODINGS[i]);
+  }
+  return out;
+}
+
+function renderTable() {
+  var shown = withData();
+  var host = document.getElementById("table");
+  if (!shown.length) {
+    host.innerHTML = '<p class="note" style="margin:0">Nothing yet. A dozen trials on one encoding, then switch and do a dozen more — the rows only mean something next to each other.</p>';
+    return;
+  }
+
+  var html = "<table><thead><tr><th>lie</th>";
+  for (var i = 0; i < shown.length; i++) html += "<th>" + shown[i].short + "</th>";
+  html += "</tr></thead><tbody>";
+
+  var buckets = F.BUCKETS.concat(["all"]);
+  for (var b = 0; b < buckets.length; b++) {
+    html += "<tr><td>" + BUCKET_LABEL[buckets[b]] + "</td>";
+    for (var c = 0; c < shown.length; c++) {
+      var row = F.rows(state.tally, shown[c].key)[b];
+      if (!row.attempts) { html += '<td class="none">·</td>'; continue; }
+      html += "<td>" + Math.round(row.rate * 100) + "% <small>" + row.hits + "/" + row.attempts +
+        " · " + (row.mean / 1000).toFixed(1) + "s</small></td>";
+    }
+    html += "</tr>";
+  }
+  host.innerHTML = html + "</tbody></table>";
+}
+
+function tsv() {
+  var shown = withData();
+  var lines = ["lie\t" + shown.map(function (e) { return e.label + " %\t" + e.label + " n\t" + e.label + " s"; }).join("\t")];
+  var buckets = F.BUCKETS.concat(["all"]);
+  for (var b = 0; b < buckets.length; b++) {
+    var cells = [BUCKET_LABEL[buckets[b]]];
+    for (var c = 0; c < shown.length; c++) {
+      var row = F.rows(state.tally, shown[c].key)[b];
+      cells.push(row.attempts ? (row.rate * 100).toFixed(0) : "",
+                 row.attempts || "",
+                 row.attempts ? (row.mean / 1000).toFixed(2) : "");
+    }
+    lines.push(cells.join("\t"));
+  }
+  return lines.join("\n");
+}
+
+/* ------------------------------------------------------------------ *
+ * Controls                                                           *
+ * ------------------------------------------------------------------ */
+
+function buildControls() {
+  var host = document.getElementById("encodings");
+  ENCODINGS.forEach(function (enc) {
+    var b = document.createElement("button");
+    b.textContent = enc.label;
+    b.dataset.encoding = enc.key;
+    b.addEventListener("click", function () {
+      state.encoding = enc.key;
+      syncControls();
+      /* A fresh trial on every switch. Carrying one over would let a scene be
+         read under one encoding and answered under another, and that trial
+         would be credited to whichever was showing when the key went down. */
+      newTrial();
+    });
+    host.appendChild(b);
+  });
+
+  var counts = document.getElementById("counts");
+  [4, 6, 8].forEach(function (n) {
+    var b = document.createElement("button");
+    b.textContent = n;
+    b.dataset.count = n;
+    b.addEventListener("click", function () { state.count = n; syncControls(); newTrial(); });
+    counts.appendChild(b);
+  });
+}
+
+function syncControls() {
+  var buttons = document.querySelectorAll("#encodings button");
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].setAttribute("aria-pressed", String(buttons[i].dataset.encoding === state.encoding));
+  }
+  var counts = document.querySelectorAll("#counts button");
+  for (var j = 0; j < counts.length; j++) {
+    counts[j].setAttribute("aria-pressed", String(Number(counts[j].dataset.count) === state.count));
+  }
+  for (var k = 0; k < ENCODINGS.length; k++) {
+    if (ENCODINGS[k].key === state.encoding) document.getElementById("encoding-note").textContent = ENCODINGS[k].note;
+  }
+}
+
+document.getElementById("yes").addEventListener("click", function () { answer(true); });
+document.getElementById("no").addEventListener("click", function () { answer(false); });
+document.getElementById("next").addEventListener("click", newTrial);
+document.getElementById("discard").addEventListener("click", newTrial);
+document.getElementById("reset").addEventListener("click", function () {
+  state.tally = F.newTally();
+  document.getElementById("tsv").style.display = "none";
+  renderTable();
+});
+document.getElementById("copy").addEventListener("click", function () {
+  var box = document.getElementById("tsv");
+  box.value = tsv();
+  box.style.display = "block";
+  box.select();
+});
+
+document.addEventListener("keydown", function (event) {
+  if (event.target.tagName === "TEXTAREA" || event.metaKey || event.ctrlKey) return;
+  /* A focused button handles its own space and enter. Handling them here too
+     spends two trials on one press, and the second is recorded as unseen. */
+  if (event.target.tagName === "BUTTON" && (event.key === " " || event.key === "Enter")) return;
+  var key = event.key.toLowerCase();
+  if (key === "t") { answer(true); }
+  else if (key === "f") { answer(false); }
+  else if (key === " " || key === "enter") { event.preventDefault(); newTrial(); }
+  else return;
+  event.stopPropagation();
+});
+
+/* Orbiting is not decoration. The three spatial axes only read as three if the
+   scene can be turned; a single fixed view collapses two of them into one
+   ambiguous displacement, and then the probe is about a 2D picture. */
+(function orbit() {
+  var last = null;
+  view.addEventListener("pointerdown", function (event) {
+    last = { x: event.clientX, y: event.clientY };
+    view.classList.add("turning");
+    view.setPointerCapture(event.pointerId);
+  });
+  view.addEventListener("pointermove", function (event) {
+    if (!last) return;
+    state.yaw += (event.clientX - last.x) * 0.008;
+    state.pitch += (event.clientY - last.y) * 0.006;
+    /* Stopped short of straight down: at the pole the floor grid degenerates to
+       a line and every height reads the same. */
+    state.pitch = Math.max(-1.35, Math.min(1.35, state.pitch));
+    last = { x: event.clientX, y: event.clientY };
+    draw();
+  });
+  view.addEventListener("pointerup", function () { last = null; view.classList.remove("turning"); });
+  view.addEventListener("pointercancel", function () { last = null; view.classList.remove("turning"); });
+})();
+
+window.addEventListener("resize", draw);
+
+buildControls();
+syncControls();
+renderTable();
+newTrial();
+</script>
+</body>
+</html>
