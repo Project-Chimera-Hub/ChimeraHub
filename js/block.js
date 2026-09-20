@@ -532,7 +532,7 @@ function setMode(mode) {
   $('freePane').style.display = mode === 'free' ? '' : 'none';
   $('modeHint').textContent = mode === 'progression'
     ? 'One ladder, driven by your accuracy. Speed adapts every block; clearing the target speed unlocks the next difficulty.'
-    : 'Everything unlocked and manual. N still adapts each block; Load scores the setup.';
+    : 'Everything unlocked and manual. Nothing adapts — the task stays exactly as you set it; Load scores the setup.';
   if (mode === 'progression') applyProgression(); else applyFree();
   buildCube(cfg.dim);
   syncSettingsUI();
