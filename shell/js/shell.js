@@ -229,6 +229,19 @@
    * The stage                                                        *
    * ---------------------------------------------------------------- */
 
+  /*
+   * The frame asks for `rnb/index.html`, not `rnb/`.
+   *
+   * A web server resolves a directory to its index and the two are the same
+   * request. The Android build's server does not: Capacitor answers any path
+   * whose last segment has no dot with the application's own root index, which
+   * is the usual way a single-page app keeps its routes working. Here it meant
+   * every trainer's frame was served the hub again — eight cards that opened
+   * onto a copy of the page they were on.
+   *
+   * Naming the file is the whole fix, and it is the same request everywhere
+   * else, so there is nothing conditional about it.
+   */
   var openedAt = 0;
   var current = null;
 
@@ -240,7 +253,7 @@
        page already in the frame restarts it, and a restart mid-block loses the
        block. */
     if (current !== id) {
-      $("frame").src = BASE + t.path;
+      $("frame").src = BASE + t.path + "index.html";
       current = id;
       openedAt = Date.now();
     }
