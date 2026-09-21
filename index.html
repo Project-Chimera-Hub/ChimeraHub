@@ -370,6 +370,68 @@
   .ewmt-custom-thumb-remove:hover, .ewmt-custom-thumb-remove:focus-visible { background: var(--danger); color: #fff; }
   .ewmt-custom-error { color: var(--danger); }
 
+  /* ---------- Background video mode: the link list ---------- */
+  /* One row per link, colour-coded by what the check found: amber and
+     pulsing while it runs, green once video actually came back, red when
+     nothing could be pulled from it. The runtime on the right is the
+     real one, read off the player during the check. */
+  .bgvideo-add-row { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; }
+  .bgvideo-add-row .text-input { flex: 1; min-width: 0; }
+  .bgvideo-add-row .btn { flex-shrink: 0; }
+  .bgvideo-url-input {
+    resize: vertical;
+    min-height: 44px;
+    line-height: 1.45;
+    font-family: inherit;
+    display: block;
+  }
+  .bgvideo-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .bgvideo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--panel-recessed);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .bgvideo-item.is-ok { border-color: rgba(79,208,138,0.35); }
+  .bgvideo-item.is-fail { border-color: rgba(239,91,82,0.35); }
+  .bgvideo-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--text-muted); }
+  .bgvideo-item.is-ok .bgvideo-dot { background: var(--success); }
+  .bgvideo-item.is-fail .bgvideo-dot { background: var(--danger); }
+  .bgvideo-item.is-checking .bgvideo-dot { background: var(--amber); animation: bgvideo-pulse 1.1s ease-in-out infinite; }
+  @keyframes bgvideo-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+  .bgvideo-item-main { flex: 1; min-width: 0; }
+  .bgvideo-item-title {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bgvideo-item-sub { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+  .bgvideo-item.is-fail .bgvideo-item-sub { color: #f1b3ae; }
+  .bgvideo-item-time { font-size: 0.82rem; color: var(--text-muted); flex-shrink: 0; }
+  .bgvideo-item.is-ok .bgvideo-item-time { color: var(--text); }
+  .bgvideo-item-remove {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .bgvideo-item-remove:hover, .bgvideo-item-remove:focus-visible { background: var(--danger); color: #fff; }
+  .bgvideo-list-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+
   /* Link rows inside the "About Chimera" disclosure */
   .chimera-links { display: flex; flex-direction: column; gap: 10px; }
   .chimera-link {
@@ -579,6 +641,71 @@
   .dichotic-visual-half.left { left: 0; }
   .dichotic-visual-half.right { right: 0; }
   .dichotic-visual-half.active { opacity: 0.4; }
+
+  /* ---------- Background video mode ---------- */
+  /* One fixed layer behind the whole app. z-index: -1 puts it under every
+     in-flow element on the page but above the canvas background, so the
+     number frame, the top bar and both overlays keep painting over it and
+     stay exactly as legible as they were. The one thing that would cover
+     it is body's own background, so that goes transparent for as long as
+     the layer is up (html keeps painting var(--bg) underneath, which is
+     what shows through a video that doesn't fill the frame). See
+     bgVideoShowLayer. */
+  .bgvideo-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: #000;
+    pointer-events: none;
+  }
+  body.bgvideo-showing { background: transparent; }
+  /* The Brightness setting lands here as plain opacity, blending toward
+     the layer's black backing rather than laying a scrim over the top. */
+  .bgvideo-stage { position: absolute; inset: 0; opacity: 0.45; transition: opacity 0.25s linear; }
+  .bgvideo-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #000;
+  }
+  /* object-fit can't reach inside an iframe, so an embedded player is
+     cropped the long way round instead: sized to 16:9 against whichever
+     viewport axis is larger, centred, and clipped by the layer's own
+     overflow: hidden. */
+  .bgvideo-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 56.25vw;
+    min-width: 177.78vh;
+    min-height: 100vh;
+    transform: translate(-50%, -50%);
+  }
+  .bgvideo-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+  }
+  /* Where a link gets checked. Both embed APIs refuse to report a runtime
+     from a display:none iframe, so the check runs a real player on the
+     page — just small, invisible, and behind the (opaque) body
+     background. See bgVideoProbeYouTube/bgVideoProbeVimeo. */
+  .bgvideo-probe {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 200px;
+    height: 120px;
+    opacity: 0.001;
+    pointer-events: none;
+    z-index: -2;
+  }
 
   /* Native color input, restyled to sit quietly in the dark theme instead
      of showing the browser's default light swatch chrome. */
@@ -951,10 +1078,23 @@
     .persevere-btn::after { animation: none; display: none; }
     .persevere-label { transition: none; }
     .key-rebind-btn.listening { animation: none; }
+    .bgvideo-item.is-checking .bgvideo-dot { animation: none; opacity: 1; }
+    .bgvideo-stage { transition: none; }
   }
 </style>
 </head>
 <body>
+<!-- Background video mode's layer. Outside #app and fixed at z-index -1
+     so it sits behind every screen without being part of any of them —
+     see the .bgvideo-layer CSS. Empty and hidden until a session with
+     the mode on actually starts. -->
+<div class="bgvideo-layer hidden" id="bgvideo-layer" aria-hidden="true">
+  <div class="bgvideo-stage" id="bgvideo-stage">
+    <video class="bgvideo-media hidden" id="bgvideo-media" muted playsinline preload="auto" disablepictureinpicture></video>
+    <div class="bgvideo-frame hidden" id="bgvideo-frame"></div>
+  </div>
+</div>
+
 <div id="app">
 
   <section id="menu-screen" class="screen">
@@ -1367,6 +1507,55 @@
                   <div class="ewmt-custom-grid hidden" id="ewmt-custom-gallery"></div>
                   <p class="setting-note ewmt-custom-error hidden" id="ewmt-custom-error-hint">Couldn't save that image — this browser may not support local image storage.</p>
                   <button type="button" id="ewmt-custom-clear-btn" class="btn btn-danger-ghost btn-sm hidden">Clear all custom images</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mode-row">
+              <div class="setting-toggle">
+                <label class="setting-text" for="bgvideo-toggle">
+                  <span class="setting-title">Background video</span>
+                  <span class="setting-desc">Your own links play behind the session — muted, full screen, and back to the first one once the last has ended.</span>
+                </label>
+                <label class="switch"><input type="checkbox" id="bgvideo-toggle"><span class="switch-track"></span></label>
+              </div>
+              <div class="mode-options hidden" id="bgvideo-options">
+                <div class="setting">
+                  <div class="setting-row"><label class="setting-title" for="bgvideo-url">Add a link</label></div>
+                  <span class="setting-desc">A YouTube or Vimeo link, or a direct video file (.mp4, .webm). Paste several at once, one per line.</span>
+                  <!-- A textarea rather than an input: a single-line
+                       input strips newlines out of its own value, so a
+                       multi-link paste would arrive as one mashed-together
+                       string. Enter adds, shift-Enter starts a new line. -->
+                  <div class="bgvideo-add-row">
+                    <textarea id="bgvideo-url" class="text-input bgvideo-url-input" rows="2" placeholder="youtube.com/watch?v=…" autocomplete="off" spellcheck="false"></textarea>
+                    <button type="button" id="bgvideo-add-btn" class="btn btn-ghost btn-sm">Add</button>
+                  </div>
+                  <p class="setting-note" id="bgvideo-add-note"></p>
+                </div>
+
+                <div class="setting">
+                  <div class="setting-row">
+                    <span class="setting-title">Your playlist <span class="dim">— total runtime</span></span>
+                    <span class="readout" id="bgvideo-total">—</span>
+                  </div>
+                  <p class="setting-note" id="bgvideo-empty">No links yet. Every one you add is checked for video before it is used, and only the ones that pass ever play.</p>
+                  <div class="bgvideo-list hidden" id="bgvideo-list"></div>
+                  <p class="setting-note" id="bgvideo-summary"></p>
+                  <p class="setting-note is-warning hidden" id="bgvideo-file-note">This page was opened straight from disk, so YouTube and Vimeo will usually refuse to embed. Serve the folder over http instead — run "python3 -m http.server" next to this file — and they work. Direct video files are fine either way.</p>
+                  <div class="bgvideo-list-actions hidden" id="bgvideo-list-actions">
+                    <button type="button" class="text-btn" id="bgvideo-recheck-btn">Check them all again</button>
+                    <button type="button" id="bgvideo-clear-btn" class="btn btn-danger-ghost btn-sm">Clear all</button>
+                  </div>
+                </div>
+
+                <div class="setting">
+                  <div class="setting-row">
+                    <label class="setting-title" for="bgvideo-brightness-slider">Brightness</label>
+                    <span class="readout" id="bgvideo-brightness-value"></span>
+                  </div>
+                  <span class="setting-desc">How far the video comes up out of the black behind the number.</span>
+                  <input type="range" id="bgvideo-brightness-slider" min="5" max="100" step="5">
                 </div>
               </div>
             </div>
@@ -2124,7 +2313,19 @@
     // amber — it should look inviting, not like a warning.
     persevereEnabled: false,
     persevereUrl: '',
-    persevereColor: '#f0a94e'
+    persevereColor: '#f0a94e',
+    // Background video (optional, off by default): the player's own links
+    // play behind the session, muted and cropped to fill the screen, one
+    // after another, wrapping back to the first once the last one ends.
+    // bgVideoLinks is the playlist itself — each entry keeps the URL as
+    // typed alongside whatever the last check found for it (status, real
+    // runtime, title), so the menu can show which links actually have
+    // video behind them and what a full loop of them runs to. Only
+    // entries with status 'ok' are ever played. See the "Background
+    // video mode" section for the checks and the playback.
+    bgVideoMode: false,
+    bgVideoLinks: [],
+    bgVideoBrightness: 45 // percent — opacity of the video layer, see bgVideoApplyBrightness
   };
 
   // ============================================================
@@ -2231,6 +2432,7 @@
     var floorMs = parseInt(s.adaptiveFloorMs, 10);
     var ceilingMs = parseInt(s.adaptiveCeilingMs, 10);
     var nBackLevel = parseInt(s.nBackLevel, 10);
+    var bgVideoBrightness = parseInt(s.bgVideoBrightness, 10);
     return {
       mode: s.mode === 'fixed' ? 'fixed' : 'adaptive',
       startingSpeedMs: clamp(isNaN(speed) ? DEFAULT_SETTINGS.startingSpeedMs : speed, 200, 10000),
@@ -2285,7 +2487,10 @@
       // Kept as raw text, capped at a sane length; persevereHref is what
       // decides whether it's actually usable.
       persevereUrl: typeof s.persevereUrl === 'string' ? s.persevereUrl.slice(0, 2000) : '',
-      persevereColor: sanitizeHexColor(s.persevereColor, DEFAULT_SETTINGS.persevereColor)
+      persevereColor: sanitizeHexColor(s.persevereColor, DEFAULT_SETTINGS.persevereColor),
+      bgVideoMode: !!s.bgVideoMode,
+      bgVideoLinks: sanitizeBgVideoLinks(s.bgVideoLinks),
+      bgVideoBrightness: clamp(isNaN(bgVideoBrightness) ? DEFAULT_SETTINGS.bgVideoBrightness : bgVideoBrightness, 5, 100)
     };
   }
 
@@ -3475,6 +3680,10 @@
     state.hideStimulusAt = null;
     showPlaceholder();
     hideDichoticVisualCue();
+    // The overlay is opaque black, so the video is already out of sight —
+    // pausing it means it isn't somewhere else entirely by the time the ×
+    // is found, which for a short clip could be most of the way through.
+    bgVideoSetPaused(true);
     positionInterruptionCloseBtn();
     el.interruptionOverlay.classList.remove('hidden');
     el.interruptionCloseBtn.classList.remove('hidden'); // undo a previous time-crunch failure's UI swap, if any
@@ -3572,6 +3781,7 @@
     state.nextTrialAudioTime = (audioCtx ? audioCtx.currentTime : 0) + 0.05;
     state.skipInterruptionRoll = true; // the next trial runs for real before another interruption can fire
     updateDichoticVisualCue(state.dichotic.cuedEar); // restores the half-screen cue for the ear actually cued so far — see markDichoticCue
+    bgVideoSetPaused(false);
     if (state.settings.interruptionMovesNumber) randomizeNumberFramePosition();
     updateCountdownDisplay();
     countdownIntervalId = setInterval(updateCountdownDisplay, 250);
@@ -3642,6 +3852,7 @@
     clearInterval(countdownIntervalId);
     stopAllPendingAudio();
     hideDichoticVisualCue();
+    bgVideoStopSession();
     resetNumberFramePosition();
     showScreen('menu');
   }
@@ -4123,6 +4334,12 @@
     el.pauseOverlay.classList.add('hidden');
     el.interruptionOverlay.classList.add('hidden');
 
+    // Background video: the playlist is fixed for the session from
+    // whichever links are known to work right now, and starts playing
+    // immediately rather than waiting on the digit audio — it is
+    // scenery, and has nothing to stay in step with.
+    bgVideoStartSession();
+
     state.sessionEndAt = performance.now() + state.settings.durationSec * 1000;
 
     applyKeyHintLabels();
@@ -4174,6 +4391,7 @@
     if (audioCtx && audioCtx.state === 'running') {
       try { audioCtx.suspend(); } catch (e) {}
     }
+    bgVideoSetPaused(true);
     el.pauseOverlay.classList.remove('hidden');
   }
 
@@ -4237,6 +4455,7 @@
           Math.max(0, (state.dichoticCueAt - audioCtx.currentTime) * 1000));
       }
     }
+    bgVideoSetPaused(false);
     updateCountdownDisplay();
     countdownIntervalId = setInterval(updateCountdownDisplay, 250);
   }
@@ -4263,6 +4482,7 @@
     if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
     el.pauseOverlay.classList.add('hidden');
     hideDichoticVisualCue();
+    bgVideoStopSession();
     showReport();
     showScreen('report');
   }
@@ -4304,6 +4524,10 @@
       nBackLevel: state.settings.nBackLevel,
       ewmtMode: state.settings.ewmtMode,
       cctMode: state.settings.cctMode,
+      // Recorded as "was there actually video behind this session", not
+      // just "was the toggle on" — a playlist with nothing playable in it
+      // makes no difference to a session and shouldn't tag one.
+      bgVideoMode: !!(state.settings.bgVideoMode && bgVideoSummary().ok > 0),
       interruptionMode: state.settings.interruptionMode,
       interruptionChance: state.settings.interruptionChance,
       interruptionBreaksStreak: state.settings.interruptionBreaksStreak,
@@ -4596,6 +4820,7 @@
       if (rec.nBackMode) tagParts.push(rec.nBackLevel + '-back');
       if (rec.ewmtMode) tagParts.push('eWMT');
       if (rec.cctMode) tagParts.push('CCT');
+      if (rec.bgVideoMode) tagParts.push('Video BG');
       if (rec.interruptionMode) {
         // Older history entries (from before the frequency picker became
         // a slider) stored a 'low'/'mid'/'max' tier instead of a raw
@@ -4659,6 +4884,965 @@
   function refreshCustomImageGalleryUI() {
     renderCustomImageGallery();
     applyEwmtNoneHintVisibility();
+  }
+
+  // ============================================================
+  // Background video mode — the player's own links behind the task
+  // ============================================================
+  // Every link added is checked before it is ever used, because the one
+  // thing this mode must not do is run a session behind a black
+  // rectangle while the menu claims otherwise. A check builds a real,
+  // muted, throwaway player — a <video> element for a direct file,
+  // YouTube's or Vimeo's own iframe API for those two — so "working"
+  // means video actually came back, not that the URL looked plausible.
+  // What comes back with it is the true runtime, which is where the
+  // menu's total comes from, and the title where the host provides one.
+  //
+  // During a session the working links play in order, muted, cropped to
+  // fill the screen, behind everything; when the last one ends it goes
+  // back to the first and runs again. A playlist of one loops in the
+  // player itself rather than being torn down and rebuilt every time it
+  // ends. Links that failed their check are never in the rotation, and
+  // one that dies mid-session is dropped from it on the spot.
+  // ============================================================
+
+  var BGVIDEO_MAX_LINKS = 30;
+  var BGVIDEO_PROBE_TIMEOUT_MS = 20000;
+  var BGVIDEO_MAX_CONCURRENT_PROBES = 2;
+  var BGVIDEO_API_TIMEOUT_MS = 15000;
+  // Backstop for a player that never reports an end of its own — a Vimeo
+  // embed looping where the API won't say so, a frame that quietly
+  // stalled. Once the known runtime plus this grace has gone by, move on
+  // regardless. Never used when the runtime isn't known.
+  var BGVIDEO_END_GRACE_MS = 4000;
+  var BGVIDEO_YT_ID_RE = /^[A-Za-z0-9_-]{6,20}$/;
+
+  var bgVideoProbeQueue = [];
+  var bgVideoProbeRunning = 0;
+  var bgVideoYtApiPromise = null;
+  var bgVideoVimeoApiPromise = null;
+
+  // Everything about what is on screen right now. order is the list of
+  // item ids actually being played (the ones that passed their check, in
+  // playlist order); pos walks it and wraps. token invalidates the async
+  // tail of a player that has since been torn down — the embed APIs both
+  // hand back their player well after the call that asked for it.
+  var bgVideoPlay = {
+    active: false,
+    paused: false,
+    order: [],
+    pos: 0,
+    kind: null, // 'file' | 'youtube' | 'vimeo'
+    yt: null,
+    vimeo: null,
+    token: 0,
+    endTimerId: null,
+    endTimerDueAt: 0,
+    endTimerRemainingMs: 0,
+    failStreak: 0
+  };
+
+  function bgVideoNewId() {
+    return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Shape of one saved link. Status is deliberately persisted: on the
+  // next load the menu can show what was last found for each link
+  // straight away, and re-check in the background rather than opening on
+  // a row of question marks.
+  function sanitizeBgVideoLinks(list) {
+    if (!Array.isArray(list)) return [];
+    var out = [];
+    var seen = {};
+    for (var i = 0; i < list.length && out.length < BGVIDEO_MAX_LINKS; i++) {
+      var raw = list[i];
+      if (!raw) continue;
+      var url = typeof raw === 'string' ? raw : (typeof raw.url === 'string' ? raw.url : '');
+      url = url.trim().slice(0, 2000);
+      if (!url || seen[url]) continue;
+      seen[url] = true;
+      var status = (raw && raw.status) === 'ok' ? 'ok' : ((raw && raw.status) === 'fail' ? 'fail' : 'unknown');
+      var dur = parseFloat(raw && raw.duration);
+      out.push({
+        id: (raw && typeof raw.id === 'string' && raw.id) ? raw.id.slice(0, 40) : bgVideoNewId(),
+        url: url,
+        status: status,
+        duration: (isFinite(dur) && dur > 0) ? dur : null,
+        title: (raw && typeof raw.title === 'string') ? raw.title.slice(0, 140) : '',
+        error: (raw && typeof raw.error === 'string') ? raw.error.slice(0, 160) : ''
+      });
+    }
+    return out;
+  }
+
+  function bgVideoItems() {
+    return (state.settings && state.settings.bgVideoLinks) || [];
+  }
+
+  function bgVideoFind(id) {
+    var items = bgVideoItems();
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].id === id) return items[i];
+    }
+    return null;
+  }
+
+  // A typed-in host with no scheme gets https:// — except a local one,
+  // where https is almost certainly wrong: the local server this file's
+  // own audio notice recommends ("python3 -m http.server") speaks plain
+  // http, and a link to it would otherwise fail for a reason that has
+  // nothing to do with the video.
+  function bgVideoBareHostScheme(candidate) {
+    return /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|\/|$)/i.test(candidate) ? 'http://' : 'https://';
+  }
+
+  // Same rules as persevereHref: bare hosts get https://, anything that
+  // isn't plain http(s) is refused rather than rewritten into something.
+  // The one addition is an explicitly relative path — "./clips/a.mp4",
+  // "/video/b.webm" — resolved against this page, so a folder of files
+  // sitting next to the HTML can be used as-is, file:// included.
+  function bgVideoNormalizeUrl(raw) {
+    var candidate = String(raw || '').trim();
+    if (!candidate) return '';
+    if (/^(\.\.?\/|\/)/.test(candidate)) {
+      try { return new URL(candidate, location.href).href; } catch (e) { return ''; }
+    }
+    var scheme = /^([a-zA-Z][a-zA-Z0-9+.\-]*):(\/\/)?/.exec(candidate);
+    if (!scheme) {
+      candidate = bgVideoBareHostScheme(candidate) + candidate;
+    } else if (!scheme[2]) {
+      // A colon with no "//" after it is either a port ("localhost:8080")
+      // or a scheme with no business here (javascript:, data:, mailto:).
+      // Digits mean port; anything else is refused.
+      if (!/^\d/.test(candidate.slice(scheme[0].length))) return '';
+      candidate = bgVideoBareHostScheme(candidate) + candidate;
+    }
+    var parsed;
+    try { parsed = new URL(candidate); } catch (e) { return ''; }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:' && parsed.protocol !== 'file:') return '';
+    if (parsed.protocol !== 'file:') {
+      if (!parsed.hostname) return '';
+      if (parsed.hostname.indexOf('.') === -1 && parsed.hostname !== 'localhost') return '';
+    }
+    return parsed.href;
+  }
+
+  // Which of the three players a link needs, and the id that player
+  // wants. Anything not recognised as YouTube or Vimeo is handed to a
+  // plain <video> element: a CDN link with no file extension is as
+  // likely to be a video as one ending .mp4, and the check is what
+  // decides either way rather than a guess made here.
+  function bgVideoParseSource(url) {
+    var parsed;
+    try { parsed = new URL(url); } catch (e) { return null; }
+    var host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    var path = parsed.pathname || '';
+
+    if (host === 'youtu.be') {
+      var short = path.split('/').filter(Boolean)[0];
+      if (short && BGVIDEO_YT_ID_RE.test(short)) {
+        return { kind: 'youtube', id: short, url: url, label: 'YouTube', start: bgVideoYtStart(parsed) };
+      }
+      return { kind: 'file', url: url, label: 'YouTube' };
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com' || host === 'youtube-nocookie.com') {
+      var v = parsed.searchParams.get('v');
+      if (v && BGVIDEO_YT_ID_RE.test(v)) {
+        return { kind: 'youtube', id: v, url: url, label: 'YouTube', start: bgVideoYtStart(parsed) };
+      }
+      var m = /^\/(?:shorts|embed|live|v)\/([^/?#]+)/.exec(path);
+      if (m && BGVIDEO_YT_ID_RE.test(m[1])) {
+        return { kind: 'youtube', id: m[1], url: url, label: 'YouTube', start: bgVideoYtStart(parsed) };
+      }
+      return { kind: 'unsupported', url: url, label: 'YouTube', reason: 'no video id in that YouTube link' };
+    }
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      var vm = /(?:^|\/)(\d{6,})/.exec(path);
+      if (vm) return { kind: 'vimeo', id: vm[1], url: url, label: 'Vimeo' };
+      return { kind: 'unsupported', url: url, label: 'Vimeo', reason: 'no video id in that Vimeo link' };
+    }
+    return { kind: 'file', url: url, label: parsed.protocol === 'file:' ? 'Local file' : host };
+  }
+
+  // ?t=90 / ?t=1m30s / #t=90 — where the player should come in, if the
+  // link says so. Only used for playback, never for the runtime.
+  function bgVideoYtStart(parsed) {
+    var t = parsed.searchParams.get('t') || parsed.searchParams.get('start') ||
+      (/^#t=(.+)$/.test(parsed.hash) ? parsed.hash.slice(3) : '');
+    if (!t) return 0;
+    if (/^\d+$/.test(t)) return parseInt(t, 10);
+    var m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(t);
+    if (!m || (!m[1] && !m[2] && !m[3])) return 0;
+    return (parseInt(m[1] || 0, 10) * 3600) + (parseInt(m[2] || 0, 10) * 60) + parseInt(m[3] || 0, 10);
+  }
+
+  function bgVideoPrettyUrl(url) {
+    return String(url || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  }
+
+  function bgVideoFormatRuntime(sec) {
+    if (!sec || !isFinite(sec) || sec <= 0) return '—';
+    var total = Math.round(sec);
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return h
+      ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
+      : m + ':' + String(s).padStart(2, '0');
+  }
+
+  // ---------- loading the two embed APIs ----------
+  // Both are only ever fetched when a link actually needs one, and a
+  // failure clears the cached promise so a later check can try again
+  // rather than inheriting one bad network moment forever.
+  function bgVideoLoadYouTubeApi() {
+    if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+    if (bgVideoYtApiPromise) return bgVideoYtApiPromise;
+    bgVideoYtApiPromise = new Promise(function (resolve, reject) {
+      var settled = false;
+      function done() {
+        if (settled) return;
+        settled = true;
+        if (window.YT && window.YT.Player) resolve(window.YT);
+        else reject(new Error('YouTube\u2019s player could not load here'));
+      }
+      var prevReady = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = function () {
+        if (typeof prevReady === 'function') { try { prevReady(); } catch (e) {} }
+        done();
+      };
+      var s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      s.async = true;
+      s.onerror = done;
+      (document.head || document.documentElement).appendChild(s);
+      setTimeout(done, BGVIDEO_API_TIMEOUT_MS);
+    });
+    bgVideoYtApiPromise.catch(function () { bgVideoYtApiPromise = null; });
+    return bgVideoYtApiPromise;
+  }
+
+  function bgVideoLoadVimeoApi() {
+    if (window.Vimeo && window.Vimeo.Player) return Promise.resolve(window.Vimeo);
+    if (bgVideoVimeoApiPromise) return bgVideoVimeoApiPromise;
+    bgVideoVimeoApiPromise = new Promise(function (resolve, reject) {
+      var settled = false;
+      function done() {
+        if (settled) return;
+        settled = true;
+        if (window.Vimeo && window.Vimeo.Player) resolve(window.Vimeo);
+        else reject(new Error('Vimeo\u2019s player could not load here'));
+      }
+      var s = document.createElement('script');
+      s.src = 'https://player.vimeo.com/api/player.js';
+      s.async = true;
+      s.onload = done;
+      s.onerror = done;
+      (document.head || document.documentElement).appendChild(s);
+      setTimeout(done, BGVIDEO_API_TIMEOUT_MS);
+    });
+    bgVideoVimeoApiPromise.catch(function () { bgVideoVimeoApiPromise = null; });
+    return bgVideoVimeoApiPromise;
+  }
+
+  // ---------- the checks themselves ----------
+  // Each resolves { duration, title } or rejects with a message short
+  // enough to sit under the link in the list.
+  function bgVideoProbeFile(url) {
+    return new Promise(function (resolve, reject) {
+      var v = document.createElement('video');
+      var done = false;
+      var timer = setTimeout(function () { finish(null, 'nothing loaded in time'); }, BGVIDEO_PROBE_TIMEOUT_MS);
+      function finish(duration, err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        v.removeAttribute('src');
+        try { v.load(); } catch (e) {}
+        if (err) reject(new Error(err));
+        else resolve({ duration: duration, title: '' });
+      }
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      v.addEventListener('loadedmetadata', function () {
+        // A live stream reports Infinity: still video, still playable,
+        // just nothing to add to a total runtime.
+        finish(isFinite(v.duration) && v.duration > 0 ? v.duration : null, null);
+      });
+      v.addEventListener('error', function () { finish(null, 'no video at this link'); });
+      v.src = url;
+      try { v.load(); } catch (e) {}
+    });
+  }
+
+  function bgVideoYtErrorText(code) {
+    if (code === 101 || code === 150) return 'this one can\u2019t be embedded outside YouTube';
+    if (code === 100) return 'that video is gone or private';
+    if (code === 2) return 'that isn\u2019t a valid YouTube video id';
+    return 'YouTube wouldn\u2019t play this one';
+  }
+
+  function bgVideoProbeYouTube(src) {
+    return bgVideoLoadYouTubeApi().then(function (YT) {
+      return new Promise(function (resolve, reject) {
+        var host = document.createElement('div');
+        host.className = 'bgvideo-probe';
+        document.body.appendChild(host);
+        var player = null;
+        var done = false;
+        var graceId = null;
+        var timer = setTimeout(function () { finish(null, '', 'nothing loaded in time'); }, BGVIDEO_PROBE_TIMEOUT_MS);
+        function finish(duration, title, err) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          clearTimeout(graceId);
+          try { if (player && player.destroy) player.destroy(); } catch (e) {}
+          if (host.parentNode) host.parentNode.removeChild(host);
+          if (err) reject(new Error(err));
+          else resolve({ duration: duration, title: title });
+        }
+        function readTitle(target) {
+          try {
+            var data = target.getVideoData && target.getVideoData();
+            if (data && data.title) return String(data.title).slice(0, 140);
+          } catch (e) {}
+          return '';
+        }
+        function readDuration(target) {
+          var d = 0;
+          try { d = target.getDuration(); } catch (e) {}
+          return (d > 0 && isFinite(d)) ? d : 0;
+        }
+        // getDuration only answers once the player has the video data,
+        // which is why this one autoplays (muted) rather than cueing.
+        function tryRead(target) {
+          var d = readDuration(target);
+          if (d) finish(d, readTitle(target), null);
+        }
+        // Playing but still not saying how long it is: usually because
+        // the figure lands a beat after playback starts, occasionally
+        // because there isn't one (a live stream). Give it a moment, then
+        // take it either way — video that plays is video that works, and
+        // the menu can say "runtime unknown" for the handful that never
+        // answer rather than failing them on a technicality.
+        function onPlaying(target) {
+          if (done || graceId !== null) return;
+          graceId = setTimeout(function () {
+            finish(readDuration(target) || null, readTitle(target), null);
+          }, 1500);
+        }
+        try {
+          player = new YT.Player(host, {
+            videoId: src.id,
+            playerVars: { autoplay: 1, mute: 1, controls: 0, disablekb: 1, playsinline: 1, rel: 0, fs: 0, iv_load_policy: 3, modestbranding: 1 },
+            events: {
+              onReady: function (e) {
+                try { e.target.mute(); e.target.playVideo(); } catch (err) {}
+                tryRead(e.target);
+              },
+              onStateChange: function (e) {
+                tryRead(e.target);
+                if (e && (e.data === 1 || e.data === 3)) onPlaying(e.target); // 1 playing, 3 buffering
+              },
+              onError: function (e) { finish(null, '', bgVideoYtErrorText(e && e.data)); }
+            }
+          });
+        } catch (e) {
+          finish(null, '', 'YouTube\u2019s player wouldn\u2019t start');
+        }
+      });
+    });
+  }
+
+  function bgVideoProbeVimeo(src) {
+    return bgVideoLoadVimeoApi().then(function (V) {
+      return new Promise(function (resolve, reject) {
+        var host = document.createElement('div');
+        host.className = 'bgvideo-probe';
+        document.body.appendChild(host);
+        var player = null;
+        var done = false;
+        var timer = setTimeout(function () { finish(null, '', 'nothing loaded in time'); }, BGVIDEO_PROBE_TIMEOUT_MS);
+        function finish(duration, title, err) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          try { if (player && player.destroy) { var d = player.destroy(); if (d && d.catch) d.catch(function () {}); } } catch (e) {}
+          if (host.parentNode) host.parentNode.removeChild(host);
+          if (err) reject(new Error(err));
+          else resolve({ duration: duration, title: title });
+        }
+        try {
+          // The whole URL rather than the bare id, so an unlisted link's
+          // hash travels with it and is checked exactly as it will play.
+          player = new V.Player(host, { url: src.url, autoplay: false, muted: true, background: true, dnt: true });
+        } catch (e) {
+          finish(null, '', 'Vimeo\u2019s player wouldn\u2019t start');
+          return;
+        }
+        try { player.on('error', function () { finish(null, '', 'Vimeo wouldn\u2019t play this one'); }); } catch (e) {}
+        var titleFound = '';
+        var titlePromise = player.getVideoTitle ? player.getVideoTitle() : Promise.resolve('');
+        titlePromise.then(function (t) { titleFound = t ? String(t).slice(0, 140) : ''; }, function () {})
+          .then(function () { return player.getDuration(); })
+          .then(function (d) {
+            finish(d > 0 ? d : null, titleFound, null);
+          }, function () {
+            finish(null, '', 'Vimeo wouldn\u2019t play this one');
+          });
+      });
+    });
+  }
+
+  // ---------- running the checks ----------
+  function bgVideoQueueCheck(item) {
+    if (!item || item.status === 'checking') return;
+    item.status = 'checking';
+    item.error = '';
+    bgVideoProbeQueue.push(item.id);
+    bgVideoRenderList();
+    bgVideoPumpProbes();
+  }
+
+  function bgVideoPumpProbes() {
+    while (bgVideoProbeRunning < BGVIDEO_MAX_CONCURRENT_PROBES && bgVideoProbeQueue.length) {
+      var item = bgVideoFind(bgVideoProbeQueue.shift());
+      if (!item) continue; // removed while it sat in the queue
+      bgVideoProbeRunning++;
+      bgVideoRunProbe(item);
+    }
+  }
+
+  function bgVideoRunProbe(item) {
+    var id = item.id;
+    var src = bgVideoParseSource(item.url);
+    var probe;
+    if (!src) probe = Promise.reject(new Error('that isn\u2019t a web address'));
+    else if (src.kind === 'unsupported') probe = Promise.reject(new Error(src.reason || 'no video to pull from this link'));
+    else if (src.kind === 'youtube') probe = bgVideoProbeYouTube(src);
+    else if (src.kind === 'vimeo') probe = bgVideoProbeVimeo(src);
+    else probe = bgVideoProbeFile(src.url);
+
+    probe.then(function (info) {
+      bgVideoFinishProbe(id, 'ok', info.duration, info.title, '');
+    }, function (err) {
+      bgVideoFinishProbe(id, 'fail', null, '', (err && err.message) || 'couldn\u2019t be checked');
+    });
+  }
+
+  function bgVideoFinishProbe(id, status, duration, title, error) {
+    bgVideoProbeRunning = Math.max(0, bgVideoProbeRunning - 1);
+    var item = bgVideoFind(id);
+    if (item) {
+      item.status = status;
+      item.duration = (duration && isFinite(duration) && duration > 0) ? duration : null;
+      if (title) item.title = title;
+      item.error = error || '';
+      saveSettings(state.settings);
+      bgVideoRenderList();
+      refreshMenuMeta();
+    }
+    bgVideoPumpProbes();
+  }
+
+  // Anything not currently known to work gets looked at again; links
+  // that passed are left alone unless the player asks for a full
+  // re-check. Nothing here runs unless the mode is actually on.
+  function bgVideoCheckPending(force) {
+    if (!state.settings || !state.settings.bgVideoMode) return;
+    bgVideoItems().forEach(function (item) {
+      if (force || item.status !== 'ok') bgVideoQueueCheck(item);
+    });
+  }
+
+  // ---------- the menu list ----------
+  function bgVideoStatusText(item) {
+    var src = bgVideoParseSource(item.url);
+    var label = (src && src.label) || 'Link';
+    if (item.status === 'checking') return 'Checking this one\u2026';
+    if (item.status === 'fail') return 'No video here \u2014 ' + (item.error || 'nothing could be pulled from it');
+    if (item.status === 'ok') {
+      return label + ' \u00b7 video found' + (item.duration ? '' : ', runtime unknown');
+    }
+    return label + ' \u00b7 not checked yet';
+  }
+
+  function bgVideoSummary() {
+    var items = bgVideoItems();
+    var out = { count: items.length, ok: 0, failed: 0, checking: 0, totalSec: 0, unknownLength: 0 };
+    items.forEach(function (item) {
+      if (item.status === 'ok') {
+        out.ok++;
+        if (item.duration) out.totalSec += item.duration;
+        else out.unknownLength++;
+      } else if (item.status === 'fail') {
+        out.failed++;
+      } else if (item.status === 'checking') {
+        out.checking++;
+      }
+    });
+    return out;
+  }
+
+  function bgVideoRenderList() {
+    if (!el.bgVideoList || !state.settings) return;
+    var items = bgVideoItems();
+    el.bgVideoEmpty.classList.toggle('hidden', items.length > 0);
+    el.bgVideoList.classList.toggle('hidden', items.length === 0);
+    el.bgVideoListActions.classList.toggle('hidden', items.length === 0);
+    el.bgVideoList.innerHTML = '';
+
+    items.forEach(function (item) {
+      var row = document.createElement('div');
+      row.className = 'bgvideo-item' +
+        (item.status === 'ok' ? ' is-ok' : item.status === 'fail' ? ' is-fail' : item.status === 'checking' ? ' is-checking' : '');
+
+      var dot = document.createElement('span');
+      dot.className = 'bgvideo-dot';
+
+      var main = document.createElement('div');
+      main.className = 'bgvideo-item-main';
+      var title = document.createElement('span');
+      title.className = 'bgvideo-item-title';
+      // textContent throughout: a link is the player's own text and has
+      // no business being parsed as markup on the way to the screen.
+      title.textContent = item.title || bgVideoPrettyUrl(item.url);
+      title.title = item.url;
+      var sub = document.createElement('span');
+      sub.className = 'bgvideo-item-sub';
+      sub.textContent = bgVideoStatusText(item);
+      main.appendChild(title);
+      main.appendChild(sub);
+
+      var time = document.createElement('span');
+      time.className = 'bgvideo-item-time mono';
+      time.textContent = (item.status === 'ok' && item.duration) ? bgVideoFormatRuntime(item.duration) : '';
+
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'bgvideo-item-remove';
+      remove.setAttribute('data-id', item.id);
+      remove.setAttribute('aria-label', 'Remove this link');
+      remove.textContent = '\u00d7';
+
+      row.appendChild(dot);
+      row.appendChild(main);
+      row.appendChild(time);
+      row.appendChild(remove);
+      el.bgVideoList.appendChild(row);
+    });
+
+    bgVideoRenderSummary();
+  }
+
+  // The two figures asked of this mode from the menu: how long one pass
+  // through the playlist runs, and how many links actually have video
+  // behind them.
+  function bgVideoRenderSummary() {
+    if (!el.bgVideoTotal) return;
+    var sum = bgVideoSummary();
+    if (!sum.count) {
+      el.bgVideoTotal.textContent = '\u2014';
+      el.bgVideoSummary.textContent = '';
+      el.bgVideoSummary.classList.remove('is-warning');
+      return;
+    }
+    el.bgVideoTotal.textContent = (sum.ok && sum.totalSec ? bgVideoFormatRuntime(sum.totalSec) : '\u2014') +
+      (sum.unknownLength ? ' +?' : '');
+
+    var line = sum.ok + ' of ' + sum.count + ' link' + (sum.count === 1 ? '' : 's') + ' working';
+    if (sum.failed) line += ', ' + sum.failed + ' with no video to pull';
+    if (sum.checking) line += ', ' + sum.checking + ' still being checked';
+    line += '. ';
+    if (sum.ok) {
+      line += 'One pass runs ' + (sum.totalSec ? bgVideoFormatRuntime(sum.totalSec) : 'an unknown length') +
+        (sum.unknownLength ? ' plus ' + sum.unknownLength + ' of unknown length' : '') +
+        ', then starts again from the first.';
+    } else {
+      line += 'Nothing will play behind a session until at least one of them works.';
+    }
+    el.bgVideoSummary.textContent = line;
+    el.bgVideoSummary.classList.toggle('is-warning', sum.ok === 0);
+  }
+
+  // ---------- adding and removing ----------
+  function bgVideoAddFromInput() {
+    if (!state.settings) return;
+    var pieces = String(el.bgVideoUrl.value || '').split(/[\s,]+/).filter(Boolean);
+    if (!pieces.length) {
+      bgVideoSetAddNote('Paste a link in first.', true);
+      return;
+    }
+    var items = bgVideoItems();
+    var added = 0;
+    var duplicates = 0;
+    var rejected = 0;
+    var full = false;
+
+    pieces.forEach(function (piece) {
+      if (items.length >= BGVIDEO_MAX_LINKS) { full = true; return; }
+      var url = bgVideoNormalizeUrl(piece);
+      if (!url) { rejected++; return; }
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].url === url) { duplicates++; return; }
+      }
+      var item = { id: bgVideoNewId(), url: url, status: 'unknown', duration: null, title: '', error: '' };
+      items.push(item);
+      added++;
+      bgVideoQueueCheck(item);
+    });
+
+    if (added) {
+      el.bgVideoUrl.value = '';
+      persistSettings();
+    }
+    bgVideoRenderList();
+
+    var notes = [];
+    if (added) notes.push(added === 1 ? 'Added \u2014 checking it now.' : 'Added ' + added + ' links \u2014 checking them now.');
+    if (duplicates) notes.push(duplicates === 1 ? 'One was already in the list.' : duplicates + ' were already in the list.');
+    if (rejected) notes.push(rejected === 1 ? 'One wasn\u2019t a web address.' : rejected + ' weren\u2019t web addresses.');
+    if (full) notes.push('The list is full at ' + BGVIDEO_MAX_LINKS + '.');
+    bgVideoSetAddNote(notes.join(' '), !added);
+  }
+
+  function bgVideoSetAddNote(text, warn) {
+    if (!el.bgVideoAddNote) return;
+    el.bgVideoAddNote.textContent = text || '';
+    el.bgVideoAddNote.classList.toggle('is-warning', !!warn && !!text);
+  }
+
+  function bgVideoRemove(id) {
+    var items = bgVideoItems();
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].id === id) { items.splice(i, 1); break; }
+    }
+    // A session running off this playlist keeps whatever is on screen,
+    // but the removed link is out of the rotation from here on.
+    if (bgVideoPlay.active) bgVideoRebuildOrder();
+    persistSettings();
+    bgVideoRenderList();
+  }
+
+  // ---------- playback ----------
+  function bgVideoBuildOrder() {
+    var order = [];
+    bgVideoItems().forEach(function (item) {
+      if (item.status === 'ok') order.push(item.id);
+    });
+    return order;
+  }
+
+  // Keeps a running session pointed at the right place in a playlist
+  // that changed underneath it — the current item stays current if it
+  // survived, otherwise the next one along takes over.
+  function bgVideoRebuildOrder() {
+    var currentId = bgVideoPlay.order[bgVideoPlay.pos];
+    var order = bgVideoBuildOrder();
+    bgVideoPlay.order = order;
+    if (!order.length) { bgVideoStopSession(); return; }
+    var idx = order.indexOf(currentId);
+    if (idx !== -1) { bgVideoPlay.pos = idx; return; }
+    if (bgVideoPlay.pos >= order.length) bgVideoPlay.pos = 0;
+    bgVideoPlayCurrent();
+  }
+
+  function bgVideoShowLayer() {
+    if (!el.bgVideoLayer) return;
+    el.bgVideoLayer.classList.remove('hidden');
+    document.body.classList.add('bgvideo-showing');
+    bgVideoApplyBrightness();
+  }
+
+  function bgVideoHideLayer() {
+    if (!el.bgVideoLayer) return;
+    el.bgVideoLayer.classList.add('hidden');
+    document.body.classList.remove('bgvideo-showing');
+  }
+
+  function bgVideoApplyBrightness() {
+    if (!el.bgVideoStage || !state.settings) return;
+    el.bgVideoStage.style.opacity = String(clamp(state.settings.bgVideoBrightness, 5, 100) / 100);
+  }
+
+  function bgVideoStartSession() {
+    bgVideoTeardownPlayer();
+    bgVideoPlay.active = false;
+    bgVideoPlay.paused = false;
+    bgVideoPlay.failStreak = 0;
+    if (!state.settings.bgVideoMode) { bgVideoHideLayer(); return; }
+    var order = bgVideoBuildOrder();
+    if (!order.length) { bgVideoHideLayer(); return; }
+    bgVideoPlay.order = order;
+    bgVideoPlay.pos = 0;
+    bgVideoPlay.active = true;
+    bgVideoShowLayer();
+    bgVideoPlayCurrent();
+  }
+
+  function bgVideoStopSession() {
+    bgVideoPlay.active = false;
+    bgVideoPlay.paused = false;
+    bgVideoTeardownPlayer();
+    bgVideoHideLayer();
+  }
+
+  function bgVideoTeardownPlayer() {
+    bgVideoPlay.token++; // anything still in flight for the old player is now stale
+    bgVideoClearEndTimer();
+    if (bgVideoPlay.yt) {
+      try { if (bgVideoPlay.yt.destroy) bgVideoPlay.yt.destroy(); } catch (e) {}
+      bgVideoPlay.yt = null;
+    }
+    if (bgVideoPlay.vimeo) {
+      try {
+        if (bgVideoPlay.vimeo.destroy) {
+          var d = bgVideoPlay.vimeo.destroy();
+          if (d && d.catch) d.catch(function () {});
+        }
+      } catch (e) {}
+      bgVideoPlay.vimeo = null;
+    }
+    if (el.bgVideoFrame) {
+      el.bgVideoFrame.innerHTML = '';
+      el.bgVideoFrame.classList.add('hidden');
+    }
+    if (el.bgVideoMedia) {
+      try { el.bgVideoMedia.pause(); } catch (e) {}
+      el.bgVideoMedia.removeAttribute('src');
+      try { el.bgVideoMedia.load(); } catch (e) {}
+      el.bgVideoMedia.classList.add('hidden');
+    }
+    bgVideoPlay.kind = null;
+  }
+
+  function bgVideoPlayCurrent() {
+    if (!bgVideoPlay.active) return;
+    bgVideoTeardownPlayer();
+    var order = bgVideoPlay.order;
+    if (!order.length) { bgVideoStopSession(); return; }
+    if (bgVideoPlay.pos >= order.length) bgVideoPlay.pos = 0;
+    var item = bgVideoFind(order[bgVideoPlay.pos]);
+    if (!item) { bgVideoSkipCurrent(''); return; }
+    var src = bgVideoParseSource(item.url);
+    if (!src) { bgVideoSkipCurrent('that isn\u2019t a web address'); return; }
+    // One working link loops inside its own player instead of being
+    // rebuilt every time it ends — no reload, no black frame between.
+    var single = order.length === 1;
+    if (src.kind === 'youtube') bgVideoStartYouTube(item, src, single);
+    else if (src.kind === 'vimeo') bgVideoStartVimeo(item, src, single);
+    else bgVideoStartFile(item, src, single);
+  }
+
+  // The next link, wrapping back to the first once the last one has
+  // played — the loop this whole mode is built around.
+  function bgVideoAdvance() {
+    if (!bgVideoPlay.active) return;
+    bgVideoPlay.failStreak = 0;
+    bgVideoPlay.pos = (bgVideoPlay.pos + 1) % Math.max(1, bgVideoPlay.order.length);
+    bgVideoPlayCurrent();
+  }
+
+  // A link that dies mid-session — pulled, region-locked, network gone —
+  // steps aside for the next one rather than freezing the background on
+  // black, and is marked failed so the menu tells the truth about it
+  // afterwards. If every remaining link does the same thing in a row the
+  // layer gives up instead of spinning through them forever.
+  function bgVideoSkipCurrent(reason) {
+    if (!bgVideoPlay.active) return;
+    var item = bgVideoFind(bgVideoPlay.order[bgVideoPlay.pos]);
+    if (item && reason) {
+      item.status = 'fail';
+      item.error = reason;
+      item.duration = null;
+      saveSettings(state.settings);
+      bgVideoRenderList();
+    }
+    bgVideoPlay.failStreak++;
+    if (bgVideoPlay.failStreak >= bgVideoPlay.order.length) { bgVideoStopSession(); return; }
+    bgVideoPlay.pos = (bgVideoPlay.pos + 1) % Math.max(1, bgVideoPlay.order.length);
+    bgVideoPlayCurrent();
+  }
+
+  function bgVideoStartFile(item, src, single) {
+    var v = el.bgVideoMedia;
+    if (!v) return;
+    bgVideoPlay.kind = 'file';
+    v.classList.remove('hidden');
+    v.loop = single;
+    v.muted = true;
+    v.volume = 0;
+    v.src = src.url;
+    try { v.load(); } catch (e) {}
+    var p = v.play();
+    if (p && typeof p.catch === 'function') p.catch(function () {});
+    if (!single) bgVideoArmEndTimer(item.duration);
+  }
+
+  function bgVideoStartYouTube(item, src, single) {
+    if (!el.bgVideoFrame) return;
+    bgVideoPlay.kind = 'youtube';
+    el.bgVideoFrame.classList.remove('hidden');
+    var host = document.createElement('div');
+    el.bgVideoFrame.appendChild(host);
+    var token = bgVideoPlay.token;
+    bgVideoLoadYouTubeApi().then(function (YT) {
+      if (token !== bgVideoPlay.token || !bgVideoPlay.active) return;
+      var vars = {
+        autoplay: 1, mute: 1, controls: 0, disablekb: 1, fs: 0,
+        modestbranding: 1, rel: 0, iv_load_policy: 3, playsinline: 1
+      };
+      // YouTube's own single-video loop wants the id repeated as a
+      // one-entry playlist; without that, loop=1 does nothing.
+      if (single) { vars.loop = 1; vars.playlist = src.id; }
+      if (src.start) vars.start = src.start;
+      try {
+        bgVideoPlay.yt = new YT.Player(host, {
+          videoId: src.id,
+          playerVars: vars,
+          events: {
+            onReady: function (e) {
+              try { e.target.mute(); e.target.playVideo(); } catch (err) {}
+              if (single) return;
+              var d = 0;
+              try { d = e.target.getDuration(); } catch (err) {}
+              bgVideoArmEndTimer(d > 0 ? d : item.duration);
+            },
+            onStateChange: function (e) {
+              if (!single && e && e.data === 0) bgVideoAdvance(); // 0 = ENDED
+            },
+            onError: function (e) {
+              if (token !== bgVideoPlay.token) return;
+              bgVideoSkipCurrent(bgVideoYtErrorText(e && e.data));
+            }
+          }
+        });
+      } catch (e) {
+        bgVideoSkipCurrent('YouTube\u2019s player wouldn\u2019t start');
+      }
+    }, function (err) {
+      if (token !== bgVideoPlay.token || !bgVideoPlay.active) return;
+      bgVideoSkipCurrent((err && err.message) || 'YouTube\u2019s player could not load here');
+    });
+  }
+
+  function bgVideoStartVimeo(item, src, single) {
+    if (!el.bgVideoFrame) return;
+    bgVideoPlay.kind = 'vimeo';
+    el.bgVideoFrame.classList.remove('hidden');
+    var host = document.createElement('div');
+    el.bgVideoFrame.appendChild(host);
+    var token = bgVideoPlay.token;
+    bgVideoLoadVimeoApi().then(function (V) {
+      if (token !== bgVideoPlay.token || !bgVideoPlay.active) return;
+      var player;
+      try {
+        player = new V.Player(host, {
+          url: src.url,
+          autoplay: true,
+          muted: true,
+          loop: single,
+          controls: false,
+          title: false,
+          byline: false,
+          portrait: false,
+          dnt: true
+        });
+      } catch (e) {
+        bgVideoSkipCurrent('Vimeo\u2019s player wouldn\u2019t start');
+        return;
+      }
+      bgVideoPlay.vimeo = player;
+      try { player.setVolume(0); } catch (e) {}
+      try {
+        player.on('ended', function () { if (!single) bgVideoAdvance(); });
+        player.on('error', function () {
+          if (token !== bgVideoPlay.token) return;
+          bgVideoSkipCurrent('Vimeo wouldn\u2019t play this one');
+        });
+      } catch (e) {}
+      var p = player.play();
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+      if (!single) bgVideoArmEndTimer(item.duration);
+    }, function (err) {
+      if (token !== bgVideoPlay.token || !bgVideoPlay.active) return;
+      bgVideoSkipCurrent((err && err.message) || 'Vimeo\u2019s player could not load here');
+    });
+  }
+
+  // ---------- the "it never ended" backstop ----------
+  function bgVideoArmEndTimer(durationSec) {
+    bgVideoClearEndTimer();
+    if (!durationSec || !isFinite(durationSec) || durationSec <= 0) return;
+    bgVideoSetEndTimer(durationSec * 1000 + BGVIDEO_END_GRACE_MS);
+  }
+
+  function bgVideoSetEndTimer(ms) {
+    bgVideoClearEndTimer();
+    bgVideoPlay.endTimerRemainingMs = ms;
+    bgVideoPlay.endTimerDueAt = performance.now() + ms;
+    bgVideoPlay.endTimerId = setTimeout(function () {
+      bgVideoPlay.endTimerId = null;
+      bgVideoAdvance();
+    }, ms);
+  }
+
+  function bgVideoClearEndTimer() {
+    if (bgVideoPlay.endTimerId !== null) {
+      clearTimeout(bgVideoPlay.endTimerId);
+      bgVideoPlay.endTimerId = null;
+    }
+  }
+
+  // Follows the session: a pause, an interruption's black screen, and
+  // the video stops where it is with whatever is left of its backstop
+  // banked, rather than running on behind the overlay and coming back
+  // somewhere else entirely.
+  function bgVideoSetPaused(paused) {
+    if (!bgVideoPlay.active || bgVideoPlay.paused === paused) return;
+    bgVideoPlay.paused = paused;
+    if (paused) {
+      bgVideoPlay.endTimerRemainingMs = bgVideoPlay.endTimerId !== null
+        ? Math.max(0, bgVideoPlay.endTimerDueAt - performance.now())
+        : 0;
+      bgVideoClearEndTimer();
+      if (el.bgVideoMedia && bgVideoPlay.kind === 'file') { try { el.bgVideoMedia.pause(); } catch (e) {} }
+      if (bgVideoPlay.yt) { try { bgVideoPlay.yt.pauseVideo(); } catch (e) {} }
+      if (bgVideoPlay.vimeo) {
+        try { var vp = bgVideoPlay.vimeo.pause(); if (vp && vp.catch) vp.catch(function () {}); } catch (e) {}
+      }
+      return;
+    }
+    if (el.bgVideoMedia && bgVideoPlay.kind === 'file') {
+      var p = el.bgVideoMedia.play();
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    }
+    if (bgVideoPlay.yt) { try { bgVideoPlay.yt.playVideo(); } catch (e) {} }
+    if (bgVideoPlay.vimeo) {
+      try { var rp = bgVideoPlay.vimeo.play(); if (rp && rp.catch) rp.catch(function () {}); } catch (e) {}
+    }
+    if (bgVideoPlay.endTimerRemainingMs > 0) bgVideoSetEndTimer(bgVideoPlay.endTimerRemainingMs);
+  }
+
+  // The <video> element is one reused element, so its two events are
+  // bound once here rather than per link.
+  function bgVideoWireMedia() {
+    if (!el.bgVideoMedia) return;
+    el.bgVideoMedia.addEventListener('ended', function () {
+      if (bgVideoPlay.active && bgVideoPlay.kind === 'file' && !el.bgVideoMedia.loop) bgVideoAdvance();
+    });
+    el.bgVideoMedia.addEventListener('error', function () {
+      if (!bgVideoPlay.active || bgVideoPlay.kind !== 'file') return;
+      var src = el.bgVideoMedia.getAttribute('src');
+      if (!src) return; // teardown clears src; that isn't a link failing
+      // An error that arrives after the next link has already been loaded
+      // belongs to the previous one and has no business failing this one.
+      var item = bgVideoFind(bgVideoPlay.order[bgVideoPlay.pos]);
+      if (!item || item.url !== src) return;
+      bgVideoSkipCurrent('the video stopped loading');
+    });
   }
 
   // ============================================================
@@ -4989,6 +6173,32 @@
       blocks.push(ewmt);
     }
 
+    // ---------- background video ----------
+    if (s.bgVideoMode) {
+      var bgv = [];
+      var bgvSum = bgVideoSummary();
+      bgv.push(explainLine('Background video',
+        'Your links play behind the session at <strong>' + s.bgVideoBrightness + '%</strong> brightness, ' +
+        'muted and cropped to fill the screen, one after another. When the last one ends it goes back to ' +
+        'the first and runs again for as long as the session lasts. It has no effect on scoring — like ' +
+        'eWMT\u2019s images, it is there to be ignored.'));
+      if (!bgvSum.count) {
+        bgv.push('<p class="explain-warn">No links added yet, so nothing will actually play. Add some under Challenges.</p>');
+      } else if (!bgvSum.ok) {
+        bgv.push('<p class="explain-warn">None of your ' + bgvSum.count + ' link' + (bgvSum.count === 1 ? '' : 's') +
+          ' has video that can be pulled from it' + (bgvSum.checking ? ' yet — some are still being checked' : '') +
+          ', so nothing will play.</p>');
+      } else {
+        bgv.push('<p>Playing <strong>' + bgvSum.ok + ' of ' + bgvSum.count + '</strong> link' +
+          (bgvSum.count === 1 ? '' : 's') +
+          (bgvSum.totalSec ? ', <strong>' + bgVideoFormatRuntime(bgvSum.totalSec) + '</strong> a pass' : '') +
+          (bgvSum.unknownLength ? ' plus ' + bgvSum.unknownLength + ' of unknown length' : '') +
+          (bgvSum.failed ? '. The other ' + bgvSum.failed + ' had no video to pull and ' +
+            (bgvSum.failed === 1 ? 'is' : 'are') + ' skipped' : '') + '.</p>');
+      }
+      blocks.push(bgv);
+    }
+
     // ---------- interruption ----------
     if (s.interruptionMode) {
       var intr = [];
@@ -5049,12 +6259,12 @@
       blocks.map(function (lines) { return '<div>' + lines.join('') + '</div>'; }).join('');
   }
 
-  // How many of the six challenges are switched on — shown on the
+  // How many of the seven challenges are switched on — shown on the
   // Challenges tab so it's visible from any of the other tabs.
   function updateChallengeCount() {
     if (!state.settings || !el.challengeCount) return;
     var s = state.settings;
-    var on = [s.nBackMode, s.cctMode, s.dichoticMode, s.ewmtMode, s.interruptionMode, s.persevereEnabled]
+    var on = [s.nBackMode, s.cctMode, s.dichoticMode, s.ewmtMode, s.bgVideoMode, s.interruptionMode, s.persevereEnabled]
       .filter(function (v) { return !!v; }).length;
     el.challengeCount.textContent = on;
     el.challengeCount.classList.toggle('hidden', on === 0);
@@ -5179,6 +6389,7 @@
     el.dichoticOptions.classList.toggle('hidden', !state.settings.dichoticMode);
     el.interruptionOptions.classList.toggle('hidden', !state.settings.interruptionMode);
     el.persevereOptions.classList.toggle('hidden', !state.settings.persevereEnabled);
+    el.bgVideoOptions.classList.toggle('hidden', !state.settings.bgVideoMode);
   }
 
   // The min/max test sliders only mean anything once variable loudness
@@ -5399,6 +6610,17 @@
     updatePersevereUrlNote();
     applyPersevereVisibility();
 
+    el.bgVideoToggle.checked = state.settings.bgVideoMode;
+    el.bgVideoBrightnessSlider.value = state.settings.bgVideoBrightness;
+    el.bgVideoBrightnessValue.textContent = state.settings.bgVideoBrightness + '%';
+    // Opened from disk, both embed APIs are usually refused — worth
+    // saying up front rather than letting every YouTube link come back
+    // failed with no explanation.
+    el.bgVideoFileNote.classList.toggle('hidden', location.protocol !== 'file:');
+    bgVideoRenderList();
+    bgVideoApplyBrightness();
+    bgVideoCheckPending(false); // no-op unless the mode is on
+
     applyModeOptionsVisibility();
     renderSettingsExplainer();
     updateChallengeCount();
@@ -5468,6 +6690,61 @@
       state.settings.persevereColor = DEFAULT_SETTINGS.persevereColor;
       el.persevereColor.value = state.settings.persevereColor;
       applyPersevereAppearance();
+      persistSettings();
+    });
+
+    el.bgVideoToggle.addEventListener('change', function () {
+      state.settings.bgVideoMode = el.bgVideoToggle.checked;
+      applyModeOptionsVisibility();
+      persistSettings();
+      // Switching it on is when the links are worth spending network on.
+      if (state.settings.bgVideoMode) bgVideoCheckPending(false);
+    });
+
+    el.bgVideoAddBtn.addEventListener('click', function () {
+      el.bgVideoAddBtn.blur();
+      bgVideoAddFromInput();
+    });
+
+    el.bgVideoUrl.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.shiftKey) return; // shift-Enter is how you get a second line
+      e.preventDefault();
+      bgVideoAddFromInput();
+    });
+
+    el.bgVideoList.addEventListener('click', function (e) {
+      var btn = e.target.closest('.bgvideo-item-remove');
+      if (!btn) return;
+      bgVideoRemove(btn.getAttribute('data-id'));
+    });
+
+    el.bgVideoRecheckBtn.addEventListener('click', function () {
+      el.bgVideoRecheckBtn.blur();
+      if (!bgVideoItems().length) return;
+      if (!state.settings.bgVideoMode) {
+        bgVideoSetAddNote('Switch Background video on first \u2014 the links are only checked while it is.', true);
+        return;
+      }
+      bgVideoSetAddNote('Checking every link again\u2026', false);
+      bgVideoCheckPending(true);
+    });
+
+    el.bgVideoClearBtn.addEventListener('click', function () {
+      el.bgVideoClearBtn.blur();
+      var n = bgVideoItems().length;
+      if (!n) return;
+      if (!confirm('Remove all ' + n + ' link' + (n === 1 ? '' : 's') + '? This can\'t be undone.')) return;
+      state.settings.bgVideoLinks = [];
+      if (bgVideoPlay.active) bgVideoStopSession();
+      bgVideoSetAddNote('', false);
+      persistSettings();
+      bgVideoRenderList();
+    });
+
+    el.bgVideoBrightnessSlider.addEventListener('input', function () {
+      state.settings.bgVideoBrightness = parseInt(el.bgVideoBrightnessSlider.value, 10);
+      el.bgVideoBrightnessValue.textContent = state.settings.bgVideoBrightness + '%';
+      bgVideoApplyBrightness();
       persistSettings();
     });
 
@@ -6130,6 +7407,25 @@
     el.persevereRow = q('persevere-row');
     el.persevereBtn = q('persevere-btn');
     el.persevereLabel = q('persevere-label');
+    el.bgVideoToggle = q('bgvideo-toggle');
+    el.bgVideoOptions = q('bgvideo-options');
+    el.bgVideoUrl = q('bgvideo-url');
+    el.bgVideoAddBtn = q('bgvideo-add-btn');
+    el.bgVideoAddNote = q('bgvideo-add-note');
+    el.bgVideoTotal = q('bgvideo-total');
+    el.bgVideoEmpty = q('bgvideo-empty');
+    el.bgVideoList = q('bgvideo-list');
+    el.bgVideoSummary = q('bgvideo-summary');
+    el.bgVideoFileNote = q('bgvideo-file-note');
+    el.bgVideoListActions = q('bgvideo-list-actions');
+    el.bgVideoRecheckBtn = q('bgvideo-recheck-btn');
+    el.bgVideoClearBtn = q('bgvideo-clear-btn');
+    el.bgVideoBrightnessSlider = q('bgvideo-brightness-slider');
+    el.bgVideoBrightnessValue = q('bgvideo-brightness-value');
+    el.bgVideoLayer = q('bgvideo-layer');
+    el.bgVideoStage = q('bgvideo-stage');
+    el.bgVideoMedia = q('bgvideo-media');
+    el.bgVideoFrame = q('bgvideo-frame');
 
     el.timerDisplay = q('timer-display');
     el.speedReadout = q('speed-readout');
@@ -6189,6 +7485,7 @@
     wirePlay();
     wireReport();
     wireHistory();
+    bgVideoWireMedia();
     decodeAllDigitAudio(); // start decoding right away so it's ready well before "Start session" is clicked
     customImagesLoad().then(refreshCustomImageGalleryUI); // populate the eWMT custom gallery in the background — doesn't block the menu below
 
