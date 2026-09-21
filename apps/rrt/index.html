@@ -321,11 +321,16 @@
     .pic.mask{fill:var(--text-faint);opacity:.5}
     .cue{font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--text-dim);min-height:1.2rem;text-align:center;position:relative;z-index:2}
     .cue b{color:var(--text);font-size:1rem;font-weight:500}
-    .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem}
-    .arena.side{flex-direction:row;justify-content:center}
-    .rank-pad{display:flex;gap:6px;justify-content:center;align-items:stretch}
+    .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem;max-width:100%}
+    /* Wrapping is the safety net under the size setting: the keys hold their row
+       (or their column, beside the stage) while they fit, and fold onto a second
+       line rather than off the screen when they are scaled past it. */
+    .arena.side{flex-direction:row;justify-content:center;flex-wrap:wrap}
+    .rank-pad{display:flex;gap:6px;justify-content:center;align-items:stretch;flex-wrap:wrap;max-width:100%}
     .rank-pad.vertical{flex-direction:column}
-    .rank-btn{min-width:3.1rem;min-height:2.7rem;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:1rem;cursor:pointer;transition:all var(--t);touch-action:manipulation}
+    /* --pad-scale is the Button size setting. One multiplier on the footprint and
+       the type, so a key stays the same shape at every size. */
+    .rank-btn{min-width:calc(3.1rem * var(--pad-scale,1));min-height:calc(2.7rem * var(--pad-scale,1));padding:0 calc(.35rem * var(--pad-scale,1));display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:calc(1rem * var(--pad-scale,1));cursor:pointer;transition:all var(--t);touch-action:manipulation}
     .rank-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
     .rank-btn:disabled{opacity:.25;cursor:default}
     .rank-btn.hit{background:var(--accent);color:#000;border-color:var(--accent)}
@@ -349,6 +354,33 @@
     .strip-tag{font-family:var(--mono);font-size:.52rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:2px}
     .glyph.mini{stroke-width:3}
     .tut-actions{display:flex;gap:.75rem;justify-content:flex-end;align-items:center}
+    /* Portrait. The top bar's buttons ran off the right edge of a phone, which
+       put the settings reset and the theme switch somewhere no finger could
+       reach; and in training the gutters were sized for a page of settings,
+       where they are room the stage and the rank keys could be using — which
+       is what the size setting is there to spend. */
+    @media(max-width:560px){
+      .topbar{flex-wrap:wrap;gap:6px;padding:.6rem .75rem}
+      .topbar-actions{flex-wrap:wrap;justify-content:flex-end}
+      #pageTrain .train-layout{width:calc(100% - 1rem);padding:.7rem 0 1.2rem;gap:.6rem}
+      #pageTrain .stimulus-box{min-height:0;padding:1rem .5rem;gap:.6rem}
+      #pageTrain .stat-tile{padding:.45rem .55rem}
+      #pageTrain .timer-display{font-size:1.6rem}
+    }
+    /* A fingertip is about 9mm across, and every one of these is something it
+       has to hit. The slider especially: a 17px thumb on a 5px rail is a
+       desktop control. */
+    @media(pointer:coarse){
+      .btn,.icon-btn,.tab-btn{min-height:44px}
+      .rank-btn{min-height:max(44px, calc(2.7rem * var(--pad-scale,1)))}
+      .btn,.icon-btn,.tab-btn,.rank-btn,.toggle-track{touch-action:manipulation}
+      .slider{height:8px}
+      .slider::-webkit-slider-thumb{width:28px;height:28px}
+      .slider::-moz-range-thumb{width:28px;height:28px}
+      .toggle{width:46px;height:26px}
+      .toggle-track::after{width:18px;height:18px}
+      .toggle input:checked+.toggle-track::after{transform:translateX(20px)}
+    }
   </style>
 </head>
 <body>
@@ -504,6 +536,25 @@
           <label class="label">Starting level</label>
           <select class="num-input" id="startLevelSelect" style="width:auto;padding:0 .5rem"></select>
           <p class="hint">Used when "continue" is off, or when there is no previous session.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Controls</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Button size</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="padScaleSlider"></div><span class="slider-val" id="padScaleVal"></span></div>
+          <p class="hint">Scales the rank keys. On a phone held upright the default keys are
+            smaller than the fingertip aiming at them, and the neighbour of the key you
+            meant is the rank next to the one you meant — the one mistake the task cannot
+            tell from a real error.</p>
+          <p class="hint" style="margin-top:.35rem">A size that does not fit is given as much
+            as does fit: the pad is the key times the number of keys, so a level with more
+            symbols gets smaller keys than one with fewer, and on the height axis — where the
+            keys stand in a column beside the card — it is the strip of width the card leaves
+            over that decides. Keys are never made smaller than they were.</p>
         </div>
       </div>
     </div>
@@ -753,6 +804,7 @@ const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, t
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 3, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
+  padScale: 1,
 }, STANDARD);
 
 function loadSettings() {
@@ -809,13 +861,28 @@ function signalError() {
 }
 
 /* ══ SETTINGS UI ══ */
-function wireSlider(id, valId, key, min, max, step, fmt) {
+function wireSlider(id, valId, key, min, max, step, fmt, after) {
   const sl = $(id), out = $(valId);
   sl.min = min; sl.max = max; sl.step = step;
-  const paint = () => { sl.value = settings[key]; out.textContent = fmt(+settings[key]); };
+  const paint = () => { sl.value = settings[key]; out.textContent = fmt(+settings[key]); if (after) after(); };
   paint();
-  sl.addEventListener('input', () => { settings[key] = +sl.value; out.textContent = fmt(+sl.value); saveSettings(); });
+  sl.addEventListener('input', () => {
+    settings[key] = +sl.value; out.textContent = fmt(+sl.value); saveSettings(); if (after) after();
+  });
   return paint;
+}
+
+/* The pad's size lives in CSS; this is the one place the setting reaches it.
+   Called on every paint, so a reset to defaults lands on the keys too — and on
+   a pad that is already up, so the slider can be judged against real keys
+   rather than a number. */
+function applyPadScale() {
+  document.documentElement.style.setProperty('--pad-scale', settings.padScale || 1);
+  const pad = document.getElementById('rankPad');
+  if (pad && pad.children.length) {
+    pad.style.setProperty('--pad-scale',
+      fitPadScale(pad.classList.contains('vertical') ? 0 : 1, pad.children.length, pad));
+  }
 }
 function wireToggle(id, key, subId, after) {
   const el = $(id);
@@ -834,6 +901,7 @@ const painters = [
   wireSlider('exposureSlider', 'exposureVal', 'exposure', 100, 1500, 50, fmtMs),
   wireSlider('encodingSlider', 'encodingVal', 'encoding', 500, 6000, 100, fmtMs),
   wireSlider('beepVolSlider', 'beepVolVal', 'beepVol', 0, 1, 0.05, v => Math.round(v * 100) + '%'),
+  wireSlider('padScaleSlider', 'padScaleVal', 'padScale', 0.8, 2.4, 0.1, v => v.toFixed(1) + '\u00d7', applyPadScale),
   wireToggle('adaptLevelToggle', 'adaptLevel'),
   wireToggle('maskToggle', 'mask'),
   wireToggle('resumeToggle', 'resumeLevel', null, paintLevel),
@@ -1066,12 +1134,62 @@ const AXIS_CUE = [
   '<b>●</b> rank from the biggest',
 ];
 
+/* What the Button size setting comes to on THIS pad, which is the size asked
+   for capped by the room there is for it.
+
+   The cap is needed because the pad's footprint is the key times the number of
+   keys, and the number of keys is the level: the size that fits a 3-key pad puts
+   a 7-key column off the bottom of a phone. Asking and not getting is better
+   than a key that cannot be reached — and the keys stay the size they were the
+   moment the level rises, rather than the pad silently growing past the screen.
+
+   Down a column the budget is the height beside the stage; across a row it is
+   the width, less the gaps. Both are deliberately shy of the whole thing: the
+   cue and the stage are in the same box. */
+function fitPadScale(axis, keys, pad) {
+  const asked = settings.padScale || 1;
+  const n = Math.max(1, keys);
+  const gaps = 6 * n;
+  let fit;
+  if (axis === 0) {
+    /* A column, standing beside the stage: bounded by the height it has, and
+       by the strip of width the stage leaves it — a key wider than that strip
+       folds the column under the stage, which costs far more height than the
+       bigger key was worth. */
+    /* This pad's own stage, not the first one in the document — the walkthrough
+       has a stage of its own and it is on a hidden page, where it measures 0. */
+    const stage = pad && pad.closest('.arena') && pad.closest('.arena').querySelector('.stage-wrap');
+    const stageW = (stage && stage.getBoundingClientRect().width)
+      || Math.min(300, window.innerWidth * 0.72);
+    /* The room beside it, measured off the box the two of them share rather
+       than off the window — a couple of pixels either way decides whether the
+       column stays beside the stage or folds under it. */
+    const box = pad && pad.closest('.stimulus-box');
+    const cs = box && getComputedStyle(box);
+    const inner = box
+      ? box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      : window.innerWidth * 0.9;
+    const beside = inner - stageW - 16;
+    fit = Math.min(
+      (window.innerHeight * 0.42 - gaps) / n / (2.7 * 16),
+      beside / (3.1 * 16),
+    );
+  } else {
+    fit = (window.innerWidth * 0.92 - gaps) / n / (3.1 * 16);
+  }
+  /* The cap never takes a key below the size it has always been: that size fits
+     by construction, and this setting exists to make keys bigger, not smaller.
+     A player who asks for smaller still gets it. */
+  return Math.min(asked, Math.max(1, fit)).toFixed(2);
+}
+
 /* The pad takes the shape of the asked axis — a column for height, a row for
    width, shrinking dots for size — so pressing a rank is pointing at a place. */
 function buildPad(pad, arena, o) {
   pad.replaceChildren();
   pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : '');
   if (arena) arena.classList.toggle('side', o.axis === 0);
+  pad.style.setProperty('--pad-scale', fitPadScale(o.axis, o.s, pad));
   for (let r = 1; r <= o.s; r++) {
     const b = document.createElement('button');
     b.className = 'rank-btn';
@@ -1081,7 +1199,10 @@ function buildPad(pad, arena, o) {
       const dot = document.createElement('span');
       const px = Math.round(18 - (r - 1) * (12 / Math.max(1, o.s - 1)));
       dot.className = 'rank-dot';
-      dot.style.width = dot.style.height = px + 'px';
+      /* Through the same multiplier as the key, so the size axis stays readable
+         at every button size — and in calc(), so a pad already on screen follows
+         the slider without being rebuilt. */
+      dot.style.width = dot.style.height = `calc(${px}px * var(--pad-scale, 1))`;
       b.append(dot);
     }
     b.append(String(r));
@@ -1097,6 +1218,14 @@ function renderPad() {
   });
 }
 function padButton(pad, r) { return pad.querySelector(`[data-rank="${r}"]`); }
+/* The cap above is read off the window, so it has to be taken again when the
+   window changes — a rotation is the common one. Debounced: a phone fires this
+   continuously while its address bar slides. */
+let padFitTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(padFitTimer);
+  padFitTimer = setTimeout(() => { if (active) renderPad(); }, 160);
+});
 
 /* ══ SESSION ══════════════════════════════════════════════════════════ */
 let active = false, ctrl = null, model = null, cur = null, trials = [];
