@@ -21,6 +21,35 @@ var $ = function (id) { return document.getElementById(id); };
 /** Weeks of overlap before a cross-app comparison is worth computing. */
 var WEEKS_NEEDED = 20;
 
+/*
+ * What each source is called, where a person reads it.
+ *
+ * The id is what the record is keyed by and it never changes — `rrt` is in
+ * every file ever written, and renaming it would orphan them. What it is
+ * *called* is another matter: a heading reading "rrt" is a heading nobody
+ * recognises as the trainer they were in ten minutes ago, and Running Order in
+ * particular imports and counts perfectly well while looking to the reader like
+ * something that is missing. So: ids underneath, names on the page, and the
+ * names are the hub's.
+ *
+ * Anything not listed shows its own id, which is what a source added later
+ * should do until somebody names it.
+ */
+var SOURCE_NAMES = {
+  syllogimous: "Syllogimous",
+  rnb: "Relational N-back",
+  precision: "Precision N-back",
+  rotation: "3D Rotation",
+  cct: "CCT",
+  ewmt: "eWMT",
+  rrt: "Running Order",
+  synth: "Synaesthesia colours",
+};
+
+function sourceName(id) {
+  return SOURCE_NAMES[id] || id;
+}
+
 function fmt(n, digits) { return Number(n).toFixed(digits == null ? 0 : digits); }
 
 /*
@@ -505,7 +534,7 @@ function renderCharts() {
 
     var div = document.createElement("div");
     div.className = "chart";
-    div.innerHTML = "<h3>" + name + " <small class='dim'>"
+    div.innerHTML = "<h3>" + sourceName(name) + " <small class='dim'>"
       + pts.length + " days · bars are minutes, peak " + fmt(peak) + "m"
       + (dHi == null
           ? " · no difficulty recorded"
@@ -581,7 +610,7 @@ function renderModes() {
       + "<th>time</th></tr>";
 
     var div = document.createElement("div");
-    div.innerHTML = "<h3>" + name + "</h3><table>" + head + body + "</table>";
+    div.innerHTML = "<h3>" + sourceName(name) + "</h3><table>" + head + body + "</table>";
     host.appendChild(div);
   });
 }
@@ -626,7 +655,7 @@ function renderFilters() {
   var want = filterSource;
   sel.innerHTML = "<option value=''>every source</option>"
     + names.map(function (n) {
-        return "<option value='" + n + "'" + (n === want ? " selected" : "") + ">" + n + "</option>";
+        return "<option value='" + n + "'" + (n === want ? " selected" : "") + ">" + sourceName(n) + "</option>";
       }).join("");
 }
 
@@ -693,7 +722,7 @@ function renderSources() {
     var s = sourceSummary(archive, name);
     var div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = "<h3>" + name + "</h3>"
+    div.innerHTML = "<h3>" + sourceName(name) + "</h3>"
       + "<p><b>" + (s ? s.records : 0) + "</b> " + (s ? s.kind : "record") + "s"
       + " · <b>" + fmt(s ? s.minutes : 0) + "</b> min"
       + " · <b>" + (s ? s.days : 0) + "</b> days</p>"
@@ -731,7 +760,7 @@ function renderOverlap() {
       var enough = pair.weeks.length >= WEEKS_NEEDED;
       var div = document.createElement("div");
       div.className = "card " + (enough ? "ok" : "waiting");
-      div.innerHTML = "<h3>" + names[i] + " ↔ " + names[j] + "</h3>"
+      div.innerHTML = "<h3>" + sourceName(names[i]) + " ↔ " + sourceName(names[j]) + "</h3>"
         + "<p><b>" + pair.weeks.length + "</b> of " + WEEKS_NEEDED + " weeks"
         + " · " + pair.days.length + " days trained in both</p>"
         + (enough
@@ -764,7 +793,12 @@ function renderDays() {
   if (!all.length) { host.innerHTML = ""; return; }
 
   var html = "<tr><th>day</th>";
-  names.forEach(function (n) { html += "<th>" + n + "</th>"; });
+  /* The day table is the one place the short id earns its keep: eight columns
+     of full names on a table that is already 1800px wide would wrap every
+     header. The title attribute carries the name. */
+  names.forEach(function (n) {
+    html += "<th title='" + sourceName(n) + "'>" + n + "</th>";
+  });
   html += "<th>total</th><th></th></tr>";
 
   all.forEach(function (day) {

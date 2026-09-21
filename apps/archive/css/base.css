@@ -1,23 +1,53 @@
 /* One stylesheet, no build step. The value of this project is that it still
    runs in five years, and a toolchain is the part that rots first. That rules
    out a webfont too: everything below draws on fonts the machine already has,
-   so the page looks the same on a plane as it does online. */
+   so the page looks the same on a plane as it does online.
+
+   The look is the hub's, and it is the hub's for the same reason the hub has
+   one at all: this page is opened from there, and a record that arrives in a
+   different palette and a different family reads as a different application
+   rather than as the rest of the one you were just in. Desaturated sage on
+   near-black, one monospace family, wide-tracked caps for anything that
+   announces itself, and not one rounded corner.
+
+   What did NOT come across is the hub's photograph. That is a picture chosen
+   per machine and kept in the hub's own storage, and this page is six thousand
+   pixels of dense figures — the one surface in the project where a background
+   costs more than it gives. The glow behind the masthead is the whole of the
+   decoration here, and it is sage now rather than cold blue. */
 
 :root {
-  --bg: #0b0e14;
-  --panel: #131924;
-  --panel-hi: #171e2b;
-  --line: #232c3b;
-  --line-soft: #1b2230;
-  --ink: #dce4f0;
-  --ink-strong: #f2f6fc;
-  --dim: #8494ad;
-  --accent: #6cb6ff;
-  --ok: #3fb950;
-  --bad: #f85149;
+  --bg: #080d0b;
+  --panel: #0f1713;
+  --panel-hi: #1a2821;
+  --ink: #c9e0d3;
+  --ink-strong: #e6f4ec;
+  --dim: #7e9a8a;
 
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
+  /* One accent, and it is quiet — sage measures about 7.5:1 against the panel,
+     so it can carry small text as well as borders and fills. The rgb triple is
+     what lets a rule tint with it at any strength without a second token. */
+  --accent: #8fbda4;
+  --accent-2: #b7d8c5;
+  --accent-rgb: 143, 189, 164;
+
+  /* Met is sage; the one warm thing on the page is a warning. */
+  --ok: #a9d2bb;
+  --bad: #8c4a4a;
+  --warn: #e3b341;
+
+  --line: rgba(var(--accent-rgb), .30);
+  --line-soft: rgba(var(--accent-rgb), .13);
+
+  /* Nothing here is rounded. The token stays so the rules that used it keep
+     reading as shape decisions rather than as omissions. */
+  --radius: 0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 20px 48px -26px rgba(0, 0, 0, .95);
+
+  /* One family. Every monospace worth having, in the order a machine is likely
+     to have them, ending at the generic that always exists. */
+  --font-body: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono",
+               SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
 
   /* Native controls — selects, the date picker — follow this. Without it the
      browser hands you a white dropdown in the middle of a dark page. */
@@ -34,19 +64,23 @@ body {
   max-inline-size: 62rem;
   background: var(--bg);
   color: var(--ink);
-  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 14px/1.6 var(--font-body);
   -webkit-font-smoothing: antialiased;
 
-  /* A single cold light source behind the masthead, so the page has a top. */
-  background-image: radial-gradient(60rem 22rem at 50% -8rem, rgba(88, 140, 255, .10), transparent 70%);
+  /* A single light source behind the masthead, so the page has a top. */
+  background-image: radial-gradient(60rem 22rem at 50% -8rem, rgba(var(--accent-rgb), .10), transparent 70%);
   background-repeat: no-repeat;
 }
 
+/* The hub's masthead: tracked out and set in caps, so it is a heading by its
+   shape rather than by being bigger than everything under it. */
 h1 {
-  font-size: 1.9rem;
-  line-height: 1.2;
-  margin: 0 0 .5rem;
-  letter-spacing: -.02em;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0 0 .6rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
   color: var(--ink-strong);
 }
 
@@ -60,9 +94,9 @@ h2 {
   display: flex;
   align-items: center;
   gap: .85rem;
-  font-size: .78rem;
+  font-size: .74rem;
   margin: 3rem 0 .9rem;
-  letter-spacing: .12em;
+  letter-spacing: .22em;
   text-transform: uppercase;
   font-weight: 600;
   color: var(--dim);
@@ -79,11 +113,10 @@ h3 { font-size: .95rem; margin: 0 0 .35rem; color: var(--ink-strong); }
 p { margin: .35rem 0; }
 
 code {
-  font-size: .82em;
+  font-size: .92em;
   color: var(--accent);
-  background: rgba(108, 182, 255, .08);
+  background: rgba(var(--accent-rgb), .10);
   padding: .1em .4em;
-  border-radius: 4px;
 }
 
 .dim { color: var(--dim); }
@@ -94,7 +127,6 @@ b, table, .streaks { font-variant-numeric: tabular-nums; }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* ---- the drop zone ---- */
@@ -104,44 +136,47 @@ b, table, .streaks { font-variant-numeric: tabular-nums; }
   padding: 1.75rem 1.5rem;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  background: var(--panel-hi);
   text-align: center;
   transition: border-color .15s, background .15s, transform .15s;
 }
 
-.drop:hover { border-color: #2e3a4d; }
+.drop:hover { border-color: rgba(var(--accent-rgb), .55); }
 
 .drop.over {
   border-color: var(--accent);
-  background: linear-gradient(180deg, #1b2634, #151d29);
+  background: rgba(var(--accent-rgb), .10);
   transform: scale(1.004);
 }
 
 .row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
 .drop .row { justify-content: center; }
 
+/* The hub's pair: the quiet one is the outline, and the one you came to press
+   is filled in the accent with dark ink on it. */
 .btn {
   padding: .5rem .95rem;
   border: 1px solid var(--line);
-  border-radius: 7px;
-  background: linear-gradient(180deg, #1e2634, #191f2b);
-  color: var(--ink);
+  border-radius: var(--radius);
+  background: rgba(var(--accent-rgb), .06);
+  color: var(--accent);
   font: inherit;
+  font-size: .82rem;
+  letter-spacing: .08em;
   cursor: pointer;
   transition: border-color .12s, background .12s, color .12s;
 }
 
-.btn:hover { border-color: #3d4c63; color: var(--ink-strong); }
+.btn:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), .12); color: var(--accent-2); }
 
 .btn.primary {
-  background: linear-gradient(180deg, #79bdff, #4d9ef5);
-  border-color: #4d9ef5;
-  color: #04070c;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a1310;
   font-weight: 600;
-  box-shadow: 0 1px 8px -2px rgba(77, 158, 245, .5);
 }
 
-.btn.primary:hover { background: linear-gradient(180deg, #8cc7ff, #5aa8f7); border-color: #5aa8f7; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #0a1310; }
 
 .btn:disabled {
   opacity: .4;
@@ -157,13 +192,13 @@ select, input[type="date"] {
   margin-inline-start: .35rem;
   padding: .42rem .55rem;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: var(--panel-hi);
   color: var(--ink);
   font: inherit;
 }
 
-select:hover, input[type="date"]:hover { border-color: #3d4c63; }
+select:hover, input[type="date"]:hover { border-color: var(--accent); }
 label { color: var(--dim); font-size: .9rem; }
 
 /*
@@ -178,7 +213,7 @@ label { color: var(--dim); font-size: .9rem; }
 }
 
 .savestate.warn {
-  color: #e3b341;
+  color: var(--warn);
 }
 
 .savestate.warn b { color: #f0c674; }
@@ -202,12 +237,16 @@ label { color: var(--dim); font-size: .9rem; }
   border: 1px solid var(--line);
   border-inline-start: 3px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  background: var(--panel-hi);
   box-shadow: var(--shadow);
   transition: border-color .14s, transform .14s;
 }
 
-.card:hover { transform: translateY(-1px); border-block-color: #2e3a4d; border-inline-end-color: #2e3a4d; }
+.card:hover {
+  transform: translateY(-1px);
+  border-block-color: rgba(var(--accent-rgb), .5);
+  border-inline-end-color: rgba(var(--accent-rgb), .5);
+}
 
 /* The headline figures. A card is scanned, not read, so the counts outrank
    the words around them instead of sharing their weight. */
@@ -239,7 +278,7 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 
 /* Striping the cells and not the rows leaves that header row alone. */
 #days tr:nth-of-type(even) td { background: rgba(255, 255, 255, .022); }
-#days tr:hover td { background: rgba(108, 182, 255, .07); }
+#days tr:hover td { background: rgba(var(--accent-rgb), .09); }
 
 /* ---- the import log ---- */
 
@@ -280,7 +319,6 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .heatmap .cell {
   width: 13px;
   height: 13px;
-  border-radius: 3px;
   display: block;
   transition: outline-color .1s;
   outline: 1px solid transparent;
@@ -290,7 +328,7 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .heatmap .pad { visibility: hidden; }
 
 /* A rest day: known, and empty. */
-.heatmap .s-rested { background: rgba(140, 155, 180, 0.14); }
+.heatmap .s-rested { background: rgba(var(--accent-rgb), .12); }
 
 /*
  * A day nobody has evidence about. Hatched rather than shaded, because any
@@ -301,13 +339,16 @@ td:last-child { color: var(--ok); font-size: .8rem; }
  */
 .heatmap .s-unknown {
   background: repeating-linear-gradient(
-    45deg, rgba(140, 155, 180, 0.16) 0 1px, transparent 1px 4px);
+    45deg, rgba(var(--accent-rgb), .10) 0 1px, transparent 1px 4px);
 }
 
-.heatmap .L1 { background: #1b5e3c; }
-.heatmap .L2 { background: #2b8f55; }
-.heatmap .L3 { background: #45c176; }
-.heatmap .L4 { background: #74e89d; }
+/* The amount, in four steps of the one accent. A sequential scale wants a
+   single hue and this theme has a single hue, so the ramp is the sage the rest
+   of the page is drawn in, darkest to brightest. */
+.heatmap .L1 { background: #1c2f25; }
+.heatmap .L2 { background: #2f4b3b; }
+.heatmap .L3 { background: #5b866e; }
+.heatmap .L4 { background: #8fbda4; }
 
 /* ------------------------------------------------------------------ *
  * Over time                                                           *
@@ -318,15 +359,15 @@ td:last-child { color: var(--ok); font-size: .8rem; }
   padding: .9rem 1rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+  background: var(--panel-hi);
 }
 
 .chart h3 { margin: 0 0 .5rem; font-size: 0.95rem; }
 .chart h3 small { display: block; font-weight: 400; font-size: .8rem; margin-top: .15rem; }
 .chart svg { width: 100%; height: 120px; display: block; overflow: visible; }
-.chart .bars rect { fill: rgba(108, 182, 255, .30); transition: fill .1s; }
-.chart .bars rect:hover { fill: rgba(108, 182, 255, .62); }
-.chart .acc { fill: none; stroke: #57d68a; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.chart .bars rect { fill: rgba(var(--accent-rgb), .30); transition: fill .1s; }
+.chart .bars rect:hover { fill: rgba(var(--accent-rgb), .62); }
+.chart .acc { fill: none; stroke: var(--ok); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 
 /*
  * Not `.cards`. That grid is `minmax(15rem, 1fr)`, and a four-column table of
@@ -348,7 +389,7 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 
 .modes table { width: 100%; margin-bottom: 1rem; }
 .modes h3 { margin: 0 0 .4rem; font-size: 0.95rem; }
-.modes tr:hover td { background: rgba(108, 182, 255, .07); }
+.modes tr:hover td { background: rgba(var(--accent-rgb), .09); }
 
 /* Long labels wrap instead of setting the table's width. */
 .modes td:first-child { overflow-wrap: anywhere; }
@@ -394,7 +435,7 @@ td:last-child { color: var(--ok); font-size: .8rem; }
   align-items: center;
   gap: 1rem;
   padding: .5rem max(1.5rem, calc(50vw - 31rem));
-  background: rgba(11, 14, 20, .82);
+  background: rgba(8, 13, 11, .86);
   border-block-end: 1px solid var(--line-soft);
   /* Frosted where it is supported, flat where it is not — the fallback is the
      colour above, which is already opaque enough to read against. */
@@ -402,9 +443,9 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 }
 
 .topbar__brand {
-  font-weight: 600;
-  font-size: .82rem;
-  letter-spacing: .01em;
+  font-size: .74rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
   color: var(--ink-strong);
   text-decoration: none;
   white-space: nowrap;
@@ -427,8 +468,8 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 
 .topbar__links a {
   padding: .3rem .55rem;
-  border-radius: 6px;
-  font-size: .78rem;
+  border-radius: var(--radius);
+  font-size: .76rem;
   color: var(--dim);
   text-decoration: none;
   white-space: nowrap;
@@ -455,7 +496,6 @@ td:last-child { color: var(--ok); font-size: .8rem; }
   margin-inline-start: .45rem;
   min-inline-size: 1.15rem;
   padding: 0 .3rem;
-  border-radius: 999px;
   background: rgba(0, 0, 0, .32);
   font-size: .72rem;
   font-variant-numeric: tabular-nums;
@@ -492,7 +532,7 @@ html { scroll-behavior: smooth; }
 #noteFilter {
   padding: .4rem .55rem;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel);
   color: var(--ink);
   font: inherit;
@@ -535,20 +575,18 @@ html { scroll-behavior: smooth; }
   display: inline-block;
   padding: .1rem .45rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
   background: transparent;
   color: var(--dim);
   font: inherit;
   font-size: .72rem;
 }
 button.tag { cursor: pointer; }
-button.tag:hover { color: var(--ink); border-color: #3d4c63; }
+button.tag:hover { color: var(--ink); border-color: var(--accent); }
 
 .points { display: flex; flex-wrap: wrap; gap: .5rem; }
 .point {
   padding: .15rem .5rem;
   border: 1px solid var(--line-soft);
-  border-radius: 999px;
   font-size: .8rem;
   font-variant-numeric: tabular-nums;
 }
