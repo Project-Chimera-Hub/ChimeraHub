@@ -72,14 +72,42 @@
    * The quota                                                        *
    * ---------------------------------------------------------------- */
 
-  /* The shell's own setting, and the only key it writes. Namespaced like every
-     other app on this origin so it cannot collide with one of theirs. */
+  /* The shell's own setting. Namespaced like every other app on this origin so
+     it cannot collide with one of theirs. */
   var QUOTA_KEY = "mindbuild.quota.minutes";
 
+  /* What the bar is drawn against when nobody has said otherwise. It is not a
+     demand in that case — see renderToday — only a floor, so that four minutes
+     does not fill the bar. */
+  var DEFAULT_QUOTA = 20;
+
   function quota() {
-    var n = Number(localStorage.getItem(QUOTA_KEY));
-    return isFinite(n) && n > 0 ? n : 20;
+    return goal() || DEFAULT_QUOTA;
   }
+
+  /** The number somebody actually chose, or 0 if nobody has. */
+  function goal() {
+    try {
+      var n = Number(localStorage.getItem(QUOTA_KEY));
+      return isFinite(n) && n > 0 ? Math.min(1440, n) : 0;
+    } catch (e) { return 0; }
+  }
+
+  function setGoal(mins) {
+    try {
+      if (mins > 0) localStorage.setItem(QUOTA_KEY, String(mins));
+      else localStorage.removeItem(QUOTA_KEY);
+    } catch (e) { /* storage off: the goal lasts as long as the page does */ }
+    invalidate();
+    renderToday();
+    renderGoal();
+  }
+
+  /* Set by the first heartbeat a gate answers. The gate's config is the quota
+     on that machine — it is the thing actually holding the screen — so the hub
+     shows what it reports and says where the number came from rather than
+     offering a field whose value the next heartbeat would overwrite. */
+  var gateOwnsGoal = false;
 
   var CAPS_KEY = "mindbuild.quota.caps";
 
@@ -169,18 +197,22 @@
       bar.appendChild(seg);
     });
 
-    /* No gate, no quota. Nothing set the number and nothing is holding anyone
-       to it, so "12 min to go" would be a demand invented by the page making
-       it. What happened is true either way, so the figure, the bar and the
-       caps below stay. */
+    /* A line only where there is a number somebody stands behind: the gate's,
+       on a build that talks to one, or a goal the person set themselves. With
+       neither, "12 min to go" would be a demand invented by the page making it,
+       so the gate-free hub stayed silent — and that left the app with no way to
+       aim at anything. Now it has one, and the line comes back with it. What
+       happened is true either way, so the figure, the bar and the caps below
+       stay regardless. */
     var el = $("quota");
     el.className = "quota";
     el.innerHTML = "";
-    if (GATE_ON) {
+    if (GATE_ON || goal()) {
       var need = quota() - total;
+      var word = gateOwnsGoal || (GATE_ON && !goal()) ? "Quota" : "Goal";
       el.className = "quota" + (need <= 0 ? " met" : "");
       el.innerHTML = need <= 0
-        ? "<b>Quota met.</b> " + fmt(quota()) + " min was the ask."
+        ? "<b>" + word + " met.</b> " + fmt(quota()) + " min was the ask."
         : "<b>" + fmt(need) + " min</b> to go of " + fmt(quota()) + ".";
     }
 
@@ -205,6 +237,41 @@
           ? "<b>" + fmt(m) + " min</b> counted of " + fmt(was)
           : "<b>" + fmt(m) + " min</b> today";
     });
+  }
+
+  /* The field, its buttons and the sentence under them. Rendered rather than
+     written once, because three things move it: the person, the gate, and a
+     storage event from the hub's other copy — the open build and the gated one
+     are the same origin and share the key. */
+  function renderGoal() {
+    var input = $("goal");
+    if (!input) return;
+    var n = goal();
+
+    if (document.activeElement !== input) input.value = n || "";
+    input.placeholder = String(DEFAULT_QUOTA);
+    input.disabled = gateOwnsGoal;
+    $("goal-set").disabled = gateOwnsGoal;
+    $("goal-clear").disabled = gateOwnsGoal || !n;
+
+    $("goal-note").textContent = gateOwnsGoal
+      ? "The gate on this machine is asking for " + fmt(quota()) + " min a day. "
+        + "That is set in gate.json, and it is what the hub shows."
+      : n
+        ? "Aiming at " + fmt(n) + " min a day. Kept in this browser, on this device."
+        : GATE_ON
+          ? "No goal set, so the hub asks for the usual " + DEFAULT_QUOTA + " min."
+          : "No goal set. The day is counted either way — a goal only gives it "
+            + "something to be measured against.";
+  }
+
+  /* Read out of the field and applied. Anything that is not a number above zero
+     is not a goal, and the field goes back to saying what is actually stored
+     rather than leaving a rejected value sitting in it. */
+  function commitGoal() {
+    var n = Math.round(Number($("goal").value));
+    if (!isFinite(n) || n <= 0) { renderGoal(); return; }
+    setGoal(Math.min(1440, n));
   }
 
   function renderGrid() {
@@ -400,6 +467,7 @@
     if (changed) {
       invalidate();
       if (!$("hub").hidden) renderToday();
+      renderGoal();
     }
   }
 
@@ -412,6 +480,7 @@
       body: JSON.stringify({ day: Today.utcDay(), minutes: applied.total, bySource: applied.counted }),
     }).then(function (r) { return r.json(); }).then(function (state) {
       beatMisses = 0;
+      if (!gateOwnsGoal) { gateOwnsGoal = true; renderGoal(); }
       adoptGateSettings(state);
       $("gate-state").textContent = state.armed
         ? "Armed. " + fmt(state.required) + " min required; the lock lifts when the day's total reaches it."
@@ -578,14 +647,28 @@
      because the write happened in the frame, which is a different browsing
      context on the same origin — so the meter follows a session without the
      shell polling for it and without the trainer reporting anything. */
-  window.addEventListener("storage", function () {
+  window.addEventListener("storage", function (e) {
     invalidate();
     if (!$("hub").hidden) renderToday();
+    /* The open hub and the gated one are the same origin and share the key, so
+       a goal set in one is news in the other. */
+    if (!e || !e.key || e.key === QUOTA_KEY) renderGoal();
   });
 
   /* Coming back to the hub is the other moment the number is worth having, and
      it is a moment when nothing is being timed. */
   setInterval(tick, 1000);
+
+  renderGoal();
+  $("goal-set").addEventListener("click", commitGoal);
+  /* `change` as well as the button: a number field is stepped and typed in as
+     often as it is submitted, and on a phone the keyboard is dismissed rather
+     than the button pressed. */
+  $("goal").addEventListener("change", commitGoal);
+  $("goal").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); commitGoal(); }
+  });
+  $("goal-clear").addEventListener("click", function () { setGoal(0); });
 
   $("bg-pick").addEventListener("click", function () { $("bg-file").click(); });
   $("bg-file").addEventListener("change", function (e) {

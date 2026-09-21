@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindbuild</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=6">
+<link rel="stylesheet" href="css/shell.css?v=7">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -47,6 +47,19 @@
     <p id="gate-state" class="dim">Checking for the gate…</p>
   </div>
   <!-- gate:end -->
+
+  <!-- Outside the gate markers on purpose: this is the one setting the
+       gate-free builds — the open hub and the APK — need most, because there
+       is no gate on either to say what the day is supposed to be. -->
+  <h2>Today's goal</h2>
+  <div class="settings">
+    <span class="settings__label">Minutes a day</span>
+    <input class="settings__num" id="goal" type="number" min="1" max="1440" step="5"
+           inputmode="numeric" aria-label="Minutes of training a day">
+    <button class="btn" type="button" id="goal-set">Set</button>
+    <button class="btn ghost" type="button" id="goal-clear">Clear</button>
+    <span class="settings__note" id="goal-note"></span>
+  </div>
 
   <h2>Appearance</h2>
   <div class="settings">
@@ -90,6 +103,6 @@
 <script src="shared/adapters.js?v=3"></script>
 <script src="shared/quota.js?v=3"></script>
 <script src="js/today.js?v=3"></script>
-<script src="js/shell.js?v=6"></script>
+<script src="js/shell.js?v=7"></script>
 </body>
 </html>
