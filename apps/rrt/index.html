@@ -324,6 +324,11 @@
     /* The box the new symbol lands on a corner of. Faint, because it is the
        frame the reading is made against and not a thing to look at. */
     .box-edge{stroke:var(--text-faint);stroke-width:1.4;opacity:.55;vector-effect:non-scaling-stroke}
+    /* Where the symbol stands on the floor, and the drop to it. Both are depth
+       and height read off the box rather than off the symbol's own size, which
+       belongs to the fourth axis. */
+    .box-shadow{fill:var(--text-faint);opacity:.5}
+    .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
@@ -1230,24 +1235,69 @@ function boxLattice(n) {
 function cardPlaces(dirs, d) {
   if (d < 3) {
     const x = d >= 2 ? dirs[1] * OFFSET : 0;
-    return { ref: [MID, MID, BASE], now: [MID + x, MID + dirs[0] * OFFSET, BASE] };
+    return { flat: true, ref: [MID, MID, BASE], now: [MID + x, MID + dirs[0] * OFFSET, BASE] };
   }
-  const half = 1 / BOX_N;
-  const cell = k => boxPt(dirs[1] * half * k, dirs[0] * half * k, dirs[2] * half * k);
-  const size = d >= 4 ? (dirs[3] < 0 ? BOX_BIG : BOX_SMALL) : BOX_BASE;
-  return { ref: [...cell(-1), BOX_BASE], now: [...cell(1), size] };
+  const h = 1 / BOX_N;
+  const at = k => ({ u: dirs[1] * h * k, v: dirs[0] * h * k, w: dirs[2] * h * k });
+  return {
+    ref: Object.assign(at(-1), { size: BOX_BASE }),
+    now: Object.assign(at(1), { size: d >= 4 ? (dirs[3] < 0 ? BOX_BIG : BOX_SMALL) : BOX_BASE }),
+  };
+}
+
+/*
+ * A symbol standing in the box: the shape itself, a shadow on the floor under
+ * it, and the drop between them.
+ *
+ * The silhouettes are flat, and a flat shape at a point says nothing about
+ * where in the box that point is — the cell walls said it and the symbol said
+ * nothing, so it read as pasted on rather than standing in. The usual fix is
+ * to draw far things smaller, and that one is barred here: scale is the fourth
+ * axis, and a symbol drawn small for being far away would be stating the size
+ * relation as well.
+ *
+ * So depth is carried by the two cues that cost no channel. The shadow sits at
+ * the symbol's own place on the floor, so its position states longitude and
+ * latitude while the length of the drop states height. And the symbol is drawn
+ * either side of the lattice depending which half of the box it is in, so the
+ * wires cross a symbol at the back and are crossed by one at the front —
+ * occlusion, which is the one depth cue that needs no scale and no colour.
+ */
+function standing(stim, c, cls) {
+  const [x, y] = boxPt(c.u, c.v, c.w);
+  const [fx, fy] = boxPt(c.u, 1, c.w);
+  return [
+    svgEl('ellipse', { cx: fx, cy: fy, rx: c.size * 0.40, ry: c.size * 0.15,
+                       class: 'box-shadow' }),
+    svgEl('line', { x1: x, y1: y + c.size * 0.42, x2: fx, y2: fy, class: 'box-drop' }),
+    stimEl(stim, x, y, c.size, cls),
+  ];
 }
 
 function drawCard(el, glyph, refGlyph, dirs, d) {
   const p = cardPlaces(dirs, d);
+  if (p.flat) {
+    el.replaceChildren(stimEl(refGlyph, p.ref[0], p.ref[1], p.ref[2], 'ref'),
+                       stimEl(glyph, p.now[0], p.now[1], p.now[2], 'new'));
+    return;
+  }
+  /* The two always sit in opposite halves, so exactly one is behind the wires. */
+  const a = { c: p.ref, stim: refGlyph, cls: 'ref' };
+  const b = { c: p.now, stim: glyph, cls: 'new' };
+  const [back, front] = a.c.w <= b.c.w ? [a, b] : [b, a];
   el.replaceChildren(
-    ...(d >= 3 ? boxLattice(BOX_N) : []),
-    stimEl(refGlyph, p.ref[0], p.ref[1], p.ref[2], 'ref'),
-    stimEl(glyph, p.now[0], p.now[1], p.now[2], 'new'));
+    ...standing(back.stim, back.c, back.cls),
+    ...boxLattice(BOX_N),
+    ...standing(front.stim, front.c, front.cls));
 }
+
 function drawSeed(el, glyph, d) {
-  el.replaceChildren(...(d >= 3 ? boxLattice(BOX_N) : []),
-    stimEl(glyph, MID, MID, d >= 3 ? BOX_BASE : BASE, 'ref'));
+  if (d < 3) { el.replaceChildren(stimEl(glyph, MID, MID, BASE, 'ref')); return; }
+  /* The seed has nothing to be placed against, so it stands in the middle of
+     the floor rather than in a cell — and in front of the wires, because half
+     in and half out of the box would be a depth it is not in. */
+  el.replaceChildren(...boxLattice(BOX_N),
+    ...standing(glyph, { u: 0, v: 0, w: 0, size: BOX_BASE }, 'ref'));
 }
 
 /* A backward mask: scattered stimuli of the same kind over the whole card, so
