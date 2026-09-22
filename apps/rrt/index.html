@@ -1243,6 +1243,84 @@ let timerSec = 0, sessionDuration = 0;
 function later(fn, ms) { stageTimers.push(setTimeout(fn, ms)); }
 function clearStageTimers() { stageTimers.forEach(clearTimeout); stageTimers = []; }
 
+/* ---- Pausing ----
+   A hidden page is not being trained in front of. The shell hides this trainer
+   in a frame when you go back to the hub menu and delivers the browser's own
+   `visibilitychange` — the same signal a real tab switch sends — so both are
+   handled here and neither needs to know the other exists.
+
+   What stops is the clock and the pace. The card on screen stays, and the beat
+   it belongs to resumes with the time it had left rather than starting over,
+   so an interruption costs the interruption and not a card.
+
+   **The reaction time is corrected rather than left to absorb the pause.**
+   `cur.t0` is a `performance.now()` stamp and `rt` is the difference, so a
+   thirty-second visit to the hub would be recorded as thirty seconds of
+   thinking about whichever card was up — a number that is not wrong by a
+   little, and one that would go into the adaptive pace and drag the level
+   down. Shifting the stamp forward by exactly the paused span leaves the
+   measurement of what the player actually did.
+
+   The mask and clear-stage timers are dropped rather than resumed. They are
+   sub-steps of the beat already in progress, worth a few hundred milliseconds
+   each, and re-arming them out of order would show the mask after the card had
+   gone. The cost is that the paused card is not masked, which favours the
+   player slightly; the alternative favours nobody and looks broken. */
+let paused = false, pausedAt = 0, beatLeft = 0;
+
+function pauseSession() {
+  if (!active || paused) return;
+  paused = true;
+  pausedAt = performance.now();
+  /* What the beat had left, so resuming does not hand back a whole one. */
+  beatLeft = Math.max(50, beatDueAt - performance.now());
+  clearInterval(clockTimer); clockTimer = null;
+  clearTimeout(beatTimer); beatTimer = null;
+  clearStageTimers();
+}
+
+function resumeSession() {
+  if (!paused) return;
+  paused = false;
+  if (!active) return;
+  const away = performance.now() - pausedAt;
+  /* The card was on screen for the whole interruption and was not being
+     looked at. Move its clock, not the player's. */
+  if (cur && !cur.done) cur.t0 += away;
+  armClock();
+  armBeat(beatLeft);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseSession(); else resumeSession();
+});
+
+/* The countdown on its own, so resuming can put it back. `startSession`
+   reassigns `timerSec`, so it is the wrong thing to call when a session is
+   being continued rather than begun. */
+function armClock() {
+  clearInterval(clockTimer);
+  clockTimer = setInterval(() => {
+    if (!active || paused) return;
+    timerSec--;
+    if (!practice) {
+      $('timerDisplay').textContent = fmtTime(Math.max(0, timerSec));
+      $('progressFill').style.width = (timerSec / sessionDuration * 100) + '%';
+    }
+    if (timerSec <= 0) endSession();
+  }, 1000);
+}
+
+/* When the next beat is due, so a pause can work out what is left of it.
+   Written at every arming site through `armBeat`, because a beat scheduled
+   without it would resume with the previous beat's remainder. */
+let beatDueAt = 0;
+function armBeat(ms) {
+  beatDueAt = performance.now() + ms;
+  clearTimeout(beatTimer);
+  beatTimer = setTimeout(beat, ms);
+}
+
 function resetFeedback() {
   $('feedbackBand').className = 'feedback-band';
   $('stimulusBox').classList.remove('flash-correct', 'flash-wrong');
@@ -1315,7 +1393,7 @@ function beat() {
        is real however long the period is. */
     const hold = Math.max(eff('encoding'), interval);
     later(() => clearStage($('stage')), Math.min(eff('encoding'), hold * 0.6));
-    beatTimer = setTimeout(beat, hold);
+    armBeat(hold);
     return;
   }
 
@@ -1347,7 +1425,7 @@ function beat() {
     drawMask($('stage'), sessionSet);
     later(() => clearStage($('stage')), MASK_MS);
   }, exposure);
-  beatTimer = setTimeout(beat, interval);
+  armBeat(interval);
 }
 
 function answer(rank) {
@@ -1431,22 +1509,18 @@ function startSession(opts) {
   clearStage($('stage')); resetFeedback(); renderPad(); paintStats();
   setPage('pageTrain');
 
-  clockTimer = setInterval(() => {
-    if (!active) return;
-    timerSec--;
-    if (!practice) {
-      $('timerDisplay').textContent = fmtTime(Math.max(0, timerSec));
-      $('progressFill').style.width = (timerSec / sessionDuration * 100) + '%';
-    }
-    if (timerSec <= 0) endSession();
-  }, 1000);
+  armClock();
   document.addEventListener('keydown', onKey);
-  beatTimer = setTimeout(beat, 900);
+  armBeat(900);
 }
 
 function endSession() {
   if (!active) return;
   active = false;
+  /* Cleared here as well: a session that ends while the page is hidden would
+     otherwise leave the flag set, and the next one's clock would tick into a
+     `return` on every beat. */
+  paused = false;
   clearInterval(clockTimer); clearTimeout(beatTimer); clearStageTimers();
   document.removeEventListener('keydown', onKey);
   closeModal();

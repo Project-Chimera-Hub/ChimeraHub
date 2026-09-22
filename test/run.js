@@ -393,6 +393,55 @@ test("the shell states the frame's visibility on both paths", () => {
     "pause.js loads after shell.js, so `Pause` is undefined when the shell runs");
 });
 
+/**
+ * And the trainers honour it.
+ *
+ * The shell delivers the browser's own hidden signal and nothing more, so a
+ * trainer only pauses if it listens. Two of them already did — rnb stops the
+ * block and says so, synth stops its timer — and the rest were re-plumbed to
+ * stop the clock and the pace while leaving the trial on screen alone.
+ *
+ * Checked statically, against the shipped file. Whether the clock actually
+ * freezes is a browser question and was verified by driving both trainers in
+ * one: the countdown held across two and a half seconds hidden and resumed
+ * after, and with both stop paths removed it kept counting. What a
+ * dependency-free suite can own is that the wiring is still there at all,
+ * which is the way this would regress — a handler deleted in a refactor, and
+ * a trainer quietly running behind the menu again.
+ */
+const PAUSED_TRAINERS = [
+  ["cct", "apps/cct/index.html", "pauseSession", "sessionPaused"],
+  ["rrt", "apps/rrt/index.html", "pauseSession", "paused"],
+];
+
+for (const [name, file, fn, flag] of PAUSED_TRAINERS) {
+  test(`${name} pauses when the page it is in goes hidden`, () => {
+    const src = require("fs").readFileSync(path.join(__dirname, "..", file), "utf8");
+
+    assert.ok(/addEventListener\(\s*['"]visibilitychange['"]/.test(src),
+      `${name} does not listen for the signal the shell sends`);
+    assert.ok(src.includes("document.hidden"),
+      `${name} listens but never asks whether it is hidden`);
+    assert.ok(new RegExp(`function ${fn}\\s*\\(`).test(src),
+      `${name} has no ${fn}()`);
+
+    /* The clock has to be stopped, not merely flagged. A flag alone leaves the
+       interval firing, which is what the browser does to a background tab
+       anyway — the point of pausing here is that the hub is not a background
+       tab, so nothing throttles it. */
+    const body = src.slice(src.indexOf(`function ${fn}`));
+    assert.ok(/clearInterval/.test(body.slice(0, 900)),
+      `${name}'s pause does not stop its countdown`);
+    assert.ok(body.slice(0, 900).includes(flag),
+      `${name}'s pause does not record that it is paused`);
+
+    /* And it has to come back. A pause with no resume is a trainer that stops
+       for good the first time you look at the menu. */
+    assert.ok(/function resumeSession\s*\(/.test(src),
+      `${name} pauses and never resumes`);
+  });
+}
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {
