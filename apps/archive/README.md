@@ -119,6 +119,97 @@ against the hypothesis; against control modes, since a lift that appears
 everywhere equally is practice; and with a permutation null shown beside the
 number, along with how many pairs were tested.
 
+## The ability estimate
+
+One position on one ladder, out of every trainer at once — and the one thing
+here that crosses units.
+
+The rule above is absolute and stays absolute: a difficulty never leaves the
+scale it was measured on, because a load of 63 and a level of 13 sit on no
+shared axis. What this adds is not a shared axis but an **external** one: the
+six tiers of the Guanxinandu S11 benchmark, α to ζ, published with a
+requirement *per trainer* and a rule that nothing counts below 75%.
+
+```
+tier   relational reasoning     quad n-back    relational n-back
+α      Space 2D, 6 premises     Quad 3-back    character+position 2-back
+β      Space 3D, 6 premises     Quad 4-back    character+position 3-back
+γ      Space 5D, 6 premises     Quad 5-back    character+position 4-back
+δ      Space 6D, 6 premises     Quad 6-back    character+position 5-back
+ε      Space 7D, 6 premises     Quad 7-back    character+position 6-back
+ζ      (unset)                  Quad 8-back    character+position 7-back
+```
+
+That distinction is the whole argument for the feature. Comparing two trainers'
+numbers is inventing an axis. Reading each trainer's number against a third
+party's published requirement *for that same trainer* is a lookup — the
+benchmark did the comparing, in public, where anyone can disagree with it. So
+the cross-source mapping lives in exactly one table, `LADDERS` in
+`js/ability.js`, every row of it is a citation or a stated extrapolation, and
+every figure on the screen traces back to one row.
+
+**The benchmark's rows are priced by the apps' own difficulty functions**, not
+estimated. Six premises of Space 5D is `MODE_SCALE.Space5D.weight × 6 = 11.4`
+on the scale `levelOf` prices and Syllogimous's ability model is stated in.
+Character and position at 4-back is `computeLoad`'s `10n + 13` — ten per lag,
+nine for position judged relationally, four for the glyph stream. Where the
+benchmark left ζ unset, the last gap repeats and the table says so.
+
+**Four trainers the benchmark never ranked are in it anyway.** CCT, Running
+Order, the rotation trainer and Synth are training, they are in the record, and
+an estimate that ignored half the archive would drift from it every week the
+work went somewhere unranked. Each is aligned *ordinally* onto the same six
+steps, from the app's own starting point to its own floor or cap — its
+settings' numbers, not numbers chosen here. That is a real statement (α is
+where this trainer starts you, ζ is where it runs out) and not a claim that ζ
+here is as hard as ζ on a benchmarked one. Nobody measured that, which is why
+they carry less weight.
+
+**Syllogimous and Relational N-back carry it**, at three times anything else.
+They are two of the benchmark's three columns; they are the only two trainers
+here that estimate ability themselves rather than reporting a session's
+high-water mark; and they are the two broadest tasks in the archive, where the
+rest of the list is narrow enough to be climbed without moving anything the
+benchmark ranks.
+
+**What a source is credited with is the hardest difficulty it was held at 75%
+across**, which is the benchmark's own rule rather than an approximation of it.
+Not a peak: every trainer here climbs until it fails, so every record contains
+a best evening nobody could repeat. Not a mean: that is dragged down by
+warm-ups and by whatever the staircase served while it was re-finding you.
+The window's sittings are sorted hardest first and the run from the top is
+walked down until it clears 75% — and a run of equal difficulties is never cut
+through the middle, since a threshold inside a tie says nothing.
+
+Each source is then discounted twice: by evidence (`n / (n + 20)`, so volume
+never buys certainty) and by staleness (halving every ninety days since it was
+last trained, inside a 180-day window). `confidence` is the share of the weight
+that *could* speak for you which actually did, and it is the number to read
+before the letter.
+
+**Two numbers come out and they answer different questions.** The estimate is a
+weighted position across everything with a ladder. The **badge** is the
+benchmark's own verdict, which is conjunctive — all modes at 75%, so the tier is
+the weakest of its three columns and nothing else. A mean and a minimum are not
+approximations of each other, so reporting either alone would be answering the
+other question quietly. A column nobody has evidence for **withholds** the badge
+rather than lowering it: there is no tier earned on a benchmark two thirds of
+which was never attempted, and inferring the third column from the other two is
+exactly the cross-app guess this project refuses everywhere else.
+
+Three things are deliberately not on this ladder, and the page names each one
+rather than dropping it:
+
+- **Anki**, which records no difficulty at all, on purpose — an interval is a
+  schedule, not a measure of how hard a review was.
+- **Pre-level Syllogimous records**, which carry a premise count. A premise
+  count is not a level, which is the whole reason the adapter keeps two units;
+  there is no ladder for it and there will not be one.
+- **Everything a benchmarked ladder does not read.** Precision holds n and
+  tightens its per-modality thresholds instead, so a threshold that has halved
+  is a real gain sitting at the same n and this ladder cannot see it. The
+  benchmark only ever asked about n.
+
 ## Building it from this machine
 
 ```

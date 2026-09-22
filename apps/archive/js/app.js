@@ -12,7 +12,7 @@
 
 /* global emptyArchive, fold, foldNotes, days, dayRow, overlap, sourceSummary, cacheSave,
    cacheLoad, readFile, makeNote, noteId, tombstone, mergeNotes, visibleNotes, notesOn,
-   measureSeries, tagCounts */
+   measureSeries, tagCounts, estimate, tierLabel, TIERS, TIER_ACCURACY */
 
 var archive = cacheLoad() || emptyArchive();
 if (!Array.isArray(archive.notes)) archive.notes = [];
@@ -366,6 +366,7 @@ function render() {
   renderStreaks();
   renderHeatmap();
   renderSources();
+  renderAbility();
   renderCharts();
   renderModes();
   renderOverlap();
@@ -437,6 +438,116 @@ function renderHeatmap() {
   });
 
   host.innerHTML = html;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ability                                                             *
+ * ------------------------------------------------------------------ */
+
+/**
+ * One position on the benchmark's ladder, and the arithmetic behind it.
+ *
+ * The table is not decoration. This is the only screen in the project that puts
+ * eight trainers on one axis, and the only defence against it becoming a number
+ * nobody can argue with is showing every term: what each source demonstrated,
+ * in its own units, where that lands on the published ladder, and how much of
+ * the total it moved. A reader who disagrees with the estimate can see which
+ * row to disagree with.
+ *
+ * `est.used` arrives sorted by share, so the rows that decide the number are
+ * the rows at the top.
+ */
+function renderAbility() {
+  var head = $("abilityHead");
+  var parts = $("abilityParts");
+  var line = $("abilityBadge");
+  var unused = $("abilityUnused");
+
+  var est = estimate(archive);
+
+  if (est.level == null) {
+    head.innerHTML = "<p class='dim'>Nothing yet holds "
+      + fmt(TIER_ACCURACY * 100) + "% at a difficulty this ladder knows.</p>";
+    parts.innerHTML = "";
+    line.innerHTML = "";
+    unused.innerHTML = est.unused.map(function (u) {
+      return "<li>" + sourceName(u.source) + " — " + esc(u.why) + "</li>";
+    }).join("");
+    return;
+  }
+
+  /* A rung per tier, filled to where the estimate stands. The part-filled one
+     is the fraction into the current tier, which is the thing a bare letter
+     throws away — a whole climb reads as "still β" without it. */
+  var rungs = TIERS.map(function (t, i) {
+    var fill = Math.max(0, Math.min(1, est.level - i + 1));
+    return "<i class='rung' style='--fill:" + fmt2(fill) + "'>"
+      + "<b>" + t + "</b></i>";
+  }).join("");
+
+  head.innerHTML =
+    "<div class='ability__now'>"
+    + "<span class='ability__tier'>" + est.tier + "</span>"
+    + "<span class='ability__level'>" + fmt2(est.level + 1) + " of " + TIERS.length + "</span>"
+    + "</div>"
+    + "<div class='ability__scale'>" + rungs + "</div>"
+    + "<p class='dim'>"
+    + "<b>" + fmt(est.confidence * 100) + "%</b> confidence — the share of the weight "
+    + "that could speak for you which actually did, after staleness and sample size. "
+    + "Read it before the letter: a tier on thin evidence is a sentence about the "
+    + "archive, not about you. Window " + est.from + " to " + est.to + "."
+    + "</p>";
+
+  var body = est.used.map(function (u) {
+    return "<tr><td>" + sourceName(u.source) + "</td>"
+      + "<td>" + fmt2(u.difficulty) + " <span class='dim'>" + esc(u.unit) + "</span></td>"
+      + "<td>" + fmt(u.accuracy * 100) + "% <span class='dim'>/" + u.n + "</span></td>"
+      + "<td>" + tierLabel(u.level) + " " + fmt2(u.level + 1) + "</td>"
+      + "<td>" + fmt(u.share * 100) + "%</td>"
+      + "<td class='dim'>" + (u.from === "benchmark" ? "published" : "aligned")
+      + (u.daysSince > 30 ? ", " + u.daysSince + "d old" : "") + "</td></tr>";
+  }).join("");
+
+  parts.innerHTML = "<table>"
+    + "<tr><th>source</th>"
+    + "<th title=\"The hardest difficulty this trainer was held at "
+    + fmt(TIER_ACCURACY * 100) + "% across, in its own units\">held</th>"
+    + "<th title=\"Accuracy over that run, and how many sittings it was\">at</th>"
+    + "<th title=\"Where that lands on the benchmark's ladder\">tier</th>"
+    + "<th title=\"Share of the weight behind the estimate above\">weight</th>"
+    + "<th title=\"Whether the benchmark published a requirement for this trainer,"
+    + " or its own ladder was aligned onto the same six steps\">ladder</th></tr>"
+    + body + "</table>";
+
+  /*
+   * The benchmark's own verdict, kept apart from the estimate above.
+   *
+   * Conjunctive — the weakest of its three columns — because that is the
+   * published rule, and because a mean and a minimum answer different
+   * questions. A column with no evidence withholds the badge rather than
+   * lowering it: there is no tier anybody earned on a benchmark they have
+   * attempted two thirds of.
+   */
+  var b = est.badge;
+  if (b.missing.length) {
+    line.innerHTML = "<b>No badge.</b> The benchmark is conjunctive — every column at "
+      + fmt(TIER_ACCURACY * 100) + "% — and nothing yet speaks for "
+      + b.missing.map(function (c) { return esc(c.name); }).join(" or ")
+      + ". The estimate above is a weighted reading of what is here; this is what "
+      + "the benchmark itself would award, and it withholds rather than guesses.";
+  } else {
+    line.innerHTML = "<b>Badge: " + (b.tier || "below " + TIERS[0]) + "</b> — the benchmark's "
+      + "own rule is the weakest column, and that is "
+      + esc(b.blocking) + " at " + fmt2(b.level + 1) + ". "
+      + b.columns.map(function (c) {
+          return esc(c.name) + " " + tierLabel(c.level);
+        }).join(" · ");
+  }
+
+  unused.innerHTML = est.unused.map(function (u) {
+    return "<li>" + sourceName(u.source) + " — " + esc(u.why)
+      + ", so it is not in the estimate</li>";
+  }).join("");
 }
 
 /* ------------------------------------------------------------------ *

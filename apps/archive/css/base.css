@@ -351,6 +351,66 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .heatmap .L4 { background: #8fbda4; }
 
 /* ------------------------------------------------------------------ *
+ * Ability                                                             *
+ * ------------------------------------------------------------------ */
+
+.ability { margin: 0 0 1rem; }
+
+.ability__now {
+  display: flex;
+  gap: .9rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+/* The one glyph on the page that is allowed to be large. It is the answer to
+   the question the section asks, and everything under it is the working. */
+.ability__tier {
+  font-size: 3.2rem;
+  line-height: 1;
+  font-weight: 650;
+  color: var(--ink-strong);
+}
+
+.ability__level { color: var(--dim); }
+
+/*
+ * Six rungs, filled to where the estimate stands.
+ *
+ * The part-filled rung is the whole reason this is a bar and not a letter: a
+ * climb from the bottom of a tier to the top of it is months of work, and a
+ * badge that reads the same at both ends of it makes those months invisible.
+ * `--fill` is set per rung by the renderer.
+ */
+.ability__scale {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin: .7rem 0 .8rem;
+  max-inline-size: 34rem;
+}
+
+.ability__scale .rung {
+  position: relative;
+  display: block;
+  height: 2.1rem;
+  border: 1px solid var(--line-soft);
+  background:
+    linear-gradient(to right,
+      rgba(var(--accent-rgb), .42) 0 calc(var(--fill) * 100%),
+      transparent calc(var(--fill) * 100%) 100%);
+}
+
+.ability__scale .rung b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ *
  * Over time                                                           *
  * ------------------------------------------------------------------ */
 
