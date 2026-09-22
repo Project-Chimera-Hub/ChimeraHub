@@ -329,9 +329,20 @@
     $("stage").hidden = false;
     $("hub").hidden = true;
     document.title = t.name + " — mindbuild";
+    /* Hand the frame back to the browser. Unconditional rather than only on the
+       re-open path: a trainer opened fresh has a visible document already, and
+       stating it twice costs nothing next to the one case where it is missed. */
+    Pause.setFrameHidden($("frame"), false);
   }
 
   function home() {
+    /*
+     * Before the recount, not after. `invalidate()` and `renderToday()` read
+     * the trainers' own storage, and a trainer still running is a trainer still
+     * writing to it — so pausing first is what makes the number the hub prints
+     * the number that was true when you left the trainer.
+     */
+    Pause.setFrameHidden($("frame"), true);
     $("stage").hidden = true;
     $("hub").hidden = false;
     document.title = "mindbuild";

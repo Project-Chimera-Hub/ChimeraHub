@@ -261,6 +261,138 @@ test("the archive cannot be rescued by a cap it is not in", () => {
   assert.ok(!("archive" in r.counted), "the archive appeared in a counted day");
 });
 
+/* ------------------------------------------------------------------ *
+ * Pausing the trainer the hub has covered                             *
+ * ------------------------------------------------------------------ *
+ *
+ * Returning to the hub left the trainer running: the frame is hidden and its
+ * `src` is deliberately not reassigned, so trials went on being presented and
+ * clocks went on counting behind a menu. The shell meanwhile stops its own
+ * session clock when the stage is hidden and recounts the day on the grounds
+ * that nothing is being timed — an assertion that was true of the shell and
+ * false of the thing it framed, while the meter credited the minutes to
+ * whichever trainer was open.
+ *
+ * What is tested is the signal, not a trainer's reaction to it. The shell's
+ * whole claim here is that it delivers the *browser's* own signal and injects
+ * nothing, so a trainer that honours the standard API and knows nothing about
+ * this page pauses correctly — which means the thing worth pinning down is that
+ * a document behaving as the browser's does sees exactly what a real tab switch
+ * would show it.
+ */
+
+const Pause = require("../shell/js/pause.js");
+
+/**
+ * A frame whose document answers visibility the way a real one does.
+ *
+ * `hidden` and `visibilityState` are prototype getters in the browser, so they
+ * are prototype getters here: the shadow-and-delete this module turns on is
+ * only correct against that shape, and a fake with own data properties would
+ * pass while the real thing broke.
+ */
+function fakeFrame() {
+  const proto = {
+    get hidden() { return false; },
+    get visibilityState() { return "visible"; },
+  };
+  const doc = Object.create(proto);
+  const seen = [];
+  doc.dispatchEvent = (e) => { seen.push(["doc", e.type, doc.visibilityState]); return true; };
+
+  const win = { Event: class { constructor(type) { this.type = type; } } };
+  win.dispatchEvent = (e) => { seen.push(["win", e.type, doc.visibilityState]); return true; };
+
+  return { frame: { contentWindow: win, contentDocument: doc }, doc, seen };
+}
+
+test("covering the stage tells the frame it is hidden, as a tab switch would", () => {
+  const { frame, doc, seen } = fakeFrame();
+  assert.strictEqual(Pause.setFrameHidden(frame, true), true, "the signal was not delivered");
+
+  assert.strictEqual(doc.hidden, true, "the document still reports itself showing");
+  assert.strictEqual(doc.visibilityState, "hidden", "visibilityState was not changed");
+  /* And the state is already right when the event arrives: a listener reads
+     `document.hidden` rather than the event, so firing first would have it read
+     the old answer. */
+  assert.deepStrictEqual(seen, [
+    ["doc", "visibilitychange", "hidden"],
+    ["win", "blur", "hidden"],
+  ], "the frame saw the wrong signal, or saw it in the wrong state");
+});
+
+test("re-opening the trainer hands the frame back to the browser", () => {
+  const { frame, doc, seen } = fakeFrame();
+  Pause.setFrameHidden(frame, true);
+  seen.length = 0;
+
+  assert.strictEqual(Pause.setFrameHidden(frame, false), true);
+  assert.deepStrictEqual(seen, [
+    ["doc", "visibilitychange", "visible"],
+    ["win", "focus", "visible"],
+  ], "the frame was not told it is showing again");
+});
+
+test("resuming uncovers the native getters rather than answering for them", () => {
+  /* The failure this catches is the obvious implementation. Setting `hidden` to
+     false leaves an own property that goes on saying false when the browser
+     hides the tab for real — so the trainer stops pausing on a genuine tab
+     switch, which is the case the API exists for and the one rnb's clock
+     depends on. */
+  const { frame, doc } = fakeFrame();
+  Pause.setFrameHidden(frame, true);
+  Pause.setFrameHidden(frame, false);
+
+  assert.ok(!Object.prototype.hasOwnProperty.call(doc, "hidden"),
+    "the shell is still answering for `hidden`, so a real tab switch is masked");
+  assert.ok(!Object.prototype.hasOwnProperty.call(doc, "visibilityState"),
+    "the shell is still answering for `visibilityState`");
+  assert.strictEqual(doc.hidden, false, "the native getter did not come back");
+});
+
+test("pausing twice is the same as pausing once", () => {
+  /* `home()` runs on every hash change, including one that does not move. */
+  const { frame, doc } = fakeFrame();
+  Pause.setFrameHidden(frame, true);
+  Pause.setFrameHidden(frame, true);
+  assert.strictEqual(doc.hidden, true);
+  Pause.setFrameHidden(frame, false);
+  assert.strictEqual(doc.hidden, false, "two pauses took two resumes to undo");
+});
+
+test("an empty frame is not an error", () => {
+  /* The hub is the first thing shown, so `home()` runs before anything is
+     loaded, and a frame between documents is an ordinary state. Throwing out of
+     a navigation handler would take the hub down with it. */
+  for (const frame of [null, {}, { contentWindow: null, contentDocument: null }]) {
+    assert.strictEqual(Pause.setFrameHidden(frame, true), false,
+      "an empty frame reported a delivered signal");
+  }
+});
+
+test("the shell states the frame's visibility on both paths", () => {
+  /* Read off the shipped file: the wiring is what makes the module do anything,
+     and a module with no call site is the failure this whole area started as. */
+  const src = require("fs").readFileSync(
+    path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
+
+  const home = src.slice(src.indexOf("function home()"));
+  assert.ok(/Pause\.setFrameHidden\(\$\("frame"\), true\)/.test(home.slice(0, 600)),
+    "home() does not pause the trainer it is covering");
+
+  const show = src.slice(src.indexOf("function show("), src.indexOf("function home()"));
+  assert.ok(/Pause\.setFrameHidden\(\$\("frame"\), false\)/.test(show),
+    "show() does not un-pause the trainer it is opening");
+
+  /* And the page has to load it, or both calls are a ReferenceError that takes
+     out navigation entirely. */
+  const html = require("fs").readFileSync(
+    path.join(__dirname, "..", "shell", "index.html"), "utf8");
+  assert.ok(html.includes("js/pause.js"), "shell/index.html does not load pause.js");
+  assert.ok(html.indexOf("js/pause.js") < html.indexOf("js/shell.js"),
+    "pause.js loads after shell.js, so `Pause` is undefined when the shell runs");
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {
