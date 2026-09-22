@@ -4,33 +4,67 @@
    THE ABILITY ESTIMATE
    ============================================================
 
-   One position on one ladder, out of every trainer at once.
+   One position on one ladder, out of every trainer at once — and it is always
+   shown. There is no bar to clear and no column that can withhold it. A reading
+   can be thin, and then it says so and weighs little; it is never absent
+   because of a setting.
 
-   **This is the one thing in the archive that crosses units, and it is built to
-   be honest about it.** Everywhere else the rule is absolute: a difficulty
-   never leaves the scale it was measured on, because an RNB load of 63 and a
-   Syllogimous level of 13 sit on no shared axis and a schema that implied one
-   would manufacture findings. Nothing here repeals that. What it adds is an
-   *external* ladder — six tiers, α to ζ, from the Guanxinandu S11 benchmark —
-   and a per-source table saying what each trainer's own number has to be to
-   stand on each rung of it.
+   **The first version of this file got three things wrong and they were the
+   same mistake**: it re-derived, from the archive, things the trainers had
+   already worked out and written down.
 
-   The distinction is the whole argument for this file existing:
+   1. It required 75% accuracy before it would report anything. That number is
+      the benchmark's, and the benchmark measures a fixed test. An adaptive
+      trainer does the opposite — it moves difficulty until accuracy sits at
+      *its own* target — so its logged accuracy is pinned somewhere that has
+      nothing to do with 75%. On a real archive this refused every source.
+   2. It read those figures as raw accuracy. Most of them are not. RNB's block
+      score maps "never pressed" to 0 and perfect to 1, so about 0.50 there is
+      roughly 80% of judgements right; Running Order compares its target
+      against a guessing-corrected figure; eWMT's is hits over hits plus false
+      alarms plus misses. Three scales, one comparison, no meaning.
+   3. The fix that suggests itself — a table of each app's target accuracy and
+      which scale it is on — is worse than the bug. That is eight apps'
+      internals copied into a ninth, and `tune.targetAccuracy` in a real RNB
+      export reads 0.7 where the shipped default is 0.4. The copy is stale the
+      first time anybody moves a slider.
 
-     - Comparing two trainers' numbers directly is inventing an axis.
-     - Reading each trainer's number against a *third party's* published
-       requirement for that same trainer is not. The benchmark already did the
-       comparing, in public, for people to disagree with. This only looks up
-       what it said.
-
-   So there is exactly one place in this project where the cross-source mapping
-   lives — `LADDERS`, below — every entry of it is a citation or a stated
-   extrapolation, and every number on the screen can be traced back to one row
-   of it. That is a very different thing from a mean of eight difficulties.
+   **So accuracy is not interpreted here at all.** Every trainer has already
+   applied its own target and its own chance correction; what it produces as a
+   result is a difficulty it has settled you at, and *that* is the reading. The
+   archive's job is to look it up, not to second-guess it.
 
    ------------------------------------------------------------------
 
-   The benchmark, as published (discord.gg/brain, season 11):
+   **Where an app states its own ability, that is what is used.** Most of them
+   do, and it is in the archive already — `archive.state` keeps every non-history
+   key an export carried, which is where the trainers write exactly this:
+
+     RNB           `bestLoad`      the hardest load a block cleared at the
+                                   player's own target, whatever they set it to
+     Syllogimous   `syllogimous-ability:scale`   the aggregate ability posterior,
+                                   in the levels `levelOf` prices
+     eWMT          `bestN`
+     Running Order `bestPeakBits`
+     Rotation      the established level of its best mode
+
+   Reading those rather than recomputing them is the same rule the adapter
+   already follows for Syllogimous difficulty: a second copy of a formula is a
+   second source of truth, and the two drift in the direction nobody notices.
+   It is also the robust choice — a trainer that changes its target, its scoring
+   or its chance correction changes its own number, and this keeps reporting it
+   correctly with nothing here to update.
+
+   **Every layer is optional and falls through.** A state key that disappears,
+   a shape that changes, a source that never had one: the reading falls back to
+   the difficulty the trainer's own controller settled on in the records, which
+   needs no knowledge of any app. Only a source with no difficulty anywhere goes
+   silent, and then it is listed by name.
+
+   ------------------------------------------------------------------
+
+   The tiers are the Guanxinandu S11 benchmark's, used as what they are — six
+   bands of roughly similar proficiency, with a published anchor per trainer:
 
      tier   relational reasoning        quad n-back    relational n-back
      α      Space 2D,  6 premises       Quad 3-back    character+position 2-back
@@ -40,25 +74,11 @@
      ε      Space 7D,  6 premises       Quad 7-back    character+position 6-back
      ζ      (unset)                     Quad 8-back    character+position 7-back
 
-   with three rules: every mode has to be held at **75%** to count, the
-   reasoning column is measured over 55 questions, and the n-back columns over
-   10 rounds. All three are implemented rather than paraphrased — see
-   `TIER_ACCURACY`, `MIN_ITEMS` and `MIN_BLOCKS`.
-
-   ------------------------------------------------------------------
-
-   **Two numbers come out, and they answer different questions.**
-
-   `level` is the estimate: a weighted position across every trainer with a
-   ladder, which is what "roughly where am I" means when eight programs disagree
-   and some of them have not been opened in a month.
-
-   `badge` is the benchmark's own verdict, which is conjunctive — *all* modes at
-   75%, so the tier is the weakest of its three columns and nothing else. It is
-   kept separate rather than folded in, because a mean and a minimum are not
-   approximations of each other: the mean says what you can mostly do, the
-   minimum says what you have earned. Reporting either alone would be answering
-   the other question quietly.
+   Their value is the calibration, not the rules printed beside them: they say
+   what "about this good" looks like in five different trainers' own units, and
+   that is the one thing no amount of staring at a load and a level can supply.
+   The rules are the benchmark's own test protocol and are not reimplemented
+   here, because the trainers are not that test.
 */
 
 /* global addDays, daysBetween */
@@ -67,50 +87,36 @@ var INS = (typeof module !== "undefined" && typeof require === "function")
 var _addDays = INS ? INS.addDays : function (d, n) { return addDays(d, n); };
 var _daysBetween = INS ? INS.daysBetween : function (a, b) { return daysBetween(a, b); };
 
-/** The benchmark's rungs, in order. Index 0 is α. */
+/** The benchmark's bands, in order. Index 0 is α. */
 var TIERS = ["α", "β", "γ", "δ", "ε", "ζ"];
-
-/** Rule 1: nothing counts below this. The benchmark's own bar, not ours. */
-var TIER_ACCURACY = 0.75;
-
-/*
- * Rules 2 and 3: how much of a thing has to be behind a claim.
- *
- * 55 questions and 10 rounds are what the benchmark measures over, so they are
- * what a claim against it needs. Halved for the reasoning column and slightly
- * loosened for the rounds, because the benchmark counts one sitting and this
- * counts a window of them — a run of short evenings is more evidence than a
- * single 55, not less, and demanding 55 in one file would refuse most real
- * records for the wrong reason.
- */
-var MIN_ITEMS = 30;      // per-item sources: Syllogimous
-var MIN_BLOCKS = 8;      // per-block sources: every n-back here
 
 /* ------------------------------------------------------------------ *
  * The ladders                                                         *
  * ------------------------------------------------------------------ */
 
 /**
- * What each trainer's own difficulty has to read at each tier.
+ * What each trainer's own difficulty reads at each band.
  *
  * Keyed by **unit**, not by source, for the reason every other reader here is:
  * a source can change what it measures, and a number under the old unit must
- * never be looked up in the new unit's table. Syllogimous is the live case —
- * `syllogimous-premises` deliberately has no entry, so pre-level records
- * contribute nothing rather than being read against a ladder built for levels.
+ * never be looked up in the new unit's table. If a trainer renames or replaces
+ * its unit this table stops matching, the source falls out, and — because that
+ * would otherwise be a silent change to everybody's estimate — the page lists
+ * it by name and `test/run.js` fails on it.
  *
  * Three of these are the benchmark's own rows, priced through the app's own
- * difficulty function. The rest are not in the benchmark at all, and say so.
+ * difficulty function. The rest are not in the benchmark, and say so.
  */
 var LADDERS = {
 
   /*
    * ---- Syllogimous: the benchmark's reasoning column, priced by the app ----
    *
-   * `syllogimous-level` is `levelOf`, which is what the app charges an item
-   * and what its ability model is stated in — so the benchmark's requirement
-   * can be priced rather than guessed at. Each row is "6 premises of this
-   * mode, no rungs claimed, no clock", which is `MODE_SCALE[mode].weight * 6`:
+   * `syllogimous-level` is `levelOf`, which is what the app charges an item and
+   * what its ability posterior is stated in — so the benchmark's requirement
+   * can be priced rather than guessed at, and the app's own estimate lands on
+   * this ladder with no conversion. Each row is "6 premises of this mode, no
+   * rungs claimed, no clock", which is `MODE_SCALE[mode].weight * 6`:
    *
    *     α  Space 2D = Direction  1.15 x 6 =  6.9
    *     β  Space 3D              1.35 x 6 =  8.1
@@ -119,16 +125,10 @@ var LADDERS = {
    *     ε  Space 7D              2.40 x 6 = 14.4
    *
    * The α row names Linear and Distinction alongside Space 2D, and those price
-   * at 1.0 x 6 = 6.0. The rule is conjunctive — every mode at 75% — so the row
-   * is worth its *hardest* member and the easier two are not what gates it.
+   * at 1.0 x 6 = 6.0. The row is worth its hardest member.
    *
    * ζ is the benchmark's own `???`: the other two columns step by one n-back,
-   * and Syllogimous has no eighth axis to step to, so the last gap is repeated.
-   * Marked as the extrapolation it is.
-   *
-   * Scramble is not priced. The benchmark asks for 80% of it and `levelOf` has
-   * no term for premise order — the app treats it as presentation. Rather than
-   * invent a coefficient for one lookup table, it is left out and said so here.
+   * and Syllogimous has no eighth axis to step to, so the last gap repeats.
    */
   "syllogimous-level": {
     anchors: [6.9, 8.1, 11.4, 13.2, 14.4, 15.6],
@@ -141,10 +141,7 @@ var LADDERS = {
    *
    * `computeLoad` for character + position at N, in the cube frame at the
    * default interval: 10N for the lag, +9 for position judged relationally,
-   * +4 for the glyph stream as an identity judgement. Nothing else applies —
-   * the 3D grid is the default rather than the +12 fourth dimension, the cube
-   * frame is the one charged nothing, and 2500ms is where the interval term
-   * is zero.
+   * +4 for the glyph stream as an identity judgement.
    *
    *     load = 10N + 13,  N = 2..7  ->  33, 43, 53, 63, 73, 83
    */
@@ -157,16 +154,12 @@ var LADDERS = {
   /*
    * ---- Quad N-back: the benchmark's middle column, read as N ----
    *
-   * Quad 3-back through Quad 8-back, and both of these trainers record the N
-   * they reached. Precision N-back is the quad proper — position, tone, colour
-   * and shape — and eWMT is the same axis with its own channels.
-   *
-   * What neither ladder carries is the rest of each app's difficulty. Precision
-   * holds N and tightens its per-modality thresholds instead, and a threshold
-   * that has halved is a real gain sitting at the same N; eWMT's channel count
-   * moves too. Both are in `raw` and neither is read here, so this ladder
-   * understates a player who got better without moving N. It is the benchmark's
-   * own axis, and the benchmark only ever asked about N.
+   * Quad 3-back through Quad 8-back. Precision N-back is the quad proper —
+   * position, tone, colour and shape — and eWMT is the same axis with its own
+   * channels. What neither ladder carries is the rest of each app's difficulty:
+   * Precision holds n and tightens its per-modality thresholds instead, so a
+   * threshold that has halved is a real gain sitting at the same n. The
+   * benchmark only ever asked about n.
    */
   "precision-n": {
     anchors: [3, 4, 5, 6, 7, 8],
@@ -180,63 +173,36 @@ var LADDERS = {
   },
 
   /*
-   * ---- Everything below here is NOT in the benchmark ----
+   * ---- Not in the benchmark ----
    *
-   * Four trainers the benchmark never ranked. Leaving them out would be the
-   * tidier choice and the wrong one: they are training, they are in the record,
-   * and an estimate that ignored half the archive would drift from it every
-   * time the week's work went somewhere unranked.
-   *
-   * So each one is aligned **ordinally** onto the same six steps, from the
-   * app's own starting point to the app's own floor or cap — the numbers its
-   * settings already name, not numbers chosen here. That is a real statement
-   * (α is where this trainer starts you, ζ is where it runs out) and it is not
-   * a claim that ζ on this ladder is as hard as ζ on a benchmarked one. Nobody
-   * measured that, which is exactly why these carry less weight below.
+   * Four trainers it never ranked. Leaving them out would be tidier and wrong:
+   * they are training, they are in the record, and an estimate that ignored
+   * half the archive would drift from it every week the work went somewhere
+   * unranked. Each is aligned onto the same six steps from the app's own
+   * starting point to its own floor or cap — numbers its settings already name.
+   * That is a real statement (α is where this trainer starts you, ζ is where it
+   * runs out) and not a claim that ζ here is as hard as ζ on a benchmarked one.
+   * Nobody measured that, which is why they carry less weight.
    */
 
-  /*
-   * CCT adapts speed at a fixed N, so its ladder is its own interval range:
-   * the default start of 1500ms down to the default floor of 500ms, in five
-   * equal ratio steps, carried as the items-per-minute the adapter stores.
-   */
   "cct-peak-items-per-min": {
     anchors: [40, 50, 62, 77, 96, 120],
-    from: "stretched",
+    from: "aligned",
     note: "the app's own 1500ms start to its 500ms floor, in equal ratio steps",
   },
-
-  /*
-   * Running Order's own ladder is eleven rungs of d x log2(s) carried bits.
-   * Every other rung is taken, and each is priced at the 800ms floor a player
-   * has to reach before the rung moves at all — so a tier here is "cleared that
-   * rung", in the throughput the adapter records.
-   */
   "rrt-peak-bits-per-s": {
     anchors: [2.0, 2.9, 3.5, 5.0, 5.9, 8.7],
-    from: "stretched",
+    from: "aligned",
     note: "every other rung of the app's own 11-rung ladder, at its 800ms floor",
   },
-
-  /*
-   * The rotation trainer's level is its own, and it saturates: past level 10
-   * the only thing that grows is how many blocks a shape has, and that is
-   * capped. So the six tiers span the part of the ladder that still moves.
-   */
   "rotation-level": {
     anchors: [1, 2, 4, 6, 8, 10],
-    from: "stretched",
+    from: "aligned",
     note: "the app's own level, which stops discriminating past 10",
   },
-
-  /*
-   * Synth pins accuracy and moves the window, so its ladder is the window's own
-   * range: the core modes' 3400ms starting unit down to their 250ms floor, in
-   * five equal ratio steps, as the symbols per minute the adapter inverts it to.
-   */
   "synth-symbols-per-min": {
     anchors: [18, 30, 50, 84, 141, 237],
-    from: "stretched",
+    from: "aligned",
     note: "the app's own 3400ms starting window to its 250ms floor",
   },
 };
@@ -244,27 +210,15 @@ var LADDERS = {
 /**
  * How much each source moves the estimate, before evidence and staleness.
  *
- * **Syllogimous and Relational N-back carry it**, at three times anything else
- * and six times the narrowest. Three reasons, and they agree:
+ * Syllogimous and Relational N-back carry it, at three times anything else.
+ * They are two of the benchmark's three columns; they are the two trainers here
+ * with the most developed ability models of their own, so their readings are a
+ * measurement rather than a high-water mark; and they are the two broadest
+ * tasks in the archive, where the rest of the list is narrow enough to be
+ * climbed without moving much else.
  *
- *   - They are two of the benchmark's three columns, so their ladders are
- *     citations rather than alignments.
- *   - They are the only two trainers here that estimate ability themselves —
- *     Syllogimous keeps a posterior per mode on the scale `levelOf` prices, RNB
- *     runs a QUEST-style posterior over its threshold — so their difficulty
- *     numbers are already a measurement rather than a session's high-water mark.
- *   - They are the two broadest tasks in the archive. Relational reasoning and
- *     relational n-back are what the benchmark is about; the rest of this list
- *     is narrower, and a narrow task can be trained to a high rung without
- *     moving anything the benchmark ranks.
- *
- * Precision and eWMT follow because they are on the benchmark's own quad axis.
- * Running Order and CCT are real throughput measures the benchmark never
- * priced. Rotation and Synth are single-faculty trainers — genuine skills, and
- * the furthest from what this ladder ranks.
- *
- * A source with a ladder and no entry here gets `DEFAULT_WEIGHT`, so adding an
- * adapter does not silently add a heavyweight.
+ * A source with no entry gets `DEFAULT_WEIGHT`, so adding an adapter never
+ * silently adds a heavyweight.
  */
 var SOURCE_WEIGHT = {
   syllogimous: 3,
@@ -283,54 +237,204 @@ var DEFAULT_WEIGHT = 0.5;
 var WINDOW_DAYS = 180;
 
 /**
- * How fast a source stops speaking for you.
- *
- * Halving every three months, on days since it was last trained. Not a cliff:
- * a trainer left alone for a month is still evidence, and one left alone for a
- * year is nearly none. The window above is the hard stop; this is the slope
- * inside it.
+ * How fast a source stops speaking for you: halving every three months since it
+ * was last trained. Not a cliff — a trainer left alone for a month is still
+ * evidence, one left alone for a year is nearly none.
  */
 var HALF_LIFE_DAYS = 90;
 
 /**
- * Sample size at which a source is trusted half as much as it ever will be.
+ * Days of training at which a source is trusted half as much as it ever will be.
  *
- * `n / (n + 20)`: twenty scored sittings is half, a hundred is 0.83, and it
- * never reaches 1. A source cannot buy its way to certainty by volume, which
- * matters because the cheapest trainer here to rack up sessions in is not the
- * one that says most about ability.
+ * Days rather than sessions, because sessions can be racked up in one evening
+ * and days cannot. What the weight is asking is whether this trainer is an
+ * established part of the practice or something opened on Tuesday, and a
+ * fortnight is a fair halfway point. It never reaches 1: no amount of volume
+ * buys certainty.
  */
-var EVIDENCE_HALF = 20;
+var EVIDENCE_DAYS = 14;
 
 /**
- * The benchmark's three columns, and which sources speak for each.
+ * Half-life of a sitting's say in the fallback reading, in days.
  *
- * Only used by `badge` — the strict conjunctive verdict. A column with two
- * sources takes the better of them: either one demonstrates the column's skill,
- * and the benchmark asks for the skill rather than for a particular website.
+ * Only used where an app states no ability of its own and the difficulty its
+ * controller settled on has to stand in. Three weeks: long enough that one bad
+ * evening does not move it, short enough that a month of climbing shows.
  */
-var COLUMNS = [
-  { name: "Relational reasoning", sources: ["syllogimous"] },
-  { name: "Quad N-back", sources: ["precision", "ewmt"] },
-  { name: "Relational N-back", sources: ["rnb"] },
-];
+var RECENCY_HALF_LIFE = 21;
+
+/**
+ * Tiers of disagreement between an app's own estimate and the difficulty it is
+ * actually serving, past which the page says so.
+ *
+ * Both numbers come from the same trainer, so they should agree. When they do
+ * not, either the app's estimate is stale or the reader below has fallen behind
+ * a change in the app — and both are things to be told about rather than
+ * averaged away. The app's own number is still what is used.
+ */
+var DISAGREEMENT_TIERS = 2;
+
+/* ------------------------------------------------------------------ *
+ * What the apps say about themselves                                  *
+ * ------------------------------------------------------------------ */
+
+/** JSON that may already be parsed, or may be a localStorage string. */
+function parseMaybe(value) {
+  if (value && typeof value === "object") return value;
+  if (typeof value !== "string") return null;
+  try { return JSON.parse(value); } catch (e) { return null; }
+}
+
+/*
+ * Syllogimous's ability posterior, decoded.
+ *
+ * `syllogimous-ability:scale` is the aggregate across every mode — the one
+ * number the app itself calls the player's ability, on the same level scale
+ * `levelOf` prices items in and this ladder is built from.
+ *
+ * It is stored as a grid of log-posterior densities and nothing else, because
+ * the grid's floor and spacing are fixed by the app and *growing it only ever
+ * appends points* — an old posterior is a prefix of a longer one, which the app
+ * documents and relies on. So the array's own length is how far it runs, and
+ * reading it needs only the floor and the step. Those two are the one thing
+ * here that a Syllogimous change could invalidate, and `checkDisagreement`
+ * below is what notices when it has.
+ */
+var SYL_MIN_LEVEL = 1;
+var SYL_MAX_LEVEL = 26;
+var SYL_BINS = 80;
+
+function syllogimousAbility(state) {
+  var obj = parseMaybe(state["syllogimous-ability:scale"]);
+  if (!obj || !Array.isArray(obj.logPost) || obj.logPost.length < 2) return null;
+
+  var lp = obj.logPost;
+  var step = (SYL_MAX_LEVEL - SYL_MIN_LEVEL) / (SYL_BINS - 1);
+
+  // Subtract the peak before exponentiating, or a posterior this sharp underflows.
+  var top = -Infinity;
+  for (var i = 0; i < lp.length; i++) if (lp[i] > top) top = lp[i];
+  if (!isFinite(top)) return null;
+
+  var sum = 0, mu = 0;
+  for (var j = 0; j < lp.length; j++) {
+    var w = Math.exp(lp[j] - top);
+    sum += w;
+    mu += w * (SYL_MIN_LEVEL + step * j);
+  }
+  if (!(sum > 0)) return null;
+
+  var level = mu / sum;
+  return isFinite(level) && level >= SYL_MIN_LEVEL ? level : null;
+}
+
+/**
+ * Where each trainer writes down what it thinks of you.
+ *
+ * One small guarded function per source, and every one of them may return null
+ * — a key that moved, a shape that changed, a version that never had it. The
+ * reading then falls through to the records, which know nothing about any app.
+ * That fall-through is the whole robustness story: a trainer can change
+ * anything about how it scores, targets or stores, and the worst case is that
+ * this layer goes quiet for that one source.
+ *
+ * None of these recompute anything. Each app has already applied its own target
+ * accuracy and its own chance correction; the number it kept is the conclusion.
+ */
+var STATE_READERS = {
+
+  /*
+   * The hardest load a block actually cleared — RNB only raises this when a
+   * block scores at or above its *own* advance threshold, which is derived from
+   * whatever target the player has set. A real export reads 0.7 where the
+   * shipped default is 0.4, which is exactly why this is read and not rebuilt.
+   */
+  rnb: function (s) {
+    var v = Number(s.bestLoad);
+    return isFinite(v) && v > 0
+      ? { difficulty: v, unit: "rnb-load", note: "its own best cleared load" }
+      : null;
+  },
+
+  syllogimous: function (s) {
+    var v = syllogimousAbility(s);
+    return v == null
+      ? null
+      : { difficulty: v, unit: "syllogimous-level", note: "its own ability posterior" };
+  },
+
+  ewmt: function (s) {
+    var v = Number(s.bestN);
+    return isFinite(v) && v > 0
+      ? { difficulty: v, unit: "ewmt-n", note: "its own best n" }
+      : null;
+  },
+
+  rrt: function (s) {
+    var v = Number(s.bestPeakBits);
+    return isFinite(v) && v > 0
+      ? { difficulty: v, unit: "rrt-peak-bits-per-s", note: "its own best throughput" }
+      : null;
+  },
+
+  /*
+   * Three modes under one source, each with its own ladder. The best
+   * established level across them, since they are the same faculty asked three
+   * ways and being deep in one of them is the thing to report.
+   */
+  rotation: function (s) {
+    var best = null;
+    for (var mode in s) {
+      if (!Object.prototype.hasOwnProperty.call(s, mode)) continue;
+      var e = s[mode];
+      if (!e || typeof e !== "object") continue;
+      var v = Number(e.best != null ? e.best : e.level);
+      if (isFinite(v) && (best == null || v > best)) best = v;
+    }
+    return best == null
+      ? null
+      : { difficulty: best, unit: "rotation-level", note: "its own best established level" };
+  },
+};
+
+/** The most recent state snapshot a source has, or null. */
+function latestState(archive, source) {
+  var bySource = (archive.state || {})[source];
+  if (!bySource) return null;
+  var days = Object.keys(bySource).sort();
+  return days.length ? bySource[days[days.length - 1]] : null;
+}
+
+/** What the app says about itself, if it says anything this reader understands. */
+function statedAbility(archive, source) {
+  var reader = STATE_READERS[source];
+  if (!reader) return null;
+  var state = latestState(archive, source);
+  if (!state || typeof state !== "object") return null;
+  try {
+    var out = reader(state);
+    return out && LADDERS[out.unit] ? out : null;
+  } catch (e) {
+    // A shape nobody anticipated is a quiet fall-through, never a dead page.
+    return null;
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * The ladder lookup                                                   *
  * ------------------------------------------------------------------ */
 
 /**
- * Where a difficulty sits on the tier axis: 0 is α, 5 is ζ, and the gaps are
- * linear in between.
+ * Where a difficulty sits on the tier axis: 0 is α, 5 is ζ, linear in between.
  *
  * Continuous rather than a rung, because a rung thrown away is a month of work
- * made invisible — the whole climb from β to γ would report as β until the day
- * it reported as γ. The page rounds for the badge and shows the fraction.
+ * made invisible — the whole climb from β to γ would read as β until the day it
+ * read as γ.
  *
  * Off both ends it extrapolates on the nearest gap, bounded one tier either
  * side: below α is a real place to be and so is past ζ, but an estimate four
- * tiers past the top of a published ladder is not a measurement, it is a
- * straight line run out of evidence.
+ * tiers past the top of a published ladder is a straight line run out of
+ * evidence, not a measurement.
  */
 function tierOf(unit, difficulty) {
   var ladder = LADDERS[unit];
@@ -349,7 +453,7 @@ function tierOf(unit, difficulty) {
   return Math.min(top + 1, top + (difficulty - a[top]) / (a[top] - a[top - 1]));
 }
 
-/** The tier a position stands on, as a name — "β", "below α", "past ζ". */
+/** The band a position stands in, as a name — "β", "below α", "past ζ". */
 function tierLabel(level) {
   if (level == null) return null;
   if (level < 0) return "below " + TIERS[0];
@@ -359,66 +463,33 @@ function tierLabel(level) {
 }
 
 /* ------------------------------------------------------------------ *
- * What a source has actually demonstrated                             *
+ * What the records say                                                *
  * ------------------------------------------------------------------ */
 
 /**
- * The hardest difficulty a source was held at 75% across, in its own unit.
+ * The difficulty a trainer's own controller has settled on lately.
  *
- * **This is the benchmark's rule implemented rather than approximated**, and it
- * is why the estimate is not simply a peak or a mean:
+ * **Accuracy is not read.** Every adaptive trainer here moves difficulty until
+ * accuracy sits where it wants it, so the figure it logs is a statement about
+ * the controller and the difficulty is the statement about the player. Looking
+ * at both would be counting the same evidence twice, on a scale this file
+ * cannot interpret anyway.
  *
- *   - A *peak* is the one lucky block. Every trainer here adapts upward until
- *     it fails, so every record contains a peak nobody could repeat, and an
- *     estimate built on one is an estimate of somebody's best evening in six
- *     months.
- *   - A *mean* is dragged down by warm-ups, by the easy end of a staircase, and
- *     by whatever the controller served while it was re-finding you after a
- *     break. It answers "what were you mostly given", not "what can you hold".
- *
- * So: sort the window's scored sittings hardest first, and walk down until the
- * run from the top clears 75%. The difficulty where that first happens is the
- * answer — everything at or above it was held at the benchmark's bar, which is
- * exactly what the benchmark asks. A prefix is only considered where it ends on
- * a change of difficulty, so a tie is never cut through the middle.
- *
- * Null when no prefix long enough ever clears it. That is not a gap to paper
- * over with the best available number: it means this trainer has not recently
- * shown 75% anywhere, and the page says so by name.
+ * Recency-weighted rather than a window mean, because what is wanted is where
+ * the controller has arrived, not where it started. Every sitting still counts;
+ * a sitting three weeks ago counts half.
  */
-function demonstrated(rows, minRows) {
-  var scored = [];
+function settledDifficulty(rows, to) {
+  var sum = 0, weight = 0;
   for (var i = 0; i < rows.length; i++) {
-    if (rows[i].difficulty != null && rows[i].correct != null) scored.push(rows[i]);
+    if (rows[i].difficulty == null || !isFinite(rows[i].difficulty)) continue;
+    var age = Math.max(0, _daysBetween(rows[i].day, to));
+    var w = Math.pow(0.5, age / RECENCY_HALF_LIFE);
+    sum += w * rows[i].difficulty;
+    weight += w;
   }
-  if (scored.length < minRows) {
-    return { difficulty: null, n: 0, of: scored.length, short: true };
-  }
-
-  scored.sort(function (a, b) { return b.difficulty - a.difficulty; });
-
-  var sum = 0;
-  for (var j = 0; j < scored.length; j++) {
-    sum += scored[j].correct;
-    if (j + 1 < minRows) continue;
-    // Only at a difficulty boundary, so the threshold means what it says.
-    if (j + 1 < scored.length && scored[j + 1].difficulty === scored[j].difficulty) continue;
-    if (sum / (j + 1) >= TIER_ACCURACY) {
-      return {
-        difficulty: scored[j].difficulty,
-        accuracy: sum / (j + 1),
-        n: j + 1,
-        of: scored.length,
-        short: false,
-      };
-    }
-  }
-  return { difficulty: null, n: 0, of: scored.length, short: false };
+  return weight > 0 ? sum / weight : null;
 }
-
-/* ------------------------------------------------------------------ *
- * The estimate                                                        *
- * ------------------------------------------------------------------ */
 
 /** Records of one source inside the window, grouped by the unit they use. */
 function windowRows(archive, source, from, to) {
@@ -433,12 +504,11 @@ function windowRows(archive, source, from, to) {
 }
 
 /**
- * Which of a source's units to read it on: the one with a ladder and the most
- * records behind it.
+ * Which unit to read a source on: the one with a ladder and the most records.
  *
- * A source mid-changeover has two, and only one of them can be looked up. Where
- * both could be, the larger sample wins — the same call `sourceSummary` makes
- * about which unit a source is "in".
+ * A source mid-changeover has two and only one of them can be looked up —
+ * Syllogimous is the live case, where a premise count is not a level and there
+ * is no converting between them.
  */
 function bestUnit(byUnit) {
   var best = null;
@@ -450,50 +520,60 @@ function bestUnit(byUnit) {
   return best;
 }
 
-/**
- * Why a source's windowed records fit no ladder, in its own terms.
- *
- * Two different silences and the page should not blur them. A source with
- * units nobody has a ladder for is a gap in this table — Syllogimous's premise
- * counts are the live case, and a ladder for them is a decision somebody could
- * make. A source with no unit at all records no difficulty **on purpose**, as
- * Anki does, and there is nothing to build a ladder out of.
- */
-function noLadderReason(byUnit) {
-  var units = Object.keys(byUnit).filter(function (u) { return u; });
-  if (!units.length) return "records no difficulty, so there is nothing to place";
-  return "no tier ladder for " + units.join(", ");
-}
-
-/** The last day a source has any record on, ladder or no ladder. */
-function lastDayOf(archive, source) {
+/** Distinct days a source was trained, and the last of them. */
+function trainingDays(archive, source) {
+  var seen = {};
   var last = null;
   for (var i = 0; i < archive.records.length; i++) {
     var r = archive.records[i];
     if (r.source !== source) continue;
+    seen[r.day] = true;
     if (last == null || r.day > last) last = r.day;
   }
-  return last;
+  return { days: Object.keys(seen).length, last: last };
 }
+
+/**
+ * Why a source's records fit no ladder, in its own terms.
+ *
+ * Two different silences. A source with units nobody has a ladder for is a gap
+ * in `LADDERS` somebody could close — and, if a trainer has *renamed* its unit,
+ * the thing that would otherwise change everybody's estimate without a word. A
+ * source with no unit at all records no difficulty on purpose, as Anki does.
+ */
+function noLadderReason(byUnit) {
+  var units = Object.keys(byUnit).filter(function (u) { return u; });
+  if (!units.length) return "records no difficulty, so there is nothing to place";
+  return "no tier ladder for " + units.join(", ") + " — add one, or it stays out";
+}
+
+/* ------------------------------------------------------------------ *
+ * The estimate                                                        *
+ * ------------------------------------------------------------------ */
 
 /**
  * Every source in the archive, and what it contributes.
  *
- * Sources that cannot contribute are returned too, with the reason — a screen
- * that silently drops half the archive is a screen nobody can check. There are
- * four reasons and they are different things: no ladder for the unit (Anki
- * records no difficulty at all, and pre-level Syllogimous records a quantity
- * this ladder was not built for), nothing inside the window, too few sittings,
- * or nothing held at 75%.
+ * Each one is read in two ways where both are available: what the app says
+ * about itself, and what its controller has settled on. The app's own number
+ * wins — it applied a target and a chance correction this file deliberately
+ * knows nothing about — and the second is kept as the cross-check, because two
+ * readings of the same trainer that disagree by two tiers mean something is
+ * stale and nobody would otherwise find out.
+ *
+ * Sources that cannot contribute are returned too, with the reason. A screen
+ * that silently drops part of the archive is a screen nobody can check.
  */
 function contributions(archive, opts) {
   opts = opts || {};
   var to = opts.asOf || new Date().toISOString().slice(0, 10);
-  var from = _addDays(to, -(opts.windowDays || WINDOW_DAYS));
+  var windowDays = opts.windowDays || WINDOW_DAYS;
+  var from = _addDays(to, -windowDays);
   var halfLife = opts.halfLifeDays || HALF_LIFE_DAYS;
 
   var sources = {};
   for (var i = 0; i < archive.records.length; i++) sources[archive.records[i].source] = true;
+  for (var s in archive.state || {}) sources[s] = true;
 
   var used = [];
   var unused = [];
@@ -501,52 +581,51 @@ function contributions(archive, opts) {
   Object.keys(sources).sort().forEach(function (source) {
     var byUnit = windowRows(archive, source, from, to);
     var unit = bestUnit(byUnit);
+    var settled = unit ? settledDifficulty(byUnit[unit], to) : null;
+    var stated = statedAbility(archive, source);
 
-    if (!unit) {
-      var anyUnit = Object.keys(byUnit).length > 0;
+    var reading = stated || (settled == null ? null : {
+      difficulty: settled,
+      unit: unit,
+      note: "the difficulty its own controller settled on",
+    });
+
+    if (!reading) {
+      var anyRows = Object.keys(byUnit).length > 0;
       unused.push({
         source: source,
-        why: anyUnit
+        why: anyRows
           ? noLadderReason(byUnit)
-          : "nothing in the last " + (opts.windowDays || WINDOW_DAYS) + " days",
+          : "nothing in the last " + windowDays + " days",
       });
       return;
     }
 
-    var rows = byUnit[unit];
-    var minRows = rows[0].kind === "item" ? MIN_ITEMS : MIN_BLOCKS;
-    var shown = demonstrated(rows, minRows);
+    var level = tierOf(reading.unit, reading.difficulty);
+    var alt = (unit && settled != null && stated) ? tierOf(unit, settled) : null;
 
-    if (shown.difficulty == null) {
-      unused.push({
-        source: source,
-        unit: unit,
-        why: shown.short
-          ? shown.of + " of " + minRows + " scored sittings in the window"
-          : "nothing held at " + Math.round(TIER_ACCURACY * 100) + "% across "
-            + shown.of + " sittings",
-      });
-      return;
-    }
-
-    var last = lastDayOf(archive, source);
-    var stale = Math.max(0, _daysBetween(last, to));
+    var seen = trainingDays(archive, source);
+    var stale = seen.last == null ? 0 : Math.max(0, _daysBetween(seen.last, to));
     var freshness = Math.pow(0.5, stale / halfLife);
-    var confidence = shown.of / (shown.of + EVIDENCE_HALF);
+    var confidence = seen.days / (seen.days + EVIDENCE_DAYS);
     var base = SOURCE_WEIGHT[source] == null ? DEFAULT_WEIGHT : SOURCE_WEIGHT[source];
 
     used.push({
       source: source,
-      unit: unit,
-      from: LADDERS[unit].from,
-      note: LADDERS[unit].note,
-      difficulty: shown.difficulty,
-      accuracy: shown.accuracy,
-      n: shown.n,
-      of: shown.of,
-      lastDay: last,
+      unit: reading.unit,
+      basis: stated ? "stated" : "settled",
+      note: reading.note,
+      from: LADDERS[reading.unit].from,
+      ladderNote: LADDERS[reading.unit].note,
+      difficulty: reading.difficulty,
+      level: level,
+      /* The other reading of the same trainer, where there is one. Not averaged
+         in — shown, so a disagreement is visible rather than split. */
+      crossCheck: alt,
+      disagrees: alt != null && Math.abs(alt - level) > DISAGREEMENT_TIERS,
+      days: seen.days,
+      lastDay: seen.last,
       daysSince: stale,
-      level: tierOf(unit, shown.difficulty),
       baseWeight: base,
       freshness: freshness,
       confidence: confidence,
@@ -558,59 +637,17 @@ function contributions(archive, opts) {
 }
 
 /**
- * The benchmark's own verdict: the weakest of its three columns, and nothing
- * else.
+ * Where the whole record puts you.
  *
- * Conjunctive, because that is the published rule — "all modes must meet at
- * least 75% to advance". A column nobody has evidence for does not lower the
- * badge, it withholds it: there is no tier you can be said to have earned on a
- * benchmark two thirds of which you have not attempted, and guessing the third
- * from the other two is precisely the cross-app inference this project refuses
- * to make anywhere else.
- */
-function badge(used) {
-  var columns = COLUMNS.map(function (col) {
-    var best = null;
-    for (var i = 0; i < used.length; i++) {
-      if (col.sources.indexOf(used[i].source) < 0) continue;
-      if (!best || used[i].level > best.level) best = used[i];
-    }
-    return {
-      name: col.name,
-      source: best ? best.source : null,
-      level: best ? best.level : null,
-    };
-  });
-
-  var missing = columns.filter(function (c) { return c.level == null; });
-  if (missing.length) {
-    return { tier: null, level: null, columns: columns, missing: missing };
-  }
-
-  var lowest = columns[0];
-  columns.forEach(function (c) { if (c.level < lowest.level) lowest = c; });
-
-  return {
-    tier: Math.floor(lowest.level) < 0 ? null : tierLabel(lowest.level),
-    level: lowest.level,
-    columns: columns,
-    missing: [],
-    blocking: lowest.name,
-  };
-}
-
-/**
- * Where the whole record puts you, on the benchmark's ladder.
+ * A weighted mean of the per-source positions. Not a minimum — the benchmark's
+ * own rule is conjunctive and that is the right rule for awarding *its* badge,
+ * but it is the wrong answer to "roughly how good am I", where one trainer
+ * opened last Tuesday would decide everything. Not a maximum either, which
+ * would report whichever trainer you happened to be best at.
  *
- * A weighted mean of the per-source positions — not a minimum, which is what
- * `badge` is for, and not a maximum, which would make the estimate a report on
- * whichever trainer you happened to be best at.
- *
- * `confidence` is the share of the weight that could exist which actually
- * turned up: every listed source at full freshness and full evidence. It is
- * deliberately hard to max out, and it is the number to read before the tier —
- * an α on 12% confidence is a sentence about the archive, not about anybody's
- * reasoning.
+ * It is always produced when anything at all can be read. `confidence` is the
+ * share of the weight that could speak for you which actually did, and it is
+ * the number to read beside the letter rather than a bar to clear.
  */
 function estimate(archive, opts) {
   var parts = contributions(archive, opts);
@@ -619,7 +656,7 @@ function estimate(archive, opts) {
   if (!used.length) {
     return {
       level: null, tier: null, progress: null, confidence: 0,
-      used: [], unused: parts.unused, badge: badge([]),
+      used: [], unused: parts.unused, spread: null,
       from: parts.from, to: parts.to,
     };
   }
@@ -632,25 +669,41 @@ function estimate(archive, opts) {
   used.forEach(function (u) { u.share = total > 0 ? u.weight / total : 0; });
   used.sort(function (a, b) { return b.share - a.share; });
 
-  /* What the same sources would be worth trained today with unlimited evidence.
-     The ceiling is never reached — `confidence` above says why — so this is a
-     ratio to read, not a percentage to complete. */
   var possible = 0;
   used.forEach(function (u) { possible += u.baseWeight; });
   parts.unused.forEach(function (u) {
     possible += SOURCE_WEIGHT[u.source] == null ? DEFAULT_WEIGHT : SOURCE_WEIGHT[u.source];
   });
 
+  /*
+   * How far apart the trainers are, which is the honest replacement for the
+   * conjunctive badge the first version withheld.
+   *
+   * A single letter over eight trainers hides whether they agree. Being γ
+   * everywhere and being ε in two things and α in six are different situations
+   * with the same mean, and the second is the more useful thing to know — it is
+   * where the next hour is worth spending. Reported rather than used to refuse
+   * anything.
+   */
+  var lowest = used[0], highest = used[0];
+  used.forEach(function (u) {
+    if (u.level < lowest.level) lowest = u;
+    if (u.level > highest.level) highest = u;
+  });
+
   return {
     level: level,
     tier: tierLabel(level),
-    /* How far into the tier, for a bar. Negative positions are below α and
-       have no tier to be a fraction of. */
+    /* How far into the band, for a bar. Below α there is no band to be a
+       fraction of. */
     progress: level == null || level < 0 ? null : level - Math.floor(level),
     confidence: possible > 0 ? total / possible : 0,
     used: used,
     unused: parts.unused,
-    badge: badge(used),
+    spread: {
+      low: lowest, high: highest,
+      tiers: highest.level - lowest.level,
+    },
     from: parts.from,
     to: parts.to,
   };
@@ -658,12 +711,13 @@ function estimate(archive, opts) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    estimate: estimate, contributions: contributions, demonstrated: demonstrated,
-    tierOf: tierOf, tierLabel: tierLabel, badge: badge,
+    estimate: estimate, contributions: contributions, settledDifficulty: settledDifficulty,
+    tierOf: tierOf, tierLabel: tierLabel, statedAbility: statedAbility,
+    latestState: latestState, syllogimousAbility: syllogimousAbility,
     TIERS: TIERS, LADDERS: LADDERS, SOURCE_WEIGHT: SOURCE_WEIGHT,
-    COLUMNS: COLUMNS, TIER_ACCURACY: TIER_ACCURACY,
-    MIN_ITEMS: MIN_ITEMS, MIN_BLOCKS: MIN_BLOCKS,
+    STATE_READERS: STATE_READERS, DEFAULT_WEIGHT: DEFAULT_WEIGHT,
     WINDOW_DAYS: WINDOW_DAYS, HALF_LIFE_DAYS: HALF_LIFE_DAYS,
-    EVIDENCE_HALF: EVIDENCE_HALF, DEFAULT_WEIGHT: DEFAULT_WEIGHT,
+    EVIDENCE_DAYS: EVIDENCE_DAYS, RECENCY_HALF_LIFE: RECENCY_HALF_LIFE,
+    DISAGREEMENT_TIERS: DISAGREEMENT_TIERS,
   };
 }

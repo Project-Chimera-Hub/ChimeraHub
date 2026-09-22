@@ -8,7 +8,7 @@
      that loaded the page while the wiring was broken would keep serving
      itself the broken script for ten more minutes — and the failure is
      silent, so it would read as "the fix did not work". Bump on release. -->
-<link rel="stylesheet" href="css/base.css?v=6">
+<link rel="stylesheet" href="css/base.css?v=7">
 </head>
 <body>
 
@@ -76,13 +76,22 @@
 <section id="ability">
   <h2>Ability</h2>
   <p class="dim">
-    Where the whole record stands on the <b>Guanxinandu S11</b> tiers &mdash; six
-    rungs, &alpha; to &zeta;, published with a rule this page keeps: nothing
-    counts below <b>75%</b>. Each trainer is read against that benchmark's own
-    requirement <em>for that trainer</em>, in its own units; nothing here
-    averages one app's difficulty with another's. Syllogimous and Relational
-    N&#8209;back carry most of it, being two of the benchmark's three columns and
-    the only two trainers that estimate ability themselves.
+    Where the whole record stands, on six bands of roughly similar proficiency
+    &mdash; &alpha; to &zeta;, from the <b>Guanxinandu S11</b> benchmark, which is
+    used here for its calibration rather than its test protocol: it says what
+    "about this good" looks like in five trainers' own units, and nothing else
+    supplies that. Each trainer is read against its own anchor, in its own units;
+    nothing averages one app's difficulty with another's.
+  </p>
+  <p class="dim">
+    <b>Where a trainer keeps its own ability estimate, that is what is read</b> —
+    RNB's best cleared load, Syllogimous's ability posterior, eWMT's best n. Each
+    has already applied its own target accuracy and its own chance correction, and
+    those differ: RNB scores a block so that never pressing is 0 and perfect is 1,
+    where about 0.5 is four answers in five. So accuracy is not second-guessed
+    here, and there is no bar to clear. A thin reading is reported thin and
+    weighed light; it is never withheld, and no one trainer's settings can
+    suppress the rest.
   </p>
   <div id="abilityHead" class="ability"></div>
   <div id="abilityParts" class="modes"></div>
@@ -183,12 +192,12 @@
   <ul id="log" class="log"></ul>
 </section>
 
-<script src="js/record.js?v=5"></script>
-<script src="js/notes.js?v=5"></script>
-<script src="js/adapters.js?v=5"></script>
-<script src="js/archive.js?v=5"></script>
-<script src="js/insight.js?v=5"></script>
-<script src="js/ability.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/record.js?v=6"></script>
+<script src="js/notes.js?v=6"></script>
+<script src="js/adapters.js?v=6"></script>
+<script src="js/archive.js?v=6"></script>
+<script src="js/insight.js?v=6"></script>
+<script src="js/ability.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>

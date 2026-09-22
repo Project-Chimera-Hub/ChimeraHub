@@ -401,6 +401,12 @@ td:last-child { color: var(--ok); font-size: .8rem; }
       transparent calc(var(--fill) * 100%) 100%);
 }
 
+/* A row whose two readings of the same trainer disagree: the app's own estimate
+   against the difficulty it is actually serving. Warm, because it is the one
+   thing on this screen that wants acting on rather than reading. */
+.modes tr.warn td { color: var(--warn); }
+.modes tr.warn td.dim b { color: var(--warn); font-weight: 650; }
+
 .ability__scale .rung b {
   position: absolute;
   inset: 0;

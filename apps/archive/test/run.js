@@ -452,12 +452,13 @@ test("the page renders an archive without throwing", () => {
   assert.ok(nodes.daysTable.innerHTML.includes("2026-08-25"), "the day table is empty");
   assert.ok(nodes.sourceCards.innerHTML.includes("syllogimous"), "the sources are empty");
   assert.ok(nodes.overlapCards.innerHTML.includes("of 20"), "the overlap gate says nothing");
-  /* One syllogism at a premise count and one block at load 41: neither has the
-     sittings behind it to claim a tier, so the section has to say so rather
-     than print a letter or nothing at all. */
-  assert.ok(nodes.abilityHead.innerHTML.length > 0, "the ability section rendered blank");
-  assert.ok(nodes.abilityUnused.innerHTML.includes("Relational N-back"),
-    "a source that cannot place you should still be listed as silent");
+  /* One syllogism at a premise count and one block at load 41. The premise
+     count has no ladder and is listed as silent; the block still places, and a
+     tier is reported off it however thin it is — a reading is never withheld. */
+  assert.ok(nodes.abilityHead.innerHTML.includes("ability__tier"),
+    "the ability section withheld a tier it had evidence for");
+  assert.ok(nodes.abilityUnused.innerHTML.includes("syllogimous-premises"),
+    "a unit with no ladder should be named rather than dropped");
   assert.strictEqual(nodes.save.disabled, false, "the download button stayed disabled");
 
   /*
@@ -1433,18 +1434,22 @@ test("notes: an archive written before notes existed still opens", () => {
  * ------------------------------------------------------------------ */
 
 /*
- * The one screen in the project that puts eight trainers on one axis, so the
- * one that most needs a suite. What is tested is not "does it produce a
- * number" — it is the three claims the number rests on: that the ladders read
- * the benchmark's own rows back, that the 75% rule is a rule rather than a
- * decoration, and that a source which cannot speak is *listed as silent*
- * rather than quietly dropped.
+ * The one screen that puts eight trainers on one axis, so the one that most
+ * needs a suite. Three claims are tested, and they are the three the first
+ * version of this module got wrong:
+ *
+ *   - It is never withheld. No setting, no missing trainer and no accuracy
+ *     figure can suppress a reading the rest of the archive has earned.
+ *   - Accuracy is never interpreted. Each app has applied its own target and
+ *     its own chance correction already, and the scales are not comparable.
+ *   - Where an app states its own ability, that is what is read — and when that
+ *     reader stops working, the estimate degrades to the records rather than
+ *     disappearing.
  */
 
 const abilityDay = (d) => Date.UTC(2026, 8, d, 12, 0);
 
-/** An archive of one source's sittings, all at one difficulty unless varied. */
-function abilityArchive(specs) {
+function abilityArchive(specs, state) {
   const arc = A.emptyArchive();
   const records = [];
   specs.forEach((spec, s) => {
@@ -1463,6 +1468,7 @@ function abilityArchive(specs) {
     }
   });
   arc.records = records.sort((a, b) => a.at - b.at);
+  if (state) arc.state = state;
   return arc;
 }
 
@@ -1486,112 +1492,228 @@ test("ability: the benchmark's own rows are what the ladders say", () => {
   assert.strictEqual(AB.LADDERS["syllogimous-level"].anchors[2], 11.4);
   // Character + position at 4-back, priced by the app's own computeLoad.
   assert.strictEqual(AB.LADDERS["rnb-load"].anchors[2], 10 * 4 + 13);
-  // Quad 5-back.
   assert.strictEqual(AB.LADDERS["precision-n"].anchors[2], 5);
 });
 
+/*
+ * The guard against a silent unit rename.
+ *
+ * A trainer that renames its unit drops out of every ladder lookup, and the
+ * estimate then changes for everybody with nothing to say it has. The page
+ * lists the source, and this fails the build.
+ */
+test("ability: every unit the adapters emit has a ladder", () => {
+  const emitted = [
+    "syllogimous-level", "rnb-load", "cct-peak-items-per-min",
+    "rrt-peak-bits-per-s", "ewmt-n", "precision-n", "rotation-level",
+    "synth-symbols-per-min",
+  ];
+  const src = fs.readFileSync(path.join(__dirname, "..", "js", "adapters.js"), "utf8");
+  for (const unit of emitted) {
+    assert.ok(src.includes('"' + unit + '"'),
+      unit + " is no longer emitted by any adapter — drop or rename its ladder");
+    assert.ok(AB.LADDERS[unit], unit + " is emitted by an adapter and has no ladder");
+  }
+  /* Deliberately absent, and it must stay absent: a premise count is not a
+     level, which is the whole reason the adapter keeps two units. */
+  assert.ok(!AB.LADDERS["syllogimous-premises"]);
+});
+
 test("ability: between two anchors it interpolates, off the ends it is bounded", () => {
-  // Halfway from gamma (11.4) to delta (13.2).
   assert.ok(Math.abs(AB.tierOf("syllogimous-level", 12.3) - 2.5) < 1e-9);
-  // A straight line run out of evidence is not a measurement: one tier either
-  // side of the published ladder and no further.
   assert.strictEqual(AB.tierOf("syllogimous-level", -400), -1);
   assert.strictEqual(AB.tierOf("syllogimous-level", 400), AB.TIERS.length);
-  // A unit with no ladder is a refusal, not a zero.
   assert.strictEqual(AB.tierOf("syllogimous-premises", 6), null);
 });
 
-test("ability: the level is the hardest HELD at 75%, not the hardest attempted", () => {
-  /* Twelve easy blocks at load 53 answered well, then four at 83 answered
-     badly — the shape every adaptive trainer produces, since all of them climb
-     until they fail. A peak would report zeta; the benchmark's rule reports
-     the rung that was actually held. */
+/*
+ * The bug this module was rewritten for.
+ *
+ * RNB's block score maps "never pressed" to 0 and perfect to 1, so about 0.5
+ * there is four answers in five, and its shipped target is 0.40. Read as a raw
+ * percentage it looks like failure. The first version required 75% before it
+ * would report anything and therefore reported nothing at all on a real
+ * archive — every adaptive trainer here pins its accuracy somewhere of its own
+ * choosing, which is the one thing that figure is guaranteed NOT to tell you.
+ */
+test("ability: a low-looking accuracy is not a low estimate", () => {
   const arc = abilityArchive([
-    { source: "rnb", n: 12, difficulty: 53, correct: 0.9, unit: "rnb-load" },
-    { source: "rnb", n: 4, difficulty: 83, correct: 0.3, unit: "rnb-load" },
+    { source: "rnb", n: 20, difficulty: 63, correct: 0.45, unit: "rnb-load" },
   ]);
   const est = AB.estimate(arc, ASOF);
-  assert.strictEqual(est.used.length, 1);
-  assert.strictEqual(est.used[0].difficulty, 53, "the peak was reported as ability");
-  assert.ok(Math.abs(est.level - 2) < 1e-9, "load 53 is gamma");
+  assert.ok(est.level != null, "a reading was withheld over an accuracy figure");
+  assert.ok(Math.abs(est.level - 3) < 1e-9, "load 63 is delta whatever the score reads");
 });
 
-test("ability: a source that never holds 75% contributes nothing, and says why", () => {
-  const arc = abilityArchive([
-    { source: "rnb", n: 20, difficulty: 63, correct: 0.4, unit: "rnb-load" },
-  ]);
-  const est = AB.estimate(arc, ASOF);
-  assert.strictEqual(est.level, null, "a level was invented for a record that met no bar");
-  assert.strictEqual(est.unused.length, 1);
-  assert.ok(/75%/.test(est.unused[0].why), "the reason did not name the rule");
+test("ability: the same difficulty reads the same at any accuracy", () => {
+  const at = (c) => AB.estimate(abilityArchive([
+    { source: "rnb", n: 20, difficulty: 63, correct: c, unit: "rnb-load" },
+  ]), ASOF).level;
+  assert.strictEqual(at(0.2), at(0.9),
+    "accuracy moved the estimate — the controller already spent it on difficulty");
 });
 
-test("ability: too few sittings is a different silence from failing the bar", () => {
+test("ability: one trainer cannot suppress the rest", () => {
+  /* The complaint the rewrite answers: an unideal setting in one place used to
+     withhold the whole badge. Here Precision has a single block at n2 and every
+     other trainer is well established. */
   const arc = abilityArchive([
-    { source: "rnb", n: 3, difficulty: 63, correct: 1, unit: "rnb-load" },
+    { source: "syllogimous", n: 60, kind: "item", difficulty: 13.2, correct: 0.6, unit: "syllogimous-level" },
+    { source: "rnb", n: 30, difficulty: 63, correct: 0.4, unit: "rnb-load" },
+    { source: "precision", n: 1, day: 12, difficulty: 2, correct: 0.3, unit: "precision-n" },
   ]);
   const est = AB.estimate(arc, ASOF);
-  assert.strictEqual(est.level, null);
-  assert.ok(/of 8 scored sittings/.test(est.unused[0].why), est.unused[0].why);
+  assert.ok(est.level != null && est.tier, "the estimate was withheld");
+  assert.strictEqual(est.used.length, 3, "every source should be in it");
+  const weak = est.used.find((u) => u.source === "precision");
+  assert.ok(weak.share < 0.1, "one day of a trainer carried " + weak.share);
+  assert.ok(est.level > 2.5, "a single weak day dragged the estimate to " + est.level);
 });
 
-test("ability: a run of equal difficulties is never cut through the middle", () => {
-  /* Eight blocks at load 63, the first four right and the last four wrong: the
-     top four alone would clear 75% and the whole run does not. Taking the
-     prefix would report delta off a threshold that says nothing — every one of
-     those blocks was the same difficulty. */
-  const arc = abilityArchive([
-    { source: "rnb", n: 8, difficulty: 63, correct: (i) => (i < 4 ? 1 : 0), unit: "rnb-load" },
-    { source: "rnb", n: 8, difficulty: 33, correct: 1, unit: "rnb-load" },
-  ]);
+test("ability: a trainer's own estimate is read, not rebuilt from its records", () => {
+  /* RNB raises bestLoad only when a block clears its OWN advance threshold,
+     derived from whatever target the player set — a real export reads 0.7 where
+     the shipped default is 0.4. Rebuilding that here would be a second copy of
+     a number the app already keeps. */
+  const arc = abilityArchive(
+    [{ source: "rnb", n: 20, difficulty: 43, correct: 0.5, unit: "rnb-load" }],
+    { rnb: { "2026-09-20": { bestLoad: 73, tune: { targetAccuracy: 0.7 } } } });
   const est = AB.estimate(arc, ASOF);
-  assert.ok(est.used[0].difficulty < 63, "a tie was cut through to claim a tier");
+  assert.strictEqual(est.used[0].basis, "stated");
+  assert.strictEqual(est.used[0].difficulty, 73);
+  assert.ok(Math.abs(est.level - 4) < 1e-9, "the app's own best load is epsilon");
+});
+
+test("ability: the newest snapshot wins", () => {
+  const arc = abilityArchive(
+    [{ source: "rnb", n: 20, difficulty: 43, correct: 0.5, unit: "rnb-load" }],
+    { rnb: { "2026-09-01": { bestLoad: 33 }, "2026-09-20": { bestLoad: 63 } } });
+  assert.strictEqual(AB.estimate(arc, ASOF).used[0].difficulty, 63);
+});
+
+test("ability: a state reader that stops working falls through to the records", () => {
+  /* The robustness requirement. A trainer may rename a key, change a shape or
+     ship a version that never had one; the worst case has to be that this layer
+     goes quiet for that source, never that the page breaks or the source
+     vanishes. */
+  const shapes = [
+    { rnb: { "2026-09-20": { bestLoad: "not a number" } } },
+    { rnb: { "2026-09-20": { somethingElse: 73 } } },
+    { rnb: { "2026-09-20": null } },
+    { rnb: {} },
+    {},
+  ];
+  for (const state of shapes) {
+    const arc = abilityArchive(
+      [{ source: "rnb", n: 20, difficulty: 53, correct: 0.5, unit: "rnb-load" }], state);
+    const est = AB.estimate(arc, ASOF);
+    assert.strictEqual(est.used.length, 1, "the source vanished on " + JSON.stringify(state));
+    assert.strictEqual(est.used[0].basis, "settled");
+    assert.ok(Math.abs(est.used[0].level - 2) < 1e-9);
+  }
+});
+
+test("ability: Syllogimous's posterior decodes to the level the app would report", () => {
+  /* A posterior spiked on one grid point must come back as that point's level.
+     The grid's floor and spacing are fixed and growing it only appends, so an
+     array longer than 80 bins still decodes — which is what keeps this reader
+     working across the app's own grid extension. */
+  const spike = (i, len) => {
+    const lp = new Array(len).fill(-60);
+    lp[i] = 0;
+    return JSON.stringify({ logPost: lp, trials: 40, lastSeen: 1 });
+  };
+  const step = (26 - 1) / (80 - 1);
+  for (const [i, len] of [[30, 80], [30, 120], [79, 80]]) {
+    const got = AB.syllogimousAbility({ "syllogimous-ability:scale": spike(i, len) });
+    assert.ok(Math.abs(got - (1 + step * i)) < 0.01,
+      "bin " + i + " of " + len + " decoded to " + got);
+  }
+  assert.strictEqual(AB.syllogimousAbility({}), null);
+  assert.strictEqual(AB.syllogimousAbility({ "syllogimous-ability:scale": "{" }), null);
+  assert.strictEqual(
+    AB.syllogimousAbility({ "syllogimous-ability:scale": { logPost: [] } }), null);
+});
+
+test("ability: two readings of one trainer that disagree are flagged, not averaged", () => {
+  /* Both numbers come from the same app, so they should agree. When they do not,
+     either the estimate is stale or the reader has fallen behind a change — and
+     splitting the difference would hide exactly that. */
+  const arc = abilityArchive(
+    [{ source: "rnb", n: 20, difficulty: 33, correct: 0.5, unit: "rnb-load" }],
+    { rnb: { "2026-09-20": { bestLoad: 83 } } });
+  const u = AB.estimate(arc, ASOF).used[0];
+  assert.strictEqual(u.basis, "stated");
+  assert.strictEqual(u.difficulty, 83, "the flag should not change which is used");
+  assert.ok(u.disagrees, "five tiers apart went unremarked");
+  assert.ok(Math.abs(u.crossCheck - 0) < 1e-9);
+});
+
+test("ability: the settled reading follows the controller, not the whole window", () => {
+  /* Twenty blocks at load 33 three weeks ago and twenty at 63 this week. What
+     is wanted is where the controller has arrived, so the reading has to sit
+     above the plain mean of 48 — and still below 63, because a climb that
+     recent is not yet a settled position. */
+  const climbed = AB.estimate(abilityArchive([
+    { source: "rnb", n: 20, day: 1, difficulty: 33, correct: 0.5, unit: "rnb-load" },
+    { source: "rnb", n: 20, day: 21, difficulty: 63, correct: 0.5, unit: "rnb-load" },
+  ]), ASOF).used[0];
+  assert.ok(climbed.difficulty > 48 && climbed.difficulty < 63,
+    "a finished climb read " + climbed.difficulty + ", not between the mean and the top");
+
+  /* Push the old blocks far enough back and they stop mattering, which is the
+     half-life doing its job rather than a window edge doing it. */
+  const older = AB.estimate(abilityArchive([
+    { source: "rnb", n: 20, day: -60, difficulty: 33, correct: 0.5, unit: "rnb-load" },
+    { source: "rnb", n: 20, day: 21, difficulty: 63, correct: 0.5, unit: "rnb-load" },
+  ]), ASOF).used[0];
+  assert.ok(older.difficulty > climbed.difficulty,
+    "older evidence should weigh less, not the same");
+  assert.ok(older.difficulty > 60, "two months back still moved it to " + older.difficulty);
 });
 
 test("ability: Syllogimous and Relational N-back carry the estimate", () => {
   const arc = abilityArchive([
-    { source: "syllogimous", n: 60, kind: "item", difficulty: 13.2, correct: 1, unit: "syllogimous-level" },
-    { source: "rnb", n: 20, difficulty: 63, correct: 1, unit: "rnb-load" },
-    { source: "rotation", n: 20, difficulty: 10, correct: 1, unit: "rotation-level" },
-    { source: "synth", n: 20, difficulty: 237, correct: 1, unit: "synth-symbols-per-min" },
-    { source: "cct", n: 20, difficulty: 120, correct: 1, unit: "cct-peak-items-per-min" },
+    { source: "syllogimous", n: 60, kind: "item", difficulty: 13.2, correct: 0.7, unit: "syllogimous-level" },
+    { source: "rnb", n: 20, difficulty: 63, correct: 0.5, unit: "rnb-load" },
+    { source: "rotation", n: 20, difficulty: 10, correct: 0.4, unit: "rotation-level" },
+    { source: "synth", n: 20, difficulty: 237, correct: 0.9, unit: "synth-symbols-per-min" },
+    { source: "cct", n: 20, difficulty: 120, correct: 0.6, unit: "cct-peak-items-per-min" },
   ]);
   const est = AB.estimate(arc, ASOF);
-  const big = est.used.filter((u) => u.source === "syllogimous" || u.source === "rnb");
-  const share = big.reduce((a, u) => a + u.share, 0);
-  assert.strictEqual(big.length, 2);
+  const share = est.used
+    .filter((u) => u.source === "syllogimous" || u.source === "rnb")
+    .reduce((a, u) => a + u.share, 0);
   assert.ok(share > 0.6, "the two the benchmark is about carried only " + share);
-  // And the rows arrive in the order they matter, so the page reads top-down.
   assert.ok(est.used[0].share >= est.used[est.used.length - 1].share);
 });
 
 test("ability: a trainer not opened in months counts for less than one opened today", () => {
-  const fresh = abilityArchive([
-    { source: "rnb", n: 20, day: 20, difficulty: 63, correct: 1, unit: "rnb-load" },
-  ]);
-  const stale = abilityArchive([
-    { source: "rnb", n: 20, day: 20, difficulty: 63, correct: 1, unit: "rnb-load" },
-  ]);
-  const a = AB.estimate(fresh, { asOf: "2026-09-22" });     // two days on
-  const b = AB.estimate(stale, { asOf: "2026-12-19" });     // ninety days on
-  /* One half-life, so the weight halves. Bounded on both sides: a decay that
-     ran faster than advertised would quietly make a trainer you play weekly
-     stop counting. */
+  const rows = [{ source: "rnb", n: 20, day: 20, difficulty: 63, correct: 0.5, unit: "rnb-load" }];
+  const a = AB.estimate(abilityArchive(rows), { asOf: "2026-09-22" });   // two days on
+  const b = AB.estimate(abilityArchive(rows), { asOf: "2026-12-19" });   // ninety days on
   const ratio = b.used[0].weight / a.used[0].weight;
   assert.ok(ratio > 0.45 && ratio < 0.55,
     "a half-life of ninety days should halve the weight, and gave " + ratio);
-  // The tier itself does not move — what is known is still known, it is only
-  // known about a person three months ago.
+  // What is known is still known — it is only known about a person three months ago.
   assert.ok(Math.abs(a.level - b.level) < 1e-9);
   assert.ok(b.confidence < a.confidence);
 });
 
+test("ability: confidence counts days trained, not sittings racked up in one", () => {
+  const oneDay = AB.estimate(abilityArchive([
+    { source: "rnb", n: 60, day: 20, difficulty: 63, correct: 0.5, unit: "rnb-load" },
+  ]), ASOF);
+  const manyDays = AB.estimate(abilityArchive([
+    { source: "rnb", n: 60, difficulty: 63, correct: 0.5, unit: "rnb-load" },
+  ]), ASOF);
+  assert.ok(manyDays.used[0].confidence > oneDay.used[0].confidence,
+    "sixty blocks in one evening counted as much as sixty across eight days");
+});
+
 test("ability: pre-level Syllogimous records are refused rather than reinterpreted", () => {
-  /* A premise count is not a level — the whole reason the adapter keeps two
-     units — so there is no ladder for it and the source goes silent instead of
-     being read against a table built for the other quantity. */
   const arc = abilityArchive([
-    { source: "syllogimous", n: 60, kind: "item", difficulty: 6, correct: 1, unit: "syllogimous-premises" },
+    { source: "syllogimous", n: 60, kind: "item", difficulty: 6, correct: 0.8, unit: "syllogimous-premises" },
   ]);
   const est = AB.estimate(arc, ASOF);
   assert.strictEqual(est.level, null);
@@ -1599,50 +1721,26 @@ test("ability: pre-level Syllogimous records are refused rather than reinterpret
 });
 
 test("ability: a source that records no difficulty is listed, not dropped", () => {
-  /* Anki records when a review happened and how long it took, and deliberately
-     no difficulty at all. It cannot place anybody on this ladder, and a screen
-     that simply omitted it would be a screen nobody could check against the
-     Sources list above it. */
   const arc = abilityArchive([
-    { source: "rnb", n: 20, difficulty: 63, correct: 1, unit: "rnb-load" },
+    { source: "rnb", n: 20, difficulty: 63, correct: 0.5, unit: "rnb-load" },
     { source: "anki", n: 40, correct: 0.9 },
   ]);
   const est = AB.estimate(arc, ASOF);
   assert.ok(est.unused.some((u) => u.source === "anki"), "anki vanished off the page");
   assert.ok(est.used.every((u) => u.source !== "anki"));
+  assert.ok(est.level != null, "a source with no difficulty withheld the estimate");
 });
 
-test("ability: the badge is the weakest column, and is withheld when one is missing", () => {
-  const two = abilityArchive([
-    { source: "syllogimous", n: 60, kind: "item", difficulty: 14.4, correct: 1, unit: "syllogimous-level" },
-    { source: "rnb", n: 20, difficulty: 73, correct: 1, unit: "rnb-load" },
-  ]);
-  const withheld = AB.estimate(two, ASOF);
-  assert.strictEqual(withheld.badge.tier, null, "a badge was awarded on two of three columns");
-  assert.strictEqual(withheld.badge.missing[0].name, "Quad N-back");
-  assert.ok(withheld.level > 3, "the estimate should still report what is here");
-
-  const three = abilityArchive([
-    { source: "syllogimous", n: 60, kind: "item", difficulty: 14.4, correct: 1, unit: "syllogimous-level" },
-    { source: "rnb", n: 20, difficulty: 73, correct: 1, unit: "rnb-load" },
-    { source: "precision", n: 20, difficulty: 4, correct: 1, unit: "precision-n" },
-  ]);
-  const awarded = AB.estimate(three, ASOF);
-  assert.strictEqual(awarded.badge.tier, "β", "the weakest column was not what decided it");
-  assert.strictEqual(awarded.badge.blocking, "Quad N-back");
-  assert.ok(awarded.level > awarded.badge.level,
-    "the weighted estimate and the conjunctive badge should differ here");
-});
-
-test("ability: either trainer can speak for the quad column", () => {
+test("ability: the spread names the ends rather than refusing the middle", () => {
   const arc = abilityArchive([
-    { source: "syllogimous", n: 60, kind: "item", difficulty: 13.2, correct: 1, unit: "syllogimous-level" },
-    { source: "rnb", n: 20, difficulty: 63, correct: 1, unit: "rnb-load" },
-    { source: "ewmt", n: 20, difficulty: 6, correct: 1, unit: "ewmt-n" },
+    { source: "syllogimous", n: 60, kind: "item", difficulty: 14.4, correct: 0.7, unit: "syllogimous-level" },
+    { source: "rotation", n: 20, difficulty: 1, correct: 0.4, unit: "rotation-level" },
   ]);
   const est = AB.estimate(arc, ASOF);
-  assert.strictEqual(est.badge.tier, "δ");
-  assert.strictEqual(est.badge.columns[1].source, "ewmt");
+  assert.strictEqual(est.spread.high.source, "syllogimous");
+  assert.strictEqual(est.spread.low.source, "rotation");
+  assert.ok(est.spread.tiers > 3);
+  assert.ok(est.level != null, "a wide spread is a thing to report, never a refusal");
 });
 
 test("ability: an empty archive reports nothing rather than a tier", () => {
@@ -1655,7 +1753,7 @@ test("ability: an empty archive reports nothing rather than a tier", () => {
 
 test("ability: nothing outside the window speaks for today", () => {
   const arc = abilityArchive([
-    { source: "rnb", n: 20, day: 10, difficulty: 63, correct: 1, unit: "rnb-load" },
+    { source: "rnb", n: 20, day: 10, difficulty: 63, correct: 0.5, unit: "rnb-load" },
   ]);
   const est = AB.estimate(arc, { asOf: "2027-09-22" });
   assert.strictEqual(est.level, null);

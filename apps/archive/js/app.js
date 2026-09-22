@@ -12,7 +12,7 @@
 
 /* global emptyArchive, fold, foldNotes, days, dayRow, overlap, sourceSummary, cacheSave,
    cacheLoad, readFile, makeNote, noteId, tombstone, mergeNotes, visibleNotes, notesOn,
-   measureSeries, tagCounts, estimate, tierLabel, TIERS, TIER_ACCURACY */
+   measureSeries, tagCounts, estimate, tierLabel, TIERS */
 
 var archive = cacheLoad() || emptyArchive();
 if (!Array.isArray(archive.notes)) archive.notes = [];
@@ -448,14 +448,15 @@ function renderHeatmap() {
  * One position on the benchmark's ladder, and the arithmetic behind it.
  *
  * The table is not decoration. This is the only screen in the project that puts
- * eight trainers on one axis, and the only defence against it becoming a number
- * nobody can argue with is showing every term: what each source demonstrated,
- * in its own units, where that lands on the published ladder, and how much of
- * the total it moved. A reader who disagrees with the estimate can see which
- * row to disagree with.
+ * eight trainers on one axis, and the only thing stopping it becoming a number
+ * nobody can argue with is showing every term: what each trainer said about
+ * itself, in its own units, where that lands, and how much of the total it
+ * moved. A reader who disagrees with the letter can see which row to disagree
+ * with.
  *
- * `est.used` arrives sorted by share, so the rows that decide the number are
- * the rows at the top.
+ * **Nothing here can withhold the estimate.** A thin reading is reported thin;
+ * it is never reported as nothing, and no single trainer's setting can suppress
+ * the rest of the archive.
  */
 function renderAbility() {
   var head = $("abilityHead");
@@ -465,24 +466,24 @@ function renderAbility() {
 
   var est = estimate(archive);
 
+  unused.innerHTML = est.unused.map(function (u) {
+    return "<li>" + sourceName(u.source) + " — " + esc(u.why) + "</li>";
+  }).join("");
+
   if (est.level == null) {
-    head.innerHTML = "<p class='dim'>Nothing yet holds "
-      + fmt(TIER_ACCURACY * 100) + "% at a difficulty this ladder knows.</p>";
+    head.innerHTML = "<p class='dim'>No trainer has recorded a difficulty yet.</p>";
     parts.innerHTML = "";
     line.innerHTML = "";
-    unused.innerHTML = est.unused.map(function (u) {
-      return "<li>" + sourceName(u.source) + " — " + esc(u.why) + "</li>";
-    }).join("");
     return;
   }
 
-  /* A rung per tier, filled to where the estimate stands. The part-filled one
-     is the fraction into the current tier, which is the thing a bare letter
-     throws away — a whole climb reads as "still β" without it. */
+  /* A rung per band, filled to where the estimate stands. The part-filled one
+     is the whole reason this is a bar and not a letter: a climb from the bottom
+     of a band to the top of it is months, and a badge reading the same at both
+     ends makes those months invisible. */
   var rungs = TIERS.map(function (t, i) {
     var fill = Math.max(0, Math.min(1, est.level - i + 1));
-    return "<i class='rung' style='--fill:" + fmt2(fill) + "'>"
-      + "<b>" + t + "</b></i>";
+    return "<i class='rung' style='--fill:" + fmt2(fill) + "'><b>" + t + "</b></i>";
   }).join("");
 
   head.innerHTML =
@@ -493,61 +494,54 @@ function renderAbility() {
     + "<div class='ability__scale'>" + rungs + "</div>"
     + "<p class='dim'>"
     + "<b>" + fmt(est.confidence * 100) + "%</b> confidence — the share of the weight "
-    + "that could speak for you which actually did, after staleness and sample size. "
-    + "Read it before the letter: a tier on thin evidence is a sentence about the "
-    + "archive, not about you. Window " + est.from + " to " + est.to + "."
+    + "that could speak for you which actually did, after how long each trainer has "
+    + "been trained and how long ago. It is a figure to read beside the letter, not a "
+    + "bar to clear. Window " + est.from + " to " + est.to + "."
     + "</p>";
 
   var body = est.used.map(function (u) {
-    return "<tr><td>" + sourceName(u.source) + "</td>"
+    return "<tr" + (u.disagrees ? " class='warn'" : "") + ">"
+      + "<td>" + sourceName(u.source) + "</td>"
       + "<td>" + fmt2(u.difficulty) + " <span class='dim'>" + esc(u.unit) + "</span></td>"
-      + "<td>" + fmt(u.accuracy * 100) + "% <span class='dim'>/" + u.n + "</span></td>"
+      + "<td class='dim'>" + esc(u.note) + "</td>"
       + "<td>" + tierLabel(u.level) + " " + fmt2(u.level + 1) + "</td>"
       + "<td>" + fmt(u.share * 100) + "%</td>"
-      + "<td class='dim'>" + (u.from === "benchmark" ? "published" : "aligned")
-      + (u.daysSince > 30 ? ", " + u.daysSince + "d old" : "") + "</td></tr>";
+      + "<td class='dim'>" + u.days + "d"
+      + (u.daysSince > 30 ? ", last " + u.daysSince + "d ago" : "")
+      + (u.disagrees
+        ? " · <b>disagrees with what it is serving (" + tierLabel(u.crossCheck)
+          + ") — one of the two is stale</b>"
+        : "")
+      + "</td></tr>";
   }).join("");
 
   parts.innerHTML = "<table>"
     + "<tr><th>source</th>"
-    + "<th title=\"The hardest difficulty this trainer was held at "
-    + fmt(TIER_ACCURACY * 100) + "% across, in its own units\">held</th>"
-    + "<th title=\"Accuracy over that run, and how many sittings it was\">at</th>"
+    + "<th title=\"The reading, in this trainer's own units\">reading</th>"
+    + "<th title=\"Where it came from. A trainer's own estimate is used where it"
+    + " keeps one, because it has already applied its own target accuracy and its"
+    + " own chance correction\">from</th>"
     + "<th title=\"Where that lands on the benchmark's ladder\">tier</th>"
     + "<th title=\"Share of the weight behind the estimate above\">weight</th>"
-    + "<th title=\"Whether the benchmark published a requirement for this trainer,"
-    + " or its own ladder was aligned onto the same six steps\">ladder</th></tr>"
-    + body + "</table>";
+    + "<th title=\"Days trained, and whether the two readings of this trainer agree\">evidence</th>"
+    + "</tr>" + body + "</table>";
 
   /*
-   * The benchmark's own verdict, kept apart from the estimate above.
+   * The spread, which is what replaced the benchmark's conjunctive badge.
    *
-   * Conjunctive — the weakest of its three columns — because that is the
-   * published rule, and because a mean and a minimum answer different
-   * questions. A column with no evidence withholds the badge rather than
-   * lowering it: there is no tier anybody earned on a benchmark they have
-   * attempted two thirds of.
+   * That badge was withheld whenever one of three columns had no evidence, and
+   * it was the wrong instrument: a single unideal setting in one trainer could
+   * silence a reading the rest of the archive had earned. The spread says the
+   * same useful thing — where the trainers disagree — without ever refusing,
+   * and it points at where the next hour is worth spending.
    */
-  var b = est.badge;
-  if (b.missing.length) {
-    line.innerHTML = "<b>No badge.</b> The benchmark is conjunctive — every column at "
-      + fmt(TIER_ACCURACY * 100) + "% — and nothing yet speaks for "
-      + b.missing.map(function (c) { return esc(c.name); }).join(" or ")
-      + ". The estimate above is a weighted reading of what is here; this is what "
-      + "the benchmark itself would award, and it withholds rather than guesses.";
-  } else {
-    line.innerHTML = "<b>Badge: " + (b.tier || "below " + TIERS[0]) + "</b> — the benchmark's "
-      + "own rule is the weakest column, and that is "
-      + esc(b.blocking) + " at " + fmt2(b.level + 1) + ". "
-      + b.columns.map(function (c) {
-          return esc(c.name) + " " + tierLabel(c.level);
-        }).join(" · ");
-  }
-
-  unused.innerHTML = est.unused.map(function (u) {
-    return "<li>" + sourceName(u.source) + " — " + esc(u.why)
-      + ", so it is not in the estimate</li>";
-  }).join("");
+  var sp = est.spread;
+  line.innerHTML = sp.tiers < 0.5
+    ? "Your trainers agree: everything sits around <b>" + est.tier + "</b>."
+    : "Spread: <b>" + sourceName(sp.low.source) + "</b> at " + tierLabel(sp.low.level)
+      + " up to <b>" + sourceName(sp.high.source) + "</b> at " + tierLabel(sp.high.level)
+      + " — " + fmt2(sp.tiers) + " tiers apart. The letter above is the weighted middle; "
+      + "the low end is where an hour buys the most.";
 }
 
 /* ------------------------------------------------------------------ *
