@@ -353,17 +353,22 @@
       position:absolute;inset:0;z-index:0;
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15em;
       font-family:var(--mono);text-align:center;line-height:1.05;
-      color:var(--ax,var(--text-dim));opacity:.13;
+      color:var(--ax,var(--text-dim));
       pointer-events:none;user-select:none;-webkit-user-select:none;
     }
     .axis-ghost:empty{display:none}
-    .axis-ghost .ag-main{font-size:clamp(1.7rem,7.4vh,4.5rem);font-weight:600;letter-spacing:.04em;white-space:nowrap}
+    /* The alpha is on the two parts, not on the container. Opacity on a parent
+       composites the whole subtree, so the line at the foot could only ever be
+       fainter than the word and went down with it every time the word did —
+       and that line is the functional half of the cue, the one saying which end
+       rank 1 counts from. */
+    .axis-ghost .ag-main{opacity:.13;font-size:clamp(1.7rem,7.4vh,4.5rem);font-weight:600;letter-spacing:.04em;white-space:nowrap}
     .axis-ghost .ag-main b{font-weight:500;font-size:1.15em}
     /* Which end rank 1 counts from — needed, and unreadable where the word is,
        since that band is the one the box occupies. It goes to the foot of the
        card instead, which had nothing in it. */
     .axis-ghost .ag-sub{position:absolute;left:0;right:0;bottom:3%;
-      font-size:clamp(.7rem,1.7vh,1rem);letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+      font-size:clamp(.7rem,1.7vh,1rem);letter-spacing:.14em;text-transform:uppercase;opacity:.62}
     /* Above the watermark, which fills the box behind it. */
     .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem;max-width:100%;position:relative;z-index:2}
     /* Wrapping is the safety net under the size setting: the keys hold their row
