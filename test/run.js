@@ -509,6 +509,41 @@ test("ewmt pauses through its own pause, and resumes only its own", () => {
     "a session ended while hidden leaves the flag armed");
 });
 
+/**
+ * precision pauses its transport and does not bill the interruption.
+ *
+ * Two halves, and the second is the one that reaches the meter. `display: none`
+ * stops `requestAnimationFrame`, so this trainer's 3D rotation freezes on its
+ * own — but the trials are scheduled on `Tone.Transport`, which runs on the Web
+ * Audio clock, and nothing about being hidden stops that. And the session's
+ * recorded duration is wall-clock, so time in the hub menu was being written
+ * into the very figure the archive's adapters turn into minutes trained today.
+ */
+test("precision pauses its transport and discounts the time it was hidden", () => {
+  const src = require("fs").readFileSync(
+    path.join(__dirname, "..", "apps", "precision", "components", "NBackGame.tsx"), "utf8");
+
+  const at = src.indexOf('addEventListener("visibilitychange"');
+  assert.ok(at > 0, "precision does not listen for the signal the shell sends");
+
+  const effect = src.slice(src.indexOf("const onVisibility"), at);
+  assert.ok(/Tone\.Transport\.pause\(\)/.test(effect),
+    "precision does not stop the transport, so trials keep advancing");
+  assert.ok(/Tone\.Transport\.start\(\)/.test(effect),
+    "precision stops the transport and never starts it again");
+  /* `pause`, not `stop`: the transport keeps its position, so the
+     self-scheduling loop resumes inside the ISI it had reached rather than
+     firing the next trial the moment you come back. */
+  assert.ok(!/Tone\.Transport\.stop\(\)/.test(effect),
+    "precision stops the transport instead of pausing it, losing its position");
+
+  /* And the duration that reaches the record has the interruption taken off. */
+  assert.ok(/const duration = Date\.now\(\) - startTimeRef\.current - awayMsRef\.current/.test(src),
+    "precision still records wall-clock duration, so the hub menu counts as training");
+  assert.ok(src.includes("removeEventListener(\"visibilitychange\"", ),
+    "the handler outlives the component");
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {
