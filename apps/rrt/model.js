@@ -207,11 +207,25 @@
    * The model                                                           *
    * ------------------------------------------------------------------ */
 
-  /* Axis 0 is height, 1 is width, 2 is size. Rank 0 is top, left, biggest —
-     the end a reader meets first. A direction of -1 means "toward rank 0". */
+  /*
+   * Axis 0 is height, 1 is longitude, 2 is latitude, 3 is size. Rank 0 is top,
+   * left, back, biggest — the end a reader meets first. A direction of -1 means
+   * "toward rank 0".
+   *
+   * The first three are one box: height up the page, longitude across it,
+   * latitude into it. Longitude comes before latitude so that two dimensions is
+   * still a flat plane — height and across — and the third is what turns the
+   * plane into a box, rather than 2D being a page seen edge-on.
+   *
+   * Size is last and deliberately outside the box. It is the one axis that is a
+   * property of the symbol rather than a place, so it cannot be drawn as one
+   * more direction; and once it is an axis of its own, nothing else may use
+   * scale — which is why depth is carried by offset and the drawn frame alone.
+   */
   var AXES = [
     { id: "height", before: "above", after: "below" },
-    { id: "width", before: "left of", after: "right of" },
+    { id: "longitude", before: "left of", after: "right of" },
+    { id: "latitude", before: "behind", after: "in front of" },
     { id: "size", before: "bigger than", after: "smaller than" },
   ];
 
@@ -299,17 +313,27 @@
    * Levels and the controller                                           *
    * ------------------------------------------------------------------ */
 
-  /* Ordered by what is carried — d·log2(s) bits — and it happens to rise
-     monotonically: 1D·7 holds 2.81 bits, 2D·3 holds 3.17. Size first, then a
-     dimension, and adding a dimension drops the size back. */
-  var SIZES = { 1: [3, 4, 5, 6, 7], 2: [3, 4, 5], 3: [3, 4, 5] };
+  /* Span first, then a dimension, and adding a dimension drops the span back:
+     1D·7 holds 2.81 bits, 2D·3 holds 3.17. */
+  var SIZES = { 1: [3, 4, 5, 6, 7], 2: [3, 4, 5], 3: [3, 4, 5], 4: [3, 4, 5] };
 
+  /*
+   * Ordered by what is carried, d·log2(s) bits — sorted rather than assumed.
+   *
+   * Nesting the loops happened to produce that order for three dimensions and
+   * stops doing so at four: 4D·3 carries 6.34 bits and 3D·5 carries 6.97, so a
+   * fourth dimension does not simply go on the end. Sorting states the rule the
+   * comment always claimed, and leaves the first eleven rungs in exactly the
+   * order they were in.
+   */
   function ladder(maxD) {
     var out = [];
-    for (var d = 1; d <= Math.max(1, Math.min(3, maxD || 3)); d++) {
+    for (var d = 1; d <= Math.max(1, Math.min(4, maxD || 4)); d++) {
       SIZES[d].forEach(function (s) { out.push({ d: d, s: s }); });
     }
-    return out;
+    return out.sort(function (a, b) {
+      return carriedBits(a.d, a.s) - carriedBits(b.d, b.s);
+    });
   }
 
   function levelIndex(levels, level) {

@@ -14,6 +14,10 @@
       --accent:#4fffb0;--accent-dim:rgba(79,255,176,0.10);--accent-glow:rgba(79,255,176,0.22);
       --danger:#ff4d6d;--danger-dim:rgba(255,77,109,0.12);
       --warn:#ffb347;--warn-dim:rgba(255,179,71,0.13);
+      /* One hue per axis, for the cue that says which rank to report. Kept off
+         --accent (the new symbol), --danger (wrong) and the feedback band, so a
+         colour never means two things at once. */
+      --ax-0:#6aa6ff;--ax-1:#b98cff;--ax-2:#5ad8d0;--ax-3:#ffc46b;
       --info:#5ba4ff;--info-dim:rgba(91,164,255,0.12);
       --radius-sm:6px;--radius-md:12px;--radius-lg:18px;
       --mono:'DM Mono',monospace;--sans:'Outfit',sans-serif;
@@ -26,6 +30,7 @@
       --accent:#008f58;--accent-dim:rgba(0,143,88,0.08);--accent-glow:rgba(0,143,88,0.18);
       --danger:#d62048;--danger-dim:rgba(214,32,72,0.10);
       --warn:#b05500;--warn-dim:rgba(176,85,0,0.10);
+      --ax-0:#2563c9;--ax-1:#7c3aed;--ax-2:#0d7a72;--ax-3:#a35a00;
       --info:#1a6fe0;--info-dim:rgba(26,111,224,0.10);
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -142,14 +147,14 @@
     .action-row{display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem;flex-wrap:wrap;gap:0.75rem}
 
     /* Training */
-    .train-layout{flex:1;display:flex;flex-direction:column;max-width:640px;width:calc(100% - 2rem);margin:0 auto;padding:1.25rem 0 3rem;gap:1rem}
+    .train-layout{flex:1;display:flex;flex-direction:column;max-width:min(880px,100%);width:calc(100% - 2rem);margin:0 auto;padding:1.25rem 0 1.25rem;gap:1rem}
     .status-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
     .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.8rem 0.9rem;display:flex;flex-direction:column;gap:3px}
     .stat-tile-label{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase}
     .stat-tile-val{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--text)}
     .stat-tile-val.accent{color:var(--accent)}
     .timer-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
-    .timer-display{font-family:var(--mono);font-size:2.4rem;font-weight:300;letter-spacing:0.03em}
+    .timer-display{font-family:var(--mono);font-size:1.7rem;font-weight:300;letter-spacing:0.03em}
     .timer-label{font-family:var(--mono);font-size:0.6rem;color:var(--text-faint);letter-spacing:0.08em;text-transform:uppercase}
     .speed-badge{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
     .speed-val{font-family:var(--mono);font-size:1.05rem;color:var(--accent)}
@@ -157,6 +162,9 @@
     .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .6s ease;box-shadow:0 0 8px var(--accent-glow)}
 
     .stimulus-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.25rem 1rem;gap:1rem;position:relative;overflow:hidden;min-height:170px}
+    /* On the training screen the card takes the height the rest of the column
+       does not want, so the stage above has something to grow into. */
+    #pageTrain .stimulus-box{flex:1}
     /* Decoration, and it fills the whole box: without this it takes the taps
        meant for the rank pad, which shares the box with it. */
     .stimulus-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--accent-dim) 0%,transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
@@ -307,8 +315,19 @@
     hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
 
     /* ── Running Order ─────────────────────────────────────────────── */
-    .stage-wrap{position:relative;width:min(300px,72vw);aspect-ratio:1}
+    /* The stage was pinned at 300px however much room there was, which on a
+       desktop left a small square adrift in a tall empty card. It now takes the
+       smaller of the height and the width available, still square, still capped
+       so it cannot outgrow a big monitor. */
+    .stage-wrap{position:relative;width:clamp(200px,min(48vh,52vw),520px);aspect-ratio:1}
     .stage{width:100%;height:100%;display:block;position:relative;z-index:2}
+    /* The box the new symbol lands on a corner of. Faint, because it is the
+       frame the reading is made against and not a thing to look at; the back
+       face fainter still, so which plane a symbol sits in is legible before
+       its position in that plane is. */
+    .box-face{fill:none;stroke:var(--text-faint);stroke-width:1.5}
+    .box-face.back{stroke-dasharray:5 5;opacity:.6}
+    .box-edge{stroke:var(--text-faint);stroke-width:1.5;opacity:.6}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
@@ -319,15 +338,47 @@
     .pic.new{fill:var(--accent)}
     .pic.ref{fill:var(--text)}
     .pic.mask{fill:var(--text-faint);opacity:.5}
-    .cue{font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--text-dim);min-height:1.2rem;text-align:center;position:relative;z-index:2}
-    .cue b{color:var(--text);font-size:1rem;font-weight:500}
-    .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem;max-width:100%}
+    /* Which rank to report, as a watermark behind the card rather than a line
+       of small print under it.
+
+       With two or three axes in play every card states all of them at once and
+       only the QUESTION changes, so this is the one thing that varies trial to
+       trial — and it used to be the smallest type on the screen, under the
+       stage, below the symbols the eye was already on. Drawn large and central
+       it is read without being looked for; drawn faint it cannot be mistaken
+       for part of the card. The colour is the same signal again, so the axis is
+       legible from the edge of vision before the words resolve. */
+    .axis-ghost{
+      position:absolute;inset:0;z-index:0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15em;
+      font-family:var(--mono);text-align:center;line-height:1.05;
+      color:var(--ax,var(--text-dim));opacity:.26;
+      pointer-events:none;user-select:none;-webkit-user-select:none;
+    }
+    .axis-ghost:empty{display:none}
+    .axis-ghost .ag-main{font-size:clamp(2rem,9vh,5.4rem);font-weight:600;letter-spacing:.04em;white-space:nowrap}
+    .axis-ghost .ag-main b{font-weight:500;font-size:1.15em}
+    /* Which end rank 1 counts from — needed, and unreadable where the word is,
+       since that band is the one the box occupies. It goes to the foot of the
+       card instead, which had nothing in it. */
+    .axis-ghost .ag-sub{position:absolute;left:0;right:0;bottom:3%;
+      font-size:clamp(.7rem,1.7vh,1rem);letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+    /* Above the watermark, which fills the box behind it. */
+    .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem;max-width:100%;position:relative;z-index:2}
     /* Wrapping is the safety net under the size setting: the keys hold their row
        (or their column, beside the stage) while they fit, and fold onto a second
        line rather than off the screen when they are scaled past it. */
     .arena.side{flex-direction:row;justify-content:center;flex-wrap:wrap}
     .rank-pad{display:flex;gap:6px;justify-content:center;align-items:stretch;flex-wrap:wrap;max-width:100%}
     .rank-pad.vertical{flex-direction:column}
+    /* Latitude runs into the picture, so its keys climb the way the box does
+       rather than sitting in the flat row longitude already owns. */
+    .rank-pad.depth{align-items:flex-end}
+    .rank-pad.depth .rank-btn:nth-child(1){transform:translateY(22%)}
+    .rank-pad.depth .rank-btn:nth-child(2){transform:translateY(11%)}
+    .rank-pad.depth .rank-btn:nth-child(4){transform:translateY(-11%)}
+    .rank-pad.depth .rank-btn:nth-child(5){transform:translateY(-22%)}
+    .rank-pad.depth .rank-btn:nth-child(6){transform:translateY(-33%)}
     /* --pad-scale is the Button size setting. One multiplier on the footprint and
        the type, so a key stays the same shape at every size. */
     .rank-btn{min-width:calc(3.1rem * var(--pad-scale,1));min-height:calc(2.7rem * var(--pad-scale,1));padding:0 calc(.35rem * var(--pad-scale,1));display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:calc(1rem * var(--pad-scale,1));cursor:pointer;transition:all var(--t);touch-action:manipulation}
@@ -430,7 +481,7 @@
     <div class="callout">
       <p id="cardHowText"></p>
       <div class="example" id="cardExample"></div>
-      <p class="hint" style="margin-top:.6rem">With two or three dimensions every card places the symbol on every axis at once, and a label says which rank to report: <b>↕ height</b>, <b>↔ width</b> or <b>● size</b>. Keep all of them — the next card may ask any.</p>
+      <p class="hint" style="margin-top:.6rem">Past one dimension every card places the symbol on every axis at once, and the card says which rank to report: <b>↕ height</b>, <b>↔ longitude</b>, <b>╱ latitude</b> or <b>● size</b>. Keep all of them — the next card may ask any. The first three are one drawn box, height up, longitude across and latitude into it; size is the fourth and sits outside the box, which is why depth is never shown by drawing a symbol smaller.</p>
     </div>
 
     <div class="section-label">Pace</div>
@@ -521,8 +572,9 @@
           <label class="label">Highest dimension</label>
           <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + width</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + size</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + longitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + latitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="4" style="accent-color:var(--accent)"> 4D · + size</label>
           </div>
           <p class="hint">The ladder: 1D with 3–7 symbols, then 2D with 3–5, then 3D with 3–5 — ordered by how much you carry, so every step up is more. Adding a dimension drops the symbol count back to 3.</p>
         </div>
@@ -629,10 +681,10 @@
     <div class="stimulus-box" id="tutBox">
       <div class="stimulus-bg"></div>
       <div class="stimulus-instruction" id="tutHint" style="position:relative;z-index:2"></div>
+      <div class="axis-ghost" id="tutCue"></div>
       <div class="arena" id="tutArena">
         <div>
           <div class="stage-wrap"><svg class="stage" id="tutStage" viewBox="0 0 300 300"></svg></div>
-          <div class="cue" id="tutCue"></div>
         </div>
         <div class="rank-pad" id="tutPad"></div>
       </div>
@@ -682,10 +734,10 @@
       <div class="stimulus-bg"></div>
       <div class="stimulus-error-flash" id="errorFlash"></div>
       <div class="stimulus-instruction" id="stimInstruction" style="position:relative;z-index:2">Get ready…</div>
+      <div class="axis-ghost" id="cue"></div>
       <div class="arena" id="arena">
         <div>
           <div class="stage-wrap"><svg class="stage" id="stage" viewBox="0 0 300 300"></svg></div>
-          <div class="cue" id="cue"></div>
         </div>
         <div class="rank-pad" id="rankPad"></div>
       </div>
@@ -802,7 +854,7 @@ const bestFor = (prog, set) => Math.max(
 /* Standard mode is these, fixed. Custom mode is whatever the sliders say. */
 const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, encoding: 1500, mask: true, adaptLevel: true };
 const DEFAULTS = Object.assign({
-  mode: 'standard', maxD: 3, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
+  mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
   padScale: 1,
 }, STANDARD);
@@ -1069,7 +1121,22 @@ $('resetBtn').addEventListener('click', () => openModal(
 
 /* ══ DRAWING ══════════════════════════════════════════════════════════ */
 const SVGNS = 'http://www.w3.org/2000/svg';
-const STAGE = 300, MID = 150, BASE = 64, OFFSET = 92, BIG = 92, SMALL = 40;
+const STAGE = 300, MID = 150, BASE = 64, BIG = 92, SMALL = 40;
+/*
+ * How far one step goes. Flat while the card is a plane; shorter once latitude
+ * is in play, because the oblique step has to fit beside the other two without
+ * anything leaving the stage: 150 + 64 + 34 + 46 = 294 of 300 at the largest
+ * symbol a 4D card can draw.
+ */
+const OFFSET = 92, BOX_OFFSET = 64, DEPTH = 34;
+/*
+ * Symbols shrink once the card is a box. A step is shorter there — it has to
+ * leave room for the oblique one — and a symbol drawn at the flat card's size
+ * would then overlap the one it is placed against, which is the one thing the
+ * card may never do. The stage renders far larger than its 300-unit viewBox, so
+ * these are smaller in the drawing and no smaller on the screen.
+ */
+const BOX_BASE = 46, BOX_BIG = 64, BOX_SMALL = 30;
 const MASK_MS = 100;
 
 function glyphEl(glyph, cx, cy, size, cls) {
@@ -1104,14 +1171,66 @@ function stimEl(stim, cx, cy, size, cls) {
 }
 function clearStage(el) { (el || $('stage')).replaceChildren(); }
 
-/* The reference sits in the middle at a fixed size; the new symbol is offset
-   one step along every axis in play. Height is always in play, so a 1D card is
-   a plain stack. */
+/*
+ * Where the new symbol lands: one step along every axis in play, from the
+ * reference in the middle. Height is always in play, so a 1D card is a plain
+ * stack.
+ *
+ * Latitude is an oblique step — back is up and to the right — and never a
+ * change of scale, though scale is what depth is usually drawn with. It cannot
+ * be: at 4D scale is an axis of its own, and a symbol drawn smaller for being
+ * far away would be stating the size relation as well. The drawn box is what
+ * pays for that: with all eight places it could be shown, the one it is in
+ * reads off the frame instead of off its size.
+ */
+function cardOffset(dirs, d) {
+  const box = d >= 3;
+  const step = box ? BOX_OFFSET : OFFSET;
+  const o = { x: 0, y: dirs[0] * step, ref: box ? BOX_BASE : BASE };
+  o.size = o.ref;
+  if (d >= 2) o.x = dirs[1] * step;
+  if (box) { o.x -= dirs[2] * DEPTH; o.y += dirs[2] * DEPTH; }
+  if (d >= 4) o.size = dirs[3] < 0 ? BOX_BIG : BOX_SMALL;
+  return o;
+}
+
+/*
+ * The cuboid the new symbol lands on a corner of, drawn only once latitude is
+ * in play. Its eight corners are exactly the eight placements a 3D card can
+ * make, and the reference sits at its centre — so the frame is not decoration
+ * but the set of answers, and which corner is occupied is the whole reading.
+ */
+function boxFrame() {
+  const pt = (sx, sy, sz) => [
+    MID + sx * BOX_OFFSET - sz * DEPTH,
+    MID + sy * BOX_OFFSET + sz * DEPTH,
+  ];
+  const parts = [];
+  const face = sz => {
+    const c = [pt(-1, -1, sz), pt(1, -1, sz), pt(1, 1, sz), pt(-1, 1, sz)];
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    el.setAttribute('points', c.map(p => p.join(',')).join(' '));
+    el.setAttribute('class', 'box-face' + (sz < 0 ? ' back' : ''));
+    return el;
+  };
+  parts.push(face(-1), face(1));
+  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
+    const a = pt(sx, sy, -1), b = pt(sx, sy, 1);
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    el.setAttribute('x1', a[0]); el.setAttribute('y1', a[1]);
+    el.setAttribute('x2', b[0]); el.setAttribute('y2', b[1]);
+    el.setAttribute('class', 'box-edge');
+    parts.push(el);
+  });
+  return parts;
+}
+
 function drawCard(el, glyph, refGlyph, dirs, d) {
-  const cx = MID + (d >= 2 ? dirs[1] * OFFSET : 0);
-  const cy = MID + dirs[0] * OFFSET;
-  const size = d >= 3 ? (dirs[2] < 0 ? BIG : SMALL) : BASE;
-  el.replaceChildren(stimEl(refGlyph, MID, MID, BASE, 'ref'), stimEl(glyph, cx, cy, size, 'new'));
+  const o = cardOffset(dirs, d);
+  el.replaceChildren(
+    ...(d >= 3 ? boxFrame() : []),
+    stimEl(refGlyph, MID, MID, o.ref, 'ref'),
+    stimEl(glyph, MID + o.x, MID + o.y, o.size, 'new'));
 }
 function drawSeed(el, glyph) { el.replaceChildren(stimEl(glyph, MID, MID, BASE, 'ref')); }
 
@@ -1129,10 +1248,26 @@ function drawMask(el, setId) {
 }
 
 const AXIS_CUE = [
-  '<b>↕</b> rank from the top',
-  '<b>↔</b> rank from the left',
-  '<b>●</b> rank from the biggest',
+  { glyph: '↕', word: 'height',    sub: 'rank from the top' },
+  { glyph: '↔', word: 'longitude', sub: 'rank from the left' },
+  { glyph: '╱', word: 'latitude',  sub: 'rank from the back' },
+  { glyph: '●', word: 'size',      sub: 'rank from the biggest' },
 ];
+
+/* The watermark that says which rank to report. `axis` null clears it. */
+function setAxisCue(el, axis) {
+  if (!el) return;
+  const box = el.closest('.stimulus-box');
+  if (axis == null || !AXIS_CUE[axis]) {
+    el.replaceChildren();
+    if (box) box.style.removeProperty('--ax');
+    return;
+  }
+  const a = AXIS_CUE[axis];
+  el.innerHTML = `<span class="ag-main"><b>${a.glyph}</b> ${a.word}</span>`
+               + `<span class="ag-sub">${a.sub}</span>`;
+  if (box) box.style.setProperty('--ax', `var(--ax-${axis})`);
+}
 
 /* What the Button size setting comes to on THIS pad, which is the size asked
    for capped by the room there is for it.
@@ -1187,7 +1322,7 @@ function fitPadScale(axis, keys, pad) {
    width, shrinking dots for size — so pressing a rank is pointing at a place. */
 function buildPad(pad, arena, o) {
   pad.replaceChildren();
-  pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : '');
+  pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : o.axis === 2 ? ' depth' : '');
   if (arena) arena.classList.toggle('side', o.axis === 0);
   pad.style.setProperty('--pad-scale', fitPadScale(o.axis, o.s, pad));
   for (let r = 1; r <= o.s; r++) {
@@ -1195,7 +1330,7 @@ function buildPad(pad, arena, o) {
     b.className = 'rank-btn';
     b.dataset.rank = r;
     b.disabled = !o.enabled || r > o.k;
-    if (o.axis === 2) {
+    if (o.axis === 3) {
       const dot = document.createElement('span');
       const px = Math.round(18 - (r - 1) * (12 / Math.max(1, o.s - 1)));
       dot.className = 'rank-dot';
@@ -1384,7 +1519,7 @@ function beat() {
     cur = null;
     drawSeed($('stage'), model.items[0].glyph);
     $('stimInstruction').textContent = `${levelName(lvl)} symbols · remember this one`;
-    $('cue').innerHTML = '';
+    setAxisCue($('cue'), null);
     renderPad();
     /* The encoding period: long enough to take the symbol in with nothing to
        place it against. Never shorter than one interval — an episode that
@@ -1414,7 +1549,7 @@ function beat() {
 
   drawCard($('stage'), glyph, refGlyph, plan.dirs, lvl.d);
   $('stimInstruction').textContent = k < lvl.s ? `filling up · ${k} of ${lvl.s}` : 'where is it now?';
-  $('cue').innerHTML = lvl.d > 1 ? AXIS_CUE[plan.axis] : '';
+  setAxisCue($('cue'), lvl.d > 1 ? plan.axis : null);
   renderPad();
 
   const exposure = Math.min(eff('exposure'), interval * 0.5);
@@ -1505,7 +1640,7 @@ function startSession(opts) {
   $('timerDisplay').textContent = fmtTime(timerSec);
   $('progressFill').style.width = '100%';
   $('stimInstruction').textContent = 'Get ready…';
-  $('cue').innerHTML = '';
+  setAxisCue($('cue'), null);
   clearStage($('stage')); resetFeedback(); renderPad(); paintStats();
   setPage('pageTrain');
 
@@ -1540,7 +1675,7 @@ function mkStat(label, val, cls = '') {
 }
 
 const DIR_GLYPHS = [['↑', '↓'], ['←', '→'], ['+', '−']];
-const AXIS_GLYPHS = ['↕', '↔', '●'];
+const AXIS_GLYPHS = ['↕', '↔', '╱', '●'];
 
 function showResults() {
   const scored = trials.filter(t => t.k >= 2);
@@ -1652,8 +1787,10 @@ function showResults() {
 ═══════════════════════════════════════════════════════════════════════ */
 
 const ORD = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - n % 10 !== 10) * (n % 10)] || 'th');
-const PLACED = [['above', 'below'], ['left of', 'right of'], ['bigger than', 'smaller than']];
-const AXIS_NAME = ['height, top to bottom', 'width, left to right', 'size, biggest first'];
+const PLACED = [['above', 'below'], ['left of', 'right of'],
+                ['behind', 'in front of'], ['bigger than', 'smaller than']];
+const AXIS_NAME = ['height, top to bottom', 'longitude, left to right',
+                   'latitude, back to front', 'size, biggest first'];
 
 const TUT = [
   { kind: 'setup', d: 1, s: 6, fill: 3 },
@@ -1862,7 +1999,7 @@ function renderTut() {
   $('tutProgress').textContent = `step ${tutSteps.indexOf(st) + 1} of ${tutSteps.length}`;
   $('tutNote').style.display = 'none';
   $('tutStrips').replaceChildren();
-  $('tutCue').innerHTML = '';
+  setAxisCue($('tutCue'), null);
   $('tutBackBtn').style.visibility = tutAt > 0 ? '' : 'hidden';
   $('tutNextBtn').textContent = 'Continue';
   $('tutNextBtn').style.display = '';
@@ -1888,7 +2025,7 @@ function renderTut() {
   tutInfo = tutDealCard();
   tutPhase = 'card';
   drawCard($('tutStage'), tutInfo.glyph, tutInfo.refGlyph, tutInfo.plan.dirs, tutModel.d);
-  if (tutModel.d > 1) $('tutCue').innerHTML = AXIS_CUE[tutInfo.plan.axis];
+  setAxisCue($('tutCue'), tutModel.d > 1 ? tutInfo.plan.axis : null);
   buildPad($('tutPad'), $('tutArena'), {
     s: tutInfo.k, k: tutInfo.k, axis: tutInfo.plan.axis,
     enabled: st.kind === 'ask', onPick: tutPick,

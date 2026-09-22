@@ -60,7 +60,7 @@ test("placing below the bottom symbol puts it last", () => {
 });
 
 test("every axis stays a permutation, in every dimension, for long runs", () => {
-  for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 300, lcg(d * 10 + s));
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 300, lcg(d * 10 + s));
 });
 
 test("the model grows to s and then holds there", () => {
@@ -180,7 +180,7 @@ test("every animal is a named silhouette, and no two share either", () => {
 });
 
 test("the model does not care which set the stimuli come from", () => {
-  for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
   const { m } = run(3, 5, 50, lcg(37), "animals");
   m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.path === "string", JSON.stringify(it.glyph)));
 });
@@ -192,7 +192,29 @@ test("an unknown set id falls back to the generated marks", () => {
   assert.ok(Array.isArray(R.stimulusSet("glyphs").next([], lcg(41))));
 });
 
+test("every axis has a name, a pair of words and a glyph", () => {
+  assert.strictEqual(R.AXES.length, 4);
+  assert.deepStrictEqual(R.AXES.map(a => a.id),
+    ["height", "longitude", "latitude", "size"]);
+  /* Longitude before latitude: two dimensions has to stay a flat plane, or the
+     third has nothing left to turn into a box. */
+  assert.ok(R.AXES.findIndex(a => a.id === "longitude")
+          < R.AXES.findIndex(a => a.id === "latitude"));
+});
+
 test("the ladder rises in carried bits", () => {
+  const L = R.ladder(4);
+  for (let i = 1; i < L.length; i++) {
+    assert.ok(R.carriedBits(L[i].d, L[i].s) > R.carriedBits(L[i - 1].d, L[i - 1].s),
+      `${L[i].d}D·${L[i].s} does not carry more than ${L[i-1].d}D·${L[i-1].s}`);
+  }
+  /* 4D·3 carries 6.34 bits and 3D·5 carries 6.97, so a fourth dimension does
+     not go on the end of the ladder — it interleaves. */
+  const at = L.findIndex(l => l.d === 4 && l.s === 3);
+  assert.deepStrictEqual([L[at - 1], L[at + 1]], [{ d: 3, s: 4 }, { d: 3, s: 5 }]);
+});
+
+test("the ladder rises in carried bits (3D cap)", () => {
   const L = R.ladder(3);
   for (let i = 1; i < L.length; i++)
     assert.ok(R.carriedBits(L[i].d, L[i].s) > R.carriedBits(L[i - 1].d, L[i - 1].s), JSON.stringify(L[i]));
