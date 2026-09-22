@@ -322,12 +322,8 @@
     .stage-wrap{position:relative;width:clamp(200px,min(48vh,52vw),520px);aspect-ratio:1}
     .stage{width:100%;height:100%;display:block;position:relative;z-index:2}
     /* The box the new symbol lands on a corner of. Faint, because it is the
-       frame the reading is made against and not a thing to look at; the back
-       face fainter still, so which plane a symbol sits in is legible before
-       its position in that plane is. */
-    .box-face{fill:none;stroke:var(--text-faint);stroke-width:1.5}
-    .box-face.back{stroke-dasharray:5 5;opacity:.6}
-    .box-edge{stroke:var(--text-faint);stroke-width:1.5;opacity:.6}
+       frame the reading is made against and not a thing to look at. */
+    .box-edge{stroke:var(--text-faint);stroke-width:1.4;opacity:.55;vector-effect:non-scaling-stroke}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
@@ -1128,15 +1124,6 @@ const STAGE = 300, MID = 150, BASE = 64, BIG = 92, SMALL = 40;
  * anything leaving the stage: 150 + 64 + 34 + 46 = 294 of 300 at the largest
  * symbol a 4D card can draw.
  */
-const OFFSET = 92, BOX_OFFSET = 64, DEPTH = 34;
-/*
- * Symbols shrink once the card is a box. A step is shorter there — it has to
- * leave room for the oblique one — and a symbol drawn at the flat card's size
- * would then overlap the one it is placed against, which is the one thing the
- * card may never do. The stage renders far larger than its 300-unit viewBox, so
- * these are smaller in the drawing and no smaller on the screen.
- */
-const BOX_BASE = 46, BOX_BIG = 64, BOX_SMALL = 30;
 const MASK_MS = 100;
 
 function glyphEl(glyph, cx, cy, size, cls) {
@@ -1171,68 +1158,97 @@ function stimEl(stim, cx, cy, size, cls) {
 }
 function clearStage(el) { (el || $('stage')).replaceChildren(); }
 
+const OFFSET = 92;
 /*
- * Where the new symbol lands: one step along every axis in play, from the
- * reference in the middle. Height is always in play, so a 1D card is a plain
- * stack.
+ * The box, once latitude is in play: half-width, half-depth, and cells a side.
  *
- * Latitude is an oblique step — back is up and to the right — and never a
- * change of scale, though scale is what depth is usually drawn with. It cannot
- * be: at 4D scale is an axis of its own, and a symbol drawn smaller for being
- * far away would be stating the size relation as well. The drawn box is what
- * pays for that: with all eight places it could be shown, the one it is in
- * reads off the frame instead of off its size.
+ * Depth is deliberately not at 45°. At equal x and y it runs down the same
+ * diagonal a combined height-and-longitude step makes, which is the one angle
+ * that cannot be told from those two moving together. Shallower, it reads as
+ * its own direction.
+ *
+ * Two cells a side, which is eight subcubes. That is not a look, it is what the
+ * card can say: `simulate` inserts the new symbol at the rank immediately
+ * before or after the reference, so every direction is exactly one step and a
+ * symbol never lands two cells away. Three a side is the number the day a step
+ * can be longer than one — change BOX_N and the lattice, the cell centres and
+ * the frame all follow.
  */
-function cardOffset(dirs, d) {
-  const box = d >= 3;
-  const step = box ? BOX_OFFSET : OFFSET;
-  const o = { x: 0, y: dirs[0] * step, ref: box ? BOX_BASE : BASE };
-  o.size = o.ref;
-  if (d >= 2) o.x = dirs[1] * step;
-  if (box) { o.x -= dirs[2] * DEPTH; o.y += dirs[2] * DEPTH; }
-  if (d >= 4) o.size = dirs[3] < 0 ? BOX_BIG : BOX_SMALL;
-  return o;
-}
+const BOX_W = 78, BOX_DX = 48, BOX_DY = 26, BOX_N = 2;
+/*
+ * Symbols shrink once the card is a box, so that one sits inside a cell with
+ * room to spare rather than spilling across the wall into the next. The stage
+ * renders far larger than its 300-unit viewBox, so these are smaller in the
+ * drawing and no smaller on the screen.
+ */
+const BOX_BASE = 44, BOX_BIG = 56, BOX_SMALL = 28;
+
+/* Lattice coordinates to the stage, in oblique projection. `w` is depth, and
+   -1 is the back: up and to the right. */
+const boxPt = (u, v, w) => [
+  MID + u * BOX_W - w * BOX_DX,
+  MID + v * BOX_W + w * BOX_DY,
+];
+
+const svgEl = (name, attrs) => {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+};
 
 /*
- * The cuboid the new symbol lands on a corner of, drawn only once latitude is
- * in play. Its eight corners are exactly the eight placements a 3D card can
- * make, and the reference sits at its centre — so the frame is not decoration
- * but the set of answers, and which corner is occupied is the whole reading.
+ * The box drawn as cells rather than as one outline.
+ *
+ * An outline with the reference at its centre and the new symbol on a corner
+ * could not be read: height moves it 78 up and latitude moves it 42 up as part
+ * of going back, so telling those two apart meant measuring an oblique offset
+ * rather than seeing it. Drawn as cells, each symbol is IN one, and every axis
+ * is the same question — which half of the box, top or bottom, left or right,
+ * back or front.
  */
-function boxFrame() {
-  const pt = (sx, sy, sz) => [
-    MID + sx * BOX_OFFSET - sz * DEPTH,
-    MID + sy * BOX_OFFSET + sz * DEPTH,
-  ];
-  const parts = [];
-  const face = sz => {
-    const c = [pt(-1, -1, sz), pt(1, -1, sz), pt(1, 1, sz), pt(-1, 1, sz)];
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    el.setAttribute('points', c.map(p => p.join(',')).join(' '));
-    el.setAttribute('class', 'box-face' + (sz < 0 ? ' back' : ''));
-    return el;
-  };
-  parts.push(face(-1), face(1));
-  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {
-    const a = pt(sx, sy, -1), b = pt(sx, sy, 1);
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    el.setAttribute('x1', a[0]); el.setAttribute('y1', a[1]);
-    el.setAttribute('x2', b[0]); el.setAttribute('y2', b[1]);
-    el.setAttribute('class', 'box-edge');
-    parts.push(el);
+function boxLattice(n) {
+  const t = [];
+  for (let i = 0; i <= n; i++) t.push(-1 + (2 * i) / n);
+  const line = (a, b) => svgEl('line', {
+    x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: 'box-edge',
   });
+  const parts = [];
+  for (const v of t) for (const w of t) parts.push(line(boxPt(-1, v, w), boxPt(1, v, w)));
+  for (const u of t) for (const w of t) parts.push(line(boxPt(u, -1, w), boxPt(u, 1, w)));
+  for (const u of t) for (const v of t) parts.push(line(boxPt(u, v, -1), boxPt(u, v, 1)));
   return parts;
 }
 
-function drawCard(el, glyph, refGlyph, dirs, d) {
-  const o = cardOffset(dirs, d);
-  el.replaceChildren(
-    ...(d >= 3 ? boxFrame() : []),
-    stimEl(refGlyph, MID, MID, o.ref, 'ref'),
-    stimEl(glyph, MID + o.x, MID + o.y, o.size, 'new'));
+/*
+ * Where the two symbols sit. Past two dimensions they take opposite cells of
+ * the box — the reference is no longer at the middle, because the middle is a
+ * wall between cells and not a place a symbol can be.
+ *
+ * Both move, by half a cell each from the centre, so the pair stays centred
+ * however it is turned and neither symbol is ever the one that "stays put".
+ */
+function cardPlaces(dirs, d) {
+  if (d < 3) {
+    const x = d >= 2 ? dirs[1] * OFFSET : 0;
+    return { ref: [MID, MID, BASE], now: [MID + x, MID + dirs[0] * OFFSET, BASE] };
+  }
+  const half = 1 / BOX_N;
+  const cell = k => boxPt(dirs[1] * half * k, dirs[0] * half * k, dirs[2] * half * k);
+  const size = d >= 4 ? (dirs[3] < 0 ? BOX_BIG : BOX_SMALL) : BOX_BASE;
+  return { ref: [...cell(-1), BOX_BASE], now: [...cell(1), size] };
 }
-function drawSeed(el, glyph) { el.replaceChildren(stimEl(glyph, MID, MID, BASE, 'ref')); }
+
+function drawCard(el, glyph, refGlyph, dirs, d) {
+  const p = cardPlaces(dirs, d);
+  el.replaceChildren(
+    ...(d >= 3 ? boxLattice(BOX_N) : []),
+    stimEl(refGlyph, p.ref[0], p.ref[1], p.ref[2], 'ref'),
+    stimEl(glyph, p.now[0], p.now[1], p.now[2], 'new'));
+}
+function drawSeed(el, glyph, d) {
+  el.replaceChildren(...(d >= 3 ? boxLattice(BOX_N) : []),
+    stimEl(glyph, MID, MID, d >= 3 ? BOX_BASE : BASE, 'ref'));
+}
 
 /* A backward mask: scattered stimuli of the same kind over the whole card, so
    the image does not linger on the retina after the card has gone. Strokes for
@@ -1517,7 +1533,7 @@ function beat() {
     recentlyGone = [];
     R.seed(model, nextStim([]));
     cur = null;
-    drawSeed($('stage'), model.items[0].glyph);
+    drawSeed($('stage'), model.items[0].glyph, lvl.d);
     $('stimInstruction').textContent = `${levelName(lvl)} symbols · remember this one`;
     setAxisCue($('cue'), null);
     renderPad();
