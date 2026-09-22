@@ -442,6 +442,38 @@ for (const [name, file, fn, flag] of PAUSED_TRAINERS) {
   });
 }
 
+/**
+ * Rotation gates its clocks instead of clearing them.
+ *
+ * Both of its timers are intervals set up inside long blocks, and re-arming
+ * one from outside would mean a second copy of that setup drifting from the
+ * first — so a flag the ticks read is the same freeze with nothing to keep in
+ * step. That makes the shape different from cct's and rrt's, which is why it
+ * is asserted separately rather than bent into the same table.
+ *
+ * Static only, and unusually so: this trainer's script is a module that
+ * imports `three` from a CDN, so it does not execute at all without network
+ * and cannot be driven here the way cct and rrt were.
+ */
+test("rotation stops both its clocks when the page goes hidden", () => {
+  const src = require("fs").readFileSync(
+    path.join(__dirname, "..", "apps", "rotation", "index.html"), "utf8");
+
+  assert.ok(/addEventListener\(\s*\n?\s*['"]visibilitychange['"]/.test(src),
+    "rotation does not listen for the signal the shell sends");
+  assert.ok(/trainerPaused\s*=\s*document\.hidden/.test(src),
+    "rotation listens but does not record being hidden");
+
+  /* Both ticks have to read the flag. The trial countdown had no guard of any
+     kind before this — not even the `sessionActive` one the session clock
+     had — so it is the half that would silently go back to ticking. */
+  const gates = src.match(/trainerPaused/g) || [];
+  assert.ok(gates.length >= 4,
+    `only ${gates.length} mentions of the pause flag: one clock is ungated`);
+  assert.ok(/!sessionActive \|\|\s*\n?\s*trainerPaused/.test(src),
+    "rotation's session clock does not read the pause flag");
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {
