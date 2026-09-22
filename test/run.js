@@ -474,6 +474,41 @@ test("rotation stops both its clocks when the page goes hidden", () => {
     "rotation's session clock does not read the pause flag");
 });
 
+/**
+ * ewmt routes the signal into the pause it already had.
+ *
+ * Its `togglePause` clears the trial timeouts, cancels the speech queue, stops
+ * the audio and puts the PAUSED overlay up — so reaching into the engine to
+ * stop a clock beside all that would be the quieter pause that forgets the
+ * sound. The thing worth asserting is therefore that it goes through the
+ * existing one, and that it only un-pauses what the hiding paused: the same
+ * button is on screen, and auto-resuming would restart a session the player
+ * had deliberately stopped before looking away.
+ */
+test("ewmt pauses through its own pause, and resumes only its own", () => {
+  const src = require("fs").readFileSync(
+    path.join(__dirname, "..", "apps", "ewmt", "js", "08-app.js"), "utf8");
+
+  /* Anchored on the listener rather than on the word: the comment above it
+     names the event too, and a window measured from there is all prose. */
+  const at = src.indexOf("addEventListener('visibilitychange'");
+  assert.ok(at > 0, "ewmt does not listen for the signal the shell sends");
+  const handler = src.slice(at, at + 700);
+
+  assert.ok(/this\.togglePause\(\)/.test(handler),
+    "ewmt stops something other than its own pause, which would skip the audio");
+  assert.ok(/_pausedByHiding\s*=\s*true/.test(handler),
+    "ewmt does not record that the hiding is what paused it");
+  assert.ok(/if \(!this\._pausedByHiding\) return/.test(handler),
+    "ewmt would resume a session the player paused by hand");
+
+  /* And the flag is cleared when a session ends, or coming back would toggle a
+     pause onto the next session's first trial. */
+  const ended = src.slice(src.indexOf("endSession(reason"));
+  assert.ok(/_pausedByHiding\s*=\s*false/.test(ended.slice(0, 400)),
+    "a session ended while hidden leaves the flag armed");
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of cases) {
