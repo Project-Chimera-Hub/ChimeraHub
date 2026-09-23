@@ -85,6 +85,12 @@
     .field{margin-bottom:1.1rem}
     .field:last-child{margin-bottom:0}
     .label{display:block;font-size:0.7rem;font-family:var(--mono);color:var(--text-dim);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.45rem}
+    .hint-fold summary{cursor:pointer;list-style:none;display:block}
+    .hint-fold summary::-webkit-details-marker{display:none}
+    .hint-fold summary::after{content:' \25b8';opacity:.55}
+    .hint-fold[open] summary::after{content:' \25be'}
+    .hint-fold summary:hover{color:var(--text-dim)}
+    .hint-fold > div{margin-top:.4rem}
     .hint{font-size:0.72rem;color:var(--text-faint);margin-top:0.3rem;line-height:1.5}
     .row{display:flex;align-items:center;gap:0.875rem;flex-wrap:wrap}
     .num-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:1rem;padding:0.45rem 0.7rem;width:80px;outline:none;transition:all var(--t)}
@@ -339,6 +345,13 @@
     .photo-mini{border-radius:14%;object-fit:cover;display:block}
     .photo-mini.new{box-shadow:0 0 0 2px var(--accent)}
     .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+    .probe-arrow{stroke:var(--text-dim);stroke-width:2;vector-effect:non-scaling-stroke}
+    .probe-head{fill:var(--text-dim)}
+    .rank-pad.probe{gap:14px}
+    .rank-btn.probe-btn{flex-direction:column;gap:1px;min-width:calc(4.6rem * var(--pad-scale,1));padding:calc(.3rem * var(--pad-scale,1)) calc(.6rem * var(--pad-scale,1))}
+    .pb-glyph{font-size:calc(1.35rem * var(--pad-scale,1));line-height:1}
+    .pb-word{font-size:calc(.62rem * var(--pad-scale,1));letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+    .rank-btn.probe-btn.hit .pb-word,.rank-btn.probe-btn.miss .pb-word{color:inherit}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
     .glyph.ref{stroke:var(--text)}
@@ -500,7 +513,79 @@
       <p class="hint" style="margin-top:.6rem">Past one dimension every card places the symbol on every axis at once, and the card says which rank to report: <b>↕ height</b>, <b>↔ longitude</b>, <b>╱ latitude</b> or <b>● size</b>. Keep all of them — the next card may ask any. The first three are one drawn box, height up, longitude across and latitude into it; size is the fourth and sits outside the box, which is why depth is never shown by drawing a symbol smaller.</p>
     </div>
 
-    <div class="section-label">Pace</div>
+    <div class="section-label">What you train</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 20h4v-6H3zM10 20h4V9h-4zM17 20h4V4h-4z"/></svg></span>
+          Symbols and dimensions
+        </span>
+        <span class="pill level-pill" id="savedLevelPill"></span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Symbols</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · photos, easiest</label>
+          </div>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> colour photographs of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
+          <div class="toggle-row" style="margin-top:.6rem">
+            <label class="toggle"><input type="checkbox" id="speakToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Speak the names</strong> — say each symbol's name aloud as it appears</span>
+          </div>
+          <p class="hint">The whole board at the start, then every new one. Only animals and
+            pictures have names; the generated marks stay silent. Hearing the word as well
+            as seeing the picture is a second way in, so a spoken session keeps its own
+            best score.</p>
+          <details class="hint" style="margin-top:.35rem;color:var(--text-faint);display:none" id="photoCreditsBox"><summary style="cursor:pointer">Photo credits</summary><div id="photoCredits" style="margin-top:.3rem;line-height:1.5"></div></details>
+          <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Analogy probes</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="probeRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0" style="accent-color:var(--accent)"> Off</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0.2" style="accent-color:var(--accent)"> Sometimes · 1 beat in 5</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0.35" style="accent-color:var(--accent)"> Often · 1 beat in 3</label>
+          </div>
+          <p class="hint">Some beats ask a question instead of dealing a card. Two pairs
+            of symbols you are already holding, and the claim that the step from the
+            first to the second is the same on both rows — <b>↑ true</b> or
+            <b>↓ false</b>. Nothing is placed and the board does not change, so a probe
+            is the one beat that only asks whether the board is still there. It needs a
+            board of four: on three, the only two pairs with the same step share a
+            symbol, and that is a chain rather than an analogy — below that a card is
+            dealt as usual. A probe is answered from two options where a card is
+            answered from as many as the board is wide, so bits per second is not
+            comparable with an unprobed session and the best-ever figure is kept
+            separately.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Highest dimension</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + longitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + latitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="4" style="accent-color:var(--accent)"> 4D · + size</label>
+          </div>
+          <p class="hint">The ladder: 1D with 3–7 symbols, then 2D with 3–5, then 3D with 3–5 — ordered by how much you carry, so every step up is more. Adding a dimension drops the symbol count back to 3.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="resumeToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Continue from last level</strong> — start where the previous session ended</span>
+          </div>
+        </div>
+        <div class="field" style="margin-top:.9rem" id="startLevelField">
+          <label class="label">Starting level</label>
+          <select class="num-input" id="startLevelSelect" style="width:auto;padding:0 .5rem"></select>
+          <p class="hint">Used when "continue" is off, or when there is no previous session.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">How fast</div>
     <div class="card">
       <div class="card-head">
         <span class="card-title">
@@ -565,56 +650,7 @@
       </div>
     </div>
 
-    <div class="section-label">Level</div>
-    <div class="card">
-      <div class="card-head">
-        <span class="card-title">
-          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 20h4v-6H3zM10 20h4V9h-4zM17 20h4V4h-4z"/></svg></span>
-          Symbols and dimensions
-        </span>
-        <span class="pill level-pill" id="savedLevelPill"></span>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <label class="label">Symbols</label>
-          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · photos, easiest</label>
-          </div>
-          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> colour photographs of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
-          <div class="toggle-row" style="margin-top:.6rem">
-            <label class="toggle"><input type="checkbox" id="speakToggle"><div class="toggle-track"></div></label>
-            <span class="toggle-label"><strong>Speak the names</strong> — say each symbol's name aloud as it appears: the whole board at the start, then every new one. Only animals and pictures have names; the generated marks stay silent. Hearing the word as well as seeing the picture is a second way in, so a spoken session keeps its own best score.</span>
-          </div>
-          <details class="hint" style="margin-top:.35rem;color:var(--text-faint);display:none" id="photoCreditsBox"><summary style="cursor:pointer">Photo credits</summary><div id="photoCredits" style="margin-top:.3rem;line-height:1.5"></div></details>
-          <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
-        </div>
-        <div class="field" style="margin-top:.9rem">
-          <label class="label">Highest dimension</label>
-          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + longitude</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + latitude</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="4" style="accent-color:var(--accent)"> 4D · + size</label>
-          </div>
-          <p class="hint">The ladder: 1D with 3–7 symbols, then 2D with 3–5, then 3D with 3–5 — ordered by how much you carry, so every step up is more. Adding a dimension drops the symbol count back to 3.</p>
-        </div>
-        <div class="field" style="margin-top:.9rem">
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="resumeToggle"><div class="toggle-track"></div></label>
-            <span class="toggle-label"><strong>Continue from last level</strong> — start where the previous session ended</span>
-          </div>
-        </div>
-        <div class="field" style="margin-top:.9rem" id="startLevelField">
-          <label class="label">Starting level</label>
-          <select class="num-input" id="startLevelSelect" style="width:auto;padding:0 .5rem"></select>
-          <p class="hint">Used when "continue" is off, or when there is no previous session.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-label">Controls</div>
+    <div class="section-label">Size on screen</div>
     <div class="card">
       <div class="card-body">
         <div class="field">
@@ -884,8 +920,12 @@ const bestFor = (prog, set) => Math.max(
 
 /* Standard mode is these, fixed. Custom mode is whatever the sliders say. */
 const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, encoding: 1500, mask: true, adaptLevel: true };
+/* `probeRate` is deliberately NOT in STANDARD. What is asked is a property of
+   the task like the dimension count and the stimulus set, not of the pace, so
+   it applies in both session modes rather than being overridden by one. */
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
+  probeRate: 0,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
   padScale: 1, stageScale: 1, speak: false,
 }, STANDARD);
@@ -1012,6 +1052,9 @@ document.querySelectorAll('#modeTabBar .tab-btn').forEach(b => b.addEventListene
   settings.mode = b.dataset.tab; saveSettings(); paintMode();
 }));
 
+document.querySelectorAll('input[name="probeRate"]').forEach(r => r.addEventListener('change', () => {
+  settings.probeRate = +r.value; saveSettings(); paintLevel();
+}));
 document.querySelectorAll('input[name="maxD"]').forEach(r => r.addEventListener('change', () => {
   settings.maxD = +r.value; saveSettings(); paintLevel();
 }));
@@ -1033,6 +1076,7 @@ function startingLevel() {
 
 function paintLevel() {
   document.querySelectorAll('input[name="maxD"]').forEach(r => { r.checked = +r.value === settings.maxD; });
+  document.querySelectorAll('input[name="probeRate"]').forEach(r => { r.checked = +r.value === (settings.probeRate || 0); });
   const sel = $('startLevelSelect');
   sel.innerHTML = '';
   R.ladder(settings.maxD).forEach(l => {
@@ -1394,6 +1438,31 @@ function boxScene(entries, lattice) {
  * One card: the reference and the new symbol, `dist[a]` steps apart on axis
  * `a`. Negative is toward rank 1 — up, left, back, bigger.
  */
+/*
+ * An analogy probe: two pairs of held symbols, and the claim that the step
+ * between them is the same.
+ *
+ * No lattice and no placement, deliberately. Where the four stand is the whole
+ * of what is being asked, so drawing them anywhere but in two neutral rows
+ * would hand over the answer. None is coloured as new either — all four are
+ * already held, and the accent means "this one is arriving".
+ */
+function drawProbe(el, q) {
+  const S = 52, yA = 84, yB = 216, xL = 62, xR = 238;
+  const arrow = y => [
+    svgEl('line', { x1: xL + 36, y1: y, x2: xR - 46, y2: y, class: 'probe-arrow' }),
+    svgEl('polygon', { points: `${xR - 46},${y - 6} ${xR - 34},${y} ${xR - 46},${y + 6}`,
+                       class: 'probe-head' }),
+  ];
+  /* No label between the rows: the foot of the card already asks the question,
+     and the middle of the stage is where the axis watermark sits. */
+  el.replaceChildren(
+    stimEl(q.pair[0].glyph, xL, yA, S, 'ref'), ...arrow(yA),
+    stimEl(q.pair[1].glyph, xR, yA, S, 'ref'),
+    stimEl(q.mate[0].glyph, xL, yB, S, 'ref'), ...arrow(yB),
+    stimEl(q.mate[1].glyph, xR, yB, S, 'ref'));
+}
+
 function drawCard(el, glyph, refGlyph, dist, d) {
   const n = a => Math.abs(dist[a]) + 1;
   /* Along one axis: the new symbol's cell and the reference's. */
@@ -1476,7 +1545,7 @@ const AXIS_CUE = [
 ];
 
 /* The watermark that says which rank to report. `axis` null clears it. */
-function setAxisCue(el, axis) {
+function setAxisCue(el, axis, sub) {
   if (!el) return;
   const box = el.closest('.stimulus-box');
   if (axis == null || !AXIS_CUE[axis]) {
@@ -1486,7 +1555,7 @@ function setAxisCue(el, axis) {
   }
   const a = AXIS_CUE[axis];
   el.innerHTML = `<span class="ag-main"><b>${a.glyph}</b> ${a.word}</span>`
-               + `<span class="ag-sub">${a.sub}</span>`;
+               + `<span class="ag-sub">${sub || a.sub}</span>`;
   if (box) box.style.setProperty('--ax', `var(--ax-${axis})`);
 }
 
@@ -1541,8 +1610,28 @@ function fitPadScale(axis, keys, pad) {
 
 /* The pad takes the shape of the asked axis — a column for height, a row for
    width, shrinking dots for size — so pressing a rank is pointing at a place. */
+const PROBE_KEYS = [{ rank: 1, glyph: '\u2191', word: 'true' },
+                   { rank: 2, glyph: '\u2193', word: 'false' }];
+
 function buildPad(pad, arena, o) {
   pad.replaceChildren();
+  /* A probe is answered with a claim, not a place, so its pad keeps none of the
+     axis's shape — two keys, up for true and down for false. */
+  if (o.probe) {
+    pad.className = 'rank-pad probe';
+    if (arena) arena.classList.remove('side');
+    pad.style.setProperty('--pad-scale', fitPadScale(1, 2, pad));
+    PROBE_KEYS.forEach(key => {
+      const b = document.createElement('button');
+      b.className = 'rank-btn probe-btn';
+      b.dataset.rank = key.rank;
+      b.disabled = !o.enabled;
+      b.innerHTML = `<span class="pb-glyph">${key.glyph}</span><span class="pb-word">${key.word}</span>`;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); o.onPick(key.rank); });
+      pad.appendChild(b);
+    });
+    return;
+  }
   pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : o.axis === 2 ? ' depth' : '');
   if (arena) arena.classList.toggle('side', o.axis === 0);
   pad.style.setProperty('--pad-scale', fitPadScale(o.axis, o.s, pad));
@@ -1570,6 +1659,7 @@ function renderPad() {
   const lvl = ctrl.levels[ctrl.level];
   buildPad($('rankPad'), $('arena'), {
     s: lvl.s, k: cur ? cur.k : 0, axis: cur ? cur.axis : 0,
+    probe: !!(cur && cur.probe),
     enabled: !!cur && !cur.done, onPick: answer,
   });
 }
@@ -1644,6 +1734,7 @@ let active = false, ctrl = null, model = null, cur = null, trials = [];
 let sessionSet = 'glyphs';
 /* Fixed with it: a spoken session is kept apart in the records. */
 let sessionSpoken = false;
+let sessionProbed = false;
 const nextStim = avoid => R.stimulusSet(sessionSet).next(avoid, Math.random);
 /* Set while the walkthrough is running its practice beats: a session with the
    pace pinned, a beat budget instead of a clock, and no record kept. */
@@ -1810,6 +1901,35 @@ function beat() {
     return;
   }
 
+  /* A probe instead of a card, some of the time. Nothing is placed and the
+     board does not change: this beat asks whether the board is held, where
+     every other beat adds to it. `planAnalogy` returns null on a board too
+     small to state one, and an ordinary card is dealt instead. */
+  const probeQ = Math.random() < eff('probeRate') ? R.planAnalogy(model, Math.random) : null;
+  if (probeQ) {
+    cur = {
+      k: 2, d: lvl.d, s: lvl.s, level: ctrl.level, axis: probeQ.axis, probe: true,
+      answer: probeQ.truth ? 1 : 2,
+      /* Two options is the answer's width, not the load's: the same board has
+         to be held either way, so the trial is worth what the board is worth,
+         and `credit` does the guessing correction from `k`. */
+      bits: R.carriedBits(lvl.d, lvl.s),
+      given: null, ok: false, interval, full: true,
+      t0: performance.now(), rt: null, done: false,
+    };
+    drawProbe($('stage'), probeQ);
+    $('stimInstruction').textContent = 'is this true?';
+    setAxisCue($('cue'), lvl.d > 1 ? probeQ.axis : null, 'is the step the same?');
+    renderPad();
+    later(() => {
+      if (!eff('mask')) { clearStage($('stage')); return; }
+      drawMask($('stage'), sessionSet);
+      later(() => clearStage($('stage')), MASK_MS);
+    }, Math.min(eff('exposure'), interval * 0.5));
+    armBeat(interval);
+    return;
+  }
+
   const plan = R.planCard(model, Math.random);
   const refGlyph = plan.ref.glyph;
   const glyph = nextStim(model.items.map(it => it.glyph).concat(recentlyGone));
@@ -1889,6 +2009,9 @@ function onKey(e) {
     openModal('End training session?', 'This session will still be saved.', endSession, 'Exit');
     return;
   }
+  if (cur && cur.probe && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault(); answer(e.key === 'ArrowUp' ? 1 : 2); return;
+  }
   if (/^[1-9]$/.test(e.key)) { e.preventDefault(); answer(+e.key); }
 }
 
@@ -1906,6 +2029,7 @@ function startSession(opts) {
   active = true;
   sessionSet = R.stimulusSet(settings.stimset).id;
   sessionSpoken = speaks();
+  sessionProbed = eff('probeRate') > 0;
   if (sessionSet === 'pictures') warmPhotos();
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
@@ -1970,7 +2094,11 @@ function showResults() {
 
   /* Spoken sessions keep their own best: the name heard as well as seen is a
      second way in, and a record should say what it was earned with. */
-  const bestKey = sessionSet + (sessionSpoken ? '+spoken' : '');
+  /* A probed session keeps its own best too. A probe is answered from two
+     options where a card is answered from `s`, so the two are not the same
+     trial at all, and the record should say which it was earned with. */
+  const bestKey = sessionSet + (sessionSpoken ? '+spoken' : '')
+                + (sessionProbed ? '+analogy' : '');
   const prog = loadProgress();
   if (total > 0) {
     prog.sessions = (prog.sessions || 0) + 1;
@@ -2384,6 +2512,34 @@ $('tutExitBtn').addEventListener('click', () => tutFinish(false));
 $('tutorialBtn').addEventListener('click', openTutorial);
 $('firstRunBtn').addEventListener('click', openTutorial);
 $('firstRunDismiss').addEventListener('click', () => { store.set(KEYS.seen, '1'); paintFirstRun(); });
+
+/*
+ * Long explanations fold.
+ *
+ * Every setting here is argued for, which is right, and it left the settings
+ * page three thousand pixels of prose with the controls scattered through it
+ * as small islands. Folding is done to the rendered page rather than to the
+ * markup so that not one word has to be cut or moved: the first line stays
+ * visible as the summary, and the rest is a click away.
+ */
+function foldLongHints() {
+  document.querySelectorAll('.hint').forEach(h => {
+    if (h.dataset.folded || h.closest('details')) return;
+    const text = h.textContent.trim();
+    if (text.length < 220) return;
+    h.dataset.folded = '1';
+    const d = document.createElement('details');
+    d.className = 'hint-fold';
+    const sum = document.createElement('summary');
+    /* Cut at a word, so the teaser never ends mid-syllable. */
+    sum.textContent = text.slice(0, 74).replace(/\s+\S*$/, '') + '\u2026';
+    const body = document.createElement('div');
+    while (h.firstChild) body.appendChild(h.firstChild);
+    d.append(sum, body);
+    h.appendChild(d);
+  });
+}
+foldLongHints();
 
 /* The nudge shows until it has been taken or waved off, and never again once a
    session has been recorded. */

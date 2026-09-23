@@ -103,6 +103,33 @@ working-memory training find far transfer weak at best. What the design can
 honestly claim is that it keeps the task at the edge of capacity and measures it
 cleanly.
 
+## Analogy probes
+
+Off by default. Turned on, some beats ask a question instead of dealing a card:
+two pairs of symbols you are already holding, and the claim that the step from
+the first to the second is the same on both rows — **↑ true** or **↓ false**.
+
+Nothing is placed and the board does not change, so a probe is the one beat
+that only asks whether the board is still there. Every other beat revises it.
+
+It needs a board of four. On three, the only two pairs with the same step share
+a symbol, and "A is to B as B is to C" is a chain rather than an analogy —
+below four a card is dealt as usual. Half the probes are true, drawn as the
+claim before the pairs that state it, so neither key is the one to press when
+unsure.
+
+The four symbols are drawn in two plain rows with no grid and nothing coloured
+as new. Where they stand is the whole of what is being asked, so a card that
+showed any of it would be answering itself.
+
+A probe is answered from two options where a card is answered from as many as
+the board is wide, so bits per second is not comparable with an unprobed
+session and the best-ever figure is kept separately — the same way a spoken
+session and an animal session keep their own. Within a session a probe is
+credited for the board it interrogates rather than for its two options, since
+the same board has to be held either way; the guessing correction comes from
+the two options, as it does everywhere else.
+
 ## What is on the cards
 
 Three stimulus sets, and the choice is a real trade rather than a skin.

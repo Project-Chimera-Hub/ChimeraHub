@@ -311,6 +311,51 @@
     return { ref: ref, target: target, dist: dist, axis: axis };
   }
 
+  /**
+   * An analogy probe: is the step from one held symbol to another the same as
+   * the step from a third to a fourth, on one axis?
+   *
+   * A probe, not a card — nothing is placed and the board does not change. It
+   * asks whether the board is held rather than adding to it, so it is the one
+   * beat that is pure retrieval, and the only one whose answer is a claim
+   * rather than a position.
+   *
+   * All four symbols are distinct, which is why it needs a board of four: on
+   * three, the only two pairs with the same step share a symbol, and "A is to B
+   * as B is to C" is a chain rather than an analogy. Below that the caller
+   * deals an ordinary card instead.
+   *
+   * Half the probes are true, drawn as the claim BEFORE the pairs that state
+   * it, so neither answer is the one to press when unsure.
+   */
+  function planAnalogy(model, rnd) {
+    rnd = rnd || Math.random;
+    var items = model.items;
+    if (items.length < 4) return null;
+    var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
+    var step = function (p) { return p[1].ranks[axis] - p[0].ranks[axis]; };
+    var pairs = [];
+    for (var i = 0; i < items.length; i++) {
+      for (var j = 0; j < items.length; j++) if (i !== j) pairs.push([items[i], items[j]]);
+    }
+    var truth = rnd() < 0.5;
+    /* Shuffled, or a first pair with no mate would bias the draw toward
+       whichever pairs happen to come first in item order. */
+    var order = shuffled(pairs.length, rnd);
+    for (var n = 0; n < order.length; n++) {
+      var a = pairs[order[n]];
+      var mates = pairs.filter(function (b) {
+        return b[0] !== a[0] && b[0] !== a[1] && b[1] !== a[0] && b[1] !== a[1]
+            && (step(b) === step(a)) === truth;
+      });
+      if (mates.length) {
+        return { kind: "analogy", axis: axis, truth: truth,
+                 pair: a, mate: mates[Math.floor(rnd() * mates.length)] };
+      }
+    }
+    return null;
+  }
+
   /** The card's symbol takes the target's slot; the target leaves. Nothing
       else moves. */
   function apply(model, plan, glyph) {
@@ -442,7 +487,11 @@
     var bits = 0, secs = 0;
     trials.forEach(function (t) {
       if (t.k < 2) return;
-      bits += credit(t) * carriedBits(t.d, t.k);
+      /* `t.bits` where the trial carried something other than its answer's
+         width — an analogy probe is answered from two options and holds the
+         whole board. Records from before probes existed have no `bits` and are
+         read the way they always were. */
+      bits += credit(t) * (t.bits != null ? t.bits : carriedBits(t.d, t.k));
       secs += t.interval / 1000;
     });
     return secs > 0 ? Math.max(0, bits / secs) : 0;
@@ -465,6 +514,7 @@
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
     newAnimal: newAnimal, newPicture: newPicture, stimulusSet: stimulusSet,
     createModel: createModel, fill: fill, planCard: planCard, apply: apply,
+    planAnalogy: planAnalogy,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,
     credit: credit, throughput: throughput, peakThroughput: peakThroughput,

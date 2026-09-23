@@ -249,6 +249,50 @@ test("an unknown set id falls back to the generated marks", () => {
   assert.ok(Array.isArray(R.stimulusSet("glyphs").next([], lcg(41))));
 });
 
+test("an analogy probe is four distinct symbols and a claim about two steps", () => {
+  for (const [d, span] of [[1, 4], [2, 5], [4, 5], [1, 7]]) {
+    const rnd = lcg(d * 31 + span);
+    const m = R.createModel(d, span);
+    const glyphs = [];
+    for (let i = 0; i < span; i++) glyphs.push(R.makeGlyph(rnd));
+    R.fill(m, glyphs, rnd);
+    let t = 0;
+    for (let i = 0; i < 2000; i++) {
+      const q = R.planAnalogy(m, rnd);
+      assert.ok(q, `${d}D\u00b7${span} drew nothing`);
+      const step = p => p[1].ranks[q.axis] - p[0].ranks[q.axis];
+      assert.strictEqual(step(q.pair) === step(q.mate), q.truth,
+        "the claim does not match the board");
+      assert.strictEqual(new Set([q.pair[0], q.pair[1], q.mate[0], q.mate[1]]).size, 4,
+        "a symbol appears in both pairs");
+      assert.ok(q.axis >= 0 && q.axis < d, "axis outside the space");
+      if (q.truth) t++;
+    }
+    /* Half true, or pressing one key would be a strategy. */
+    assert.ok(Math.abs(t / 2000 - 0.5) < 0.05, `${d}\u00b7${span}: ${t / 2000} true`);
+  }
+});
+
+test("a board of three is too small to state an analogy", () => {
+  /* Two pairs with the same step must share a symbol on three, and "A is to B
+     as B is to C" is a chain. The caller deals an ordinary card instead. */
+  const rnd = lcg(7);
+  const m = R.createModel(2, 3);
+  const glyphs = [R.makeGlyph(rnd), R.makeGlyph(rnd), R.makeGlyph(rnd)];
+  R.fill(m, glyphs, rnd);
+  for (let i = 0; i < 200; i++) assert.strictEqual(R.planAnalogy(m, rnd), null);
+});
+
+test("a probe is credited for the board it interrogates, not its two options", () => {
+  /* Its answer is one bit wide; the board behind it is not. A trial carrying
+     an explicit `bits` is read by that, and older records by their `k`. */
+  const probe = { k: 2, d: 3, s: 5, bits: R.carriedBits(3, 5), ok: true, interval: 1000 };
+  const card = { k: 5, d: 3, s: 5, ok: true, interval: 1000 };
+  assert.strictEqual(R.throughput([probe]), R.throughput([card]));
+  const old = { k: 2, d: 3, ok: true, interval: 1000 };
+  assert.strictEqual(R.throughput([old]), R.carriedBits(3, 2));
+});
+
 test("every axis has a name, a pair of words and a glyph", () => {
   assert.strictEqual(R.AXES.length, 4);
   assert.deepStrictEqual(R.AXES.map(a => a.id),
