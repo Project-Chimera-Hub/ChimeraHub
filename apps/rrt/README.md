@@ -91,13 +91,19 @@ So bits per second is **not comparable between the sets**. Every session record
 carries the set it used, the best-ever figure is kept per set, and the archive
 reads it as `raw.stimuli`.
 
-**Pictures** are the far end: 56 coloured emoji of everyday things — fruit,
-animals, vehicles, objects — each with a name anyone would use. They are the
-easiest to take in, and they are the one set drawn by the device's own colour
-font, so a picture looks a little different from one phone to the next; the
-animals were drawn by hand to avoid exactly that, and for a set whose point is
-to be easy to encode it is a fair price. A picture brings its own colours, so
-the new one on a card stands in an accent ring instead of being tinted.
+**Pictures** are the far end: real colour photographs of everyday things —
+fruit, animals, vehicles, objects — each with a name anyone would use. They are
+the easiest to take in. They come from Wikimedia Commons, only under licences
+that allow reuse (public domain, CC0, CC BY, CC BY-SA), and every one is
+credited in the app under the setting, with its author, licence and source.
+
+`tools/fetch-pictures.mjs` fetches them and `.github/workflows/pictures.yml`
+runs it whenever `pictures/list.json` changes, committing 256px squares and
+`pictures/pictures.js` (the list the page loads, credits included). The photos
+are files in the repository, so the APK carries them offline. To replace a bad
+photo, pin a Commons `file` for that name in the list, or add the bad one to
+its `reject`, and push. A photo brings its own colours, so the new one on a
+card stands in an accent frame instead of being tinted.
 
 ### Speaking the names
 
