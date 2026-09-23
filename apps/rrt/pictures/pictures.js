@@ -19,9 +19,9 @@
    {
     "name": "grapes",
     "image": "pictures/grapes.jpg",
-    "author": "Ewan Munro from London, UK",
-    "licence": "CC BY-SA 2.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Bunch_of_Grapes,_Brompton,_SW3_(4197149602).jpg"
+    "author": "This file was donated to Wikimedia Commons as part of a project by the Metropolitan Museum of Art. See the Image and Data Resources Open Access Policy",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pendant-_Bunch_of_Grapes_MET_11.215.313.jpg"
    },
    {
     "name": "strawberry",
@@ -47,9 +47,9 @@
    {
     "name": "carrot",
     "image": "pictures/carrot.jpg",
-    "author": "Stephen Ausmus",
-    "licence": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Carrots_of_many_colors.jpg"
+    "author": "W.carter",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Open_refrigerator_with_food_at_night.jpg"
    },
    {
     "name": "corn",
@@ -68,44 +68,44 @@
    {
     "name": "broccoli",
     "image": "pictures/broccoli.jpg",
-    "author": "George Chernilevsky",
-    "licence": "CC BY 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Romanesco_broccoli_2025_G2.jpg"
+    "author": "HaJunkiyada",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Broccoli_from_San_Francisco_farmers_market.jpg"
    },
    {
     "name": "cheese",
     "image": "pictures/cheese.jpg",
-    "author": "Daderot",
-    "licence": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:Wedge_salad_with_blue_cheese_dressing_-_San_Francisco,_CA.jpg"
+    "author": "Kritzolina",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:K%C3%A4se_auf_dem_Viktualienmarkt_M%C3%BCnchen_01.jpg"
    },
    {
     "name": "pizza",
     "image": "pictures/pizza.jpg",
-    "author": "Petar Milošević",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Vegetarian_Pizza.jpg"
+    "author": "Mario56",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Margherita_Originale.JPG"
    },
    {
     "name": "doughnut",
     "image": "pictures/doughnut.jpg",
-    "author": "DoughnutEconomics",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Doughnut_(economic_model).jpg"
+    "author": "Evan-Amos",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Dough-Doughnut-Blood-Orange.jpg"
    },
    {
     "name": "cake",
     "image": "pictures/cake.jpg",
-    "author": "Anna.Massini",
+    "author": "Acabashi",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:My_birthday_cake!_Oops_there%27s_only_half_left!.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Chocolate_cake_and_Victoria_sponge.jpg"
    },
    {
     "name": "dog",
     "image": "pictures/dog.jpg",
-    "author": "Basile Morin",
+    "author": "Dietmar Rabich",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Human%E2%80%93canine_friendship_-_girl_hugging_her_dog_tightly_at_golden_hour_in_Laos.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Hausd%C3%BClmen,_Golden_Retriever_--_2022_--_5945.jpg"
    },
    {
     "name": "cat",
@@ -210,35 +210,35 @@
     "image": "pictures/fish.jpg",
     "author": "Kritzolina",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Fountain_with_goldfish_in_Jard%C3%AD_del_Bisbe_03.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Fountain_with_goldfish_in_Jard%C3%AD_del_Bisbe_02.jpg"
    },
    {
     "name": "car",
     "image": "pictures/car.jpg",
-    "author": "Jebulon",
-    "licence": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:Red_car_toy.jpg"
+    "author": "Matti Blume",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VW_Golf_R,_Berlin_(1X7A3939).jpg"
    },
    {
     "name": "bicycle",
     "image": "pictures/bicycle.jpg",
-    "author": "Basile Morin",
+    "author": "Petar Milošević",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Parked_bicycle_with_graffitied_building_facade_and_doors_in_Amsterdam.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Dutch_bicycle.jpg"
    },
    {
     "name": "aeroplane",
     "image": "pictures/aeroplane.jpg",
-    "author": "Noah Wulf",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Airliner_Contrail.jpg"
+    "author": "Julian Herzog (Website)",
+    "licence": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lufthansa_Airbus_A320-211_D-AIQT_01.jpg"
    },
    {
     "name": "rocket",
     "image": "pictures/rocket.jpg",
     "author": "NASA",
     "licence": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:First_NASA_ISINGLASS_rocket_launch.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Space_Shuttle_Columbia_launching.jpg"
    },
    {
     "name": "sailboat",
@@ -264,9 +264,9 @@
    {
     "name": "key",
     "image": "pictures/key.jpg",
-    "author": "The Metal Fest",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:MetalFestLogo2024.png"
+    "author": "Ianaré Sévi",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Old_house_in_Key_West.JPG"
    },
    {
     "name": "balloon",
@@ -279,22 +279,22 @@
     "name": "guitar",
     "image": "pictures/guitar.jpg",
     "author": "Wilfredor",
-    "licence": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:Man_playing_an_acoustic_brazilian_guitar_(Viol%C3%A3o)_on_Marco_Zero_Square,_Refice,_Pernambuco,_Brazil.jpg"
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Paramount_Series_acoustic_guitars.jpg"
    },
    {
     "name": "football",
     "image": "pictures/football.jpg",
-    "author": "Jonathan McIntosh",
-    "licence": "CC BY 2.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Jakarta_old_football.jpg"
+    "author": "Peter Glaser baraida",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Adidas_soccer_ball_on_a_grass_pitch_(Unsplash).jpg"
    },
    {
     "name": "hat",
     "image": "pictures/hat.jpg",
-    "author": "Michael Evans",
-    "licence": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Ronald_Reagan_with_cowboy_hat_12-0071M_edit.jpg"
+    "author": "Nomad0212",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%D0%A7%D0%B5%D1%80%D0%BD%D1%96%D0%B3%D1%96%D0%B2_%D0%A6%D0%B5%D1%80%D0%BA%D0%B2%D0%B0_%D0%9C%D0%B8%D1%85%D0%B0%D0%B9%D0%BB%D0%B0_%D1%82%D0%B0_%D0%A4%D0%B5%D0%B4%D0%BE%D1%80%D0%B0_%D0%92%D0%B5%D1%81%D0%BD%D0%B0_2016.jpg"
    },
    {
     "name": "shoe",
@@ -306,9 +306,9 @@
    {
     "name": "umbrella",
     "image": "pictures/umbrella.jpg",
-    "author": "Sopyaylynn",
+    "author": "Basile Morin",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:The_Umbrella_Workshop.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Beige_and_brown_oil-paper_umbrella_on_the_edge_of_a_wooden_house_in_Luang_Prabang_Laos.jpg"
    },
    {
     "name": "cactus",
@@ -334,16 +334,16 @@
    {
     "name": "candle",
     "image": "pictures/candle.jpg",
-    "author": "W.carter",
+    "author": "Petar Milošević",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Candle_light_projected_through_a_glass_orb.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Candle_(Slava_celebration).jpg"
    },
    {
     "name": "fire",
     "image": "pictures/fire.jpg",
-    "author": "kallerna",
-    "licence": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Campfire_and_sparks_in_Anttoora_3.jpg"
+    "author": "Marc-Lautenbacher",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Campfire_flames_at_night.jpg"
    },
    {
     "name": "rainbow",
@@ -369,9 +369,9 @@
    {
     "name": "books",
     "image": "pictures/books.jpg",
-    "author": "mycurrency.com",
+    "author": "Roman Eisele",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Stack_of_Books_for_decor.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Part_of_a_bookshelf_containing_books_by_Aristotle_(1).jpg"
    },
    {
     "name": "scissors",
@@ -383,9 +383,9 @@
    {
     "name": "bell",
     "image": "pictures/bell.jpg",
-    "author": "Dmitry A. Mottl",
-    "licence": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Chersonesos_Bell.jpg"
+    "author": "Dietmar Rabich",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Santorin_(GR),_Ia,_Vier_Glocken_--_2017_--_2720-6-2.jpg"
    },
    {
     "name": "teapot",
