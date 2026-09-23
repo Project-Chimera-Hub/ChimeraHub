@@ -9,9 +9,10 @@
  },
  {
   "name": "grapes",
-  "query": "grapes bunch fruit",
+  "query": "red grapes white background",
   "reject": [
-   "File:Bunch of Grapes, Brompton, SW3 (4197149602).jpg"
+   "File:Bunch of Grapes, Brompton, SW3 (4197149602).jpg",
+   "File:Pendant- Bunch of Grapes MET 11.215.313.jpg"
   ]
  },
  {
@@ -28,9 +29,10 @@
  },
  {
   "name": "carrot",
-  "query": "carrots",
+  "query": "carrots white background",
   "reject": [
-   "File:Carrots of many colors.jpg"
+   "File:Carrots of many colors.jpg",
+   "File:Open refrigerator with food at night.jpg"
   ]
  },
  {
@@ -50,9 +52,10 @@
  },
  {
   "name": "cheese",
-  "query": "Emmental cheese",
+  "query": "cheese wheel",
   "reject": [
-   "File:Wedge salad with blue cheese dressing - San Francisco, CA.jpg"
+   "File:Wedge salad with blue cheese dressing - San Francisco, CA.jpg",
+   "File:K\u00e4se auf dem Viktualienmarkt M\u00fcnchen 01.jpg"
   ]
  },
  {
@@ -71,9 +74,10 @@
  },
  {
   "name": "cake",
-  "query": "chocolate cake",
+  "query": "birthday cake candles",
   "reject": [
-   "File:My birthday cake! Oops there's only half left!.jpg"
+   "File:My birthday cake! Oops there's only half left!.jpg",
+   "File:Chocolate cake and Victoria sponge.jpg"
   ]
  },
  {
@@ -141,9 +145,10 @@
  },
  {
   "name": "fish",
-  "query": "goldfish",
+  "query": "clownfish Amphiprion ocellaris",
   "reject": [
-   "File:Fountain with goldfish in Jard\u00ed del Bisbe 03.jpg"
+   "File:Fountain with goldfish in Jard\u00ed del Bisbe 03.jpg",
+   "File:Fountain with goldfish in Jard\u00ed del Bisbe 02.jpg"
   ]
  },
  {
@@ -188,9 +193,10 @@
  },
  {
   "name": "key",
-  "query": "old key",
+  "query": "door key",
   "reject": [
-   "File:MetalFestLogo2024.png"
+   "File:MetalFestLogo2024.png",
+   "File:Old house in Key West.JPG"
   ]
  },
  {
@@ -213,9 +219,10 @@
  },
  {
   "name": "hat",
-  "query": "fedora hat",
+  "query": "straw hat",
   "reject": [
-   "File:Ronald Reagan with cowboy hat 12-0071M edit.jpg"
+   "File:Ronald Reagan with cowboy hat 12-0071M edit.jpg",
+   "File:\u0427\u0435\u0440\u043d\u0456\u0433\u0456\u0432 \u0426\u0435\u0440\u043a\u0432\u0430 \u041c\u0438\u0445\u0430\u0439\u043b\u0430 \u0442\u0430 \u0424\u0435\u0434\u043e\u0440\u0430 \u0412\u0435\u0441\u043d\u0430 2016.jpg"
   ]
  },
  {
@@ -224,9 +231,10 @@
  },
  {
   "name": "umbrella",
-  "query": "open umbrella",
+  "query": "red umbrella",
   "reject": [
-   "File:The Umbrella Workshop.jpg"
+   "File:The Umbrella Workshop.jpg",
+   "File:Beige and brown oil-paper umbrella on the edge of a wooden house in Luang Prabang Laos.jpg"
   ]
  },
  {
@@ -280,9 +288,10 @@
  },
  {
   "name": "bell",
-  "query": "church bell",
+  "query": "handbell",
   "reject": [
-   "File:Chersonesos Bell.jpg"
+   "File:Chersonesos Bell.jpg",
+   "File:Santorin (GR), Ia, Vier Glocken -- 2017 -- 2720-6-2.jpg"
   ]
  },
  {
