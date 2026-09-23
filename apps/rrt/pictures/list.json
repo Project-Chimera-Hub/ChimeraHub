@@ -8,8 +8,8 @@
   "query": "banana fruit single"
  },
  {
-  "name": "pineapple",
-  "query": "pineapple fruit"
+  "name": "pear",
+  "query": "pear fruit"
  },
  {
   "name": "strawberry",
@@ -24,8 +24,8 @@
   "query": "lemon fruit"
  },
  {
-  "name": "tomato",
-  "query": "tomato fruit"
+  "name": "sheep",
+  "query": "sheep"
  },
  {
   "name": "corn",
@@ -267,8 +267,8 @@
   "query": "scissors"
  },
  {
-  "name": "rabbit",
-  "query": "rabbit"
+  "name": "hedgehog",
+  "query": "hedgehog"
  },
  {
   "name": "teapot",
