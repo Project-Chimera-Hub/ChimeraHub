@@ -25,67 +25,85 @@ function assertPermutations(model) {
   }
 }
 
+function stims(set, n, rnd) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(set.next(out, rnd));
+  return out;
+}
+
 function run(d, s, beats, rnd, setId) {
   const set = R.stimulusSet(setId);
   const m = R.createModel(d, s);
-  R.seed(m, set.next([], rnd));
+  R.fill(m, stims(set, s, rnd), rnd);
+  assertPermutations(m);
   const out = [];
   for (let i = 0; i < beats; i++) {
+    const before = new Map(m.items.map(it => [it.id, it.ranks.slice()]));
     const plan = R.planCard(m, rnd);
     const res = R.apply(m, plan, set.next(m.items.map(it => it.glyph), rnd));
-    out.push({ plan, res, size: m.items.length });
+    out.push({ plan, res, size: m.items.length, before });
     assertPermutations(m);
   }
   return { m, out };
 }
 
-test("the worked example: new above the 2nd of three answers 1", () => {
+test("the worked example: new two above the 3rd of three answers 1", () => {
   const m = R.createModel(1, 3);
-  const dot = R.seed(m, [0]);
-  const tri = { id: 90, glyph: [1], ranks: [1], born: ++m.clock };
-  const sq = { id: 91, glyph: [2], ranks: [2], born: ++m.clock };
-  m.items.push(tri, sq);
-  const res = R.apply(m, { ref: tri, dirs: [-1], axis: 0 }, [3]);
-  assert.strictEqual(res.removed, dot);
+  const [a, b, c] = R.fill(m, [[0], [1], [2]], lcg(1));
+  a.ranks = [0]; b.ranks = [1]; c.ranks = [2];
+  const res = R.apply(m, { ref: c, target: a, dist: [-2], axis: 0 }, [3]);
+  assert.strictEqual(res.removed, a);
   assert.strictEqual(res.answer, 1);
   assert.deepStrictEqual(m.items.map(it => it.ranks[0]), [1, 2, 0]);
 });
 
-test("placing below the bottom symbol puts it last", () => {
-  const m = R.createModel(1, 5);
-  const a = R.seed(m, [0]);
-  const r = R.apply(m, { ref: a, dirs: [1], axis: 0 }, [1]);
-  assert.strictEqual(r.answer, 2);
-  assert.strictEqual(r.removed, null);
+test("the board starts full, one symbol per slot on every axis", () => {
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) {
+    const m = R.createModel(d, s);
+    R.fill(m, stims(R.stimulusSet("glyphs"), s, lcg(d + s)), lcg(d * s));
+    assert.strictEqual(m.items.length, s);
+    assertPermutations(m);
+  }
 });
 
 test("every axis stays a permutation, in every dimension, for long runs", () => {
   for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 300, lcg(d * 10 + s));
 });
 
-test("the model grows to s and then holds there", () => {
-  const { out } = run(2, 4, 20, lcg(7));
-  assert.deepStrictEqual(out.map(o => o.size).slice(0, 5), [2, 3, 4, 4, 4]);
-  assert.ok(out.slice(3).every(o => o.res.removed), "no departure at full size");
-});
-
-test("the oldest symbol is the one that leaves", () => {
-  const rnd = lcg(3);
-  const m = R.createModel(1, 3);
-  R.seed(m, R.newGlyph([], rnd));
-  for (let i = 0; i < 50; i++) {
-    const oldest = m.items.reduce((a, b) => (a.born < b.born ? a : b));
-    const full = m.items.length === 3;
-    const r = R.apply(m, R.planCard(m, rnd), R.newGlyph([], rnd));
-    assert.strictEqual(r.removed, full ? oldest : null);
+test("nothing moves but the new symbol: every other slot is where it was", () => {
+  const m = R.createModel(2, 4);
+  R.fill(m, stims(R.stimulusSet("glyphs"), 4, lcg(2)), lcg(2));
+  for (let i = 0; i < 200; i++) {
+    const keep = m.items.map(it => [it, it.ranks.slice()]);
+    const plan = R.planCard(m, lcg(i));
+    R.apply(m, plan, [i]);
+    keep.forEach(([it, r]) => { if (it !== plan.target) assert.deepStrictEqual(it.ranks, r); });
   }
 });
 
-test("answers are close to uniform over the ranks at full size", () => {
+test("the new symbol lands where the card says: reference plus steps", () => {
+  const { out } = run(4, 4, 800, lcg(47));
+  out.forEach(o => {
+    const refRanks = o.before.get(o.plan.ref.id);
+    o.res.item.ranks.forEach((r, a) => assert.strictEqual(r, refRanks[a] + o.plan.dist[a]));
+    o.plan.dist.forEach(v => assert.ok(v !== 0, "a zero step"));
+  });
+});
+
+test("the symbol in the landing slot is the one that leaves, and the board stays full", () => {
+  const { out } = run(2, 5, 300, lcg(3));
+  out.forEach(o => {
+    assert.strictEqual(o.res.removed, o.plan.target);
+    assert.notStrictEqual(o.plan.ref, o.plan.target);
+    assert.strictEqual(o.size, 5);
+  });
+});
+
+test("answers are close to uniform over the ranks", () => {
   for (const [d, s] of [[1, 3], [1, 7], [2, 4], [3, 5]]) {
     const { out } = run(d, s, 6000, lcg(d * 100 + s));
     const counts = new Array(s).fill(0);
-    out.slice(s).forEach(o => counts[o.res.answer - 1]++);
+    out.forEach(o => counts[o.res.answer - 1]++);
     const n = counts.reduce((a, b) => a + b, 0);
     counts.forEach((c, i) =>
       assert.ok(Math.abs(c / n - 1 / s) < 0.035, `${d}D s${s}: rank ${i + 1} at ${(c / n).toFixed(3)}`));
@@ -95,16 +113,33 @@ test("answers are close to uniform over the ranks at full size", () => {
 test("pressing one key always scores chance, corrected to zero", () => {
   const s = 5;
   const { out } = run(1, s, 5000, lcg(11));
-  const oks = out.slice(s).map(o => o.res.answer === 3);
+  const oks = out.map(o => o.res.answer === 3);
   assert.ok(Math.abs(R.correctedAccuracy(oks, s)) < 0.03, R.correctedAccuracy(oks, s));
 });
 
-test("the direction on the card alone does not give the answer", () => {
-  /* After "above", every rank is still possible — even the last, when the
-     reference was the oldest and leaves on the same beat. */
-  const { out } = run(1, 5, 3000, lcg(5));
-  const seen = new Set(out.slice(5).filter(o => o.plan.dirs[0] < 0).map(o => o.res.answer));
-  assert.deepStrictEqual([...seen].sort(), [1, 2, 3, 4, 5]);
+test("the steps on the card alone never give the answer", () => {
+  /* For every step count the card can show, at least two answers are possible:
+     the rank still depends on where the reference is. */
+  for (const s of [3, 5, 7]) {
+    const { out } = run(1, s, 3000, lcg(s));
+    const byDist = new Map();
+    out.forEach(o => {
+      const k = o.plan.dist[0];
+      if (!byDist.has(k)) byDist.set(k, new Set());
+      byDist.get(k).add(o.res.answer);
+    });
+    byDist.forEach((ans, k) => assert.ok(ans.size >= 2, `s${s} step ${k} always answers ${[...ans]}`));
+  }
+});
+
+test("the landing slots do not fall into a rhythm", () => {
+  /* The failure fixed slots invite: if the slot were chosen by age, the answers
+     would repeat with period s. */
+  const s = 4;
+  const { out } = run(1, s, 400, lcg(53));
+  const a = out.map(o => o.res.answer);
+  const same = a.slice(s).filter((v, i) => v === a[i]).length / (a.length - s);
+  assert.ok(same < 0.4, same);
 });
 
 test("the asked axis is spread over all axes", () => {
@@ -146,7 +181,7 @@ test("a glyph is zero from its own mirror image", () => {
 test("an animal is never one that is held or has only just left", () => {
   const rnd = lcg(29);
   const m = R.createModel(1, 5);
-  R.seed(m, R.newAnimal([], rnd));
+  R.fill(m, stims(R.stimulusSet("animals"), 5, rnd), rnd);
   const gone = [];
   for (let i = 0; i < 400; i++) {
     const avoid = m.items.map(it => it.glyph).concat(gone);

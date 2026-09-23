@@ -5,20 +5,26 @@
    Everything here is pure, so node can test it without a browser; index.html
    only draws what this decides.
 
-   THE TASK. You hold `s` symbols in your head, each with a rank on each of `d`
-   axes (height, then width, then size). Every beat shows one new symbol
-   placed relative to one symbol you already hold: above or below it, left or
-   right of it, bigger or smaller than it — one relation per axis, all at once.
-   The new symbol slots in right next to that one on every axis, and when that
-   makes one too many, the OLDEST symbol leaves and everything closes up. You
-   answer the new symbol's rank on one axis.
+   THE TASK. A board of `s` slots on each of `d` axes (height, then width,
+   then depth, then size) holds `s` symbols, one per slot on every axis. An
+   episode opens by showing the whole board. Every beat after that shows one
+   new symbol placed some number of steps from one symbol you hold — above or
+   below it, left or right of it, and so on, one count per axis. The new
+   symbol takes that slot, the symbol that was in it leaves, and nothing else
+   moves. You answer the new symbol's rank on one axis.
 
-   Why this shape, rather than CCT's "combine with the previous one":
+   It used to be an insertion: the new symbol slotted in next to the
+   reference, everything past it shifted a rank, and then the oldest left and
+   everything closed up again. That moved symbols the card never mentioned,
+   which made the bookkeeping the hard part rather than the relations. Fixed
+   slots keep what mattered:
 
-   - No card contains its answer. The rank depends on where the reference sits
-     now, which depends on every insertion and departure before it.
-   - Each symbol carries two bindings — where it is and how old it is — and both
-     change every beat. Discarding the stale ones is part of the work.
+   - No card contains its answer. The rank is the reference's rank plus the
+     steps on the card, and where the reference is depends on the cards before.
+   - What leaves is decided by the card, not by age. Leaving by age in a board
+     where nothing moves would put the new symbols into the slots in the same
+     order every lap, and the answers would be a rhythm to learn instead of a
+     board to hold.
    - The symbols are generated, not drawn from a set, so no symbol ever comes to
      mean anything. A task whose stimuli keep a fixed meaning automatises, and a
      task that has automatised has stopped loading what it was chosen to load.
@@ -233,80 +239,68 @@
     return { d: d, s: s, items: [], clock: 0, nextId: 1 };
   }
 
-  /** The first symbol of an episode: it has nothing to be placed against. */
-  function seed(model, glyph) {
-    var ranks = [];
-    for (var a = 0; a < model.d; a++) ranks.push(0);
-    var item = { id: model.nextId++, glyph: glyph, ranks: ranks, born: ++model.clock };
-    model.items.push(item);
-    return item;
-  }
-
-  /* Where every rank ends up if a symbol goes in next to `ref`, in `dirs`, and
-     the oldest then leaves when there is one too many. Returns the new symbol's
-     ranks, and the item that left. Pure: works on copies. */
-  function simulate(model, ref, dirs) {
-    var ranks = model.items.map(function (it) { return it.ranks.slice(); });
-    var refIdx = model.items.indexOf(ref);
-    var x = [];
-    for (var a = 0; a < model.d; a++) {
-      var at = ranks[refIdx][a] + (dirs[a] < 0 ? 0 : 1);
-      for (var i = 0; i < ranks.length; i++) if (ranks[i][a] >= at) ranks[i][a]++;
-      x.push(at);
+  /* A random order of 0..n-1. */
+  function shuffled(n, rnd) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(i);
+    for (var j = n - 1; j > 0; j--) {
+      var k = Math.floor(rnd() * (j + 1)), t = out[j];
+      out[j] = out[k]; out[k] = t;
     }
-    var removed = -1;
-    if (model.items.length + 1 > model.s) {
-      removed = 0;
-      for (var j = 1; j < model.items.length; j++) {
-        if (model.items[j].born < model.items[removed].born) removed = j;
-      }
-      for (var b = 0; b < model.d; b++) {
-        var gone = ranks[removed][b];
-        if (x[b] > gone) x[b]--;
-        for (var k = 0; k < ranks.length; k++) if (ranks[k][b] > gone) ranks[k][b]--;
-      }
-    }
-    return { x: x, ranks: ranks, removed: removed };
+    return out;
   }
 
   /**
-   * The next card: which symbol it is placed against, in which directions, and
-   * which axis is asked about.
+   * The board an episode opens with: `s` symbols, one in every slot on every
+   * axis, shown all at once to be learnt before the first card. From here on
+   * the board is always full and a slot is a slot — nothing ever renumbers.
+   */
+  function fill(model, stims, rnd) {
+    rnd = rnd || Math.random;
+    var perms = [];
+    for (var a = 0; a < model.d; a++) perms.push(shuffled(model.s, rnd));
+    model.items = [];
+    for (var i = 0; i < model.s; i++) {
+      var ranks = [];
+      for (var b = 0; b < model.d; b++) ranks.push(perms[b][i]);
+      model.items.push({ id: model.nextId++, glyph: stims[i], ranks: ranks, born: ++model.clock });
+    }
+    return model.items;
+  }
+
+  /**
+   * The next card: the slot the new symbol lands in (the symbol there now is
+   * the one it replaces), the held symbol it is placed against, how many steps
+   * away that slot is on every axis, and which axis is asked about.
    *
-   * Picking all of that uniformly would pile the answers up in the middle
-   * ranks, and a player who learned to press the middle key would score for it.
-   * So the answer is picked first, uniformly among the ranks this model can
-   * produce on the asked axis, and then a placement that produces it. The
-   * other axes' directions are free.
+   * The slot is picked first and uniformly, so the answers come out even over
+   * the ranks and pressing one key forever scores exactly chance. The
+   * reference is any other symbol, except one exactly the whole board away on
+   * the asked axis: "all the way up" would say the answer without needing to
+   * know where anything is.
    */
   function planCard(model, rnd) {
     rnd = rnd || Math.random;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
-    var byAnswer = {};
-    var answers = [];
-    model.items.forEach(function (ref) {
-      [-1, 1].forEach(function (dir) {
-        var dirs = [];
-        for (var a = 0; a < model.d; a++) dirs.push(a === axis ? dir : (rnd() < 0.5 ? -1 : 1));
-        var r = simulate(model, ref, dirs).x[axis];
-        if (!byAnswer[r]) { byAnswer[r] = []; answers.push(r); }
-        byAnswer[r].push({ ref: ref, dirs: dirs });
-      });
+    var target = pick(model.items);
+    var refs = model.items.filter(function (it) {
+      return it !== target && Math.abs(target.ranks[axis] - it.ranks[axis]) < model.s - 1;
     });
-    var chosen = pick(byAnswer[pick(answers)]);
-    return { ref: chosen.ref, dirs: chosen.dirs, axis: axis };
+    var ref = pick(refs);
+    var dist = [];
+    for (var a = 0; a < model.d; a++) dist.push(target.ranks[a] - ref.ranks[a]);
+    return { ref: ref, target: target, dist: dist, axis: axis };
   }
 
-  /** Put the card's symbol in, drop the oldest if needed. */
+  /** The card's symbol takes the target's slot; the target leaves. Nothing
+      else moves. */
   function apply(model, plan, glyph) {
-    var sim = simulate(model, plan.ref, plan.dirs);
-    var removed = sim.removed >= 0 ? model.items[sim.removed] : null;
-    model.items.forEach(function (it, i) { it.ranks = sim.ranks[i]; });
-    if (removed) model.items.splice(sim.removed, 1);
-    var x = { id: model.nextId++, glyph: glyph, ranks: sim.x, born: ++model.clock };
+    var i = model.items.indexOf(plan.target);
+    var x = { id: model.nextId++, glyph: glyph, ranks: plan.target.ranks.slice(), born: ++model.clock };
+    model.items.splice(i, 1);
     model.items.push(x);
-    return { item: x, removed: removed, answer: sim.x[plan.axis] + 1 };
+    return { item: x, removed: plan.target, answer: x.ranks[plan.axis] + 1 };
   }
 
   /* ------------------------------------------------------------------ *
@@ -452,7 +446,7 @@
     SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, SETS: SETS,
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
     newAnimal: newAnimal, stimulusSet: stimulusSet,
-    createModel: createModel, seed: seed, planCard: planCard, apply: apply, simulate: simulate,
+    createModel: createModel, fill: fill, planCard: planCard, apply: apply,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,
     credit: credit, throughput: throughput, peakThroughput: peakThroughput,

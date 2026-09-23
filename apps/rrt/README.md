@@ -2,22 +2,37 @@
 
 Relational reasoning training at CCT's pace.
 
-You hold a few symbols in order in your head. Every beat, one card places a new
-symbol next to one you already hold — above or below it, and higher up the
-ladder also left or right of it, and bigger or smaller than it. If that makes
-one too many, the **oldest** symbol leaves and the ranks close up. You answer
-where the new symbol now stands, on the axis the card asks about, before the
+An episode opens with a **board**: a few symbols, one in every slot, shown all
+at once to be learnt. Every beat after that, one card places a new symbol some
+number of steps from one you already hold — up or down, and higher up the
+ladder also left or right, back or front, and bigger or smaller. The card is a
+small grid, and counting its cells is reading the distance. The new symbol
+takes that slot, the symbol that was there leaves, and **nothing else moves**.
+You answer the new symbol's rank, on the axis the card asks about, before the
 next card arrives.
 
 ```
-holding  1st 2nd 3rd  (1st oldest)   card: new above the 2nd
-  → the new symbol goes in 2nd, the oldest leaves, everything closes up
+holding  A B C  (slots 1 2 3)      card: new two above C
+  → 3 − 2 = slot 1, where A was; A leaves, B and C stay put
   → answer: 1
 ```
 
 The home page shows that example with real symbols, dealt from whichever set is
 in play, because written out in fixed shapes it would be a picture of a game
 nobody plays.
+
+### It used to be an insertion
+
+Until the fixed slots, the new symbol went in *directly* next to the reference,
+everything past it shifted down a rank, and then the oldest symbol left and
+everything past *that* shifted back up. A card could move three symbols it never
+mentioned, so most of the effort went on the bookkeeping rather than on the
+relation the card showed. Now a card changes exactly one slot.
+
+What leaves is the symbol in the landing slot, not the oldest. With nothing
+moving, leaving by age would send new symbols into the slots in the same order
+every lap — the answers would repeat with a period of the board size, and a
+rhythm is a lot easier to learn than a board.
 
 ## Why this shape
 
@@ -28,10 +43,12 @@ longer loading what the task was chosen to load — the finding is Ackerman's, a
 it is the reason consistent-mapping practice stops predicting ability.
 
 So the rule here is that **no card contains its own answer**. The new symbol's
-rank depends on where its reference stands *now*, which depends on every
-insertion and departure before it. Each symbol carries two bindings — where it
-is, and how old it is — and both change every beat; keeping them straight is the
-work, and discarding the stale ones is part of it. The symbols themselves are
+rank is its reference's rank plus the steps on the card, and where the
+reference stands depends on the cards before it. Every card rewrites one slot of
+the board you hold; keeping the board current is the work, and letting go of
+the symbol that was replaced is part of it. A card never spans the whole board
+on the axis it asks about, since "all the way up" would be an answer that needs
+no board. The symbols themselves are
 generated stroke by stroke and never repeat, so none of them can come to mean
 anything. The animal set trades that away on purpose — see "What is on the
 cards" below, which says what it buys and what it costs.
@@ -95,14 +112,16 @@ because a mask has to be made of what it masks. It is there so the card does
 not sit on the retina after it has gone, which is what keeps the order
 something you hold rather than something you are still looking at.
 
-An episode opens differently. The first symbol arrives on its own, with nothing
-to place it against, and the **encoding period** is how long that beat lasts —
-never shorter than one interval, since a beat faster than the cards arrive
-would be a card in all but name. The symbol itself goes at 60% of it, so there
-is a real gap before the first card whatever the period.
+An episode opens differently. The whole board is shown, and the **encoding
+period** is how long for each symbol on it — a board of five gets five times
+the period — never shorter than one interval. The board goes at 85% of that, so
+there is a real gap before the first card. From three dimensions up, the board
+is still drawn flat, rows by height and columns by width, with depth (and size)
+as a tag under each symbol: a box with sixty-four cells hides its symbols
+behind one another, and this is the one screen whose only job is to be read.
 
-Standard mode fixes all three: 0.4 s visible, masked, and 1.5 s to take the
-first symbol in. Custom mode puts the exposure and the encoding period on
+Standard mode fixes all three: 0.4 s visible, masked, and 1.5 s per symbol to
+learn the board. Custom mode puts the exposure and the encoding period on
 sliders and lets the mask be turned off. Both are worth knowing about when
 reading a figure: an unmasked card is worth an afterimage, and a long encoding
 period is a head start, so neither kind of session is comparable with one run
@@ -116,7 +135,7 @@ Difficulty moves on three fronts, and the controller drives them together:
 - **Pace.** The interval moves on every answer toward a target accuracy, stated
   above chance so it means the same at every size.
 - **Symbols.** 3 to 7 of them — how many are held, not which set they come from.
-- **Dimensions.** Height, then width, then size — 1D, 2D, 3D.
+- **Dimensions.** Height, then width, then depth, then size — 1D to 4D.
 
 When the pace is at its floor and you are still above target, speed has nowhere
 to go and the level rises instead: symbols first, then a dimension, with the
@@ -139,10 +158,12 @@ test/run.js   node apps/rrt/test/run.js
 ```
 
 `model.js` is separate so the parts that must be right can be tested without a
-browser: that ranks stay a permutation on every axis, that the oldest symbol is
-the one that leaves, that answers come out even across the ranks, that pressing
-one key forever scores exactly chance, and that the model is indifferent to which
-stimulus set fills the cards.
+browser: that ranks stay a permutation on every axis, that a card moves nothing
+but the symbol it places, that the new symbol lands at the reference plus the
+steps, that answers come out even across the ranks and fall into no rhythm, that
+no step count alone gives the answer, that pressing one key forever scores
+exactly chance, and that the model is indifferent to which stimulus set fills
+the cards.
 
 ## Credits
 
