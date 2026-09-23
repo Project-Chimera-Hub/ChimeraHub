@@ -214,8 +214,30 @@ test("every animal is a named silhouette, and no two share either", () => {
   });
 });
 
+test("every picture has a name and a photograph, none shared, and avoids what is held", () => {
+  if (!R.PICTURES.length) { console.log("       (no pictures fetched yet)"); return; }
+  const fs = require("fs"), path = require("path");
+  assert.ok(R.PICTURES.length > 10, R.PICTURES.length);
+  assert.strictEqual(new Set(R.PICTURES.map(p => p.name)).size, R.PICTURES.length);
+  assert.strictEqual(new Set(R.PICTURES.map(p => p.image)).size, R.PICTURES.length);
+  R.PICTURES.forEach(p => {
+    assert.ok(fs.existsSync(path.join(__dirname, "..", p.image)), p.image + " is missing");
+    assert.ok(p.author && p.licence && p.source, p.name + " has no credit");
+  });
+  const rnd = lcg(59);
+  for (let i = 0; i < 300; i++) {
+    const held = [];
+    for (let k = 0; k < 10; k++) held.push(R.newPicture(held, rnd));
+    assert.strictEqual(new Set(held.map(p => p.name)).size, held.length);
+  }
+  assert.strictEqual(R.stimulusSet("pictures").id, "pictures");
+  assert.ok(R.stimulusSet("pictures").named && R.stimulusSet("animals").named);
+  assert.ok(!R.stimulusSet("glyphs").named);
+});
+
 test("the model does not care which set the stimuli come from", () => {
   for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
+  if (R.PICTURES.length) for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 30 + s), "pictures");
   const { m } = run(3, 5, 50, lcg(37), "animals");
   m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.path === "string", JSON.stringify(it.glyph)));
 });

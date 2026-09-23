@@ -180,32 +180,50 @@
      with it (what is held, plus what has only just left — a symbol that has
      only just gone is still in the head). A generated mark is an array of
      stroke indices; an animal is `{name, path}`, a silhouette drawn on the
-     same kind of grid and coloured the same way. Nothing in the model looks
-     inside either. The drawings live in animals.js, with their credit. */
+     same kind of grid and coloured the same way; a picture is
+     `{name, image}`, a photograph. Nothing in the model looks inside any of them. The
+     animal drawings live in animals.js, with their credit. */
   var ANIMALS = (typeof module !== "undefined" && module.exports)
     ? require("./animals.js")
     : (root.RunningOrderAnimals || []);
 
   /** An animal that is not one of `avoid`, uniformly among those that are left. */
-  function newAnimal(avoid, rnd) {
+  function newAnimal(avoid, rnd) { return fromPool(ANIMALS, avoid, rnd); }
+
+  /* PICTURES go one step further than the animals: real photographs, in
+     colour, of things from all over the house and the garden, each with a
+     name that can be said aloud. They come from Wikimedia Commons under
+     licences that allow it — tools/fetch-pictures.mjs fetches them, and
+     pictures/pictures.js lists each with its author and licence. The files
+     are part of the site, so the APK has them offline like everything else. */
+  var PICTURES = (typeof module !== "undefined" && module.exports)
+    ? (function () { try { return require("./pictures/pictures.js"); } catch (e) { return []; } })()
+    : (root.RunningOrderPictures || []);
+
+  /** One of `pool` whose name is not in `avoid`, uniformly among the rest. */
+  function fromPool(pool, avoid, rnd) {
     rnd = rnd || Math.random;
     var taken = {};
     (avoid || []).forEach(function (a) { if (a && a.name) taken[a.name] = true; });
-    var free = ANIMALS.filter(function (a) { return !taken[a.name]; });
-    var pool = free.length ? free : ANIMALS;
-    return pool[Math.floor(rnd() * pool.length)];
+    var free = pool.filter(function (a) { return !taken[a.name]; });
+    var from = free.length ? free : pool;
+    return from[Math.floor(rnd() * from.length)];
   }
+
+  function newPicture(avoid, rnd) { return fromPool(PICTURES, avoid, rnd); }
 
   var SETS = {
     glyphs: { id: "glyphs", label: "Generated marks", next: newGlyph },
-    animals: { id: "animals", label: "Animals", next: newAnimal },
+    animals: { id: "animals", label: "Animals", next: newAnimal, named: true },
+    pictures: { id: "pictures", label: "Pictures", next: newPicture, named: true },
   };
 
   /** The named set, or the generated marks for anything unrecognised — and for
       the animals when their drawings did not load, which beats a blank card. */
   function stimulusSet(id) {
     var set = SETS[id];
-    if (!set || (set === SETS.animals && !ANIMALS.length)) return SETS.glyphs;
+    if (!set || (set === SETS.animals && !ANIMALS.length)
+        || (set === SETS.pictures && !PICTURES.length)) return SETS.glyphs;
     return set;
   }
 
@@ -443,9 +461,9 @@
   }
 
   var api = {
-    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, SETS: SETS,
+    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, PICTURES: PICTURES, SETS: SETS,
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
-    newAnimal: newAnimal, stimulusSet: stimulusSet,
+    newAnimal: newAnimal, newPicture: newPicture, stimulusSet: stimulusSet,
     createModel: createModel, fill: fill, planCard: planCard, apply: apply,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,

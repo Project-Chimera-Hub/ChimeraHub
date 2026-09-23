@@ -331,6 +331,10 @@
     .size-tag{fill:var(--ax-3);font-family:var(--mono);font-size:13px;font-weight:600}
     .board-num{fill:var(--text-faint);font-family:var(--mono);font-size:11px}
     .board-tag{fill:var(--text-dim);font-family:var(--mono);font-size:12px}
+    .photo-ring{fill:none;stroke:var(--accent);stroke-width:3;vector-effect:non-scaling-stroke}
+    .photo.mask{opacity:.35}
+    .photo-mini{border-radius:14%;object-fit:cover;display:block}
+    .photo-mini.new{box-shadow:0 0 0 2px var(--accent)}
     .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
@@ -573,8 +577,14 @@
           <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · photos, easiest</label>
           </div>
-          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set.</p>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> colour photographs of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
+          <div class="toggle-row" style="margin-top:.6rem">
+            <label class="toggle"><input type="checkbox" id="speakToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Speak the names</strong> — say each symbol's name aloud as it appears: the whole board at the start, then every new one. Only animals and pictures have names; the generated marks stay silent. Hearing the word as well as seeing the picture is a second way in, so a spoken session keeps its own best score.</span>
+          </div>
+          <details class="hint" style="margin-top:.35rem;color:var(--text-faint);display:none" id="photoCreditsBox"><summary style="cursor:pointer">Photo credits</summary><div id="photoCredits" style="margin-top:.3rem;line-height:1.5"></div></details>
           <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
@@ -824,6 +834,7 @@
 </div>
 
 <script src="animals.js"></script>
+<script src="pictures/pictures.js"></script>
 <script src="model.js"></script>
 <script>
 "use strict";
@@ -865,7 +876,7 @@ const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, t
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
-  padScale: 1,
+  padScale: 1, speak: false,
 }, STANDARD);
 
 function loadSettings() {
@@ -969,6 +980,7 @@ const painters = [
   wireToggle('truthToggle', 'showTruth'),
   wireToggle('beepToggle', 'beepEnabled', 'beepOpts'),
   wireToggle('flashToggle', 'flashEnabled'),
+  wireToggle('speakToggle', 'speak', null, () => { if (settings.speak) say('names on'); }),
 ];
 
 function paintMode() {
@@ -1051,14 +1063,35 @@ function exampleStep(caption, cells) {
   return box;
 }
 
+/* Every photograph with its author, licence and source, as the licences ask. */
+function paintPhotoCredits() {
+  const box = $('photoCredits');
+  if (!box || box.childElementCount || !R.PICTURES.length) return;
+  $('photoCreditsBox').style.display = '';
+  R.PICTURES.forEach(p => {
+    const row = document.createElement('div');
+    const a = document.createElement('a');
+    a.href = p.source; a.target = '_blank'; a.rel = 'noopener';
+    a.style.color = 'inherit';
+    a.textContent = p.name;
+    row.append(a, ` — ${p.author}, ${p.licence}`);
+    box.appendChild(row);
+  });
+}
+
 function paintStimset() {
   const set = R.stimulusSet(settings.stimset);
   $('animalCount').textContent = R.ANIMALS.length;
+  $('pictureCount').textContent = R.PICTURES.length;
+  paintPhotoCredits();
+  if (set.id === 'pictures') warmPhotos();
   document.querySelectorAll('input[name="stimset"]').forEach(r => { r.checked = r.value === set.id; });
 
   const a = set.next([], Math.random), b = set.next([a], Math.random);
   const c = set.next([a, b], Math.random), x = set.next([a, b, c], Math.random);
-  const mark = set.id === 'animals'
+  const mark = set.id === 'pictures'
+    ? 'the one in the <span style="color:var(--accent)">frame</span> is new. They are photographs of things you can name at a glance, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    : set.id === 'animals'
     ? 'the <span style="color:var(--accent)">coloured</span> one is new. They are a fixed pool of animals you can put a name to, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
     : 'the <span style="color:var(--accent)">coloured</span> one is new. Every mark is generated on the spot and never comes back, so there is nothing about it to learn — only where it goes.';
   $('cardHowText').innerHTML = `<strong>How a card works.</strong> An episode opens with the whole board: every symbol in its own slot. After that, every card shows two symbols: the plain one is one you already hold, and ${mark}`
@@ -1163,11 +1196,51 @@ function picEl(stim, cx, cy, size, cls) {
   return p;
 }
 
+/*
+ * A picture: a photograph, square, with rounded corners. It brings its own
+ * colours, so the page cannot tint it to say which one is new — the new one
+ * stands in an accent frame instead, and a mask is the same photos faded.
+ */
+let photoClip = 0;
+function photoEl(stim, cx, cy, size, cls) {
+  /* A photo fills its square where a mark leaves air round its strokes, so
+     it reads small at a mark's size; a quarter bigger still sits in its cell. */
+  size *= 1.25;
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'photo ' + cls);
+  const x = cx - size / 2, y = cy - size / 2, r = size * 0.14;
+  const id = 'pc' + (++photoClip);
+  const clip = svgEl('clipPath', { id });
+  clip.appendChild(svgEl('rect', { x, y, width: size, height: size, rx: r }));
+  g.appendChild(clip);
+  const img = svgEl('image', { x, y, width: size, height: size, href: stim.image,
+                               'clip-path': `url(#${id})`, preserveAspectRatio: 'xMidYMid slice' });
+  g.appendChild(img);
+  if (cls === 'new') {
+    const pad = size * 0.09;
+    g.appendChild(svgEl('rect', { x: x - pad, y: y - pad, width: size + 2 * pad, height: size + 2 * pad,
+                                  rx: r + pad, class: 'photo-ring' }));
+  }
+  return g;
+}
+
+/* The photos, loaded before they are needed, so a card never lands as an
+   empty frame while its picture is still on its way off the disk. */
+let photosWarm = false;
+function warmPhotos() {
+  if (photosWarm || !R.PICTURES.length) return;
+  photosWarm = true;
+  R.PICTURES.forEach(p => { const i = new Image(); i.src = p.image; });
+}
+
 /* The one place that knows the difference: a generated mark is an array of
-   stroke indices, an animal is an object. Everything above this draws cards
-   without caring which set is in play. */
+   stroke indices, an animal is an object with a path, a picture one with an
+   image. Everything above this draws cards without caring which set is in
+   play. */
 const isPic = stim => !Array.isArray(stim);
+const isPhoto = stim => !!(stim && stim.image);
 function stimEl(stim, cx, cy, size, cls) {
+  if (isPhoto(stim)) return photoEl(stim, cx, cy, size, cls);
   return isPic(stim) ? picEl(stim, cx, cy, size, cls) : glyphEl(stim, cx, cy, size, cls);
 }
 function clearStage(el) { (el || $('stage')).replaceChildren(); }
@@ -1290,7 +1363,7 @@ function boxScene(entries, lattice) {
     const out = standing(e.stim, e.c, e.cls);
     if (e.tag != null) {
       const [x, y] = boxPt(e.c.u, e.c.v, e.c.w);
-      out.push(sizeTag(x + e.c.size * 0.55, y - e.c.size * 0.35, e.tag));
+      out.push(sizeTag(x + e.c.size * 0.8, y - e.c.size * 0.45, e.tag));
     }
     return out;
   };
@@ -1366,10 +1439,10 @@ function drawBoard(el, items, d, s) {
    the image does not linger on the retina after the card has gone. Strokes for
    strokes and animals for animals — a mask has to be made of what it masks. */
 function drawMask(el, setId) {
-  const pic = R.stimulusSet(setId).id === 'animals';
+  const set = R.stimulusSet(setId);
   const parts = [];
   for (let i = 0; i < 9; i++) {
-    const stim = pic ? R.newAnimal([], Math.random) : R.makeGlyph(Math.random);
+    const stim = set.id === 'glyphs' ? R.makeGlyph(Math.random) : set.next([], Math.random);
     parts.push(stimEl(stim, 40 + Math.random() * 220, 40 + Math.random() * 220, 50 + Math.random() * 40, 'mask'));
   }
   el.replaceChildren(...parts);
@@ -1490,11 +1563,67 @@ window.addEventListener('resize', () => {
   padFitTimer = setTimeout(() => { if (active) renderPad(); }, 160);
 });
 
+/* ══ SPEECH ══════════════════════════════════════════════════════════
+   Names said aloud, for the sets that have names. In the Android app the
+   page runs in a WebView, which has no speechSynthesis of its own, so the
+   app carries Capacitor's native text-to-speech plugin and that is tried
+   first — on this page's window, and on the hub's, since the trainer runs in
+   a frame of it. In a browser the Web Speech API does the same job. Where
+   neither exists, nothing is said and nothing breaks.
+
+   Every call cuts off whatever was still being said: the newest symbol is the
+   one that matters, and a queue of stale names would run behind the cards.
+═══════════════════════════════════════════════════════════════════════ */
+function nativeSpeech() {
+  for (const w of [window, window.parent, window.top]) {
+    try {
+      const cap = w && w.Capacitor;
+      if (cap && cap.isPluginAvailable && cap.isPluginAvailable('TextToSpeech')) return cap.Plugins.TextToSpeech;
+    } catch { /* a frame of another origin: not ours to ask */ }
+  }
+  return null;
+}
+
+function say(text) {
+  const tts = nativeSpeech();
+  /* The plugin's speak already flushes the queue, so it needs no stop first. */
+  if (tts) { Promise.resolve(tts.speak({ text, lang: 'en-GB', rate: 1.1 })).catch(() => {}); return; }
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-GB';
+    u.rate = 1.1;
+    speechSynthesis.speak(u);
+  } catch { /* no voice here */ }
+}
+
+function stopSpeech() {
+  const tts = nativeSpeech();
+  if (tts) { Promise.resolve(tts.stop()).catch(() => {}); return; }
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch { /* nothing to stop */ }
+}
+
+/* Whether this session speaks: the setting, and a set with names to say. */
+const speaks = () => !!settings.speak && !!R.stimulusSet(sessionSet).named;
+
+/* The board in reading order, a row at a time; or one new symbol. */
+function sayStims(stims) {
+  if (!speaks() || !stims.length) return;
+  say(stims.map(x => x.name).join(', '));
+}
+function sayBoard(items) {
+  sayStims(items.slice().sort((a, b) => a.ranks[0] - b.ranks[0] || (a.ranks[1] || 0) - (b.ranks[1] || 0))
+    .map(it => it.glyph));
+}
+
 /* ══ SESSION ══════════════════════════════════════════════════════════ */
 let active = false, ctrl = null, model = null, cur = null, trials = [];
 /* Which stimuli the cards are made of. Fixed when a session or the walkthrough
    starts, not read live, so a record always says what it was earned on. */
 let sessionSet = 'glyphs';
+/* Fixed with it: a spoken session is kept apart in the records. */
+let sessionSpoken = false;
 const nextStim = avoid => R.stimulusSet(sessionSet).next(avoid, Math.random);
 /* Set while the walkthrough is running its practice beats: a session with the
    pace pinned, a beat budget instead of a clock, and no record kept. */
@@ -1540,6 +1669,7 @@ function pauseSession() {
   clearInterval(clockTimer); clockTimer = null;
   clearTimeout(beatTimer); beatTimer = null;
   clearStageTimers();
+  stopSpeech();
 }
 
 function resumeSession() {
@@ -1647,6 +1777,7 @@ function beat() {
     R.fill(model, fresh, Math.random);
     cur = null;
     drawBoard($('stage'), model.items, lvl.d, lvl.s);
+    sayBoard(model.items);
     $('stimInstruction').textContent = `${levelName(lvl)} · learn the board`;
     setAxisCue($('cue'), null);
     renderPad();
@@ -1673,6 +1804,7 @@ function beat() {
   };
 
   drawCard($('stage'), glyph, refGlyph, plan.dist, lvl.d);
+  sayStims([glyph]);
   $('stimInstruction').textContent = 'where is it now?';
   setAxisCue($('cue'), lvl.d > 1 ? plan.axis : null);
   renderPad();
@@ -1753,6 +1885,8 @@ function startSession(opts) {
   });
   active = true;
   sessionSet = R.stimulusSet(settings.stimset).id;
+  sessionSpoken = speaks();
+  if (sessionSet === 'pictures') warmPhotos();
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
   /* The practice run ends on its beat budget; the clock is only a backstop. */
@@ -1782,6 +1916,7 @@ function endSession() {
      `return` on every beat. */
   paused = false;
   clearInterval(clockTimer); clearTimeout(beatTimer); clearStageTimers();
+  stopSpeech();
   document.removeEventListener('keydown', onKey);
   closeModal();
   if (practice) { const done = practice.onDone; practice = null; done(); return; }
@@ -1813,6 +1948,9 @@ function showResults() {
   const endLevel = ctrl.levels[ctrl.level], topLevel = ctrl.levels[peakLevel];
   const durationSec = sessionDuration - Math.max(0, timerSec);
 
+  /* Spoken sessions keep their own best: the name heard as well as seen is a
+     second way in, and a record should say what it was earned with. */
+  const bestKey = sessionSet + (sessionSpoken ? '+spoken' : '');
   const prog = loadProgress();
   if (total > 0) {
     prog.sessions = (prog.sessions || 0) + 1;
@@ -1822,8 +1960,8 @@ function showResults() {
        is encoded in a word — so the record is kept per set. `bestBits` stays
        the generated-marks record, which is what the archive already reads. */
     prog.best = prog.best || {};
-    prog.best[sessionSet] = Math.max(bestFor(prog, sessionSet), peakBits);
-    if (sessionSet === 'glyphs') prog.bestBits = prog.best.glyphs;
+    prog.best[bestKey] = Math.max(bestFor(prog, bestKey), peakBits);
+    if (bestKey === 'glyphs') prog.bestBits = prog.best.glyphs;
     const today = new Date().toDateString();
     if (prog.lastDate !== today) {
       const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -1840,7 +1978,7 @@ function showResults() {
       bits: Math.round(bits * 1000) / 1000,
       peakBits: Math.round(peakBits * 1000) / 1000,
       lowestISI, d: endLevel.d, s: endLevel.s, peakD: topLevel.d, peakS: topLevel.s,
-      set: sessionSet,
+      set: sessionSet, spoken: sessionSpoken,
     });
     if (prog.history.length > 1000) prog.history.length = 1000;
     saveProgress(prog);
@@ -1860,8 +1998,9 @@ function showResults() {
     mkStat('Sessions', prog.sessions || 0) +
     mkStat('Total trials', (prog.totalQ || 0).toLocaleString('en')) +
     mkStat('Raw accuracy', lifetimeAcc + '%') +
-    mkStat('Best peak bits / s' + (sessionSet === 'glyphs' ? '' : ' · ' + R.stimulusSet(sessionSet).label.toLowerCase()),
-      bestFor(prog, sessionSet).toFixed(2), 'accent-val');
+    mkStat('Best peak bits / s' + (sessionSet === 'glyphs' ? '' : ' · ' + R.stimulusSet(sessionSet).label.toLowerCase())
+      + (sessionSpoken ? ' · spoken' : ''),
+      bestFor(prog, bestKey).toFixed(2), 'accent-val');
 
   $('accBarFill').style.width = '0%'; $('accBarPct').textContent = pct + '%';
   setTimeout(() => { $('accBarFill').style.width = pct + '%'; }, 120);
@@ -1881,7 +2020,7 @@ function showResults() {
       <span style="flex:1;font-size:.72rem">${when}${i === 0 && total > 0 ? ' <span style="color:var(--accent);font-size:.6rem">← this session</span>' : ''}</span>
       <span style="color:var(--text-dim);font-size:.7rem">${mins ? mins + 'min' : ''}</span>
       <span style="color:var(--text-dim);font-size:.7rem;min-width:52px;text-align:right">${s.peakD}D·${s.peakS}</span>
-      <span style="color:var(--text-faint);font-size:.6rem;min-width:46px;text-align:right">${s.set === 'animals' ? 'animals' : ''}</span>
+      <span style="color:var(--text-faint);font-size:.6rem;min-width:46px;text-align:right">${s.set && s.set !== 'glyphs' ? s.set : ''}${s.spoken ? ' 🔊' : ''}</span>
       <span style="color:var(--accent);min-width:64px;text-align:right">${(s.peakBits || 0).toFixed(2)} b/s</span>
       <span style="color:var(--text-faint);font-size:.65rem;min-width:52px;text-align:right">${s.correct}/${s.total}</span>`;
     histLog.appendChild(el);
@@ -1969,6 +2108,14 @@ function glyphMini(glyph, px, cls) {
 /* The small version, for the strips and the worked example on the home page. */
 function stimMini(stim, px, cls) {
   if (!isPic(stim)) return glyphMini(stim, px, cls);
+  if (isPhoto(stim)) {
+    const el = document.createElement('img');
+    el.className = 'photo-mini' + (cls === 'new' ? ' new' : '');
+    el.src = stim.image;
+    el.alt = el.title = stim.name;
+    el.width = el.height = px;
+    return el;
+  }
   const svg = document.createElementNS(SVGNS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${PIC_GRID} ${PIC_GRID}`);
   svg.setAttribute('width', px); svg.setAttribute('height', px);
@@ -2139,6 +2286,7 @@ function renderTut() {
   tutInfo = tutDealCard();
   tutPhase = 'card';
   drawCard($('tutStage'), tutInfo.glyph, tutInfo.refGlyph, tutInfo.plan.dist, tutModel.d);
+  sayStims([tutInfo.glyph]);
   setAxisCue($('tutCue'), tutModel.d > 1 ? tutInfo.plan.axis : null);
   buildPad($('tutPad'), $('tutArena'), {
     s: tutModel.s, k: tutModel.s, axis: tutInfo.plan.axis,

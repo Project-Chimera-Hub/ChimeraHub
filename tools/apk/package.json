@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "The Android wrapper. Nothing is authored here: the app is tools/build-site.mjs's output in a WebView, and this directory only holds what Capacitor needs to wrap it.",
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^4.1.1",
     "@capacitor/android": "^6.2.2",
     "@capacitor/core": "^6.2.2"
   },
