@@ -1,0 +1,450 @@
+{
+ "apple": {
+  "image": "apple.jpg",
+  "file": "File:Red Apple.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Red_Apple.jpg",
+  "author": "Abhijit Tembhekar from Mumbai, India",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ "banana": {
+  "image": "banana.jpg",
+  "file": "File:SingleYelakki banana, bangalore, karnataka single.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:SingleYelakki_banana,_bangalore,_karnataka_single.jpg",
+  "author": "Mohanramus",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ "grapes": {
+  "image": "grapes.jpg",
+  "file": "File:Bunch of Grapes, Brompton, SW3 (4197149602).jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Bunch_of_Grapes,_Brompton,_SW3_(4197149602).jpg",
+  "author": "Ewan Munro from London, UK",
+  "licence": "CC BY-SA 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+ },
+ "strawberry": {
+  "image": "strawberry.jpg",
+  "file": "File:Still life with strawberries in a crystal bowl.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Still_life_with_strawberries_in_a_crystal_bowl.jpg",
+  "author": "W.carter",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "watermelon": {
+  "image": "watermelon.jpg",
+  "file": "File:Watermelon slice, May 2024.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Watermelon_slice,_May_2024.jpg",
+  "author": "Ralff Nestor Nacor",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "lemon": {
+  "image": "lemon.jpg",
+  "file": "File:Lemon.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Lemon.jpg",
+  "author": "André Karwath aka Aka",
+  "licence": "CC BY-SA 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5"
+ },
+ "carrot": {
+  "image": "carrot.jpg",
+  "file": "File:Carrots of many colors.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Carrots_of_many_colors.jpg",
+  "author": "Stephen Ausmus",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "corn": {
+  "image": "corn.jpg",
+  "file": "File:Corn on the cob (sweet corn).jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Corn_on_the_cob_(sweet_corn).jpg",
+  "author": "Nutrition, Food Safety &amp; Health",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+ },
+ "mushroom": {
+  "image": "mushroom.jpg",
+  "file": "File:Edible fungi in basket 2012 G1.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Edible_fungi_in_basket_2012_G1.jpg",
+  "author": "George Chernilevsky",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "broccoli": {
+  "image": "broccoli.jpg",
+  "file": "File:Romanesco broccoli 2025 G2.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Romanesco_broccoli_2025_G2.jpg",
+  "author": "George Chernilevsky",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ "cheese": {
+  "image": "cheese.jpg",
+  "file": "File:Wedge salad with blue cheese dressing - San Francisco, CA.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Wedge_salad_with_blue_cheese_dressing_-_San_Francisco,_CA.jpg",
+  "author": "Daderot",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+ },
+ "pizza": {
+  "image": "pizza.jpg",
+  "file": "File:Vegetarian Pizza.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Vegetarian_Pizza.jpg",
+  "author": "Petar Milošević",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "doughnut": {
+  "image": "doughnut.jpg",
+  "file": "File:Doughnut (economic model).jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Doughnut_(economic_model).jpg",
+  "author": "DoughnutEconomics",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "cake": {
+  "image": "cake.jpg",
+  "file": "File:My birthday cake! Oops there's only half left!.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:My_birthday_cake!_Oops_there%27s_only_half_left!.jpg",
+  "author": "Anna.Massini",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "dog": {
+  "image": "dog.jpg",
+  "file": "File:Human–canine friendship - girl hugging her dog tightly at golden hour in Laos.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Human%E2%80%93canine_friendship_-_girl_hugging_her_dog_tightly_at_golden_hour_in_Laos.jpg",
+  "author": "Basile Morin",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "cat": {
+  "image": "cat.jpg",
+  "file": "File:Cat November 2010-1a.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Cat_November_2010-1a.jpg",
+  "author": "Alvesgaspar",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "frog": {
+  "image": "frog.jpg",
+  "file": "File:The Green and Golden Bell Frog.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Green_and_Golden_Bell_Frog.jpg",
+  "author": "Bernard Spragg. NZ",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+ },
+ "pig": {
+  "image": "pig.jpg",
+  "file": "File:Pot-bellied pigs in Lisbon Zoo 2008.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Pot-bellied_pigs_in_Lisbon_Zoo_2008.jpg",
+  "author": "Alvesgaspar",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "cow": {
+  "image": "cow.jpg",
+  "file": "File:Cow (Fleckvieh breed) Oeschinensee Slaunger 2009-07-07.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Cow_(Fleckvieh_breed)_Oeschinensee_Slaunger_2009-07-07.jpg",
+  "author": "Kim Hansen",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "monkey": {
+  "image": "monkey.jpg",
+  "file": "File:Macaque India 3.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Macaque_India_3.jpg",
+  "author": "Thomas Schoch",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "chicken": {
+  "image": "chicken.jpg",
+  "file": "File:Hen chicken.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Hen_chicken.jpg",
+  "author": "Thegreenj",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
+ },
+ "penguin": {
+  "image": "penguin.jpg",
+  "file": "File:Sander-pinguins.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Sander-pinguins.jpg",
+  "author": "Sander Spek",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "lion": {
+  "image": "lion.jpg",
+  "file": "File:002 The lion king Snyggve in the Serengeti National Park Photo by Giles Laurent.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:002_The_lion_king_Snyggve_in_the_Serengeti_National_Park_Photo_by_Giles_Laurent.jpg",
+  "author": "Giles Laurent",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "elephant": {
+  "image": "elephant.jpg",
+  "file": "File:African bush elephants (Loxodonta africana) female with six-week-old baby.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:African_bush_elephants_(Loxodonta_africana)_female_with_six-week-old_baby.jpg",
+  "author": "Charles J. Sharp",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "giraffe": {
+  "image": "giraffe.jpg",
+  "file": "File:Three giraffes 01.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Three_giraffes_01.jpg",
+  "author": "Byrdyak",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "turtle": {
+  "image": "turtle.jpg",
+  "file": "File:Tortoise portrait.JPG",
+  "source": "https://commons.wikimedia.org/wiki/File:Tortoise_portrait.JPG",
+  "author": "Moise Nicu",
+  "licence": "CC BY 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/3.0"
+ },
+ "octopus": {
+  "image": "octopus.jpg",
+  "file": "File:Octopus vulgaris Merculiano.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Octopus_vulgaris_Merculiano.jpg",
+  "author": "Comingio Merculiano (1845-1915) in Jatta Giuseppe (1860-1903)",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "butterfly": {
+  "image": "butterfly.jpg",
+  "file": "File:Common brimstone butterfly (Gonepteryx rhamni) male.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Common_brimstone_butterfly_(Gonepteryx_rhamni)_male.jpg",
+  "author": "Charles J. Sharp",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "bee": {
+  "image": "bee.jpg",
+  "file": "File:European honey bee extracts nectar.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:European_honey_bee_extracts_nectar.jpg",
+  "author": "John Severns (Severnjc)",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "fish": {
+  "image": "fish.jpg",
+  "file": "File:Fountain with goldfish in Jardí del Bisbe 03.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Fountain_with_goldfish_in_Jard%C3%AD_del_Bisbe_03.jpg",
+  "author": "Kritzolina",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "car": {
+  "image": "car.jpg",
+  "file": "File:Red car toy.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Red_car_toy.jpg",
+  "author": "Jebulon",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+ },
+ "bicycle": {
+  "image": "bicycle.jpg",
+  "file": "File:Parked bicycle with graffitied building facade and doors in Amsterdam.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Parked_bicycle_with_graffitied_building_facade_and_doors_in_Amsterdam.jpg",
+  "author": "Basile Morin",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "aeroplane": {
+  "image": "aeroplane.jpg",
+  "file": "File:Airliner Contrail.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Airliner_Contrail.jpg",
+  "author": "Noah Wulf",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "rocket": {
+  "image": "rocket.jpg",
+  "file": "File:First NASA ISINGLASS rocket launch.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:First_NASA_ISINGLASS_rocket_launch.jpg",
+  "author": "NASA",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "sailboat": {
+  "image": "sailboat.jpg",
+  "file": "File:Zoutelande (NL), Strand, Blick auf die Nordsee -- 2022 -- 4984.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Zoutelande_(NL),_Strand,_Blick_auf_die_Nordsee_--_2022_--_4984.jpg",
+  "author": "Dietmar Rabich",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "house": {
+  "image": "house.jpg",
+  "file": "File:Ljungris July 2013.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Ljungris_July_2013.jpg",
+  "author": "Arild Vågen",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "alarm clock": {
+  "image": "alarm-clock.jpg",
+  "file": "File:Classic alarm clock 20180513.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Classic_alarm_clock_20180513.jpg",
+  "author": "Santeri Viinamäki",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "key": {
+  "image": "key.jpg",
+  "file": "File:MetalFestLogo2024.png",
+  "source": "https://commons.wikimedia.org/wiki/File:MetalFestLogo2024.png",
+  "author": "The Metal Fest",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "balloon": {
+  "image": "balloon.jpg",
+  "file": "File:2006 Ojiya balloon festival 011.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:2006_Ojiya_balloon_festival_011.jpg",
+  "author": "Kropsoq",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
+ },
+ "guitar": {
+  "image": "guitar.jpg",
+  "file": "File:Man playing an acoustic brazilian guitar (Violão) on Marco Zero Square, Refice, Pernambuco, Brazil.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Man_playing_an_acoustic_brazilian_guitar_(Viol%C3%A3o)_on_Marco_Zero_Square,_Refice,_Pernambuco,_Brazil.jpg",
+  "author": "Wilfredor",
+  "licence": "CC0",
+  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+ },
+ "football": {
+  "image": "football.jpg",
+  "file": "File:Jakarta old football.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Jakarta_old_football.jpg",
+  "author": "Jonathan McIntosh",
+  "licence": "CC BY 2.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ "hat": {
+  "image": "hat.jpg",
+  "file": "File:Ronald Reagan with cowboy hat 12-0071M edit.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Ronald_Reagan_with_cowboy_hat_12-0071M_edit.jpg",
+  "author": "Michael Evans",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ },
+ "shoe": {
+  "image": "shoe.jpg",
+  "file": "File:Reebok Royal Glide Ripple Clip shoe.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Reebok_Royal_Glide_Ripple_Clip_shoe.jpg",
+  "author": "Petar Milošević",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "umbrella": {
+  "image": "umbrella.jpg",
+  "file": "File:The Umbrella Workshop.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:The_Umbrella_Workshop.jpg",
+  "author": "Sopyaylynn",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "cactus": {
+  "image": "cactus.jpg",
+  "file": "File:Pachycereus pringlei forest.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Pachycereus_pringlei_forest.jpg",
+  "author": "Tomascastelazo",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "sunflower": {
+  "image": "sunflower.jpg",
+  "file": "File:Sunflower head 2026 G1.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Sunflower_head_2026_G1.jpg",
+  "author": "George Chernilevsky",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ "moon": {
+  "image": "moon.jpg",
+  "file": "File:Full Moon Luc Viatour.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Full_Moon_Luc_Viatour.jpg",
+  "author": "Luc Viatour",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
+ },
+ "candle": {
+  "image": "candle.jpg",
+  "file": "File:Candle light projected through a glass orb.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Candle_light_projected_through_a_glass_orb.jpg",
+  "author": "W.carter",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "fire": {
+  "image": "fire.jpg",
+  "file": "File:Campfire and sparks in Anttoora 3.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Campfire_and_sparks_in_Anttoora_3.jpg",
+  "author": "kallerna",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "rainbow": {
+  "image": "rainbow.jpg",
+  "file": "File:WhereRainbowRises.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:WhereRainbowRises.jpg",
+  "author": "Wing-Chi Poon",
+  "licence": "CC BY-SA 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5"
+ },
+ "snowman": {
+  "image": "snowman.jpg",
+  "file": "File:Bonhomme de neige 2.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Bonhomme_de_neige_2.jpg",
+  "author": "Sphiiix",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "light bulb": {
+  "image": "light-bulb.jpg",
+  "file": "File:Gluehlampe 01 KMJ.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Gluehlampe_01_KMJ.jpg",
+  "author": "KMJ",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "http://creativecommons.org/licenses/by-sa/3.0/"
+ },
+ "books": {
+  "image": "books.jpg",
+  "file": "File:Stack of Books for decor.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Stack_of_Books_for_decor.jpg",
+  "author": "mycurrency.com",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "scissors": {
+  "image": "scissors.jpg",
+  "file": "File:Pair of scissors with black handle, 2015-06-07.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Pair_of_scissors_with_black_handle,_2015-06-07.jpg",
+  "author": "Crisco 1492",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ "bell": {
+  "image": "bell.jpg",
+  "file": "File:Chersonesos Bell.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Chersonesos_Bell.jpg",
+  "author": "Dmitry A. Mottl",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+ },
+ "teapot": {
+  "image": "teapot.jpg",
+  "file": "File:Teapot 2010 G1.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Teapot_2010_G1.jpg",
+  "author": "George Chernilevsky",
+  "licence": "Public domain",
+  "licenceUrl": ""
+ }
+}
