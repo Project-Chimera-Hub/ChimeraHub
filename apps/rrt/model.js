@@ -181,7 +181,7 @@
      only just gone is still in the head). A generated mark is an array of
      stroke indices; an animal is `{name, path}`, a silhouette drawn on the
      same kind of grid and coloured the same way; a picture is
-     `{name, emoji}`. Nothing in the model looks inside any of them. The
+     `{name, image}`, a photograph. Nothing in the model looks inside any of them. The
      animal drawings live in animals.js, with their credit. */
   var ANIMALS = (typeof module !== "undefined" && module.exports)
     ? require("./animals.js")
@@ -190,33 +190,15 @@
   /** An animal that is not one of `avoid`, uniformly among those that are left. */
   function newAnimal(avoid, rnd) { return fromPool(ANIMALS, avoid, rnd); }
 
-  /* PICTURES go one step further than the animals: colour, and things from all
-     over the house and the garden, each with a name that can be said aloud.
-     They are emoji, so they are drawn by whatever colour font the device has
-     — the same picture looks a little different on another phone, which the
-     animals were drawn by hand to avoid. For a set whose point is to be easy
-     to encode that is a fair price: every Android phone has the same font,
-     and a coloured picture of a strawberry is a strawberry anywhere.
-
-     Chosen to stay apart at a glance: one of each kind of fruit, no two
-     animals that are the same shape in a different colour, nothing that
-     renders as a flag or a face. Every name is what a person would say. */
-  var PICTURES = [
-    ["🍎", "apple"], ["🍌", "banana"], ["🍇", "grapes"], ["🍓", "strawberry"],
-    ["🍉", "watermelon"], ["🍋", "lemon"], ["🥕", "carrot"], ["🌽", "corn"],
-    ["🍄", "mushroom"], ["🥦", "broccoli"], ["🧀", "cheese"], ["🍕", "pizza"],
-    ["🍩", "doughnut"], ["🎂", "cake"], ["🐶", "dog"], ["🐱", "cat"],
-    ["🐸", "frog"], ["🐷", "pig"], ["🐮", "cow"], ["🐵", "monkey"],
-    ["🐔", "chicken"], ["🐧", "penguin"], ["🦁", "lion"], ["🐘", "elephant"],
-    ["🦒", "giraffe"], ["🐢", "turtle"], ["🐙", "octopus"], ["🦋", "butterfly"],
-    ["🐝", "bee"], ["🐟", "fish"], ["🚗", "car"], ["🚲", "bicycle"],
-    ["✈️", "aeroplane"], ["🚀", "rocket"], ["⛵", "sailboat"], ["🏠", "house"],
-    ["⏰", "alarm clock"], ["🔑", "key"], ["🎈", "balloon"], ["🎸", "guitar"],
-    ["⚽", "football"], ["🎩", "top hat"], ["👟", "trainer"], ["☂️", "umbrella"],
-    ["🌵", "cactus"], ["🌻", "sunflower"], ["🌙", "moon"], ["⭐", "star"],
-    ["🔥", "fire"], ["🌈", "rainbow"], ["❄️", "snowflake"], ["💡", "light bulb"],
-    ["📚", "books"], ["✂️", "scissors"], ["🔔", "bell"], ["🎁", "present"],
-  ].map(function (p) { return { name: p[1], emoji: p[0] }; });
+  /* PICTURES go one step further than the animals: real photographs, in
+     colour, of things from all over the house and the garden, each with a
+     name that can be said aloud. They come from Wikimedia Commons under
+     licences that allow it — tools/fetch-pictures.mjs fetches them, and
+     pictures/pictures.js lists each with its author and licence. The files
+     are part of the site, so the APK has them offline like everything else. */
+  var PICTURES = (typeof module !== "undefined" && module.exports)
+    ? (function () { try { return require("./pictures/pictures.js"); } catch (e) { return []; } })()
+    : (root.RunningOrderPictures || []);
 
   /** One of `pool` whose name is not in `avoid`, uniformly among the rest. */
   function fromPool(pool, avoid, rnd) {
@@ -240,7 +222,8 @@
       the animals when their drawings did not load, which beats a blank card. */
   function stimulusSet(id) {
     var set = SETS[id];
-    if (!set || (set === SETS.animals && !ANIMALS.length)) return SETS.glyphs;
+    if (!set || (set === SETS.animals && !ANIMALS.length)
+        || (set === SETS.pictures && !PICTURES.length)) return SETS.glyphs;
     return set;
   }
 

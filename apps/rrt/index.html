@@ -331,11 +331,10 @@
     .size-tag{fill:var(--ax-3);font-family:var(--mono);font-size:13px;font-weight:600}
     .board-num{fill:var(--text-faint);font-family:var(--mono);font-size:11px}
     .board-tag{fill:var(--text-dim);font-family:var(--mono);font-size:12px}
-    .emo text{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
-    .emo-ring{fill:none;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke}
-    .emo.mask{opacity:.35}
-    .emo-mini{line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;border-radius:50%;padding:2px}
-    .emo-mini.new{box-shadow:0 0 0 2px var(--accent)}
+    .photo-ring{fill:none;stroke:var(--accent);stroke-width:3;vector-effect:non-scaling-stroke}
+    .photo.mask{opacity:.35}
+    .photo-mini{border-radius:14%;object-fit:cover;display:block}
+    .photo-mini.new{box-shadow:0 0 0 2px var(--accent)}
     .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
     .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
     .glyph.new{stroke:var(--accent)}
@@ -578,13 +577,14 @@
           <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · colour, easiest</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · photos, easiest</label>
           </div>
-          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> coloured pictures of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> colour photographs of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
           <div class="toggle-row" style="margin-top:.6rem">
             <label class="toggle"><input type="checkbox" id="speakToggle"><div class="toggle-track"></div></label>
             <span class="toggle-label"><strong>Speak the names</strong> — say each symbol's name aloud as it appears: the whole board at the start, then every new one. Only animals and pictures have names; the generated marks stay silent. Hearing the word as well as seeing the picture is a second way in, so a spoken session keeps its own best score.</span>
           </div>
+          <details class="hint" style="margin-top:.35rem;color:var(--text-faint);display:none" id="photoCreditsBox"><summary style="cursor:pointer">Photo credits</summary><div id="photoCredits" style="margin-top:.3rem;line-height:1.5"></div></details>
           <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
@@ -834,6 +834,7 @@
 </div>
 
 <script src="animals.js"></script>
+<script src="pictures/pictures.js"></script>
 <script src="model.js"></script>
 <script>
 "use strict";
@@ -1062,16 +1063,34 @@ function exampleStep(caption, cells) {
   return box;
 }
 
+/* Every photograph with its author, licence and source, as the licences ask. */
+function paintPhotoCredits() {
+  const box = $('photoCredits');
+  if (!box || box.childElementCount || !R.PICTURES.length) return;
+  $('photoCreditsBox').style.display = '';
+  R.PICTURES.forEach(p => {
+    const row = document.createElement('div');
+    const a = document.createElement('a');
+    a.href = p.source; a.target = '_blank'; a.rel = 'noopener';
+    a.style.color = 'inherit';
+    a.textContent = p.name;
+    row.append(a, ` — ${p.author}, ${p.licence}`);
+    box.appendChild(row);
+  });
+}
+
 function paintStimset() {
   const set = R.stimulusSet(settings.stimset);
   $('animalCount').textContent = R.ANIMALS.length;
   $('pictureCount').textContent = R.PICTURES.length;
+  paintPhotoCredits();
+  if (set.id === 'pictures') warmPhotos();
   document.querySelectorAll('input[name="stimset"]').forEach(r => { r.checked = r.value === set.id; });
 
   const a = set.next([], Math.random), b = set.next([a], Math.random);
   const c = set.next([a, b], Math.random), x = set.next([a, b, c], Math.random);
   const mark = set.id === 'pictures'
-    ? 'the one in the <span style="color:var(--accent)">ring</span> is new. They are coloured pictures of things you can name at a glance, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    ? 'the one in the <span style="color:var(--accent)">frame</span> is new. They are photographs of things you can name at a glance, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
     : set.id === 'animals'
     ? 'the <span style="color:var(--accent)">coloured</span> one is new. They are a fixed pool of animals you can put a name to, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
     : 'the <span style="color:var(--accent)">coloured</span> one is new. Every mark is generated on the spot and never comes back, so there is nothing about it to learn — only where it goes.';
@@ -1178,31 +1197,47 @@ function picEl(stim, cx, cy, size, cls) {
 }
 
 /*
- * A picture: an emoji at the size the card asks for. It brings its own
+ * A picture: a photograph, square, with rounded corners. It brings its own
  * colours, so the page cannot tint it to say which one is new — the new one
- * stands in an accent ring instead, and a mask is the same pictures faded.
+ * stands in an accent frame instead, and a mask is the same photos faded.
  */
-function emojiEl(stim, cx, cy, size, cls) {
+let photoClip = 0;
+function photoEl(stim, cx, cy, size, cls) {
   const g = document.createElementNS(SVGNS, 'g');
-  g.setAttribute('class', 'emo ' + cls);
+  g.setAttribute('class', 'photo ' + cls);
+  const x = cx - size / 2, y = cy - size / 2, r = size * 0.14;
+  const id = 'pc' + (++photoClip);
+  const clip = svgEl('clipPath', { id });
+  clip.appendChild(svgEl('rect', { x, y, width: size, height: size, rx: r }));
+  g.appendChild(clip);
+  const img = svgEl('image', { x, y, width: size, height: size, href: stim.image,
+                               'clip-path': `url(#${id})`, preserveAspectRatio: 'xMidYMid slice' });
+  g.appendChild(img);
   if (cls === 'new') {
-    g.appendChild(svgEl('circle', { cx, cy, r: size * 0.62, class: 'emo-ring' }));
+    const pad = size * 0.09;
+    g.appendChild(svgEl('rect', { x: x - pad, y: y - pad, width: size + 2 * pad, height: size + 2 * pad,
+                                  rx: r + pad, class: 'photo-ring' }));
   }
-  const t = svgEl('text', { x: cx, y: cy, 'font-size': size * 0.86,
-                            'text-anchor': 'middle', 'dominant-baseline': 'central' });
-  t.textContent = stim.emoji;
-  g.appendChild(t);
   return g;
+}
+
+/* The photos, loaded before they are needed, so a card never lands as an
+   empty frame while its picture is still on its way off the disk. */
+let photosWarm = false;
+function warmPhotos() {
+  if (photosWarm || !R.PICTURES.length) return;
+  photosWarm = true;
+  R.PICTURES.forEach(p => { const i = new Image(); i.src = p.image; });
 }
 
 /* The one place that knows the difference: a generated mark is an array of
    stroke indices, an animal is an object with a path, a picture one with an
-   emoji. Everything above this draws cards without caring which set is in
+   image. Everything above this draws cards without caring which set is in
    play. */
 const isPic = stim => !Array.isArray(stim);
-const isEmoji = stim => !!(stim && stim.emoji);
+const isPhoto = stim => !!(stim && stim.image);
 function stimEl(stim, cx, cy, size, cls) {
-  if (isEmoji(stim)) return emojiEl(stim, cx, cy, size, cls);
+  if (isPhoto(stim)) return photoEl(stim, cx, cy, size, cls);
   return isPic(stim) ? picEl(stim, cx, cy, size, cls) : glyphEl(stim, cx, cy, size, cls);
 }
 function clearStage(el) { (el || $('stage')).replaceChildren(); }
@@ -1848,6 +1883,7 @@ function startSession(opts) {
   active = true;
   sessionSet = R.stimulusSet(settings.stimset).id;
   sessionSpoken = speaks();
+  if (sessionSet === 'pictures') warmPhotos();
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
   /* The practice run ends on its beat budget; the clock is only a backstop. */
@@ -2069,12 +2105,12 @@ function glyphMini(glyph, px, cls) {
 /* The small version, for the strips and the worked example on the home page. */
 function stimMini(stim, px, cls) {
   if (!isPic(stim)) return glyphMini(stim, px, cls);
-  if (isEmoji(stim)) {
-    const el = document.createElement('span');
-    el.className = 'emo-mini' + (cls === 'new' ? ' new' : '');
-    el.style.fontSize = Math.round(px * 0.8) + 'px';
-    el.textContent = stim.emoji;
-    el.title = stim.name;
+  if (isPhoto(stim)) {
+    const el = document.createElement('img');
+    el.className = 'photo-mini' + (cls === 'new' ? ' new' : '');
+    el.src = stim.image;
+    el.alt = el.title = stim.name;
+    el.width = el.height = px;
     return el;
   }
   const svg = document.createElementNS(SVGNS, 'svg');
