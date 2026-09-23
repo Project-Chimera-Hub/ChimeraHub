@@ -312,6 +312,48 @@
   }
 
   /**
+   * A relation probe: is the step from one held symbol to another this one?
+   *
+   * The other kind of conclusion — a claim about a single relation rather than
+   * about two of them. It asks the same thing an analogy asks of a pair, minus
+   * the second pair to compare it against, so it is the shallower of the two
+   * and the one worth mixing in rather than replacing with.
+   *
+   * The claimed step is drawn, never written: its size is a count of pips and
+   * its sign is which way the arrow points, so nothing here has to be read as
+   * a word.
+   *
+   * A false claim is off by a real step in the same space — never by a
+   * direction the axis does not have, and never by zero, which would be two
+   * symbols in one slot and is not a claim the board can make.
+   */
+  function planRelation(model, rnd) {
+    rnd = rnd || Math.random;
+    var items = model.items;
+    if (items.length < 2) return null;
+    var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
+    var i = Math.floor(rnd() * items.length);
+    var j = Math.floor(rnd() * (items.length - 1));
+    if (j >= i) j++;
+    var a = items[i], b = items[j];
+    var real = b.ranks[axis] - a.ranks[axis];
+    var truth = rnd() < 0.5;
+    var claim = real;
+    if (!truth) {
+      /* Every other step this board could state, so a wrong claim is always a
+         step some pair really is apart. */
+      var others = [];
+      for (var v = -(model.s - 1); v <= model.s - 1; v++) {
+        if (v !== 0 && v !== real) others.push(v);
+      }
+      if (!others.length) return null;
+      claim = others[Math.floor(rnd() * others.length)];
+    }
+    return { kind: "relation", axis: axis, truth: truth,
+             pair: [a, b], claim: claim };
+  }
+
+  /**
    * An analogy probe: is the step from one held symbol to another the same as
    * the step from a third to a fourth, on one axis?
    *
@@ -383,9 +425,15 @@
    * comment always claimed, and leaves the first eleven rungs in exactly the
    * order they were in.
    */
-  function ladder(maxD) {
+  function ladder(maxD, minD) {
     var out = [];
-    for (var d = 1; d <= Math.max(1, Math.min(4, maxD || 4)); d++) {
+    var top = Math.max(1, Math.min(4, maxD || 4));
+    /* A floor as well as a ceiling. Picking a dimension used only to say which
+       levels were ALLOWED, so "3D" still started at 1D·3 and climbed through
+       everything below it — which is not what picking 3D looks like it means.
+       With the floor equal to the ceiling the ladder is that dimension's spans
+       and nothing else, and the span is what adapts. */
+    for (var d = Math.max(1, Math.min(top, minD || 1)); d <= top; d++) {
       SIZES[d].forEach(function (s) { out.push({ d: d, s: s }); });
     }
     return out.sort(function (a, b) {
@@ -514,7 +562,7 @@
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
     newAnimal: newAnimal, newPicture: newPicture, stimulusSet: stimulusSet,
     createModel: createModel, fill: fill, planCard: planCard, apply: apply,
-    planAnalogy: planAnalogy,
+    planAnalogy: planAnalogy, planRelation: planRelation,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,
     credit: credit, throughput: throughput, peakThroughput: peakThroughput,

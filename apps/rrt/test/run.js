@@ -249,6 +249,40 @@ test("an unknown set id falls back to the generated marks", () => {
   assert.ok(Array.isArray(R.stimulusSet("glyphs").next([], lcg(41))));
 });
 
+test("a relation probe claims a real step, right or wrong", () => {
+  for (const [d, span] of [[1, 3], [2, 5], [4, 5]]) {
+    const rnd = lcg(d * 17 + span);
+    const m = R.createModel(d, span);
+    const glyphs = [];
+    for (let i = 0; i < span; i++) glyphs.push(R.makeGlyph(rnd));
+    R.fill(m, glyphs, rnd);
+    let t = 0;
+    for (let i = 0; i < 2000; i++) {
+      const q = R.planRelation(m, rnd);
+      assert.ok(q, `${d}D\u00b7${span} drew nothing`);
+      const real = q.pair[1].ranks[q.axis] - q.pair[0].ranks[q.axis];
+      assert.strictEqual(q.claim === real, q.truth, "the claim does not match the board");
+      assert.notStrictEqual(q.claim, 0, "two symbols cannot share a slot");
+      assert.ok(Math.abs(q.claim) < span, "a step wider than the board");
+      assert.strictEqual(q.pair[0] === q.pair[1], false, "a symbol against itself");
+      if (q.truth) t++;
+    }
+    assert.ok(Math.abs(t / 2000 - 0.5) < 0.05, `${d}\u00b7${span}: ${t / 2000} true`);
+  }
+});
+
+test("a chosen dimension can be the floor as well as the ceiling", () => {
+  /* Picking 3D used only to say which levels were allowed, so it still began
+     at 1D\u00b73 \u2014 which is not what picking 3D looks like it means. */
+  assert.deepStrictEqual(R.ladder(3, 3).map(l => `${l.d}D\u00b7${l.s}`),
+    ["3D\u00b73", "3D\u00b74", "3D\u00b75"]);
+  assert.deepStrictEqual(R.ladder(1, 1).map(l => l.s), [3, 4, 5, 6, 7]);
+  /* A floor above the ceiling is the ceiling, not an empty ladder. */
+  assert.ok(R.ladder(2, 4).length > 0);
+  /* And the default is unchanged, so every saved level still resolves. */
+  assert.strictEqual(R.ladder(3).length, 11);
+});
+
 test("an analogy probe is four distinct symbols and a claim about two steps", () => {
   for (const [d, span] of [[1, 4], [2, 5], [4, 5], [1, 7]]) {
     const rnd = lcg(d * 31 + span);

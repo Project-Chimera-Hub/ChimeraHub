@@ -93,6 +93,30 @@
     .hint-fold > div{margin-top:.4rem}
     .hint{font-size:0.72rem;color:var(--text-faint);margin-top:0.3rem;line-height:1.5}
     .row{display:flex;align-items:center;gap:0.875rem;flex-wrap:wrap}
+    /* Selects were the browser's own, which on every platform is a different
+       shape, a different font and a different grey from everything around it.
+       Same surface, border and mono face as the number inputs, with the arrow
+       drawn rather than left to the platform. */
+    select{-webkit-appearance:none;appearance:none;background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:.85rem;
+      padding:.5rem 2rem .5rem .7rem;outline:none;cursor:pointer;transition:all var(--t);
+      background-image:linear-gradient(45deg,transparent 50%,var(--text-dim) 50%),linear-gradient(135deg,var(--text-dim) 50%,transparent 50%);
+      background-position:calc(100% - 15px) calc(50% + 1px),calc(100% - 10px) calc(50% + 1px);
+      background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    select:hover{border-color:var(--border2)}
+    select:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+    select option{background:var(--surface2);color:var(--text)}
+    /* Radios and checkboxes keep the platform control but take the accent, so a
+       chosen option reads as chosen in this app's colour rather than the OS's. */
+    input[type=radio],input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+
+    /* A settings card folds from its head. The body is what scrolls past; the
+       heads are the map, and a map you can see is the whole point. */
+    .card.collapsible > .card-head{cursor:pointer;user-select:none}
+    .card.collapsible > .card-head::after{content:'\25be';color:var(--text-faint);font-size:.8rem;margin-left:.6rem;transition:transform var(--t)}
+    .card.collapsed > .card-head::after{transform:rotate(-90deg)}
+    .card.collapsed > .card-head{border-bottom:none}
+    .card.collapsed > .card-body{display:none}
     .num-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:1rem;padding:0.45rem 0.7rem;width:80px;outline:none;transition:all var(--t)}
     .num-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
 
@@ -347,6 +371,9 @@
     .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
     .probe-arrow{stroke:var(--text-dim);stroke-width:2;vector-effect:non-scaling-stroke}
     .probe-head{fill:var(--text-dim)}
+    .probe-pip{fill:var(--text-dim)}
+    .probe-rule{stroke:var(--border2);stroke-width:1.5;vector-effect:non-scaling-stroke}
+    .probe-axis{font-family:var(--mono);font-size:26px;font-weight:600;text-anchor:middle}
     .rank-pad.probe{gap:14px}
     .rank-btn.probe-btn{flex-direction:column;gap:1px;min-width:calc(4.6rem * var(--pad-scale,1));padding:calc(.3rem * var(--pad-scale,1)) calc(.6rem * var(--pad-scale,1))}
     .pb-glyph{font-size:calc(1.35rem * var(--pad-scale,1));line-height:1}
@@ -543,33 +570,44 @@
           <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
-          <label class="label">Analogy probes</label>
-          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="probeRow">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0" style="accent-color:var(--accent)"> Off</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0.2" style="accent-color:var(--accent)"> Sometimes · 1 beat in 5</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="probeRate" value="0.35" style="accent-color:var(--accent)"> Often · 1 beat in 3</label>
-          </div>
-          <p class="hint">Some beats ask a question instead of dealing a card. Two pairs
-            of symbols you are already holding, and the claim that the step from the
-            first to the second is the same on both rows — <b>↑ true</b> or
-            <b>↓ false</b>. Nothing is placed and the board does not change, so a probe
-            is the one beat that only asks whether the board is still there. It needs a
-            board of four: on three, the only two pairs with the same step share a
-            symbol, and that is a chain rather than an analogy — below that a card is
-            dealt as usual. A probe is answered from two options where a card is
-            answered from as many as the board is wide, so bits per second is not
-            comparable with an unprobed session and the best-ever figure is kept
-            separately.</p>
+          <label class="label">Conclusion beats</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="probeRateSlider"></div><span class="slider-val" id="probeRateVal"></span></div>
+          <div class="slider-row" id="probeMixRow"><div class="slider-wrap"><input type="range" class="slider" id="probeMixSlider"></div><span class="slider-val" id="probeMixVal"></span></div>
+          <p class="hint">Some beats ask a question instead of dealing a card, and nothing is
+            placed — the board does not change, so a conclusion beat is the one that only
+            asks whether the board is still there. Both kinds are answered
+            <b>↑ true</b> or <b>↓ false</b>.
+            A <strong>relation</strong> asks whether one symbol really is that many steps
+            from another; an <strong>analogy</strong> asks whether the step between one pair
+            is the same as the step between a second. The mix is the share of conclusion
+            beats that are analogies, so either slider at one end gives you only the other
+            kind. An analogy needs a board of four — on three the only two pairs with the
+            same step share a symbol, which is a chain and not an analogy — so below four
+            every conclusion is a relation. Answering from two options is not the same trial
+            as answering from as many as the board is wide, so bits per second is not
+            comparable with a session of cards alone and the best-ever figure is kept
+            apart.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
-          <label class="label">Highest dimension</label>
+          <label class="label">Dimensions</label>
           <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + longitude</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + latitude</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="4" style="accent-color:var(--accent)"> 4D · + size</label>
           </div>
-          <p class="hint">The ladder: 1D with 3–7 symbols, then 2D with 3–5, then 3D with 3–5 — ordered by how much you carry, so every step up is more. Adding a dimension drops the symbol count back to 3.</p>
+          <div class="toggle-row" style="margin-top:.6rem">
+            <label class="toggle"><input type="checkbox" id="climbToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Climb from 1D</strong> — treat this as a ceiling rather than the dimension you play</span>
+          </div>
+          <p class="hint">Off, the dimension you pick is the dimension you get: the ladder is
+            that one's spans and nothing else, and the span is what rises and falls. On, it
+            is a ceiling instead and the ladder starts at 1D with three symbols and climbs
+            through every dimension below it — the teaching order, and what this setting
+            used to do whether or not it looked like it. The whole ladder is 1D with 3–7
+            symbols, then 2D with 3–5, then 3D with 3–5, then 4D with 3–5, ordered by how
+            much you carry, so every step up is more; adding a dimension drops the span back
+            to three.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
           <div class="toggle-row">
@@ -652,6 +690,9 @@
 
     <div class="section-label">Size on screen</div>
     <div class="card">
+      <div class="card-head">
+        <span class="card-title"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h7v7H4zM13 13h7v7h-7z"/></svg></span>Symbol and key size</span>
+      </div>
       <div class="card-body">
         <div class="field">
           <label class="label">Symbol size</label>
@@ -679,6 +720,9 @@
 
     <div class="section-label">Feedback</div>
     <div class="card">
+      <div class="card-head">
+        <span class="card-title"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5 6 9H3v6h3l5 4zM16 9a5 5 0 0 1 0 6"/></svg></span>After a wrong answer</span>
+      </div>
       <div class="card-body">
         <div class="field">
           <div class="toggle-row">
@@ -925,7 +969,7 @@ const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, t
    it applies in both session modes rather than being overridden by one. */
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
-  probeRate: 0,
+  probeRate: 0, probeMix: 0.5, climb: false,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
   padScale: 1, stageScale: 1, speak: false,
 }, STANDARD);
@@ -1036,6 +1080,12 @@ const painters = [
   wireSlider('padScaleSlider', 'padScaleVal', 'padScale', 0.8, 2.4, 0.1, v => v.toFixed(1) + '\u00d7', applyPadScale),
   wireToggle('adaptLevelToggle', 'adaptLevel'),
   wireToggle('maskToggle', 'mask'),
+  wireSlider('probeRateSlider', 'probeRateVal', 'probeRate', 0, 0.5, 0.05,
+             v => v === 0 ? 'none' : Math.round(v * 100) + '% of beats', paintProbeMix),
+  wireSlider('probeMixSlider', 'probeMixVal', 'probeMix', 0, 1, 0.1,
+             v => v === 0 ? 'all relations' : v === 1 ? 'all analogies'
+                                            : Math.round(v * 100) + '% analogies'),
+  wireToggle('climbToggle', 'climb', null, paintLevel),
   wireToggle('resumeToggle', 'resumeLevel', null, paintLevel),
   wireToggle('truthToggle', 'showTruth'),
   wireToggle('beepToggle', 'beepEnabled', 'beepOpts'),
@@ -1067,25 +1117,36 @@ $('startLevelSelect').addEventListener('change', () => {
 });
 
 /** The level the next session starts at, after the dimension cap. */
+/* The rungs this configuration actually offers. `climb` off means the chosen
+   dimension is the floor as well as the ceiling. */
+function playLadder() {
+  return R.ladder(settings.maxD, settings.climb ? 1 : settings.maxD);
+}
+
 function startingLevel() {
-  const levels = R.ladder(settings.maxD);
+  const levels = playLadder();
   const saved = loadProgress().level;
   const want = settings.resumeLevel && saved ? saved : { d: settings.startD, s: settings.startS };
   return levels[R.levelIndex(levels, want)];
 }
 
+/* The mix only means something once some beats are conclusions. */
+function paintProbeMix() {
+  const row = $('probeMixRow');
+  if (row) row.style.display = (settings.probeRate || 0) > 0 ? '' : 'none';
+}
+
 function paintLevel() {
   document.querySelectorAll('input[name="maxD"]').forEach(r => { r.checked = +r.value === settings.maxD; });
-  document.querySelectorAll('input[name="probeRate"]').forEach(r => { r.checked = +r.value === (settings.probeRate || 0); });
   const sel = $('startLevelSelect');
   sel.innerHTML = '';
-  R.ladder(settings.maxD).forEach(l => {
+  playLadder().forEach(l => {
     const o = document.createElement('option');
     o.value = `${l.d}-${l.s}`;
     o.textContent = `${l.d}D · ${l.s} symbols  (${R.carriedBits(l.d, l.s).toFixed(2)} bits)`;
     sel.appendChild(o);
   });
-  const levels = R.ladder(settings.maxD);
+  const levels = playLadder();
   sel.value = (l => `${l.d}-${l.s}`)(levels[R.levelIndex(levels, { d: settings.startD, s: settings.startS })]);
   const saved = loadProgress().level;
   $('savedLevelPill').textContent = 'next: ' + levelName(startingLevel()) + (saved && settings.resumeLevel ? ' (resumed)' : '');
@@ -1439,27 +1500,80 @@ function boxScene(entries, lattice) {
  * `a`. Negative is toward rank 1 — up, left, back, bigger.
  */
 /*
- * An analogy probe: two pairs of held symbols, and the claim that the step
- * between them is the same.
+ * A conclusion, drawn: the pairs it is about, the step it claims, and the axis
+ * it claims it on — the axis in the middle, between the two relations it
+ * joins, because that is where it belongs both to the eye and to the sense.
+ * Set beside the card it would be a label on the question; set between the
+ * rows it is the thing the two rows are being compared along.
  *
- * No lattice and no placement, deliberately. Where the four stand is the whole
- * of what is being asked, so drawing them anywhere but in two neutral rows
- * would hand over the answer. None is coloured as new either — all four are
- * already held, and the accent means "this one is arriving".
+ * No lattice and no placement. Where the symbols stand is the whole of what is
+ * being asked, so drawing any of it would answer the question. None of them is
+ * coloured as new either — all are already held, and the accent means "this
+ * one is arriving".
  */
-function drawProbe(el, q) {
-  const S = 52, yA = 84, yB = 216, xL = 62, xR = 238;
-  const arrow = y => [
-    svgEl('line', { x1: xL + 36, y1: y, x2: xR - 46, y2: y, class: 'probe-arrow' }),
-    svgEl('polygon', { points: `${xR - 46},${y - 6} ${xR - 34},${y} ${xR - 46},${y + 6}`,
+const PROBE_ROW = { S: 52, xL: 62, xR: 238 };
+
+/* An arrow from the left symbol to the right one, with the claimed step as
+   pips under it when there is a step being claimed. Never a numeral: the card
+   counts cells and this counts dots, and neither has to be read as a word. */
+function probeRow(y, step) {
+  const { xL, xR } = PROBE_ROW;
+  const x1 = xL + 36, x2 = xR - 46;
+  const out = [
+    svgEl('line', { x1, y1: y, x2, y2: y, class: 'probe-arrow' }),
+    svgEl('polygon', { points: `${x2 - 12},${y - 6} ${x2},${y} ${x2 - 12},${y + 6}`,
                        class: 'probe-head' }),
   ];
-  /* No label between the rows: the foot of the card already asks the question,
-     and the middle of the stage is where the axis watermark sits. */
+  if (step != null) {
+    const n = step, mid = (x1 + x2) / 2, gap = 11;
+    for (let i = 0; i < n; i++) {
+      out.push(svgEl('circle', {
+        cx: mid + (i - (n - 1) / 2) * gap, cy: y + 15, r: 3.2, class: 'probe-pip',
+      }));
+    }
+  }
+  return out;
+}
+
+/* The axis, between the rows. Its glyph and its colour, at the size of a thing
+   you read rather than a thing you decode. */
+function probeAxis(axis, y) {
+  const a = AXIS_CUE[axis];
+  if (!a) return [];
+  const g = svgEl('text', { x: MID, y: y + 7, class: 'probe-axis' });
+  g.textContent = a.glyph;
+  g.setAttribute('fill', `var(--ax-${axis})`);
+  const rule = (x1, x2) => svgEl('line', { x1, y1: y, x2, y2: y, class: 'probe-rule' });
+  return [rule(PROBE_ROW.xL, MID - 18), rule(MID + 18, PROBE_ROW.xR), g];
+}
+
+function drawProbe(el, q) {
+  const { S, xL, xR } = PROBE_ROW;
+  const yA = 84, yB = 216;
+  if (q.kind === 'relation') {
+    /* One relation, so the axis heads it rather than dividing it, and the pair
+       sits under the rule where the analogy's second row would begin. The
+       group stays centred; an axis marooned under a single row read as a
+       footnote to it rather than as what it is being claimed along. */
+    const y = MID + 26;
+    /* Always a forward arrow. A backward one and a count is two things to
+       decode where the order of the two symbols already says the direction:
+       a claim of −3 is drawn as the other one first, three steps along. */
+    const back = q.claim < 0;
+    const first = back ? q.pair[1] : q.pair[0];
+    const last = back ? q.pair[0] : q.pair[1];
+    el.replaceChildren(
+      ...probeAxis(q.axis, MID - 52),
+      stimEl(first.glyph, xL, y, S, 'ref'),
+      ...probeRow(y, Math.abs(q.claim)),
+      stimEl(last.glyph, xR, y, S, 'ref'));
+    return;
+  }
   el.replaceChildren(
-    stimEl(q.pair[0].glyph, xL, yA, S, 'ref'), ...arrow(yA),
+    stimEl(q.pair[0].glyph, xL, yA, S, 'ref'), ...probeRow(yA, null),
     stimEl(q.pair[1].glyph, xR, yA, S, 'ref'),
-    stimEl(q.mate[0].glyph, xL, yB, S, 'ref'), ...arrow(yB),
+    ...probeAxis(q.axis, MID),
+    stimEl(q.mate[0].glyph, xL, yB, S, 'ref'), ...probeRow(yB, null),
     stimEl(q.mate[1].glyph, xR, yB, S, 'ref'));
 }
 
@@ -1905,10 +2019,19 @@ function beat() {
      board does not change: this beat asks whether the board is held, where
      every other beat adds to it. `planAnalogy` returns null on a board too
      small to state one, and an ordinary card is dealt instead. */
-  const probeQ = Math.random() < eff('probeRate') ? R.planAnalogy(model, Math.random) : null;
+  /* Which kind, by the mix — and an analogy that the board is too small to
+     state falls back to a relation rather than to a card, so the conclusion
+     rate is the rate whatever the span. */
+  let probeQ = null;
+  if (Math.random() < eff('probeRate')) {
+    const wantAnalogy = Math.random() < eff('probeMix');
+    probeQ = (wantAnalogy ? R.planAnalogy(model, Math.random) : null)
+          || R.planRelation(model, Math.random);
+  }
   if (probeQ) {
     cur = {
-      k: 2, d: lvl.d, s: lvl.s, level: ctrl.level, axis: probeQ.axis, probe: true,
+      k: 2, d: lvl.d, s: lvl.s, level: ctrl.level, axis: probeQ.axis,
+      probe: true, probeKind: probeQ.kind,
       answer: probeQ.truth ? 1 : 2,
       /* Two options is the answer's width, not the load's: the same board has
          to be held either way, so the trial is worth what the board is worth,
@@ -1919,7 +2042,9 @@ function beat() {
     };
     drawProbe($('stage'), probeQ);
     $('stimInstruction').textContent = 'is this true?';
-    setAxisCue($('cue'), lvl.d > 1 ? probeQ.axis : null, 'is the step the same?');
+    /* The axis is drawn on the card now, between the rows it joins, so the
+       watermark behind it would be the same thing said twice. */
+    setAxisCue($('cue'), null);
     renderPad();
     later(() => {
       if (!eff('mask')) { clearStage($('stage')); return; }
@@ -2522,6 +2647,39 @@ $('firstRunDismiss').addEventListener('click', () => { store.set(KEYS.seen, '1')
  * markup so that not one word has to be cut or moved: the first line stays
  * visible as the summary, and the rest is a click away.
  */
+/*
+ * The settings cards fold from their heads, and remember it.
+ *
+ * Only the cards under a section label, and only on the home page: the results
+ * and training screens have cards that are the content rather than a setting.
+ * Clicks on a control inside a head — the session-mode tabs live there — are
+ * left alone, or the tab would close the card it belongs to.
+ */
+const COLLAPSE_KEY = 'ro_shut';
+function shutCards() {
+  try { return new Set(JSON.parse(store.get(COLLAPSE_KEY)) || []); } catch { return new Set(); }
+}
+function makeCardsCollapsible() {
+  const shut = shutCards();
+  [...document.querySelectorAll('.section-label')].forEach(lab => {
+    const card = lab.nextElementSibling;
+    if (!card || !card.classList.contains('card')) return;
+    const head = card.querySelector('.card-head');
+    if (!head) return;
+    const name = lab.textContent.trim();
+    card.classList.add('collapsible');
+    card.classList.toggle('collapsed', shut.has(name));
+    head.addEventListener('click', e => {
+      if (e.target.closest('button, input, select, a, label')) return;
+      card.classList.toggle('collapsed');
+      const now = shutCards();
+      card.classList.contains('collapsed') ? now.add(name) : now.delete(name);
+      store.set(COLLAPSE_KEY, JSON.stringify([...now]));
+    });
+  });
+}
+makeCardsCollapsible();
+
 function foldLongHints() {
   document.querySelectorAll('.hint').forEach(h => {
     if (h.dataset.folded || h.closest('details')) return;

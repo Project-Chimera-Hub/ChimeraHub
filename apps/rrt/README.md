@@ -103,32 +103,59 @@ working-memory training find far transfer weak at best. What the design can
 honestly claim is that it keeps the task at the edge of capacity and measures it
 cleanly.
 
-## Analogy probes
+## Conclusion beats
 
-Off by default. Turned on, some beats ask a question instead of dealing a card:
-two pairs of symbols you are already holding, and the claim that the step from
-the first to the second is the same on both rows — **↑ true** or **↓ false**.
+Off by default. Turned up, some beats ask a question instead of dealing a card.
+Nothing is placed and the board does not change, so a conclusion beat is the
+one that only asks whether the board is still there — every other beat revises
+it. Both kinds are answered **↑ true** or **↓ false**.
 
-Nothing is placed and the board does not change, so a probe is the one beat
-that only asks whether the board is still there. Every other beat revises it.
+A **relation** asks whether one symbol really is that many steps from another.
+The claimed step is drawn, never written: a count of pips under a forward
+arrow, with the two symbols ordered so the arrow never has to point backwards.
+A false claim is off by a real step in the same space — never by a direction
+the axis does not have, and never by zero, which would be two symbols in one
+slot and is not a claim the board can make.
 
-It needs a board of four. On three, the only two pairs with the same step share
-a symbol, and "A is to B as B is to C" is a chain rather than an analogy —
-below four a card is dealt as usual. Half the probes are true, drawn as the
-claim before the pairs that state it, so neither key is the one to press when
-unsure.
+An **analogy** asks whether the step between one pair is the same as the step
+between a second. It needs a board of four: on three, the only two pairs with
+the same step share a symbol, and "A is to B as B is to C" is a chain rather
+than an analogy. Below four, every conclusion is a relation rather than a
+dropped beat, so the rate you set is the rate you get whatever the span.
 
-The four symbols are drawn in two plain rows with no grid and nothing coloured
-as new. Where they stand is the whole of what is being asked, so a card that
-showed any of it would be answering itself.
+Two sliders. The first is the share of beats that are conclusions; the second
+is the share of those that are analogies, so either at an end gives you only
+the other kind. Half of each kind is true, drawn as the claim before the pairs
+that state it, so neither key is the one to press when unsure.
 
-A probe is answered from two options where a card is answered from as many as
-the board is wide, so bits per second is not comparable with an unprobed
-session and the best-ever figure is kept separately — the same way a spoken
-session and an animal session keep their own. Within a session a probe is
+The axis sits between the two relations it joins, in its own colour, with a
+rule either side. Beside the card it would be a label on the question; between
+the rows it is the thing the two rows are being compared along. A relation has
+only one row, so the axis heads it instead.
+
+Nothing on a conclusion card shows where anything stands, and nothing is
+coloured as new. Where the symbols stand is the whole of what is being asked,
+and all of them are already held.
+
+A conclusion is answered from two options where a card is answered from as many
+as the board is wide, so bits per second is not comparable with a session of
+cards alone and the best-ever figure is kept apart — the same way a spoken
+session and an animal session keep their own. Within a session a conclusion is
 credited for the board it interrogates rather than for its two options, since
 the same board has to be held either way; the guessing correction comes from
 the two options, as it does everywhere else.
+
+## Dimensions, and what picking one means
+
+Picking a dimension used only to say which levels were *allowed*. The ladder
+still began at 1D with three symbols and climbed through everything below it,
+so choosing 3D and then playing 1D was not merely possible but the default —
+which is not what choosing 3D looks like it means.
+
+With **Climb from 1D** off, the chosen dimension is the floor as well as the
+ceiling: the ladder is that dimension's spans and nothing else, and the span is
+what rises and falls. On, it is a ceiling again and the whole teaching ladder
+is in play.
 
 ## What is on the cards
 
