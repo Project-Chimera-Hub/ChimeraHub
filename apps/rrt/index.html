@@ -1203,6 +1203,9 @@ function picEl(stim, cx, cy, size, cls) {
  */
 let photoClip = 0;
 function photoEl(stim, cx, cy, size, cls) {
+  /* A photo fills its square where a mark leaves air round its strokes, so
+     it reads small at a mark's size; a quarter bigger still sits in its cell. */
+  size *= 1.25;
   const g = document.createElementNS(SVGNS, 'g');
   g.setAttribute('class', 'photo ' + cls);
   const x = cx - size / 2, y = cy - size / 2, r = size * 0.14;
