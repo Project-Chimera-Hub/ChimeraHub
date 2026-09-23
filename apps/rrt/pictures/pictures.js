@@ -17,11 +17,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:SingleYelakki_banana,_bangalore,_karnataka_single.jpg"
    },
    {
-    "name": "grapes",
-    "image": "pictures/grapes.jpg",
-    "author": "BigSus",
-    "licence": "CC BY 2.5",
-    "source": "https://commons.wikimedia.org/wiki/File:Red_grape_opened.jpg"
+    "name": "pineapple",
+    "image": "pictures/pineapple.jpg",
+    "author": "Didier Descouens",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Acca_sellowiana_Fruit_MHNT_Fronton.jpg"
    },
    {
     "name": "strawberry",
@@ -45,11 +45,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Lemon.jpg"
    },
    {
-    "name": "carrot",
-    "image": "pictures/carrot.jpg",
-    "author": "Renée Kools",
-    "licence": "CC BY 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Daucus_carota_2025-07-23-1.jpg"
+    "name": "tomato",
+    "image": "pictures/tomato.jpg",
+    "author": "Michal Klajban",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Organic_home-grown_tomatoes_-_unripe_to_ripe.jpg"
    },
    {
     "name": "corn",
@@ -262,11 +262,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Classic_alarm_clock_20180513.jpg"
    },
    {
-    "name": "key",
-    "image": "pictures/key.jpg",
-    "author": "Kritzolina",
+    "name": "owl",
+    "image": "pictures/owl.jpg",
+    "author": "Rhododendrites",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Handle_with_lock_on_a_car_trailer.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Eurasian_eagle-owl_(44088).jpg"
    },
    {
     "name": "balloon",
@@ -290,11 +290,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Adidas_soccer_ball_on_a_grass_pitch_(Unsplash).jpg"
    },
    {
-    "name": "hat",
-    "image": "pictures/hat.jpg",
-    "author": "Basile Morin",
+    "name": "zebra",
+    "image": "pictures/zebra.jpg",
+    "author": "Yathin S Krishnappa",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Woman_with_a_conical_straw_hat_planting_rice_in_a_paddy_field_at_golden_hour_in_Laos.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Equus_zebra_hartmannae_-_Etosha_2015.jpg"
    },
    {
     "name": "shoe",
@@ -304,11 +304,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Reebok_Royal_Glide_Ripple_Clip_shoe.jpg"
    },
    {
-    "name": "umbrella",
-    "image": "pictures/umbrella.jpg",
-    "author": "Jules Verne Times Two",
+    "name": "horse",
+    "image": "pictures/horse.jpg",
+    "author": "Alvesgaspar",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Woman_sitting_under_a_red_umbrella,_Alameda_Afonso_Henriques,_Lisbon,_Portugal_julesvernex2.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Horse_December_2014-1.jpg"
    },
    {
     "name": "cactus",
@@ -381,11 +381,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Pair_of_scissors_with_black_handle,_2015-06-07.jpg"
    },
    {
-    "name": "bell",
-    "image": "pictures/bell.jpg",
-    "author": "Dietmar Rabich",
+    "name": "rabbit",
+    "image": "pictures/rabbit.jpg",
+    "author": "Mænsard vokser",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Kirchspiel,_St.-Jakobus-Kirche,_Chor_und_Altar_--_2022_--_4184-8.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Rabbit_den_hole_in_Parco_Alto_Milanese_-_Busto_Arsizio,_Lombardy,_Italy_-_2021-04-05.jpg"
    },
    {
     "name": "teapot",

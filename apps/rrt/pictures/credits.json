@@ -15,13 +15,13 @@
   "licence": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
  },
- "grapes": {
-  "image": "grapes.jpg",
-  "file": "File:Red grape opened.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Red_grape_opened.jpg",
-  "author": "BigSus",
-  "licence": "CC BY 2.5",
-  "licenceUrl": "https://creativecommons.org/licenses/by/2.5"
+ "pineapple": {
+  "image": "pineapple.jpg",
+  "file": "File:Acca sellowiana Fruit MHNT Fronton.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Acca_sellowiana_Fruit_MHNT_Fronton.jpg",
+  "author": "Didier Descouens",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
  "strawberry": {
   "image": "strawberry.jpg",
@@ -47,13 +47,13 @@
   "licence": "CC BY-SA 2.5",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5"
  },
- "carrot": {
-  "image": "carrot.jpg",
-  "file": "File:Daucus carota 2025-07-23-1.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Daucus_carota_2025-07-23-1.jpg",
-  "author": "Renée Kools",
-  "licence": "CC BY 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
+ "tomato": {
+  "image": "tomato.jpg",
+  "file": "File:Organic home-grown tomatoes - unripe to ripe.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Organic_home-grown_tomatoes_-_unripe_to_ripe.jpg",
+  "author": "Michal Klajban",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
  "corn": {
   "image": "corn.jpg",
@@ -295,11 +295,11 @@
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
- "key": {
-  "image": "key.jpg",
-  "file": "File:Handle with lock on a car trailer.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Handle_with_lock_on_a_car_trailer.jpg",
-  "author": "Kritzolina",
+ "owl": {
+  "image": "owl.jpg",
+  "file": "File:Eurasian eagle-owl (44088).jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Eurasian_eagle-owl_(44088).jpg",
+  "author": "Rhododendrites",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -327,11 +327,11 @@
   "licence": "CC0",
   "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
  },
- "hat": {
-  "image": "hat.jpg",
-  "file": "File:Woman with a conical straw hat planting rice in a paddy field at golden hour in Laos.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Woman_with_a_conical_straw_hat_planting_rice_in_a_paddy_field_at_golden_hour_in_Laos.jpg",
-  "author": "Basile Morin",
+ "zebra": {
+  "image": "zebra.jpg",
+  "file": "File:Equus zebra hartmannae - Etosha 2015.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Equus_zebra_hartmannae_-_Etosha_2015.jpg",
+  "author": "Yathin S Krishnappa",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -343,11 +343,11 @@
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
- "umbrella": {
-  "image": "umbrella.jpg",
-  "file": "File:Woman sitting under a red umbrella, Alameda Afonso Henriques, Lisbon, Portugal julesvernex2.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Woman_sitting_under_a_red_umbrella,_Alameda_Afonso_Henriques,_Lisbon,_Portugal_julesvernex2.jpg",
-  "author": "Jules Verne Times Two",
+ "horse": {
+  "image": "horse.jpg",
+  "file": "File:Horse December 2014-1.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Horse_December_2014-1.jpg",
+  "author": "Alvesgaspar",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -431,11 +431,11 @@
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
- "bell": {
-  "image": "bell.jpg",
-  "file": "File:Dülmen, Kirchspiel, St.-Jakobus-Kirche, Chor und Altar -- 2022 -- 4184-8.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Kirchspiel,_St.-Jakobus-Kirche,_Chor_und_Altar_--_2022_--_4184-8.jpg",
-  "author": "Dietmar Rabich",
+ "rabbit": {
+  "image": "rabbit.jpg",
+  "file": "File:Rabbit den hole in Parco Alto Milanese - Busto Arsizio, Lombardy, Italy - 2021-04-05.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Rabbit_den_hole_in_Parco_Alto_Milanese_-_Busto_Arsizio,_Lombardy,_Italy_-_2021-04-05.jpg",
+  "author": "Mænsard vokser",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
