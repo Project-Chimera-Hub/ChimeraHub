@@ -53,11 +53,50 @@ generated stroke by stroke and never repeat, so none of them can come to mean
 anything. The animal set trades that away on purpose — see "What is on the
 cards" below, which says what it buys and what it costs.
 
-What that leaves is close to what the literature says predicts fluid
-intelligence best: relational integration and binding, held under time pressure
-(Oberauer and colleagues on which working-memory functions predict intelligence;
-Halford on relational complexity; Chuderski on what time pressure does to the
-relationship between working memory and reasoning).
+What that leaves is binding and updating under time pressure — holding a
+structure of relations and revising it faster than it can be rehearsed
+(Oberauer and colleagues on which working-memory functions predict
+intelligence; Halford on relational complexity; Chuderski on what time pressure
+does to the relationship between working memory and reasoning).
+
+### What it is, named
+
+**Relational updating.**
+
+*Updating*, because the board outlives the card. It is laid out once at the top
+of an episode and then revised one slot at a time for the rest of it, so what
+is held is a set of bindings — which symbol is in which slot, on every axis —
+and the job is keeping that set current while it is overwritten under you.
+Letting go of the symbol that just left is as much of the work as taking on the
+one that replaced it.
+
+*Relational*, because the slot to revise is never named. It is addressed: a
+reference symbol and a distance from it. You cannot act on a card at all
+without already holding where its reference stands, so the relation is not
+something the card asks about afterwards — it is the only route to the thing
+the card changes.
+
+**Not *visual*.** The marks are, and that is the one part of this the eye does:
+after a card is read the picture is spent. What survives it is an ordered set
+of slot assignments, and a slot is not a picture. Calling the task visual would
+put the load in a modality it is not in, and would be wrong about the failure
+mode too — you lose track of where something stands, not of what it looked
+like. (The generated marks are unnameable by design, which blocks verbal
+labelling of the *symbols*; it does not follow that the *order* is non-verbal,
+and nothing here has tested that.)
+
+**Not relational *integration*,** which is the neighbouring thing and is what
+Syllogimous does. There the premises stay on the screen and the work is
+composing a path between two of them; nothing has to be held that is not in
+front of you. Here nothing is in front of you at all, and the work is keeping a
+structure current rather than composing over one that is given. Updating and
+relational integration come out as separable facets in the
+individual-differences work, so this is not a quibble about wording — it says
+which literature the task may borrow claims from, and it is the less flattering
+of the two: the transfer evidence is thinnest for exactly the updating family.
+
+That last point is worth holding against the next paragraph rather than
+softening it.
 
 **It is not a claim that training this raises anything.** Meta-analyses of
 working-memory training find far transfer weak at best. What the design can
