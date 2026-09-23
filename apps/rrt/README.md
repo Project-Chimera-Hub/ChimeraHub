@@ -66,7 +66,7 @@ cleanly.
 
 ## What is on the cards
 
-Two stimulus sets, and the choice is a real trade rather than a skin.
+Three stimulus sets, and the choice is a real trade rather than a skin.
 
 **Generated marks** are the default. Each is three or four strokes on a 3×3
 lattice, connected, spanning the lattice both ways, and at least two strokes from
@@ -90,6 +90,28 @@ from relational load toward how good a verbal chain you can build.
 So bits per second is **not comparable between the sets**. Every session record
 carries the set it used, the best-ever figure is kept per set, and the archive
 reads it as `raw.stimuli`.
+
+**Pictures** are the far end: 56 coloured emoji of everyday things — fruit,
+animals, vehicles, objects — each with a name anyone would use. They are the
+easiest to take in, and they are the one set drawn by the device's own colour
+font, so a picture looks a little different from one phone to the next; the
+animals were drawn by hand to avoid exactly that, and for a set whose point is
+to be easy to encode it is a fair price. A picture brings its own colours, so
+the new one on a card stands in an accent ring instead of being tinted.
+
+### Speaking the names
+
+With **Speak the names** on, the animals and pictures are also said aloud: the
+whole board in reading order when an episode opens, then each new symbol as its
+card lands. Every utterance cuts off the one before, so speech never runs
+behind the cards. The generated marks have no names and stay silent.
+
+In a browser this is the Web Speech API. The Android app runs the site in a
+WebView, which has none, so the APK carries Capacitor's native text-to-speech
+plugin (`@capacitor-community/text-to-speech`) and the page asks for that first.
+
+Hearing a word as well as seeing it is a second way in, so a spoken session is
+recorded as spoken and keeps its own best score, apart from the silent ones.
 
 ## The walkthrough
 
