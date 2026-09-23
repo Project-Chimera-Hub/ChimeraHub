@@ -28,6 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Runs queue rather than overlap; the one before may have committed
+      # pictures since this one's commit was pushed, and those are kept.
+      - name: Latest of the branch
+        run: git pull --ff-only origin "${GITHUB_REF_NAME}"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -45,4 +50,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "rrt: fetch pictures from Wikimedia Commons"
-          git push
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
