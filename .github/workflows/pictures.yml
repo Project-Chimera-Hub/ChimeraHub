@@ -1,0 +1,48 @@
+# Fetches Running Order's photographs from Wikimedia Commons and commits them.
+#
+# The photos are files in the repository, not links: the APK runs offline, and
+# a picture that had to be fetched at play time would be a blank card on a
+# train. This runs whenever the list or the fetcher changes — on any branch —
+# and commits what it fetched back to that branch. A commit made with the
+# workflow's own token does not start another run, so it cannot loop.
+name: Fetch pictures
+
+on:
+  push:
+    paths:
+      - apps/rrt/pictures/list.json
+      - tools/fetch-pictures.mjs
+      - .github/workflows/pictures.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pictures-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: ImageMagick
+        run: command -v convert || (sudo apt-get update && sudo apt-get install -y imagemagick)
+
+      - name: Fetch
+        run: node tools/fetch-pictures.mjs
+
+      - name: Commit
+        run: |
+          git add apps/rrt/pictures
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "rrt: fetch pictures from Wikimedia Commons"
+          git push

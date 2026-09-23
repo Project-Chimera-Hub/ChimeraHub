@@ -1,0 +1,226 @@
+[
+ {
+  "name": "apple",
+  "query": "red apple fruit"
+ },
+ {
+  "name": "banana",
+  "query": "banana fruit single"
+ },
+ {
+  "name": "grapes",
+  "query": "bunch of grapes"
+ },
+ {
+  "name": "strawberry",
+  "query": "strawberry fruit"
+ },
+ {
+  "name": "watermelon",
+  "query": "watermelon slice"
+ },
+ {
+  "name": "lemon",
+  "query": "lemon fruit"
+ },
+ {
+  "name": "carrot",
+  "query": "carrot vegetable"
+ },
+ {
+  "name": "corn",
+  "query": "corn cob maize"
+ },
+ {
+  "name": "mushroom",
+  "query": "mushroom fungus"
+ },
+ {
+  "name": "broccoli",
+  "query": "broccoli"
+ },
+ {
+  "name": "cheese",
+  "query": "cheese wedge"
+ },
+ {
+  "name": "pizza",
+  "query": "pizza"
+ },
+ {
+  "name": "doughnut",
+  "query": "doughnut"
+ },
+ {
+  "name": "cake",
+  "query": "birthday cake"
+ },
+ {
+  "name": "dog",
+  "query": "dog portrait"
+ },
+ {
+  "name": "cat",
+  "query": "cat portrait"
+ },
+ {
+  "name": "frog",
+  "query": "green frog"
+ },
+ {
+  "name": "pig",
+  "query": "domestic pig"
+ },
+ {
+  "name": "cow",
+  "query": "cow cattle"
+ },
+ {
+  "name": "monkey",
+  "query": "monkey"
+ },
+ {
+  "name": "chicken",
+  "query": "chicken hen"
+ },
+ {
+  "name": "penguin",
+  "query": "penguin"
+ },
+ {
+  "name": "lion",
+  "query": "lion male"
+ },
+ {
+  "name": "elephant",
+  "query": "african elephant"
+ },
+ {
+  "name": "giraffe",
+  "query": "giraffe"
+ },
+ {
+  "name": "turtle",
+  "query": "tortoise"
+ },
+ {
+  "name": "octopus",
+  "query": "octopus"
+ },
+ {
+  "name": "butterfly",
+  "query": "butterfly"
+ },
+ {
+  "name": "bee",
+  "query": "honey bee"
+ },
+ {
+  "name": "fish",
+  "query": "goldfish"
+ },
+ {
+  "name": "car",
+  "query": "red car"
+ },
+ {
+  "name": "bicycle",
+  "query": "bicycle"
+ },
+ {
+  "name": "aeroplane",
+  "query": "airliner aircraft"
+ },
+ {
+  "name": "rocket",
+  "query": "rocket launch"
+ },
+ {
+  "name": "sailboat",
+  "query": "sailboat"
+ },
+ {
+  "name": "house",
+  "query": "house"
+ },
+ {
+  "name": "alarm clock",
+  "query": "alarm clock"
+ },
+ {
+  "name": "key",
+  "query": "key metal"
+ },
+ {
+  "name": "balloon",
+  "query": "red balloon"
+ },
+ {
+  "name": "guitar",
+  "query": "acoustic guitar"
+ },
+ {
+  "name": "football",
+  "query": "football soccer ball"
+ },
+ {
+  "name": "hat",
+  "query": "hat"
+ },
+ {
+  "name": "shoe",
+  "query": "shoe"
+ },
+ {
+  "name": "umbrella",
+  "query": "umbrella"
+ },
+ {
+  "name": "cactus",
+  "query": "cactus"
+ },
+ {
+  "name": "sunflower",
+  "query": "sunflower"
+ },
+ {
+  "name": "moon",
+  "query": "full moon"
+ },
+ {
+  "name": "candle",
+  "query": "candle flame"
+ },
+ {
+  "name": "fire",
+  "query": "campfire"
+ },
+ {
+  "name": "rainbow",
+  "query": "rainbow"
+ },
+ {
+  "name": "snowman",
+  "query": "snowman"
+ },
+ {
+  "name": "light bulb",
+  "query": "light bulb"
+ },
+ {
+  "name": "books",
+  "query": "stack of books"
+ },
+ {
+  "name": "scissors",
+  "query": "scissors"
+ },
+ {
+  "name": "bell",
+  "query": "bell"
+ },
+ {
+  "name": "teapot",
+  "query": "teapot"
+ }
+]
