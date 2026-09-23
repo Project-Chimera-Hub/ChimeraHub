@@ -15,11 +15,11 @@
   "licence": "CC BY 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
  },
- "pineapple": {
-  "image": "pineapple.jpg",
-  "file": "File:Acca sellowiana Fruit MHNT Fronton.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Acca_sellowiana_Fruit_MHNT_Fronton.jpg",
-  "author": "Didier Descouens",
+ "pear": {
+  "image": "pear.jpg",
+  "file": "File:D'anjou pear.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:D%27anjou_pear.jpg",
+  "author": "Rhododendrites",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -47,13 +47,13 @@
   "licence": "CC BY-SA 2.5",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.5"
  },
- "tomato": {
-  "image": "tomato.jpg",
-  "file": "File:Organic home-grown tomatoes - unripe to ripe.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Organic_home-grown_tomatoes_-_unripe_to_ripe.jpg",
-  "author": "Michal Klajban",
-  "licence": "CC BY-SA 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ "sheep": {
+  "image": "sheep.jpg",
+  "file": "File:Swaledale Sheep, Lake District, England - June 2009.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Swaledale_Sheep,_Lake_District,_England_-_June_2009.jpg",
+  "author": "User:Diliff",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
  },
  "corn": {
   "image": "corn.jpg",
@@ -431,13 +431,13 @@
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
- "rabbit": {
-  "image": "rabbit.jpg",
-  "file": "File:Rabbit den hole in Parco Alto Milanese - Busto Arsizio, Lombardy, Italy - 2021-04-05.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Rabbit_den_hole_in_Parco_Alto_Milanese_-_Busto_Arsizio,_Lombardy,_Italy_-_2021-04-05.jpg",
-  "author": "Mænsard vokser",
-  "licence": "CC BY-SA 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+ "hedgehog": {
+  "image": "hedgehog.jpg",
+  "file": "File:Erinaceus roumanicus 2020 G2.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Erinaceus_roumanicus_2020_G2.jpg",
+  "author": "George Chernilevsky",
+  "licence": "Public domain",
+  "licenceUrl": ""
  },
  "teapot": {
   "image": "teapot.jpg",

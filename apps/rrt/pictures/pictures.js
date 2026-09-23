@@ -17,11 +17,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:SingleYelakki_banana,_bangalore,_karnataka_single.jpg"
    },
    {
-    "name": "pineapple",
-    "image": "pictures/pineapple.jpg",
-    "author": "Didier Descouens",
+    "name": "pear",
+    "image": "pictures/pear.jpg",
+    "author": "Rhododendrites",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Acca_sellowiana_Fruit_MHNT_Fronton.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:D%27anjou_pear.jpg"
    },
    {
     "name": "strawberry",
@@ -45,11 +45,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Lemon.jpg"
    },
    {
-    "name": "tomato",
-    "image": "pictures/tomato.jpg",
-    "author": "Michal Klajban",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Organic_home-grown_tomatoes_-_unripe_to_ripe.jpg"
+    "name": "sheep",
+    "image": "pictures/sheep.jpg",
+    "author": "User:Diliff",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Swaledale_Sheep,_Lake_District,_England_-_June_2009.jpg"
    },
    {
     "name": "corn",
@@ -381,11 +381,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Pair_of_scissors_with_black_handle,_2015-06-07.jpg"
    },
    {
-    "name": "rabbit",
-    "image": "pictures/rabbit.jpg",
-    "author": "Mænsard vokser",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Rabbit_den_hole_in_Parco_Alto_Milanese_-_Busto_Arsizio,_Lombardy,_Italy_-_2021-04-05.jpg"
+    "name": "hedgehog",
+    "image": "pictures/hedgehog.jpg",
+    "author": "George Chernilevsky",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Erinaceus_roumanicus_2020_G2.jpg"
    },
    {
     "name": "teapot",
