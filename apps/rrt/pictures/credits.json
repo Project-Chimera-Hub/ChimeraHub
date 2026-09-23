@@ -17,11 +17,11 @@
  },
  "grapes": {
   "image": "grapes.jpg",
-  "file": "File:Pendant- Bunch of Grapes MET 11.215.313.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Pendant-_Bunch_of_Grapes_MET_11.215.313.jpg",
-  "author": "This file was donated to Wikimedia Commons as part of a project by the Metropolitan Museum of Art. See the Image and Data Resources Open Access Policy",
-  "licence": "CC0",
-  "licenceUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  "file": "File:Red grape opened.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Red_grape_opened.jpg",
+  "author": "BigSus",
+  "licence": "CC BY 2.5",
+  "licenceUrl": "https://creativecommons.org/licenses/by/2.5"
  },
  "strawberry": {
   "image": "strawberry.jpg",
@@ -49,11 +49,11 @@
  },
  "carrot": {
   "image": "carrot.jpg",
-  "file": "File:Open refrigerator with food at night.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Open_refrigerator_with_food_at_night.jpg",
-  "author": "W.carter",
-  "licence": "CC BY-SA 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  "file": "File:Daucus carota 2025-07-23-1.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Daucus_carota_2025-07-23-1.jpg",
+  "author": "Renée Kools",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0"
  },
  "corn": {
   "image": "corn.jpg",
@@ -81,9 +81,9 @@
  },
  "cheese": {
   "image": "cheese.jpg",
-  "file": "File:Käse auf dem Viktualienmarkt München 01.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:K%C3%A4se_auf_dem_Viktualienmarkt_M%C3%BCnchen_01.jpg",
-  "author": "Kritzolina",
+  "file": "File:Cowgirl Creamery Point Reyes - Red Hawk cheese.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Cowgirl_Creamery_Point_Reyes_-_Red_Hawk_cheese.jpg",
+  "author": "Frank Schulenburg",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -105,11 +105,11 @@
  },
  "cake": {
   "image": "cake.jpg",
-  "file": "File:Chocolate cake and Victoria sponge.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Chocolate_cake_and_Victoria_sponge.jpg",
-  "author": "Acabashi",
-  "licence": "CC BY-SA 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  "file": "File:Italy - birthday cake with candles 5.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Italy_-_birthday_cake_with_candles_5.jpg",
+  "author": "Francesca Cesa Bianchi, Milano",
+  "licence": "CC BY-SA 3.0 it",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0/it/deed.en"
  },
  "dog": {
   "image": "dog.jpg",
@@ -233,11 +233,11 @@
  },
  "fish": {
   "image": "fish.jpg",
-  "file": "File:Fountain with goldfish in Jardí del Bisbe 02.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Fountain_with_goldfish_in_Jard%C3%AD_del_Bisbe_02.jpg",
-  "author": "Kritzolina",
-  "licence": "CC BY-SA 4.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  "file": "File:Amphiprion ocellaris (Clown anemonefish) by Nick Hobgood.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Amphiprion_ocellaris_(Clown_anemonefish)_by_Nick_Hobgood.jpg",
+  "author": "Nick Hobgood",
+  "licence": "CC BY-SA 3.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
  },
  "car": {
   "image": "car.jpg",
@@ -297,11 +297,11 @@
  },
  "key": {
   "image": "key.jpg",
-  "file": "File:Old house in Key West.JPG",
-  "source": "https://commons.wikimedia.org/wiki/File:Old_house_in_Key_West.JPG",
-  "author": "Ianaré Sévi",
-  "licence": "CC BY-SA 3.0",
-  "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  "file": "File:Handle with lock on a car trailer.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Handle_with_lock_on_a_car_trailer.jpg",
+  "author": "Kritzolina",
+  "licence": "CC BY-SA 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
  "balloon": {
   "image": "balloon.jpg",
@@ -329,9 +329,9 @@
  },
  "hat": {
   "image": "hat.jpg",
-  "file": "File:Чернігів Церква Михайла та Федора Весна 2016.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:%D0%A7%D0%B5%D1%80%D0%BD%D1%96%D0%B3%D1%96%D0%B2_%D0%A6%D0%B5%D1%80%D0%BA%D0%B2%D0%B0_%D0%9C%D0%B8%D1%85%D0%B0%D0%B9%D0%BB%D0%B0_%D1%82%D0%B0_%D0%A4%D0%B5%D0%B4%D0%BE%D1%80%D0%B0_%D0%92%D0%B5%D1%81%D0%BD%D0%B0_2016.jpg",
-  "author": "Nomad0212",
+  "file": "File:Woman with a conical straw hat planting rice in a paddy field at golden hour in Laos.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Woman_with_a_conical_straw_hat_planting_rice_in_a_paddy_field_at_golden_hour_in_Laos.jpg",
+  "author": "Basile Morin",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -345,9 +345,9 @@
  },
  "umbrella": {
   "image": "umbrella.jpg",
-  "file": "File:Beige and brown oil-paper umbrella on the edge of a wooden house in Luang Prabang Laos.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Beige_and_brown_oil-paper_umbrella_on_the_edge_of_a_wooden_house_in_Luang_Prabang_Laos.jpg",
-  "author": "Basile Morin",
+  "file": "File:Woman sitting under a red umbrella, Alameda Afonso Henriques, Lisbon, Portugal julesvernex2.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Woman_sitting_under_a_red_umbrella,_Alameda_Afonso_Henriques,_Lisbon,_Portugal_julesvernex2.jpg",
+  "author": "Jules Verne Times Two",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"
  },
@@ -433,8 +433,8 @@
  },
  "bell": {
   "image": "bell.jpg",
-  "file": "File:Santorin (GR), Ia, Vier Glocken -- 2017 -- 2720-6-2.jpg",
-  "source": "https://commons.wikimedia.org/wiki/File:Santorin_(GR),_Ia,_Vier_Glocken_--_2017_--_2720-6-2.jpg",
+  "file": "File:Dülmen, Kirchspiel, St.-Jakobus-Kirche, Chor und Altar -- 2022 -- 4184-8.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Kirchspiel,_St.-Jakobus-Kirche,_Chor_und_Altar_--_2022_--_4184-8.jpg",
   "author": "Dietmar Rabich",
   "licence": "CC BY-SA 4.0",
   "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0"

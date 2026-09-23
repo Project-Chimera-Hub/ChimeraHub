@@ -19,9 +19,9 @@
    {
     "name": "grapes",
     "image": "pictures/grapes.jpg",
-    "author": "This file was donated to Wikimedia Commons as part of a project by the Metropolitan Museum of Art. See the Image and Data Resources Open Access Policy",
-    "licence": "CC0",
-    "source": "https://commons.wikimedia.org/wiki/File:Pendant-_Bunch_of_Grapes_MET_11.215.313.jpg"
+    "author": "BigSus",
+    "licence": "CC BY 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_grape_opened.jpg"
    },
    {
     "name": "strawberry",
@@ -47,9 +47,9 @@
    {
     "name": "carrot",
     "image": "pictures/carrot.jpg",
-    "author": "W.carter",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Open_refrigerator_with_food_at_night.jpg"
+    "author": "Renée Kools",
+    "licence": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Daucus_carota_2025-07-23-1.jpg"
    },
    {
     "name": "corn",
@@ -75,9 +75,9 @@
    {
     "name": "cheese",
     "image": "pictures/cheese.jpg",
-    "author": "Kritzolina",
+    "author": "Frank Schulenburg",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:K%C3%A4se_auf_dem_Viktualienmarkt_M%C3%BCnchen_01.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Cowgirl_Creamery_Point_Reyes_-_Red_Hawk_cheese.jpg"
    },
    {
     "name": "pizza",
@@ -96,9 +96,9 @@
    {
     "name": "cake",
     "image": "pictures/cake.jpg",
-    "author": "Acabashi",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Chocolate_cake_and_Victoria_sponge.jpg"
+    "author": "Francesca Cesa Bianchi, Milano",
+    "licence": "CC BY-SA 3.0 it",
+    "source": "https://commons.wikimedia.org/wiki/File:Italy_-_birthday_cake_with_candles_5.jpg"
    },
    {
     "name": "dog",
@@ -208,9 +208,9 @@
    {
     "name": "fish",
     "image": "pictures/fish.jpg",
-    "author": "Kritzolina",
-    "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Fountain_with_goldfish_in_Jard%C3%AD_del_Bisbe_02.jpg"
+    "author": "Nick Hobgood",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Amphiprion_ocellaris_(Clown_anemonefish)_by_Nick_Hobgood.jpg"
    },
    {
     "name": "car",
@@ -264,9 +264,9 @@
    {
     "name": "key",
     "image": "pictures/key.jpg",
-    "author": "Ianaré Sévi",
-    "licence": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Old_house_in_Key_West.JPG"
+    "author": "Kritzolina",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Handle_with_lock_on_a_car_trailer.jpg"
    },
    {
     "name": "balloon",
@@ -292,9 +292,9 @@
    {
     "name": "hat",
     "image": "pictures/hat.jpg",
-    "author": "Nomad0212",
+    "author": "Basile Morin",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:%D0%A7%D0%B5%D1%80%D0%BD%D1%96%D0%B3%D1%96%D0%B2_%D0%A6%D0%B5%D1%80%D0%BA%D0%B2%D0%B0_%D0%9C%D0%B8%D1%85%D0%B0%D0%B9%D0%BB%D0%B0_%D1%82%D0%B0_%D0%A4%D0%B5%D0%B4%D0%BE%D1%80%D0%B0_%D0%92%D0%B5%D1%81%D0%BD%D0%B0_2016.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Woman_with_a_conical_straw_hat_planting_rice_in_a_paddy_field_at_golden_hour_in_Laos.jpg"
    },
    {
     "name": "shoe",
@@ -306,9 +306,9 @@
    {
     "name": "umbrella",
     "image": "pictures/umbrella.jpg",
-    "author": "Basile Morin",
+    "author": "Jules Verne Times Two",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Beige_and_brown_oil-paper_umbrella_on_the_edge_of_a_wooden_house_in_Luang_Prabang_Laos.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:Woman_sitting_under_a_red_umbrella,_Alameda_Afonso_Henriques,_Lisbon,_Portugal_julesvernex2.jpg"
    },
    {
     "name": "cactus",
@@ -385,7 +385,7 @@
     "image": "pictures/bell.jpg",
     "author": "Dietmar Rabich",
     "licence": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Santorin_(GR),_Ia,_Vier_Glocken_--_2017_--_2720-6-2.jpg"
+    "source": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Kirchspiel,_St.-Jakobus-Kirche,_Chor_und_Altar_--_2022_--_4184-8.jpg"
    },
    {
     "name": "teapot",
