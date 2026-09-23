@@ -27,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Runs queue rather than overlap; the one before may have committed
       # pictures since this one's commit was pushed, and those are kept.
