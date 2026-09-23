@@ -9,7 +9,10 @@
  },
  {
   "name": "grapes",
-  "query": "bunch of grapes"
+  "query": "grapes bunch fruit",
+  "reject": [
+   "File:Bunch of Grapes, Brompton, SW3 (4197149602).jpg"
+  ]
  },
  {
   "name": "strawberry",
@@ -25,7 +28,10 @@
  },
  {
   "name": "carrot",
-  "query": "carrot vegetable"
+  "query": "carrots",
+  "reject": [
+   "File:Carrots of many colors.jpg"
+  ]
  },
  {
   "name": "corn",
@@ -37,27 +43,45 @@
  },
  {
   "name": "broccoli",
-  "query": "broccoli"
+  "query": "broccoli head",
+  "reject": [
+   "File:Romanesco broccoli 2025 G2.jpg"
+  ]
  },
  {
   "name": "cheese",
-  "query": "cheese wedge"
+  "query": "Emmental cheese",
+  "reject": [
+   "File:Wedge salad with blue cheese dressing - San Francisco, CA.jpg"
+  ]
  },
  {
   "name": "pizza",
-  "query": "pizza"
+  "query": "pizza margherita",
+  "reject": [
+   "File:Vegetarian Pizza.jpg"
+  ]
  },
  {
   "name": "doughnut",
-  "query": "doughnut"
+  "query": "glazed doughnut",
+  "reject": [
+   "File:Doughnut (economic model).jpg"
+  ]
  },
  {
   "name": "cake",
-  "query": "birthday cake"
+  "query": "chocolate cake",
+  "reject": [
+   "File:My birthday cake! Oops there's only half left!.jpg"
+  ]
  },
  {
   "name": "dog",
-  "query": "dog portrait"
+  "query": "dog golden retriever",
+  "reject": [
+   "File:Human\u2013canine friendship - girl hugging her dog tightly at golden hour in Laos.jpg"
+  ]
  },
  {
   "name": "cat",
@@ -117,23 +141,38 @@
  },
  {
   "name": "fish",
-  "query": "goldfish"
+  "query": "goldfish",
+  "reject": [
+   "File:Fountain with goldfish in Jard\u00ed del Bisbe 03.jpg"
+  ]
  },
  {
   "name": "car",
-  "query": "red car"
+  "query": "red car",
+  "reject": [
+   "File:Red car toy.jpg"
+  ]
  },
  {
   "name": "bicycle",
-  "query": "bicycle"
+  "query": "bicycle side view",
+  "reject": [
+   "File:Parked bicycle with graffitied building facade and doors in Amsterdam.jpg"
+  ]
  },
  {
   "name": "aeroplane",
-  "query": "airliner aircraft"
+  "query": "airliner landing",
+  "reject": [
+   "File:Airliner Contrail.jpg"
+  ]
  },
  {
   "name": "rocket",
-  "query": "rocket launch"
+  "query": "rocket launch pad",
+  "reject": [
+   "File:First NASA ISINGLASS rocket launch.jpg"
+  ]
  },
  {
   "name": "sailboat",
@@ -149,7 +188,10 @@
  },
  {
   "name": "key",
-  "query": "key metal"
+  "query": "old key",
+  "reject": [
+   "File:MetalFestLogo2024.png"
+  ]
  },
  {
   "name": "balloon",
@@ -157,15 +199,24 @@
  },
  {
   "name": "guitar",
-  "query": "acoustic guitar"
+  "query": "acoustic guitar",
+  "reject": [
+   "File:Man playing an acoustic brazilian guitar (Viol\u00e3o) on Marco Zero Square, Refice, Pernambuco, Brazil.jpg"
+  ]
  },
  {
   "name": "football",
-  "query": "football soccer ball"
+  "query": "football ball grass",
+  "reject": [
+   "File:Jakarta old football.jpg"
+  ]
  },
  {
   "name": "hat",
-  "query": "hat"
+  "query": "fedora hat",
+  "reject": [
+   "File:Ronald Reagan with cowboy hat 12-0071M edit.jpg"
+  ]
  },
  {
   "name": "shoe",
@@ -173,7 +224,10 @@
  },
  {
   "name": "umbrella",
-  "query": "umbrella"
+  "query": "open umbrella",
+  "reject": [
+   "File:The Umbrella Workshop.jpg"
+  ]
  },
  {
   "name": "cactus",
@@ -189,11 +243,17 @@
  },
  {
   "name": "candle",
-  "query": "candle flame"
+  "query": "burning candle",
+  "reject": [
+   "File:Candle light projected through a glass orb.jpg"
+  ]
  },
  {
   "name": "fire",
-  "query": "campfire"
+  "query": "campfire flames",
+  "reject": [
+   "File:Campfire and sparks in Anttoora 3.jpg"
+  ]
  },
  {
   "name": "rainbow",
@@ -209,7 +269,10 @@
  },
  {
   "name": "books",
-  "query": "stack of books"
+  "query": "stack of books",
+  "reject": [
+   "File:Stack of Books for decor.jpg"
+  ]
  },
  {
   "name": "scissors",
@@ -217,7 +280,10 @@
  },
  {
   "name": "bell",
-  "query": "bell"
+  "query": "church bell",
+  "reject": [
+   "File:Chersonesos Bell.jpg"
+  ]
  },
  {
   "name": "teapot",

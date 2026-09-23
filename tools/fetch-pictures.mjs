@@ -91,14 +91,19 @@ async function candidate(item) {
     if (!hit) throw new Error(`${item.name}: pinned ${item.file} is not usable`);
     return hit;
   }
-  const data = await api({
-    action: "query", generator: "search", gsrnamespace: "6", gsrlimit: "30",
-    gsrsearch: `${item.query} filetype:bitmap`, ...INFO,
-  });
-  const pages = (data.query && data.query.pages || []).sort((a, b) => a.index - b.index);
-  for (const p of pages) {
-    const hit = usable(p, reject);
-    if (hit) return hit;
+  /* Commons' Quality images first: sharp, well exposed, and reviewed, which
+     in practice means the thing in the name is the thing in the frame. The
+     whole of Commons only when none of those will do. */
+  for (const scope of [" incategory:Quality_images", ""]) {
+    const data = await api({
+      action: "query", generator: "search", gsrnamespace: "6", gsrlimit: "30",
+      gsrsearch: `${item.query} filetype:bitmap${scope}`, ...INFO,
+    });
+    const pages = (data.query && data.query.pages || []).sort((a, b) => a.index - b.index);
+    for (const p of pages) {
+      const hit = usable(p, reject);
+      if (hit) return hit;
+    }
   }
   throw new Error(`${item.name}: nothing usable for "${item.query}"`);
 }
