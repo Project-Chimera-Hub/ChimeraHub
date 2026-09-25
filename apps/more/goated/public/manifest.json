@@ -1,0 +1,19 @@
+{
+  "name": "GOATED Relational n-Back",
+  "short_name": "GOATED n-Back",
+  "description": "Working-memory training on abstract relationships — spatial, trait, quantitative, verbal, complex.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080A0F",
+  "theme_color": "#2BE3C6",
+  "categories": ["education", "health", "games"],
+  "icons": [
+    { "src": "favicon.svg",                 "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png",                "sizes": "192x192", "type": "image/png",     "purpose": "any" },
+    { "src": "icon-512.png",                "sizes": "512x512", "type": "image/png",     "purpose": "any" },
+    { "src": "icon-192-maskable.png",       "sizes": "192x192", "type": "image/png",     "purpose": "maskable" },
+    { "src": "icon-512-maskable.png",       "sizes": "512x512", "type": "image/png",     "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "GOATED Relational n-Back",
+  "short_name": "GOATED n-Back",
+  "description": "GOATED Relational n-Back cognitive training app",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#080A0F",
+  "theme_color": "#2BE3C6"
+}
