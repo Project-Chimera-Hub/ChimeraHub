@@ -101,11 +101,11 @@ log("[build] precision (vite)");
 }
 
 /* The trainers under apps/more: offered by the hub in their own box, and not
-   counted toward the quota, because no adapter reads their storage yet. Three
-   are single pages and are copied as they are. GOATED is a Vite app like
+   counted toward the quota, because no adapter reads their storage yet. Four
+   are static pages and are copied as they are. GOATED is a Vite app like
    Precision, and its config already uses a relative base, so it runs at
    whatever depth it is put and needs no --base. */
-for (const name of ["posner", "schulte", "integration"]) {
+for (const name of ["posner", "schulte", "integration", "dorsalflow"]) {
   log(`[copy] more/${name}`);
   copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
 }

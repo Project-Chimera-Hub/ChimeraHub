@@ -77,6 +77,8 @@
       what: "Schulte tables against a memory span" },
     { id: "integration", name: "Relational Integration", path: "more/integration/", colour: "#f2cc60",
       what: "N-back over differences between numbers" },
+    { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
+      what: "Motion contrast and visual timing in noise" },
   ];
 
   var byId = {};

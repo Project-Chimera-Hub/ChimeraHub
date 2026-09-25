@@ -221,6 +221,9 @@ an adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
   Its own licence: free for non-commercial use, the Syllogimous-derived
   generator CC BY-NC 3.0.
 - `posner/`, `schulte/` — single pages, as they were.
+- `dorsalflow/` — a Vite app's built output, as it was published: the page,
+  one script and one stylesheet in `assets/`. There is no source for it here,
+  only the build, so it is kept as it is rather than edited.
 - `integration/` — a single page that loaded React, Babel and Tailwind from
   CDNs. The three are copied into `vendor/` and `tailwind.css` (React and
   Babel MIT, Tailwind MIT), so it runs with the network off like everything
