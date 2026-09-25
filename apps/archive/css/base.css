@@ -1,53 +1,49 @@
 /* One stylesheet, no build step. The value of this project is that it still
    runs in five years, and a toolchain is the part that rots first. That rules
-   out a webfont too: everything below draws on fonts the machine already has,
-   so the page looks the same on a plane as it does online.
+   out a webfont too: the stacks below draw on fonts the machine already has,
+   so the page looks the same on a plane as it does online. Inter is named
+   first because it is what the look was drawn in; where it is not installed
+   the system's own sans takes its place and nothing is fetched.
 
-   The look is the hub's, and it is the hub's for the same reason the hub has
-   one at all: this page is opened from there, and a record that arrives in a
-   different palette and a different family reads as a different application
-   rather than as the rest of the one you were just in. Desaturated sage on
-   near-black, one monospace family, wide-tracked caps for anything that
-   announces itself, and not one rounded corner.
-
-   What did NOT come across is the hub's photograph. That is a picture chosen
-   per machine and kept in the hub's own storage, and this page is six thousand
-   pixels of dense figures — the one surface in the project where a background
-   costs more than it gives. The glow behind the masthead is the whole of the
-   decoration here, and it is sage now rather than cold blue. */
+   The look is the Mindbuilding Tracker's: a sidebar you navigate from, a row
+   of headline figures, and the rest in soft-cornered panels on a near-black
+   ground. Colour is reserved for the sources — each has one hue, the hub's,
+   and it is the same on its dot in the sidebar, the bar down its card and its
+   chart. Everything else is greys and one indigo accent for the actions. */
 
 :root {
-  --bg: #080d0b;
-  --panel: #0f1713;
-  --panel-hi: #1a2821;
-  --ink: #c9e0d3;
-  --ink-strong: #e6f4ec;
-  --dim: #7e9a8a;
+  --bg: #0a0a0f;
+  --bg-sidebar: #0e0e14;
+  --bg-card: #13131b;
+  --bg-hover: #1a1a24;
+  --bg-input: #0f0f16;
 
-  /* One accent, and it is quiet — sage measures about 7.5:1 against the panel,
-     so it can carry small text as well as borders and fills. The rgb triple is
-     what lets a rule tint with it at any strength without a second token. */
-  --accent: #8fbda4;
-  --accent-2: #b7d8c5;
-  --accent-rgb: 143, 189, 164;
+  --text-primary: #ededf2;
+  --text-secondary: #a3a3b3;
+  --text-muted: #6e6e80;
 
-  /* Met is sage; the one warm thing on the page is a warning. */
-  --ok: #a9d2bb;
-  --bad: #8c4a4a;
-  --warn: #e3b341;
+  --border: rgba(255, 255, 255, .07);
+  --border-strong: rgba(255, 255, 255, .12);
 
-  --line: rgba(var(--accent-rgb), .30);
-  --line-soft: rgba(var(--accent-rgb), .13);
+  --accent: #818cf8;
+  --accent-hover: #939cfa;
+  --accent-rgb: 129, 140, 248;
+  --accent-2: #c084fc;
 
-  /* Nothing here is rounded. The token stays so the rules that used it keep
-     reading as shape decisions rather than as omissions. */
-  --radius: 0;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 20px 48px -26px rgba(0, 0, 0, .95);
+  --ok: #34d399;
+  --bad: #f87171;
+  --warn: #fbbf24;
 
-  /* One family. Every monospace worth having, in the order a machine is likely
-     to have them, ending at the generic that always exists. */
-  --font-body: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono",
-               SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+
+  --sidebar-w: 240px;
+
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", SFMono-Regular, Menlo,
+               Consolas, "DejaVu Sans Mono", monospace;
 
   /* Native controls — selects, the date picker — follow this. Without it the
      browser hands you a white dropdown in the middle of a dark page. */
@@ -56,250 +52,551 @@
 
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
-  margin: 0 auto;
-  /* Top padding clears the sticky bar rather than the bar overlapping the
-     masthead; `scroll-margin-top` below does the same for every anchor. */
-  padding: 4.75rem 1.5rem 5rem;
-  max-inline-size: 62rem;
+  margin: 0;
   background: var(--bg);
-  color: var(--ink);
+  color: var(--text-primary);
   font: 14px/1.6 var(--font-body);
   -webkit-font-smoothing: antialiased;
-
-  /* A single light source behind the masthead, so the page has a top. */
-  background-image: radial-gradient(60rem 22rem at 50% -8rem, rgba(var(--accent-rgb), .10), transparent 70%);
-  background-repeat: no-repeat;
 }
 
-/* The hub's masthead: tracked out and set in caps, so it is a heading by its
-   shape rather than by being bigger than everything under it. */
-h1 {
-  font-size: clamp(1.4rem, 5vw, 2rem);
-  font-weight: 400;
-  line-height: 1.15;
-  margin: 0 0 .6rem;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--ink-strong);
+.sprite { display: none; }
+
+/* Every button and badge here sets its own `display`, and any `display` beats
+   the browser's own rule for `hidden` — so without this, Undo with nothing to
+   undo and an unsaved count of zero would both be on screen. */
+[hidden] { display: none !important; }
+
+.icon {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-/*
- * Section headings carry a rule out to the right margin. It costs no markup —
- * the pseudo-element just eats the leftover flex space — and it does the one
- * thing this page needed most: show where one section stops and the next
- * starts, on a page that is six thousand pixels tall.
- */
-h2 {
-  display: flex;
-  align-items: center;
-  gap: .85rem;
-  font-size: .74rem;
-  margin: 3rem 0 .9rem;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--dim);
-}
-
-h2::after {
-  content: "";
-  flex: 1;
-  block-size: 1px;
-  background: linear-gradient(90deg, var(--line), transparent);
-}
-
-h3 { font-size: .95rem; margin: 0 0 .35rem; color: var(--ink-strong); }
+h3 { font-size: .95rem; font-weight: 600; margin: 0 0 .35rem; color: var(--text-primary); }
 p { margin: .35rem 0; }
 
 code {
-  font-size: .92em;
-  color: var(--accent);
+  font: .85em var(--font-mono);
+  color: var(--accent-hover);
   background: rgba(var(--accent-rgb), .10);
   padding: .1em .4em;
+  border-radius: 4px;
 }
 
-.dim { color: var(--dim); }
+.dim { color: var(--text-secondary); }
 
 /* Every number on this page is meant to be compared with the one above it. */
-b, table, .streaks { font-variant-numeric: tabular-nums; }
+b, table, .stat-value, .cat-hours { font-variant-numeric: tabular-nums; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* ---- the drop zone ---- */
+/* ------------------------------------------------------------------ *
+ * The frame: a sidebar and the content beside it                      *
+ * ------------------------------------------------------------------ */
 
-.drop {
-  margin-top: 1.75rem;
-  padding: 1.75rem 1.5rem;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-hi);
-  text-align: center;
-  transition: border-color .15s, background .15s, transform .15s;
+.app-layout { min-block-size: 100vh; }
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  inline-size: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sidebar);
+  border-inline-end: 1px solid var(--border);
 }
 
-.drop:hover { border-color: rgba(var(--accent-rgb), .55); }
-
-.drop.over {
-  border-color: var(--accent);
-  background: rgba(var(--accent-rgb), .10);
-  transform: scale(1.004);
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 20px 18px;
+  border-block-end: 1px solid var(--border);
 }
 
-.row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
-.drop .row { justify-content: center; }
+.logo-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 4px 14px -4px rgba(var(--accent-rgb), .6);
+}
 
-/* The hub's pair: the quiet one is the outline, and the one you came to press
-   is filled in the accent with dark ink on it. */
-.btn {
-  padding: .5rem .95rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(var(--accent-rgb), .06);
-  color: var(--accent);
-  font: inherit;
-  font-size: .82rem;
+.logo-icon .icon { inline-size: 18px; block-size: 18px; }
+
+.sidebar-logo h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.nav-label {
+  padding: 14px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.nav-label:first-child { padding-top: 4px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: start;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .12s, background .12s;
+}
+
+.nav-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+/* Set by the scroll spy in app.js, so the sidebar says where you are rather
+   than only where you can go. */
+.nav-item.active {
+  color: var(--text-primary);
+  background: rgba(var(--accent-rgb), .12);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.nav-item.active .icon { color: var(--accent); }
+
+.nav-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  margin-inline: 4px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--c, var(--text-muted));
+  box-shadow: 0 0 8px -1px var(--c, transparent);
+}
+
+.nav-item .nav-meta {
+  margin-inline-start: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-sources .nav-item { overflow: hidden; }
+.nav-sources .nav-name { overflow: hidden; text-overflow: ellipsis; }
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-block-start: 1px solid var(--border);
+}
+
+.sidebar-save { inline-size: 100%; justify-content: center; margin-top: 4px; }
+
+.main-content {
+  margin-inline-start: var(--sidebar-w);
+  padding: 32px 40px 80px;
+  max-inline-size: calc(var(--sidebar-w) + 1240px);
+}
+
+.page-header { margin-bottom: 24px; }
+
+.page-header h2 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--text-primary);
+}
+
+.page-header p { margin: 0; max-inline-size: 46rem; color: var(--text-secondary); }
+.page-header b { color: var(--text-primary); font-weight: 600; }
+
+/* ------------------------------------------------------------------ *
+ * Headline figures                                                    *
+ * ------------------------------------------------------------------ */
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stat-label .icon { inline-size: 12px; block-size: 12px; }
+
+.stat-value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  color: var(--text-primary);
+}
+
+.stat-value small { font-size: 14px; font-weight: 400; color: var(--text-secondary); letter-spacing: 0; }
+.stat-value.none { color: var(--text-muted); }
+.stat-sub { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
+
+/* ------------------------------------------------------------------ *
+ * Panels                                                              *
+ * ------------------------------------------------------------------ */
+
+.panel {
+  margin-bottom: 20px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  /* Anchors land with a little air above them rather than flush on the edge,
+     and below the top bar on a phone. */
+  scroll-margin-top: 20px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel > p.dim { font-size: 13px; max-inline-size: 52rem; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.grid-2 > .panel { margin-bottom: 20px; }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+
+/* ---- buttons ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: border-color .12s, background .12s, color .12s;
 }
 
-.btn:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), .12); color: var(--accent-2); }
+.btn:hover { border-color: rgba(255, 255, 255, .2); background: #20202c; }
 
-.btn.primary {
+.btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0a1310;
-  font-weight: 600;
+  color: #fff;
 }
 
-.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #0a1310; }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-sm .icon { inline-size: 14px; block-size: 14px; }
 
 .btn:disabled {
-  opacity: .4;
+  opacity: .45;
   cursor: default;
-  border-color: var(--line);
-  background: var(--panel);
-  color: var(--dim);
-  box-shadow: none;
+  background: var(--bg-hover);
+  border-color: var(--border);
+  color: var(--text-muted);
 }
 
-/* Selects and the date field, so the filter row reads as one control strip. */
-select, input[type="date"] {
-  margin-inline-start: .35rem;
-  padding: .42rem .55rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-hi);
-  color: var(--ink);
+/* Secondary to the button beside it: available, not advertised. */
+.btn.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--text-secondary);
+}
+
+.btn.quiet:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+/* The count of imports not yet in any file. Silent when there are none —
+   a badge reading zero is a badge nobody stops reading. */
+.pill {
+  display: inline-block;
+  margin-inline-start: 4px;
+  min-inline-size: 1.25rem;
+  padding: 0 .4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .28);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+td .pill { background: rgba(var(--accent-rgb), .16); color: var(--accent-hover); }
+
+/* ---- inputs ---- */
+
+select, input[type="date"], input[type="text"], input[type="number"],
+input[type="search"], textarea {
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
   font: inherit;
+  font-size: 13px;
+  transition: border-color .12s;
 }
 
-select:hover, input[type="date"]:hover { border-color: var(--accent); }
-label { color: var(--dim); font-size: .9rem; }
+select:hover, input:hover, textarea:hover { border-color: rgba(255, 255, 255, .2); }
+
+select:focus, input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .18);
+}
+
+label { color: var(--text-secondary); font-size: 13px; }
+.filters label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ------------------------------------------------------------------ *
+ * The drop zone                                                       *
+ * ------------------------------------------------------------------ */
+
+.drop {
+  padding: 28px 24px;
+  border: 1.5px dashed var(--border-strong);
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+
+.drop:hover { border-color: rgba(var(--accent-rgb), .5); }
+
+.drop.over {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), .08);
+}
+
+.drop__icon {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), .12);
+}
+
+.drop__icon .icon { inline-size: 20px; block-size: 20px; }
+.drop > p.dim { font-size: 13px; }
+.drop .row { justify-content: center; }
 
 /*
  * The line under the drop zone that says whether the file on disk is behind
  * this page. Amber, not red: nothing is broken, something is merely waiting.
  */
 .savestate {
-  margin: .9rem 0 0;
-  font-size: .87rem;
-  color: var(--dim);
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
   min-block-size: 1.2em;
 }
 
-.savestate.warn {
-  color: var(--warn);
+.savestate.warn { color: var(--warn); }
+.savestate.warn b { color: #fcd34d; }
+
+/* ------------------------------------------------------------------ *
+ * Sources, as the tracker's category cards                            *
+ * ------------------------------------------------------------------ */
+
+.cat-list { display: flex; flex-direction: column; gap: 8px; }
+
+.category-card {
+  position: relative;
+  padding: 12px 14px 12px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  overflow: hidden;
+  scroll-margin-top: 20px;
+  transition: border-color .14s, background .14s;
 }
 
-.savestate.warn b { color: #f0c674; }
-
-/* Secondary to the download button beside it: available, not advertised. */
-.btn.quiet {
-  padding: .35rem .7rem;
-  font-size: .85rem;
-  background: none;
-  color: var(--dim);
+/* The source's colour, as a bar down the left edge. */
+.category-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  inline-size: 3px;
+  background: var(--c, var(--text-muted));
 }
 
-.btn.quiet:hover { color: var(--ink); }
+.category-card:hover { border-color: var(--border-strong); background: #0d0d13; }
 
-/* ---- cards ---- */
+.cat-header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cat-abbr { font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--c, var(--text-primary)); }
+.cat-full { font-size: 12px; color: var(--text-muted); }
 
-.cards { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.cat-hours {
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text-primary);
+}
+
+.cat-hours span { font-size: 13px; font-weight: 400; color: var(--text-secondary); }
+.cat-meta { font-size: 12.5px; color: var(--text-secondary); }
+.cat-meta b { color: var(--text-primary); font-weight: 600; }
+.category-card p { margin: 2px 0 0; font-size: 12.5px; }
+
+/* ---- generic cards: overlap pairs, measures ---- */
+
+.cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  margin-top: 12px;
+}
+
+.modes > *, .cards > * { min-width: 0; }
 
 .card {
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--line);
-  border-inline-start: 3px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-hi);
-  box-shadow: var(--shadow);
-  transition: border-color .14s, transform .14s;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  transition: border-color .14s;
 }
 
-.card:hover {
-  transform: translateY(-1px);
-  border-block-color: rgba(var(--accent-rgb), .5);
-  border-inline-end-color: rgba(var(--accent-rgb), .5);
-}
+.card:hover { border-color: var(--border-strong); }
 
 /* The headline figures. A card is scanned, not read, so the counts outrank
    the words around them instead of sharing their weight. */
-.card p:first-of-type { color: var(--dim); }
-.card p:first-of-type b { font-size: 1.3rem; font-weight: 650; color: var(--ink-strong); }
-.card p { margin: .3rem 0; }
-.card .dim { font-size: .87rem; }
+.card p:first-of-type { color: var(--text-secondary); }
+.card p:first-of-type b { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+.card p { margin: .3rem 0; font-size: 13px; }
 
-.card.ok { border-inline-start-color: var(--ok); }
-.card.waiting { border-inline-start-color: var(--dim); }
+.card.ok { box-shadow: inset 3px 0 0 var(--ok); }
+.card.waiting { box-shadow: inset 3px 0 0 var(--border-strong); }
 
-/* ---- the day table ---- */
+/* ------------------------------------------------------------------ *
+ * Tables                                                              *
+ * ------------------------------------------------------------------ */
 
-table { inline-size: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { padding: .38rem .55rem; text-align: right; border-block-end: 1px solid var(--line-soft); }
-th { color: var(--dim); font-weight: 500; font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; }
+table { inline-size: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 10px; text-align: right; border-block-end: 1px solid var(--border); }
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
 th:first-child, td:first-child { text-align: left; }
-td:last-child { color: var(--ok); font-size: .8rem; }
+td:last-child { color: var(--ok); font-size: 12px; }
+tr:last-child td { border-block-end: 0; }
 
-/* The header of a 1800px table is worth keeping on screen. It is a `tr` of
+.table-wrap {
+  margin-top: 14px;
+  max-block-size: 70vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+/* The header of an 1800px table is worth keeping on screen. It is a `tr` of
    `th` inside the tbody, not a `thead`, so the stickiness goes on the cells. */
-#days th {
+#daysTable th {
   position: sticky;
   inset-block-start: 0;
-  background: var(--bg);
-  border-block-end-color: var(--line);
+  background: var(--bg-card);
+  border-block-end-color: var(--border-strong);
   z-index: 1;
 }
 
-/* Striping the cells and not the rows leaves that header row alone. */
-#days tr:nth-of-type(even) td { background: rgba(255, 255, 255, .022); }
-#days tr:hover td { background: rgba(var(--accent-rgb), .09); }
+#daysTable tr:hover td { background: rgba(var(--accent-rgb), .07); }
 
 /* ---- the import log ---- */
 
-.log { list-style: none; padding: 0; margin: 0; font-size: .88rem; color: var(--dim); }
-.log li { padding: .4rem 0; border-block-end: 1px solid var(--line-soft); }
+.log { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text-secondary); }
+.log li { padding: 8px 0; border-block-end: 1px solid var(--border); overflow-wrap: anywhere; }
+.log li:last-child { border-block-end: 0; }
 .log li.bad { color: var(--bad); }
+#log:empty::before { content: "Nothing imported in this session yet."; color: var(--text-muted); }
 
 /* ------------------------------------------------------------------ *
  * The year                                                            *
  * ------------------------------------------------------------------ */
-
-.streaks {
-  display: flex;
-  gap: 1.5rem;
-  margin: 0 0 .9rem;
-  align-items: baseline;
-  flex-wrap: wrap;
-  color: var(--dim);
-}
-
-.streaks b { font-size: 1.7rem; font-weight: 650; color: var(--ink-strong); margin-inline-end: .15rem; }
 
 /*
  * Columns of seven, filled top to bottom, so each column is one week — the
@@ -308,27 +605,31 @@ td:last-child { color: var(--ok); font-size: .8rem; }
  */
 .heatmap {
   display: grid;
-  grid-template-rows: repeat(7, 13px);
+  grid-template-rows: repeat(7, 12px);
   grid-auto-flow: column;
-  grid-auto-columns: 13px;
+  grid-auto-columns: 12px;
   gap: 3px;
-  overflow-x: auto;
+  max-inline-size: 100%;
+  margin-top: 14px;
   padding-bottom: 8px;
+  overflow-x: auto;
 }
 
-.heatmap .cell {
-  width: 13px;
-  height: 13px;
-  display: block;
-  transition: outline-color .1s;
+.cell {
+  display: inline-block;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .04);
   outline: 1px solid transparent;
+  transition: outline-color .1s;
 }
 
-.heatmap .cell:hover { outline-color: var(--ink); }
+.heatmap .cell:hover { outline-color: var(--text-primary); }
 .heatmap .pad { visibility: hidden; }
 
 /* A rest day: known, and empty. */
-.heatmap .s-rested { background: rgba(var(--accent-rgb), .12); }
+.cell.s-rested { background: rgba(255, 255, 255, .07); }
 
 /*
  * A day nobody has evidence about. Hatched rather than shaded, because any
@@ -337,28 +638,37 @@ td:last-child { color: var(--ok); font-size: .8rem; }
  * unevidenced days are most of the grid, and at full strength the texture
  * outshouts the training it is supposed to frame.
  */
-.heatmap .s-unknown {
+.cell.s-unknown {
   background: repeating-linear-gradient(
-    45deg, rgba(var(--accent-rgb), .10) 0 1px, transparent 1px 4px);
+    45deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 4px);
 }
 
-/* The amount, in four steps of the one accent. A sequential scale wants a
-   single hue and this theme has a single hue, so the ramp is the sage the rest
-   of the page is drawn in, darkest to brightest. */
-.heatmap .L1 { background: #1c2f25; }
-.heatmap .L2 { background: #2f4b3b; }
-.heatmap .L3 { background: #5b866e; }
-.heatmap .L4 { background: #8fbda4; }
+/* The amount, in four steps of the one accent. */
+.cell.L1 { background: rgba(var(--accent-rgb), .25); }
+.cell.L2 { background: rgba(var(--accent-rgb), .45); }
+.cell.L3 { background: rgba(var(--accent-rgb), .70); }
+.cell.L4 { background: var(--accent); }
+
+.legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legend span { display: inline-flex; align-items: center; gap: 3px; }
+.legend span .cell:last-of-type { margin-inline-end: 4px; }
 
 /* ------------------------------------------------------------------ *
  * Ability                                                             *
  * ------------------------------------------------------------------ */
 
-.ability { margin: 0 0 1rem; }
+.ability { margin: 0 0 12px; }
 
 .ability__now {
   display: flex;
-  gap: .9rem;
+  gap: 12px;
   align-items: baseline;
   flex-wrap: wrap;
 }
@@ -368,11 +678,15 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .ability__tier {
   font-size: 3.2rem;
   line-height: 1;
-  font-weight: 650;
-  color: var(--ink-strong);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-.ability__level { color: var(--dim); }
+.ability__level { color: var(--text-secondary); }
+.ability p.dim { font-size: 13px; }
 
 /*
  * Six rungs, filled to where the estimate stands.
@@ -385,20 +699,29 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .ability__scale {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 3px;
-  margin: .7rem 0 .8rem;
+  gap: 4px;
+  margin: 12px 0;
   max-inline-size: 34rem;
 }
 
 .ability__scale .rung {
   position: relative;
   display: block;
-  height: 2.1rem;
-  border: 1px solid var(--line-soft);
+  block-size: 34px;
+  border-radius: 6px;
   background:
     linear-gradient(to right,
-      rgba(var(--accent-rgb), .42) 0 calc(var(--fill) * 100%),
-      transparent calc(var(--fill) * 100%) 100%);
+      rgba(var(--accent-rgb), .55) 0 calc(var(--fill) * 100%),
+      rgba(255, 255, 255, .04) calc(var(--fill) * 100%) 100%);
+}
+
+.ability__scale .rung b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* A row whose two readings of the same trainer disagree: the app's own estimate
@@ -407,252 +730,218 @@ td:last-child { color: var(--ok); font-size: .8rem; }
 .modes tr.warn td { color: var(--warn); }
 .modes tr.warn td.dim b { color: var(--warn); font-weight: 650; }
 
-.ability__scale .rung b {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-weight: 650;
-  color: var(--ink);
+/* The working, in half the width: it scrolls on its own rather than squeezing
+   a reading like "34.61 rnb-load" onto three lines. */
+#abilityParts { display: block; overflow-x: auto; }
+#abilityParts td:nth-child(2), #abilityParts td:nth-child(4) { white-space: nowrap; }
+#abilityParts td:nth-child(3) { min-inline-size: 12rem; text-align: left; }
+
+#abilityBadge { font-size: 13px; margin-top: 4px; }
+#abilityUnused { margin-top: 8px; font-size: 12.5px; }
+
+/* The working behind the letter, folded until asked for. */
+.about { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); }
+.about summary {
+  cursor: pointer;
+  inline-size: fit-content;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
 }
+.about summary:hover { color: var(--text-primary); }
+.about p { margin: 8px 0 0; }
 
 /* ------------------------------------------------------------------ *
  * Over time                                                           *
  * ------------------------------------------------------------------ */
 
-.chart {
-  margin: 0 0 .9rem;
-  padding: .9rem 1rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel-hi);
+.charts {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  margin-top: 14px;
 }
 
-.chart h3 { margin: 0 0 .5rem; font-size: 0.95rem; }
-.chart h3 small { display: block; font-weight: 400; font-size: .8rem; margin-top: .15rem; }
+.chart {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  scroll-margin-top: 20px;
+}
+
+.chart h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; font-size: 14px; }
+.chart h3 .nav-dot { margin: 0; }
+.chart h3 small { flex-basis: 100%; font-weight: 400; font-size: 12px; color: var(--text-muted); }
 .chart svg { width: 100%; height: 120px; display: block; overflow: visible; }
-.chart .bars rect { fill: rgba(var(--accent-rgb), .30); transition: fill .1s; }
-.chart .bars rect:hover { fill: rgba(var(--accent-rgb), .62); }
-.chart .acc { fill: none; stroke: var(--ok); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.chart .bars rect { fill: var(--c, var(--accent)); opacity: .3; transition: opacity .1s; }
+.chart .bars rect:hover { opacity: .7; }
+.chart .acc {
+  fill: none;
+  stroke: var(--c, var(--accent));
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
 
 /*
  * Not `.cards`. That grid is `minmax(15rem, 1fr)`, and a four-column table of
  * labels like "Comparison Chronological" has a min-content width well past
  * 15rem — a grid item will not shrink below that, so the track grew, the grid
- * grew, and the whole page went wider than the body it sits in. Everything
- * looked shifted because everything was.
+ * grew, and the whole page went wider than the body it sits in.
  *
  * Wider tracks, `min-width: 0` so a stubborn child yields, and each table given
  * its own scroll rather than being allowed to push its container.
  */
 .modes {
   display: grid;
-  gap: .75rem 1.5rem;
+  gap: 16px 24px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
 }
 
-.modes > *, .cards > * { min-width: 0; }
-
-.modes table { width: 100%; margin-bottom: 1rem; }
-.modes h3 { margin: 0 0 .4rem; font-size: 0.95rem; }
-.modes tr:hover td { background: rgba(var(--accent-rgb), .09); }
+.modes > div { overflow-x: auto; }
+.modes table { width: 100%; }
+.modes h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; }
+.modes h3 .nav-dot { margin: 0; }
+.modes tr:hover td { background: rgba(var(--accent-rgb), .07); }
 
 /* Long labels wrap instead of setting the table's width. */
 .modes td:first-child { overflow-wrap: anywhere; }
 
-/* The heatmap is ~800px of squares; on a narrow window it scrolls rather than
-   dragging the page along with it. */
-.heatmap { max-inline-size: 100%; }
-
-/* ---- phones ---- */
-
-@media (max-width: 34rem) {
-  body { padding: 1.75rem 1rem 3.5rem; }
-  h1 { font-size: 1.55rem; }
-  h2 { margin-top: 2.25rem; }
-  .drop { padding: 1.25rem 1rem; }
-  .streaks { gap: 1.1rem; }
-  .streaks b { font-size: 1.45rem; }
-  th, td { padding: .34rem .4rem; }
-}
-
-/* Nothing here needs motion to be understood. */
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
-}
-
-
 /* ------------------------------------------------------------------ *
- * The bar                                                             *
- * ------------------------------------------------------------------ *
- *
- * This page is one document six thousand pixels tall, so the navigation is
- * in-page rather than routed: eight anchors and the one action that must be
- * reachable from all of them. The archive does not exist until it is
- * downloaded, and a Download button only at the top means the moment you
- * notice unsaved work is the moment you have to scroll away from it.
- */
-
-.topbar {
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: .5rem max(1.5rem, calc(50vw - 31rem));
-  background: rgba(8, 13, 11, .86);
-  border-block-end: 1px solid var(--line-soft);
-  /* Frosted where it is supported, flat where it is not — the fallback is the
-     colour above, which is already opaque enough to read against. */
-  backdrop-filter: blur(10px);
-}
-
-.topbar__brand {
-  font-size: .74rem;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--ink-strong);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-/*
- * Scrolls sideways rather than wrapping. A bar that grows to two rows on a
- * narrow screen moves every anchor underneath it and then hides the section
- * you just jumped to.
- */
-.topbar__links {
-  display: flex;
-  gap: .15rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-inline-end: auto;
-}
-
-.topbar__links::-webkit-scrollbar { display: none; }
-
-.topbar__links a {
-  padding: .3rem .55rem;
-  border-radius: var(--radius);
-  font-size: .76rem;
-  color: var(--dim);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color .12s, background .12s;
-}
-
-.topbar__links a:hover { color: var(--ink); background: var(--panel-hi); }
-
-/* Set by the scroll spy in app.js, so the bar says where you are rather than
-   only where you can go. */
-.topbar__links a.is-current {
-  color: var(--ink-strong);
-  background: var(--panel-hi);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.topbar__save { padding: .32rem .8rem; font-size: .78rem; }
-.topbar__save:disabled { opacity: .45; }
-
-/* The count of imports not yet in any file. Silent when there are none —
-   a badge reading zero is a badge nobody stops reading. */
-.pill {
-  display: inline-block;
-  margin-inline-start: .45rem;
-  min-inline-size: 1.15rem;
-  padding: 0 .3rem;
-  background: rgba(0, 0, 0, .32);
-  font-size: .72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Anchors land below the bar instead of behind it. */
-section[id] { scroll-margin-top: 4rem; }
-
-html { scroll-behavior: smooth; }
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-}
-
-@media (max-width: 40rem) {
-  .topbar__brand { display: none; }
-  body { padding-top: 4rem; }
-}
-
-/* ------------------------------------------------------------------ *
- * Notes                                                              *
+ * Notes                                                               *
  * ------------------------------------------------------------------ */
 
-.noteform { margin-top: 1rem; }
-.noteform label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; color: var(--dim); }
-.noteform label.grow { flex: 1 1 14rem; }
-.noteform .row { margin-top: .6rem; align-items: flex-end; }
-
-.noteform input[type="text"],
-.noteform input[type="date"],
-.noteform input[type="number"],
-.noteform input[type="search"],
-.noteform textarea,
-#noteFilter {
-  padding: .4rem .55rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  color: var(--ink);
-  font: inherit;
-  font-size: .9rem;
-}
-.noteform textarea { width: 100%; resize: vertical; line-height: 1.5; }
-.noteform input:focus, .noteform textarea:focus, #noteFilter:focus {
-  outline: none; border-color: var(--accent);
-}
+.noteform { margin-top: 14px; }
+.noteform label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 500; }
+.noteform label.grow, .panel label.grow { flex: 1 1 14rem; display: flex; flex-direction: column; gap: 5px; }
+.noteform .row { margin-top: 10px; align-items: flex-end; }
+.noteform textarea { width: 100%; margin-top: 10px; resize: vertical; line-height: 1.5; }
 
 /* The number is optional and reads as optional: set back, not boxed in as a
    field you have to get past to write a sentence. */
 .measure {
-  margin: .8rem 0 0;
-  padding: .1rem .8rem .8rem;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
+  margin: 12px 0 0;
+  padding: 4px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-.measure legend { padding: 0 .4rem; font-size: .75rem; color: var(--dim); }
+.measure legend { padding: 0 6px; font-size: 12px; color: var(--text-muted); }
 .measure input[type="number"] { max-inline-size: 7rem; }
 .measure input[type="text"] { max-inline-size: 10rem; }
 
-.notes { list-style: none; margin: 1rem 0 0; padding: 0; }
+.notes { list-style: none; margin: 14px 0 0; padding: 0; }
+.notes > li.dim { font-size: 13px; }
 .note {
-  padding: .7rem .85rem;
-  margin-bottom: .5rem;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  background: var(--panel);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
 }
-.note__head { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; font-size: .85rem; }
-.note__acts { margin-inline-start: auto; display: flex; gap: .2rem; }
-.note__acts .btn { padding: .1rem .45rem; font-size: .75rem; }
+.note__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.note__head .pill { background: rgba(var(--accent-rgb), .14); color: var(--accent-hover); padding: 1px 8px; }
+.note__acts { margin-inline-start: auto; display: flex; gap: 2px; }
+.note__acts .btn { padding: 3px 8px; font-size: 12px; }
 /* Wrapping and newlines both preserved: a note is written prose, and one long
    line of it must not drag the page wider than the screen. */
-.note__text { margin: .5rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note__text { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.tagrow { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; align-items: center; }
+.tagrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; font-size: 12px; }
 .tag {
   display: inline-block;
-  padding: .1rem .45rem;
-  border: 1px solid var(--line);
+  padding: 2px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
   background: transparent;
-  color: var(--dim);
+  color: var(--text-secondary);
   font: inherit;
-  font-size: .72rem;
+  font-size: 12px;
 }
 button.tag { cursor: pointer; }
-button.tag:hover { color: var(--ink); border-color: var(--accent); }
+button.tag:hover { color: var(--text-primary); border-color: var(--accent); }
 
-.points { display: flex; flex-wrap: wrap; gap: .5rem; }
+.points { display: flex; flex-wrap: wrap; gap: 6px; }
 .point {
-  padding: .15rem .5rem;
-  border: 1px solid var(--line-soft);
-  font-size: .8rem;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * Narrower windows                                                    *
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 1180px) {
+  .grid-2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+@media (max-width: 1000px) {
+  .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/*
+ * On a phone — or in the hub's frame on one — the sidebar becomes a bar across
+ * the top. It scrolls sideways rather than wrapping: a bar that grows to two
+ * rows moves every anchor underneath it and then hides the section you just
+ * jumped to. The per-source rows and the section labels go; the download
+ * stays, because it is the one thing that must be reachable from everywhere.
+ */
+@media (max-width: 820px) {
+  .sidebar {
+    inset: 0 0 auto 0;
+    inline-size: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--border);
+    background: rgba(14, 14, 20, .92);
+    backdrop-filter: blur(10px);
+  }
+
+  .sidebar-logo { padding: 0; border: 0; }
+  .sidebar-logo h1 { display: none; }
+  .logo-icon { inline-size: 28px; block-size: 28px; }
+
+  .sidebar-nav {
+    flex-direction: row;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .sidebar-nav::-webkit-scrollbar { display: none; }
+  .nav-label, .nav-sources { display: none; }
+  .sidebar-nav .nav-item { inline-size: auto; padding: 6px 10px; font-size: 13px; }
+  .sidebar-nav .nav-item .icon { display: none; }
+  .nav-item.active { box-shadow: inset 0 -2px 0 var(--accent); }
+
+  .sidebar-footer { flex-direction: row; padding: 0; border: 0; }
+  .sidebar-footer label.nav-item { display: none; }
+  .sidebar-save { margin: 0; padding: 6px 10px; inline-size: auto; }
+
+  .main-content { margin: 0; padding: 72px 16px 56px; }
+  .page-header h2 { font-size: 22px; }
+  .panel { padding: 16px; scroll-margin-top: 64px; }
+  .category-card, .chart { scroll-margin-top: 64px; }
+}
+
+@media (max-width: 480px) {
+  .stats-row { gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 22px; }
+  .drop { padding: 20px 14px; }
+  th, td { padding: 6px 7px; }
+  .sidebar-save .icon { display: none; }
+}
+
+/* Nothing here needs motion to be understood. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
 }

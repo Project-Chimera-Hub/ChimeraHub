@@ -8,55 +8,137 @@
      that loaded the page while the wiring was broken would keep serving
      itself the broken script for ten more minutes — and the failure is
      silent, so it would read as "the fix did not work". Bump on release. -->
-<link rel="stylesheet" href="css/base.css?v=7">
+<link rel="stylesheet" href="css/base.css?v=8">
 </head>
 <body>
 
-<nav class="topbar" aria-label="Sections">
-  <a class="topbar__brand" href="#drop">Training archive</a>
-  <div class="topbar__links">
-    <a href="#drop">Import</a>
-    <a href="#year">Year</a>
-    <a href="#sources">Sources</a>
-    <a href="#ability">Ability</a>
-    <a href="#over-time">Over&nbsp;time</a>
-    <a href="#modes">Modes</a>
-    <a href="#overlap">Overlap</a>
-    <a href="#days">Days</a>
-    <a href="#notes">Notes</a>
-    <a href="#imports">Log</a>
+<!-- The icons, once. Lucide's outlines (ISC), inline so the page makes no
+     request to anybody — the same promise as the rest of it. -->
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.85.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.85Z"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+</svg>
+
+<div class="app-layout">
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><svg class="icon"><use href="#i-archive"/></svg></div>
+    <h1>Archive</h1>
   </div>
+
+  <nav class="sidebar-nav" aria-label="Sections">
+    <span class="nav-label">Overview</span>
+    <a class="nav-item" href="#drop"><svg class="icon"><use href="#i-upload"/></svg>Import</a>
+    <a class="nav-item" href="#year"><svg class="icon"><use href="#i-calendar"/></svg>Year</a>
+    <a class="nav-item" href="#ability"><svg class="icon"><use href="#i-gauge"/></svg>Ability</a>
+
+    <span class="nav-label">Record</span>
+    <a class="nav-item" href="#sources"><svg class="icon"><use href="#i-layers"/></svg>Sources</a>
+    <a class="nav-item" href="#over-time"><svg class="icon"><use href="#i-chart"/></svg>Over&nbsp;time</a>
+    <a class="nav-item" href="#modes"><svg class="icon"><use href="#i-list"/></svg>Modes</a>
+    <a class="nav-item" href="#overlap"><svg class="icon"><use href="#i-compare"/></svg>Overlap</a>
+    <a class="nav-item" href="#days"><svg class="icon"><use href="#i-table"/></svg>Days</a>
+
+    <span class="nav-label">Yours</span>
+    <a class="nav-item" href="#notes"><svg class="icon"><use href="#i-pen"/></svg>Notes</a>
+    <a class="nav-item" href="#imports"><svg class="icon"><use href="#i-scroll"/></svg>Log</a>
+
+    <!-- One row per source, filled by renderSources: the dot is the source's
+         colour, the same one its card, its chart and the hub's bar use. -->
+    <div id="navSources" class="nav-sources"></div>
+  </nav>
+
   <!-- The one action worth reaching from anywhere: the page is six thousand
        pixels tall and the archive only exists once it is downloaded. -->
-  <button id="save" class="btn primary topbar__save" type="button" disabled>
-    Download<span id="unsaved" class="pill" hidden></span>
-  </button>
-</nav>
+  <div class="sidebar-footer">
+    <label class="nav-item" for="file"><svg class="icon"><use href="#i-upload"/></svg>Import files</label>
+    <button id="save" class="btn btn-primary sidebar-save" type="button" disabled>
+      <svg class="icon"><use href="#i-download"/></svg>Download<span id="unsaved" class="pill" hidden></span>
+    </button>
+  </div>
+</aside>
 
-<header>
-  <h1>Training archive</h1>
-  <p class="dim">
+<main class="main-content">
+
+<header class="page-header">
+  <h2>Training archive</h2>
+  <p>
     One record across every trainer. The <b>file is the archive</b> — this page only
     maintains it. Nothing a browser holds survives clearing site data, so the copy
     that matters is the one you download and keep.
   </p>
 </header>
 
-<section id="drop" class="drop">
+<div id="stats" class="stats-row"></div>
+
+<section id="drop" class="panel drop">
+  <div class="drop__icon"><svg class="icon"><use href="#i-upload"/></svg></div>
   <p><b>Drop exports here</b> — or the archive itself, to restore it.</p>
   <p class="dim">Syllogimous backups and RNB exports are recognised by their shape, not their name.</p>
   <div class="row">
-    <label class="btn">Choose files<input id="file" type="file" accept=".json" multiple hidden></label>
-    <button id="neighbours" class="btn" type="button">Read this browser</button>
-  </div>
-  <div class="row">
-    <button id="undo" class="btn quiet" type="button" hidden>Undo last import</button>
+    <label class="btn btn-primary"><svg class="icon"><use href="#i-upload"/></svg>Choose files<input id="file" type="file" accept=".json" multiple hidden></label>
+    <button id="neighbours" class="btn" type="button"><svg class="icon"><use href="#i-monitor"/></svg>Read this browser</button>
+    <button id="undo" class="btn quiet" type="button" hidden><svg class="icon"><use href="#i-undo"/></svg>Undo last import</button>
   </div>
   <p id="savestate" class="savestate"></p>
 </section>
 
-<section id="year">
-  <h2>The year</h2>
+<div class="grid-2">
+
+<section id="ability" class="panel">
+  <div class="panel-head"><h2>Ability</h2></div>
+  <div id="abilityHead" class="ability"></div>
+  <details class="about">
+    <summary>How this is read</summary>
+    <p>
+      Where the whole record stands, on six bands of roughly similar proficiency
+      &mdash; &alpha; to &zeta;, from the <b>Guanxinandu S11</b> benchmark, which is
+      used here for its calibration rather than its test protocol: it says what
+      "about this good" looks like in five trainers' own units, and nothing else
+      supplies that. Each trainer is read against its own anchor, in its own units;
+      nothing averages one app's difficulty with another's.
+    </p>
+    <p>
+      <b>Where a trainer keeps its own ability estimate, that is what is read</b> —
+      RNB's best cleared load, Syllogimous's ability posterior, eWMT's best n. Each
+      has already applied its own target accuracy and its own chance correction, and
+      those differ: RNB scores a block so that never pressing is 0 and perfect is 1,
+      where about 0.5 is four answers in five. So accuracy is not second-guessed
+      here, and there is no bar to clear. A thin reading is reported thin and
+      weighed light; it is never withheld, and no one trainer's settings can
+      suppress the rest.
+    </p>
+  </details>
+  <div id="abilityParts" class="modes"></div>
+  <p id="abilityBadge" class="dim"></p>
+  <ul id="abilityUnused" class="log"></ul>
+</section>
+
+<section id="sources" class="panel">
+  <div class="panel-head"><h2>Sources</h2></div>
+  <div id="sourceCards" class="cat-list"></div>
+</section>
+
+</div>
+
+<section id="year" class="panel">
+  <div class="panel-head"><h2>The year</h2></div>
   <p class="dim">
     One square per day. A <b>filled</b> square is a day with training; an
     <b>empty</b> one is a rest day inside a stretch some export vouched for; a
@@ -64,43 +146,16 @@
     data was cleared before a backup was taken. Drawing the last two alike would
     claim you rested through exactly the weeks the record was lost.
   </p>
-  <div id="streaks" class="streaks"></div>
   <div id="heatmap" class="heatmap"></div>
+  <div class="legend" aria-hidden="true">
+    <span><i class="cell s-unknown"></i>no evidence</span>
+    <span><i class="cell s-rested"></i>rest</span>
+    <span><i class="cell L1"></i><i class="cell L2"></i><i class="cell L3"></i><i class="cell L4"></i>more</span>
+  </div>
 </section>
 
-<section id="sources">
-  <h2>Sources</h2>
-  <div id="sourceCards" class="cards"></div>
-</section>
-
-<section id="ability">
-  <h2>Ability</h2>
-  <p class="dim">
-    Where the whole record stands, on six bands of roughly similar proficiency
-    &mdash; &alpha; to &zeta;, from the <b>Guanxinandu S11</b> benchmark, which is
-    used here for its calibration rather than its test protocol: it says what
-    "about this good" looks like in five trainers' own units, and nothing else
-    supplies that. Each trainer is read against its own anchor, in its own units;
-    nothing averages one app's difficulty with another's.
-  </p>
-  <p class="dim">
-    <b>Where a trainer keeps its own ability estimate, that is what is read</b> —
-    RNB's best cleared load, Syllogimous's ability posterior, eWMT's best n. Each
-    has already applied its own target accuracy and its own chance correction, and
-    those differ: RNB scores a block so that never pressing is 0 and perfect is 1,
-    where about 0.5 is four answers in five. So accuracy is not second-guessed
-    here, and there is no bar to clear. A thin reading is reported thin and
-    weighed light; it is never withheld, and no one trainer's settings can
-    suppress the rest.
-  </p>
-  <div id="abilityHead" class="ability"></div>
-  <div id="abilityParts" class="modes"></div>
-  <p id="abilityBadge" class="dim"></p>
-  <ul id="abilityUnused" class="log"></ul>
-</section>
-
-<section id="over-time">
-  <h2>Over time</h2>
+<section id="over-time" class="panel">
+  <div class="panel-head"><h2>Over time</h2></div>
   <p class="dim">
     Minutes as bars, <b>difficulty</b> as the line &mdash; because an adaptive
     trainer holds accuracy at a target and moves the difficulty until it gets
@@ -108,16 +163,16 @@
     about whether you improved; what improved is whatever had to rise to keep it
     flat. Accuracy is in each day's tooltip, where it belongs.
   </p>
-  <div id="charts"></div>
+  <div id="charts" class="charts"></div>
 </section>
 
-<section id="modes">
-  <h2>By mode</h2>
+<section id="modes" class="panel">
+  <div class="panel-head"><h2>By mode</h2></div>
   <div id="modeTables" class="modes"></div>
 </section>
 
-<section id="overlap">
-  <h2>Overlap</h2>
+<section id="overlap" class="panel">
+  <div class="panel-head"><h2>Overlap</h2></div>
   <p class="dim">
     Comparing two trainers needs weeks in which both were played. Until there are
     enough, this counts them and says nothing else — with a handful of days, the
@@ -127,20 +182,22 @@
   <div id="overlapCards" class="cards"></div>
 </section>
 
-<section id="days">
-  <h2>Days</h2>
-  <div class="row">
+<section id="days" class="panel">
+  <div class="panel-head">
+    <h2>Days</h2>
+    <button id="csv" class="btn btn-sm" type="button"><svg class="icon"><use href="#i-download"/></svg>CSV</button>
+  </div>
+  <div class="row filters">
     <label>Source <select id="filterSource"></select></label>
     <label>From <input id="filterFrom" type="date"></label>
     <label>To <input id="filterTo" type="date"></label>
-    <button id="more" class="btn" type="button" hidden></button>
-    <button id="csv" class="btn" type="button">Download CSV</button>
+    <button id="more" class="btn quiet" type="button" hidden></button>
   </div>
-  <table id="daysTable"></table>
+  <div class="table-wrap"><table id="daysTable"></table></div>
 </section>
 
-<section id="notes">
-  <h2>Notes</h2>
+<section id="notes" class="panel">
+  <div class="panel-head"><h2>Notes</h2></div>
   <p class="dim">
     Everything the trainers cannot tell you &mdash; a test score, an illness, a
     change of dose, a month you felt slow. None of it is in any export, and all
@@ -170,7 +227,7 @@
       </div>
     </fieldset>
     <div class="row">
-      <button id="noteSave" class="btn primary" type="submit">Add note</button>
+      <button id="noteSave" class="btn btn-primary" type="submit">Add note</button>
       <button id="noteCancel" class="btn quiet" type="button" hidden>Cancel edit</button>
       <span id="noteHint" class="dim"></span>
     </div>
@@ -187,10 +244,13 @@
   <ul id="noteList" class="notes"></ul>
 </section>
 
-<section id="imports">
-  <h2>Imports</h2>
+<section id="imports" class="panel">
+  <div class="panel-head"><h2>Imports</h2></div>
   <ul id="log" class="log"></ul>
 </section>
+
+</main>
+</div>
 
 <script src="js/record.js?v=6"></script>
 <script src="js/notes.js?v=6"></script>
@@ -198,6 +258,6 @@
 <script src="js/archive.js?v=6"></script>
 <script src="js/insight.js?v=6"></script>
 <script src="js/ability.js?v=6"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 </body>
 </html>

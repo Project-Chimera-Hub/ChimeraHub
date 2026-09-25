@@ -50,6 +50,34 @@ function sourceName(id) {
   return SOURCE_NAMES[id] || id;
 }
 
+/*
+ * And what colour it is. The hub's, source for source: the dot on a trainer's
+ * card there is the segment of the day's bar it filled, and the same hue here
+ * — on the sidebar, down the edge of its card, in its chart — is what lets a
+ * reader carry a source from one screen to the other without reading a label.
+ *
+ * A source with no colour of its own (Anki, one added later) is grey, which
+ * reads as "not one of the eight" rather than borrowing a hue that means one.
+ */
+var SOURCE_COLOURS = {
+  syllogimous: "#6cb6ff",
+  rnb: "#3fb950",
+  precision: "#d29922",
+  rotation: "#db6d9d",
+  cct: "#a371f7",
+  ewmt: "#ff7b72",
+  rrt: "#ffa657",
+  synth: "#56d4dd",
+};
+
+function sourceColour(id) {
+  return SOURCE_COLOURS[id] || "#8b8b9c";
+}
+
+function dot(id) {
+  return "<span class='nav-dot' style='--c:" + sourceColour(id) + "'></span>";
+}
+
 function fmt(n, digits) { return Number(n).toFixed(digits == null ? 0 : digits); }
 
 /*
@@ -157,7 +185,7 @@ function watchSections() {
   if (typeof IntersectionObserver !== "function") return;
 
   var links = {};
-  var anchors = document.querySelectorAll(".topbar__links a");
+  var anchors = document.querySelectorAll(".sidebar-nav a.nav-item[href^='#']");
   for (var i = 0; i < anchors.length; i++) {
     links[anchors[i].getAttribute("href").slice(1)] = anchors[i];
   }
@@ -172,7 +200,7 @@ function watchSections() {
     }
     for (var id in links) {
       if (Object.prototype.hasOwnProperty.call(links, id)) {
-        links[id].classList.toggle("is-current", id === current);
+        links[id].classList.toggle("active", id === current);
       }
     }
   }
@@ -188,8 +216,8 @@ function watchSections() {
      * degrade — it throws a SyntaxError out of the constructor. That threw out
      * of `DOMContentLoaded`, which is where every listener on this page is
      * attached, so the file input, the drop zone and paste were all left
-     * unwired: importing did nothing at all, silently. 64px is the 4rem the
-     * topbar is tall. */
+     * unwired: importing did nothing at all, silently. 64px clears the bar
+     * the sidebar turns into on a phone, and costs nothing on a desktop. */
   }, { rootMargin: "-64px 0px -70% 0px" });
 
   for (var j = 0; j < sections.length; j++) observer.observe(sections[j]);
@@ -363,7 +391,7 @@ function importNeighbours() {
  * ------------------------------------------------------------------ */
 
 function render() {
-  renderStreaks();
+  renderStats();
   renderHeatmap();
   renderSources();
   renderAbility();
@@ -388,17 +416,46 @@ function render() {
  * The year                                                            *
  * ------------------------------------------------------------------ */
 
-function renderStreaks() {
-  var s = streaks(archive);
-  var host = $("streaks");
-  if (!archive.records.length) { host.innerHTML = ""; return; }
+/*
+ * The four figures across the top: how much, how often, how long a day's
+ * training runs, and whether it is still going. All four are read off the
+ * same `minutes` table the heatmap draws, so the row and the year under it can
+ * never disagree.
+ */
+function renderStats() {
+  var host = $("stats");
+  var total = 0, perDay = {};
+  var names = Object.keys(archive.minutes);
+  names.forEach(function (n) {
+    var byDay = archive.minutes[n] || {};
+    for (var day in byDay) {
+      if (!Object.prototype.hasOwnProperty.call(byDay, day)) continue;
+      total += byDay[day];
+      perDay[day] = (perDay[day] || 0) + byDay[day];
+    }
+  });
+  var trained = Object.keys(perDay).filter(function (d) { return perDay[d] >= 1; }).length;
+  var none = !archive.records.length;
+  var s = none ? { current: 0, longest: 0, uncertain: 0 } : streaks(archive);
+
+  function card(icon, label, value, sub, dim) {
+    return "<div class='stat-card'>"
+      + "<div class='stat-label'><svg class='icon'><use href='#i-" + icon + "'/></svg>" + label + "</div>"
+      + "<div class='stat-value" + (dim ? " none" : "") + "'>" + value + "</div>"
+      + "<div class='stat-sub'>" + sub + "</div></div>";
+  }
 
   host.innerHTML =
-    "<span><b>" + s.current + "</b> day streak</span>"
-    + "<span><b>" + s.longest + "</b> longest</span>"
-    + (s.uncertain
-        ? "<span class='dim'>" + s.uncertain + " unevidenced day(s) inside it</span>"
-        : "");
+    card("clock", "Total hours", fmt(total / 60, 1),
+      "across " + names.length + " source" + (names.length === 1 ? "" : "s"), none)
+    + card("calendar", "Days trained", String(trained),
+      archive.records.length + " record" + (archive.records.length === 1 ? "" : "s"), none)
+    + card("trend", "Avg / day", fmt(trained ? total / trained : 0) + "<small> min</small>",
+      "per day trained", none)
+    + card("flame", "Streak", String(s.current),
+      "longest " + s.longest
+        + (s.uncertain ? " · " + s.uncertain + " unevidenced inside it" : ""),
+      !s.current);
 }
 
 /**
@@ -639,7 +696,8 @@ function renderCharts() {
 
     var div = document.createElement("div");
     div.className = "chart";
-    div.innerHTML = "<h3>" + sourceName(name) + " <small class='dim'>"
+    div.id = "chart-" + name;
+    div.innerHTML = "<h3>" + dot(name) + sourceName(name) + " <small class='dim'>"
       + pts.length + " days · bars are minutes, peak " + fmt(peak) + "m"
       + (dHi == null
           ? " · no difficulty recorded"
@@ -650,7 +708,8 @@ function renderCharts() {
                   + " measured differently, not drawn"
                 : ""))
       + "</small></h3>"
-      + "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none'>"
+      + "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none'"
+      + " style='--c:" + sourceColour(name) + "'>"
       + "<g class='bars'>" + bars + "</g>"
       + "<path class='acc' d='" + line + "'></path>"
       + "</svg>";
@@ -715,7 +774,7 @@ function renderModes() {
       + "<th>time</th></tr>";
 
     var div = document.createElement("div");
-    div.innerHTML = "<h3>" + sourceName(name) + "</h3><table>" + head + body + "</table>";
+    div.innerHTML = "<h3>" + dot(name) + sourceName(name) + "</h3><table>" + head + body + "</table>";
     host.appendChild(div);
   });
 }
@@ -816,28 +875,45 @@ function unitLine(name, main) {
 function renderSources() {
   var names = Object.keys(archive.minutes).sort();
   var host = $("sourceCards");
+  var nav = $("navSources");
   host.innerHTML = "";
 
   if (!names.length) {
-    host.innerHTML = "<p class='dim'>No sources yet.</p>";
+    host.innerHTML = "<p class='dim'>No sources yet. Drop an export above, or read this browser.</p>";
+    nav.innerHTML = "";
     return;
   }
 
   names.forEach(function (name) {
     var s = sourceSummary(archive, name);
     var div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = "<h3>" + sourceName(name) + "</h3>"
-      + "<p><b>" + (s ? s.records : 0) + "</b> " + (s ? s.kind : "record") + "s"
-      + " · <b>" + fmt(s ? s.minutes : 0) + "</b> min"
-      + " · <b>" + (s ? s.days : 0) + "</b> days</p>"
-      + (s && s.accuracy != null
-        ? "<p class='dim'>" + fmt(s.accuracy * 100) + "% correct · "
-          + s.first + " to " + s.last + "</p>"
-        : "")
-      + (s && s.unit ? unitLine(name, s.unit) : "");
+    div.className = "category-card";
+    div.id = "src-" + name;
+    /* The colour is set on an inner wrapper rather than on the card itself,
+       so it arrives in the one string the card is built from. */
+    div.innerHTML = "<div style='--c:" + sourceColour(name) + "'>"
+      + "<div class='cat-header'><span class='cat-abbr'>" + sourceName(name) + "</span>"
+      + (s ? "<span class='cat-full'>" + s.first + " to " + s.last + "</span>" : "")
+      + "</div>"
+      + "<div class='cat-hours'>" + fmt((s ? s.minutes : 0) / 60, 1) + " <span>hrs</span></div>"
+      + "<div class='cat-meta'><b>" + (s ? s.records : 0) + "</b> " + (s ? s.kind : "record") + "s"
+      + " · <b>" + (s ? s.days : 0) + "</b> days"
+      + (s && s.accuracy != null ? " · <b>" + fmt(s.accuracy * 100) + "%</b> correct" : "")
+      + "</div>"
+      + (s && s.unit ? unitLine(name, s.unit) : "")
+      + "</div>";
     host.appendChild(div);
   });
+
+  /* The same sources in the sidebar, each a jump to its card with its hours
+     beside it. */
+  nav.innerHTML = "<span class='nav-label'>Sources</span>" + names.map(function (name) {
+    var mins = 0, byDay = archive.minutes[name] || {};
+    for (var d in byDay) if (Object.prototype.hasOwnProperty.call(byDay, d)) mins += byDay[d];
+    return "<a class='nav-item' href='#src-" + name + "' title='" + sourceName(name) + "'>"
+      + dot(name) + "<span class='nav-name'>" + sourceName(name) + "</span>"
+      + "<span class='nav-meta'>" + fmt(mins / 60, 1) + "h</span></a>";
+  }).join("");
 }
 
 /**
