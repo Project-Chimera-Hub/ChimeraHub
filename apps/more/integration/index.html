@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relational Integration Training</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <style>
+        body { background-color: #030712; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-950 text-white p-4">
+    <div id="root"></div>
+
+    <script src="vendor/react.production.min.js"></script>
+    <script src="vendor/react-dom.production.min.js"></script>
+    <script src="vendor/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const NBackTrainer = () => {
+            const [screen, setScreen] = useState('welcome');
+            const [config, setConfig] = useState({
+                level: 4,
+                range: [1, 9],
+                displayTime: 0.75,
+                blankTime: 3.0,
+                trials: 20,
+                feedbackDuration: -1, // -1 = until next number starts, 0 = disabled, 1-5000 = ms
+                showCorrectWrong: true, // Show ✓/✗ feedback
+                showDeltaFeedback: true, // Show delta calculation feedback
+                autoShowCalculation: false, // Automatically show calculation after each answer
+                autoShowOnWrong: false, // Automatically show calculation only after wrong answers
+                easyMode: false // Show both ΔA and ΔB (for beginners or very high levels)
+            });
+
+            const [game, setGame] = useState({
+                numbers: [],
+                position: 0,
+                correct: 0,
+                attempts: 0,
+                responses: [],
+                visible: false,
+                active: false,
+                result: null,
+                responded: false
+            });
+
+            const [showCalculation, setShowCalculation] = useState(false);
+            const [soundTestRunning, setSoundTestRunning] = useState(false);
+
+            const [sessionHistory, setSessionHistory] = useState([]);
+
+            const timerRef = useRef(null);
+
+            useEffect(() => {
+                return () => {
+                    if (timerRef.current) clearTimeout(timerRef.current);
+                };
+            }, []);
+
+            // Prevent body scrolling during game
+            useEffect(() => {
+                if (screen === 'game') {
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                } else {
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                }
+                return () => {
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                };
+            }, [screen]);
+
+
+            const getColorByLevel = (pos, level) => {
+                const colors = [
+                    '#FF0000',  // RED (Level 1)
+                    '#FFFF00',  // YELLOW (Level 2)
+                    '#00FF00',  // BRIGHT GREEN (Level 3)
+                    '#FF69B4',  // PINK (Level 4)
+                    '#00FFFF',  // CYAN/AQUA (Level 5) - bright, distinct color
+                    '#FFA500',  // BRIGHT ORANGE (Level 6)
+                    '#006400',  // DARK GREEN (Level 7)
+                    '#BB00FF',  // PURPLE (Level 8)
+                    '#0066FF',  // ROYAL BLUE (Level 9)
+                    '#8B4513'   // BROWN (Level 10)
+                ];
+                return colors[pos % level] || '#FF0000';
+            };
+
+            const getColor = (pos) => getColorByLevel(pos, config.level);
+
+            const getShape = (pos) => {
+                const shapes = [
+                    'heart',        // Level 1
+                    'sun',          // Level 2
+                    'triangle',     // Level 3
+                    'semi-circle',  // Level 4
+                    'circle',       // Level 5 - new: circle instead of square
+                    'trapezium',    // Level 6
+                    'hexagon',      // Level 7
+                    'diamond',      // Level 8
+                    'cross',        // Level 9
+                    'oval'          // Level 10 - new: oval instead of arrow
+                ];
+                return shapes[pos % config.level] || 'heart';
+            };
+
+            const getCirclePosition = (pos, level) => {
+                const positionIndex = pos % level;
+                const angleStep = 360 / level;
+                const angle = (positionIndex * angleStep - 90) * (Math.PI / 180); // -90 to start at top
+                const radius = 108; // Distance from center (reduced from 135 for mobile compatibility)
+                return {
+                    x: Math.cos(angle) * radius,
+                    y: Math.sin(angle) * radius + 60 // +60px downward shift (increased from +10)
+                };
+            };
+
+            const speakWithVoice = (number, position, voices) => {
+                const synth = window.speechSynthesis;
+                const utterance = new SpeechSynthesisUtterance(number.toString());
+                const femaleVoice = voices.find(v => {
+                    const nameLower = v.name.toLowerCase();
+                    return nameLower.includes('female') || nameLower.includes('samantha');
+                });
+                if (femaleVoice) utterance.voice = femaleVoice;
+                utterance.pitch = 1.2;
+                utterance.rate = 1.0;
+                utterance.volume = 1.0;
+                synth.speak(utterance);
+            };
+
+            const speak = (number, position) => {
+                try {
+                    const synth = window.speechSynthesis;
+                    synth.cancel();
+                    const voices = synth.getVoices();
+                    if (voices.length === 0) {
+                        const listener = () => {
+                            speakWithVoice(number, position, synth.getVoices());
+                            synth.removeEventListener('voiceschanged', listener);
+                        };
+                        synth.addEventListener('voiceschanged', listener);
+                    } else {
+                        speakWithVoice(number, position, voices);
+                    }
+                } catch (e) {
+                    console.warn('Speech not available; proceeding without audio:', e);
+                }
+            };
+
+            const testSound = () => {
+                setSoundTestRunning(true);
+                // Test sound with numbers 1, 2, 3 to initialize voice
+                speak(1, 0);
+                setTimeout(() => speak(2, 1), 800);
+                setTimeout(() => speak(3, 2), 1600);
+                setTimeout(() => setSoundTestRunning(false), 2500); // Reset after all sounds played
+            };
+
+            const createSequence = () => { 
+                const seq = [];
+                const [min, max] = config.range;
+                const level = config.level;
+                // First level+1 numbers are shown initially (no inputs possible)
+                for (let i = 0; i <= level; i++) {
+                    seq.push(Math.floor(Math.random() * (max - min + 1)) + min);
+                }
+                // Then config.trials numbers where inputs are required
+                const totalNumbers = level + 1 + config.trials;
+                for (let i = level + 1; i < totalNumbers; i++) {
+                    const shouldMatch = Math.random() < 0.5;
+                    const nBack = seq[i - level];
+                    const previous = seq[i - 1];
+                    const nPlusOneBack = seq[i - level - 1];
+                    const targetDiff = Math.abs(previous - nPlusOneBack);
+                    
+                    // Get the number that was at this same position in the cycle
+                    const samePositionPrevious = i >= level ? seq[i - level] : null;
+                    
+                    if (shouldMatch) {
+                        const possibilities = [nBack + targetDiff, nBack - targetDiff]
+                            .filter(n => n >= min && n <= max)
+                            .filter(n => n !== samePositionPrevious); // Avoid same number at same position
+                        if (possibilities.length > 0) {
+                            seq.push(possibilities[Math.floor(Math.random() * possibilities.length)]);
+                        } else {
+                            // Fallback: generate random but avoid same position repeat
+                            let attempts = 0;
+                            let num;
+                            do {
+                                num = Math.floor(Math.random() * (max - min + 1)) + min;
+                                attempts++;
+                            } while (num === samePositionPrevious && attempts < 50);
+                            seq.push(num);
+                        }
+                    } else {
+                        let attempts = 0;
+                        let num;
+                        do {
+                            num = Math.floor(Math.random() * (max - min + 1)) + min;
+                            attempts++;
+                        } while ((Math.abs(num - nBack) === targetDiff || num === samePositionPrevious) && attempts < 50);
+                        seq.push(num);
+                    }
+                }
+                return seq;
+            };
+
+            const begin = () => {
+                try {
+                    const seq = createSequence();
+                    setGame({
+                        numbers: seq,
+                        position: 0,
+                        correct: 0,
+                        attempts: 0,
+                        responses: [],
+                        visible: false,
+                        active: true,
+                        result: null,
+                        responded: false
+                    });
+                    setScreen('initial');
+                    console.log('Training initiated successfully.');
+                } catch (e) {
+                    console.error('Initiation error:', e);
+                    alert('Failed to start; check console for details.');
+                }
+            };
+
+            const startGame = () => {
+                setScreen('game');
+                setTimeout(() => displayNext(game.numbers, config.level), 100);
+            };
+
+            const displayNext = (seq, pos) => {
+                if (pos >= seq.length) {
+                    finish();
+                    return;
+                }
+
+                if (pos > 0 && pos - 1 >= config.level + 1 && !game.responded) {
+                    const old_pos = pos - 1;
+                    const curr = seq[old_pos];
+                    const nBack = seq[old_pos - config.level];
+                    const prev = seq[old_pos - 1];
+                    const nPlusOne = seq[old_pos - config.level - 1];
+                    const deltaA = Math.abs(curr - nBack);
+                    const deltaB = Math.abs(prev - nPlusOne);
+                    const answer = deltaA === deltaB;
+                    setGame(prev => ({
+                        ...prev,
+                        attempts: prev.attempts + 1,
+                        responses: [...prev.responses, {
+                            position: old_pos,
+                            deltaA, deltaB,
+                            correctAnswer: answer,
+                            playerChoice: null
+                        }]
+                    }));
+                }
+
+                setGame(prev => ({
+                    ...prev,
+                    position: pos,
+                    visible: true,
+                    result: null,
+                    responded: false
+                }));
+                
+                // Reset showCalculation when new number starts (prevents cheating by holding button)
+                setShowCalculation(false);
+
+                speak(seq[pos], pos);
+
+                timerRef.current = setTimeout(() => {
+                    setGame(prev => ({ ...prev, visible: false }));
+                    timerRef.current = setTimeout(() => {
+                        displayNext(seq, pos + 1);
+                    }, config.blankTime * 1000);
+                }, config.displayTime * 1000);
+            };
+
+                const submitAnswer = (choice) => {
+                if (game.position < config.level + 1 || game.responded) return;
+                
+                const curr = game.numbers[game.position];
+                const nBack = game.numbers[game.position - config.level];
+                const prevNumber = game.numbers[game.position - 1];
+                const nPlusOne = game.numbers[game.position - config.level - 1];
+                const deltaA = Math.abs(curr - nBack);
+                const deltaB = Math.abs(prevNumber - nPlusOne);
+                const answer = deltaA === deltaB;
+                const match = choice === answer;
+                
+                setGame(prev => ({
+                    ...prev,
+                    correct: prev.correct + (match ? 1 : 0),
+                    attempts: prev.attempts + 1,
+                    responses: [...prev.responses, {
+                        position: game.position,
+                        deltaA, deltaB,
+                        correctAnswer: answer,
+                        playerChoice: choice
+                    }],
+                    result: { 
+                        match, 
+                        answer, 
+                        deltaB, 
+                        position: game.position,
+                        calculationNum1: curr,
+                        calculationNum2: nBack
+                    },
+                    responded: true
+                }));
+                
+                // Auto-show calculation if enabled (all answers)
+                if (config.autoShowCalculation && config.showDeltaFeedback) {
+                    setShowCalculation(true);
+                }
+                
+                // Auto-show calculation if wrong answer and autoShowOnWrong enabled
+                if (!match && config.autoShowOnWrong && config.showDeltaFeedback) {
+                    setShowCalculation(true);
+                }
+                
+                // Auto-show calculation if feedbackDuration is set (not -1/manual)
+                if (config.feedbackDuration >= 0 && config.showDeltaFeedback) {
+                    setShowCalculation(true);
+                    if (config.feedbackDuration > 0) {
+                        setTimeout(() => setShowCalculation(false), config.feedbackDuration);
+                    }
+                    // If feedbackDuration === 0, it stays shown until next number (cleared by displayNext)
+                }
+            };
+
+            const finish = () => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+                if (game.position >= config.level + 1 && !game.responded) {
+                    const curr = game.numbers[game.position];
+                    const nBack = game.numbers[game.position - config.level];
+                    const prev = game.numbers[game.position - 1];
+                    const nPlusOne = game.numbers[game.position - config.level - 1];
+                    const deltaA = Math.abs(curr - nBack);
+                    const deltaB = Math.abs(prev - nPlusOne);
+                    const answer = deltaA === deltaB;
+                    setGame(prev => {
+                        const newGame = {
+                            ...prev,
+                            attempts: prev.attempts + 1,
+                            responses: [...prev.responses, {
+                                position: game.position,
+                                deltaA, deltaB,
+                                correctAnswer: answer,
+                                playerChoice: null
+                            }],
+                            active: false
+                        };
+                        // Calculate accuracy and update session history
+                        const accuracy = Math.round((newGame.correct / config.trials) * 100);
+                        setSessionHistory(prevHistory => {
+                            const newHistory = [accuracy, ...prevHistory].slice(0, 10);
+                            return newHistory;
+                        });
+                        return newGame;
+                    });
+                } else {
+                    setGame(prev => {
+                        // Calculate accuracy and update session history
+                        const accuracy = Math.round((prev.correct / config.trials) * 100);
+                        setSessionHistory(prevHistory => {
+                            const newHistory = [accuracy, ...prevHistory].slice(0, 10);
+                            return newHistory;
+                        });
+                        return { ...prev, active: false };
+                    });
+                }
+                setScreen('results');
+            };
+
+            const restart = () => {
+                if (timerRef.current) clearTimeout(timerRef.current);
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+                setGame({
+                    numbers: [],
+                    position: 0,
+                    correct: 0,
+                    attempts: 0,
+                    responses: [],
+                    visible: false,
+                    active: false,
+                    result: null,
+                    responded: false
+                });
+                setScreen('welcome');
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-950 text-white p-4">
+                    {screen === 'welcome' && (
+                        <div className="max-w-md mx-auto">
+                            <div className="bg-gray-900/90 backdrop-blur rounded-3xl p-6 shadow-2xl border border-green-500/30">
+                                <h1 className="text-4xl font-black text-center mb-2 text-purple-400">
+                                    🧠 Relational Integration Training
+                                </h1>
+                                <p className="text-center text-green-400 mb-6 font-medium">Strengthen Your Cognitive Capacity</p>
+
+                                <div className="bg-gray-800/60 rounded-2xl p-4 mb-6 text-sm border border-green-500/20">
+                                    <h3 className="font-bold mb-3 text-green-400">Training Instructions</h3>
+                                    <div className="space-y-3 text-gray-300">
+                                        <div>
+                                            <p className="font-semibold text-purple-300">1-Back Mode:</p>
+                                            <p className="text-xs mt-1">Calculate: |current - 1st prior| and |1st prior - 2nd prior|</p>
+                                            <p className="text-xs mt-1 text-green-400">Match: [7, 4, 1] → |1-4|=3 and |4-7|=3 ✓</p>
+                                            <p className="text-xs text-red-400">No match: [7, 4, 2] → |2-4|=2 but |4-7|=3 ✗</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-purple-300">2-Back Mode:</p>
+                                            <p className="text-xs mt-1">Calculate: |current - 2nd prior| and |1st prior - 3rd prior|</p>
+                                            <p className="text-xs mt-1 text-green-400">Match: [3, 7, 11, 15] → |15-7|=8 and |11-3|=8 ✓</p>
+                                            <p className="text-xs text-red-400">No match: [3, 7, 11, 14] → |14-7|=7 but |11-3|=8 ✗</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-purple-300">3-Back Mode:</p>
+                                            <p className="text-xs mt-1">Calculate: |current - 3rd prior| and |1st prior - 4th prior|</p>
+                                            <p className="text-xs mt-1 text-green-400">Match: [2, 6, 10, 14, 18] → |18-6|=12 and |14-2|=12 ✓</p>
+                                            <p className="text-xs text-red-400">No match: [2, 6, 10, 14, 17] → |17-6|=11 but |14-2|=12 ✗</p>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-purple-300">Memory Aids:</p>
+                                            <p className="text-xs mt-1">- Colors rotate by position to help track sequences</p>
+                                            <p className="text-xs mt-1">- Shapes change to reinforce position memory</p>
+                                            <p className="text-xs mt-1">- Hold "Show Calculation" button to see the current calculation</p>
+                                            <p className="text-xs mt-1">- <strong>Easy Mode</strong> (in settings): Shows both calculations at once. <span className="text-yellow-400">Recommended only for beginners or very high levels (if at all)</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setScreen('settings')}
+                                    className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-4 rounded-2xl mb-3 transition shadow-lg"
+                                >
+                                    ⚙️ Configure
+                                </button>
+
+                                <button
+                                    onClick={testSound}
+                                    disabled={soundTestRunning}
+                                    className={`w-full font-bold py-3 rounded-2xl mb-3 transition shadow-lg ${
+                                        soundTestRunning 
+                                            ? 'bg-blue-500 animate-pulse text-white' 
+                                            : 'bg-blue-700 hover:bg-blue-600 text-white'
+                                    }`}
+                                >
+                                    {soundTestRunning ? '🔊 Playing 1... 2... 3...' : '🔊 Sound Test'}
+                                </button>
+
+                                <button
+                                    onClick={begin}
+                                    className="w-full bg-green-700 hover:bg-green-600 text-white font-bold py-4 rounded-2xl transition shadow-lg"
+                                >
+                                    ▶ Begin Training
+                                </button>
+
+                                {sessionHistory.length > 0 && (
+                                    <div className="mt-6 bg-gray-800/60 rounded-2xl p-4 border border-purple-500/20">
+                                        <h3 className="font-bold mb-3 text-purple-400 text-center">📊 Session History</h3>
+                                        <div className="mb-3 text-center">
+                                            <span className="text-sm text-green-400">Average: </span>
+                                            <span className="font-bold text-green-400">
+                                                {(sessionHistory.reduce((a, b) => a + b, 0) / sessionHistory.length).toFixed(2)}%
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1 text-sm">
+                                            {sessionHistory.map((accuracy, idx) => (
+                                                <div key={idx} className="flex justify-between text-gray-300">
+                                                    <span>Round {sessionHistory.length - idx}:</span>
+                                                    <span className="font-bold text-purple-400">{accuracy}%</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'settings' && (
+                        <div className="max-w-md mx-auto">
+                            <div className="bg-gray-900/90 backdrop-blur rounded-3xl p-6 shadow-2xl border border-green-500/30">
+                                <h2 className="text-2xl font-bold mb-6 text-center text-purple-400">⚙️ Configuration</h2>
+
+                                <div className="space-y-6">
+                                    <div>
+                                        <h3 className="font-semibold mb-3 text-green-400">N-Back Depth</h3>
+                                        <div className="grid grid-cols-5 gap-2">
+                                            {[1, 2, 3, 4, 5].map(lvl => (
+                                                <button
+                                                    key={lvl}
+                                                    onClick={() => setConfig(c => ({ ...c, level: lvl }))}
+                                                    className={`py-3 rounded-xl font-bold transition ${
+                                                        config.level === lvl
+                                                            ? 'bg-purple-600 text-white shadow-lg'
+                                                            : 'bg-gray-800 hover:bg-gray-700 border border-green-500/30'
+                                                    }`}
+                                                >
+                                                    {lvl}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="grid grid-cols-5 gap-2 mt-2">
+                                            {[6, 7, 8, 9, 10].map(lvl => (
+                                                <button
+                                                    key={lvl}
+                                                    onClick={() => setConfig(c => ({ ...c, level: lvl }))}
+                                                    className={`py-3 rounded-xl font-bold transition ${
+                                                        config.level === lvl
+                                                            ? 'bg-green-600 text-white shadow-lg'
+                                                            : 'bg-gray-800 hover:bg-gray-700 border border-green-500/30'
+                                                    }`}
+                                                >
+                                                    {lvl}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="font-semibold mb-3 text-green-400">Value Range</h3>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[[1,9], [1,19], [1,29], [1,39], [1,49], [1,59], [1,69], [1,79], [1,89], [1,99]].map((rng, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => setConfig(c => ({ ...c, range: rng }))}
+                                                    className={`py-3 rounded-xl font-bold transition ${
+                                                        config.range[1] === rng[1]
+                                                            ? 'bg-green-600 text-white shadow-lg'
+                                                            : 'bg-gray-800 hover:bg-gray-700 border border-purple-500/30'
+                                                    }`}
+                                                >
+                                                    {rng[0]}-{rng[1]}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gray-800/60 rounded-xl p-4 border border-green-500/20">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-green-400">Show Duration</span>
+                                            <span className="font-bold text-purple-400">{Math.round(config.displayTime * 1000)}ms</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0.05"
+                                            max="2"
+                                            step="0.05"
+                                            value={config.displayTime}
+                                            onChange={(e) => setConfig(c => ({ ...c, displayTime: parseFloat(e.target.value) }))}
+                                            className="w-full accent-purple-500"
+                                        />
+                                    </div>
+
+                                    <div className="bg-gray-800/60 rounded-xl p-4 border border-green-500/20">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-green-400">Blank Duration</span>
+                                            <span className="font-bold text-purple-400">{Math.round(config.blankTime * 1000)}ms</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0.1"
+                                            max="5"
+                                            step="0.1"
+                                            value={config.blankTime}
+                                            onChange={(e) => setConfig(c => ({ ...c, blankTime: parseFloat(e.target.value) }))}
+                                            className="w-full accent-purple-500"
+                                        />
+                                    </div>
+
+                                    <div className="bg-gray-800/60 rounded-xl p-4 border border-green-500/20">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-green-400">Trials</span>
+                                            <span className="font-bold text-purple-400">{config.trials}</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="5"
+                                            max="100"
+                                            step="1"
+                                            value={config.trials}
+                                            onChange={(e) => setConfig(c => ({ ...c, trials: parseInt(e.target.value) }))}
+                                            className="w-full accent-purple-500"
+                                        />
+                                    </div>
+
+                                    <div className="bg-gray-800/60 rounded-xl p-4 border border-green-500/20">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-green-400">Calculation Feedback</span>
+                                            <span className="font-bold text-purple-400">
+                                                {config.feedbackDuration === -1 
+                                                    ? 'Manual' 
+                                                    : config.feedbackDuration === 0 
+                                                        ? 'Until Next' 
+                                                        : `Auto ${config.feedbackDuration}ms`}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="51"
+                                            step="1"
+                                            value={config.feedbackDuration === -1 ? 0 : Math.round(config.feedbackDuration / 100) + 1}
+                                            onChange={(e) => {
+                                                const sliderValue = parseInt(e.target.value);
+                                                const actualValue = sliderValue === 0 ? -1 : (sliderValue - 1) * 100;
+                                                setConfig(c => ({ ...c, feedbackDuration: actualValue }));
+                                            }}
+                                            className="w-full accent-purple-500"
+                                        />
+                                        <div className="text-xs text-gray-400 mt-2">
+                                            {config.feedbackDuration === -1 
+                                                ? 'Manual: Hold button to see calculation' 
+                                                : config.feedbackDuration === 0 
+                                                    ? 'Auto: Shown until next number starts' 
+                                                    : 'Auto: Shown after answer for custom duration'}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gray-800/60 rounded-xl p-4 border border-green-500/20">
+                                        <h3 className="font-semibold mb-3 text-green-400">Feedback Options</h3>
+                                        <div className="space-y-3">
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.showCorrectWrong}
+                                                    onChange={(e) => setConfig(c => ({ ...c, showCorrectWrong: e.target.checked }))}
+                                                    className="w-4 h-4 accent-green-500 mr-3"
+                                                />
+                                                <span className="text-sm text-gray-300">Enable ✓/✗ Feedback</span>
+                                            </label>
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.showDeltaFeedback}
+                                                    onChange={(e) => setConfig(c => ({ ...c, showDeltaFeedback: e.target.checked }))}
+                                                    className="w-4 h-4 accent-green-500 mr-3"
+                                                />
+                                                <span className="text-sm text-gray-300">Enable Calculation Feedback</span>
+                                            </label>
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.autoShowCalculation}
+                                                    onChange={(e) => setConfig(c => ({ ...c, autoShowCalculation: e.target.checked }))}
+                                                    className="w-4 h-4 accent-green-500 mr-3"
+                                                />
+                                                <span className="text-sm text-gray-300">Auto-show calculation after each answer</span>
+                                            </label>
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.autoShowOnWrong}
+                                                    onChange={(e) => setConfig(c => ({ ...c, autoShowOnWrong: e.target.checked }))}
+                                                    className="w-4 h-4 accent-green-500 mr-3"
+                                                />
+                                                <span className="text-sm text-gray-300">Auto-show calculation after wrong answers only</span>
+                                            </label>
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={config.easyMode}
+                                                    onChange={(e) => setConfig(c => ({ ...c, easyMode: e.target.checked }))}
+                                                    className="w-4 h-4 accent-green-500 mr-3"
+                                                />
+                                                <span className="text-sm text-gray-300">Easy Mode (shows both ΔA and ΔB)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setScreen('welcome')}
+                                    className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-4 rounded-2xl mt-6 transition shadow-lg"
+                                >
+                                    Return
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'initial' && (
+                        <div className="max-w-2xl mx-auto">
+                            <div className="bg-gray-900/90 backdrop-blur rounded-3xl p-8 shadow-2xl border border-green-500/30">
+                                <h2 className="text-2xl font-bold text-center mb-6 text-purple-400">
+                                    📋 Initial Numbers
+                                </h2>
+                                <p className="text-center text-gray-300 mb-6">
+                                    Memorize these {config.level} numbers before training begins
+                                </p>
+                                <div className="grid grid-cols-3 gap-4 mb-8">
+                                    {game.numbers.slice(0, config.level).map((num, idx) => {
+                                        const color = getColorByLevel(idx, config.level);
+                                        const shape = getShape(idx);
+                                        
+                                        // Render mini shape for initial screen
+                                        const renderMiniShape = () => {
+                                            const commonStyle = {
+                                                filter: `drop-shadow(0 0 8px ${color})`
+                                            };
+                                            
+                                            if (shape === 'heart') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <path d="M40 15.7 Q 20 1.45, 7.15 15.7 Q 1.45 30, 14.3 44.3 Q 27.15 58.55, 40 70 Q 52.85 58.55, 65.7 44.3 Q 78.55 30, 72.85 15.7 Q 60 1.45, 40 15.7 Z" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="41.5" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'sun') {
+                                                return (
+                                                    <svg width="85" height="85" style={commonStyle}>
+                                                        <circle cx="42.5" cy="42.5" r="22.5" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <path d="M42.5 0 L42.5 20 M42.5 65 L42.5 85 M0 42.5 L20 42.5 M65 42.5 L85 42.5 M14 14 L22.5 22.5 M62.5 62.5 L71 71 M14 71 L22.5 62.5 M62.5 22.5 L71 14" stroke={color} strokeWidth="2"/>
+                                                        <text x="42.5" y="45.5" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'triangle') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <polygon points="40,8.5 68.5,60 11.5,60" fill="rgba(15,23,42,0.8)" stroke={color} strokeWidth="1.75"/>
+                                                        <text x="40" y="48.5" textAnchor="middle" fontSize="23" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'semi-circle') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <path d="M11.5 51.5 Q11.5 11.5, 40 11.5 Q68.5 11.5, 68.5 51.5 L11.5 51.5 Z" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="41.5" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'circle') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <circle cx="40" cy="40" r="25" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="44" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'trapezium') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <polygon points="20,20 60,20 71.5,60 8.5,60" fill="rgba(15,23,42,0.8)" stroke={color} strokeWidth="1.75"/>
+                                                        <text x="40" y="47" textAnchor="middle" fontSize="23" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'hexagon') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <polygon points="40,12.5 60,25 60,50 40,62.5 20,50 20,25" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="42.5" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'diamond') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <polygon points="40,10 70,40 40,70 10,40" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="44" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'cross') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <path d="M27.5 12.5 L52.5 12.5 L52.5 27.5 L67.5 27.5 L67.5 52.5 L52.5 52.5 L52.5 67.5 L27.5 67.5 L27.5 52.5 L12.5 52.5 L12.5 27.5 L27.5 27.5 Z" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="44" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            } else if (shape === 'oval') {
+                                                return (
+                                                    <svg width="80" height="80" style={commonStyle}>
+                                                        <ellipse cx="40" cy="40" rx="27.5" ry="20" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="2"/>
+                                                        <text x="40" y="44" textAnchor="middle" fontSize="25" fontWeight="900" fill={color}>{num}</text>
+                                                    </svg>
+                                                );
+                                            }
+                                        };
+                                        
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                className="bg-gray-800/80 rounded-2xl p-6 text-center border-2 flex flex-col items-center justify-center"
+                                                style={{ borderColor: color }}
+                                            >
+                                                <div className="text-xs mb-2" style={{ color }}>Position {idx + 1}</div>
+                                                {renderMiniShape()}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={startGame}
+                                    className="w-full bg-green-700 hover:bg-green-600 text-white font-bold py-4 rounded-2xl mb-3 transition shadow-lg"
+                                >
+                                    ✓ Ready - Begin Training
+                                </button>
+                                <button
+                                    onClick={restart}
+                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-2xl transition"
+                                >
+                                    ✕ Cancel Round
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'game' && (
+                        <div 
+                            className="max-w-md mx-auto" 
+                            style={{ 
+                                touchAction: 'none',
+                                overscrollBehavior: 'none'
+                            }}
+                        >
+                            <div className="bg-gray-900/90 backdrop-blur rounded-3xl p-6 shadow-2xl border border-green-500/30">
+                                {/* Exit banner */}
+                                <button
+                                    onClick={restart}
+                                    className="w-full bg-gray-800/40 hover:bg-gray-700/60 rounded-xl py-2 mb-4 text-center border border-gray-700/40 transition flex items-center justify-center gap-2"
+                                >
+                                    <span className="text-sm">🏠</span>
+                                    <span className="text-xs text-gray-400 font-semibold">Exit</span>
+                                </button>
+                                
+                                <div className="grid grid-cols-3 gap-3 mb-6">
+                                    <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-green-500/20">
+                                        <div className="text-xs text-green-400">Depth</div>
+                                        <div className="text-xl font-bold text-purple-400">{config.level}-Back</div>
+                                    </div>
+                                    <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-green-500/20">
+                                        <div className="text-xs text-green-400">Progress</div>
+                                        <div className="text-xl font-bold text-purple-400">{Math.max(0, game.position - config.level)}/{config.trials}</div>
+                                    </div>
+                                    <div className="bg-gray-800/60 rounded-xl p-3 text-center border border-green-500/20">
+                                        <div className="text-xs text-green-400">Range</div>
+                                        <div className="text-xl font-bold text-purple-400">{config.range[0]}-{config.range[1]}</div>
+                                    </div>
+                                </div>
+
+                                <div className="h-2 bg-gray-800 rounded-full mb-6 overflow-hidden border border-green-500/30">
+                                    <div
+                                        className="h-full bg-purple-600 transition-all duration-300"
+                                        style={{ width: `${(Math.max(0, game.position - config.level) / config.trials) * 100}%` }}
+                                    />
+                                </div>
+
+                                <div className="mx-auto mb-4 flex items-center justify-center h-64 relative">
+                                    {/* Invisible circle guide */}
+                                    <div className="absolute w-64 h-64 rounded-full border-2 border-transparent" style={{ top: '60px' }}></div>
+                                    
+                                    {game.visible && (() => {
+                                        const shape = getShape(game.position);
+                                        const color = getColor(game.position);
+                                        const num = game.numbers[game.position];
+                                        const position = getCirclePosition(game.position, config.level);
+                                        
+                                        // Render shapes at smaller scale (0.4x)
+                                        if (shape === 'heart') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <path
+                                                        d="M80 31.4 Q 40 2.9, 14.3 31.4 Q 2.9 60, 28.6 88.6 Q 54.3 117.1, 80 140 Q 105.7 117.1, 131.4 88.6 Q 157.1 60, 145.7 31.4 Q 120 2.9, 80 31.4 Z"
+                                                        fill="rgba(15,23,42,0.82)"
+                                                        stroke={color}
+                                                        strokeWidth="4"
+                                                    />
+                                                    <text
+                                                        x="80"
+                                                        y="83"
+                                                        textAnchor="middle"
+                                                        fontSize="50"
+                                                        fontWeight="900"
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'sun') {
+                                            return (
+                                                <svg 
+                                                    width="170" 
+                                                    height="170" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <circle cx="85" cy="85" r="45" fill="rgba(15,23,42,0.82)" stroke={color} strokeWidth="4" />
+                                                    <path d="M85 0 L85 40 M85 130 L85 170 M0 85 L40 85 M130 85 L170 85 M28 28 L45 45 M125 125 L142 142 M28 142 L45 125 M125 45 L142 28" stroke={color} strokeWidth="4" />
+                                                    <text
+                                                        x="85"
+                                                        y="91"
+                                                        textAnchor="middle"
+                                                        fontSize="50"
+                                                        fontWeight="900"
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'triangle') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 10px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <polygon
+                                                        points="80,17 137,120 23,120"
+                                                        fill="rgba(15,23,42,0.8)"
+                                                        stroke={color}
+                                                        strokeWidth="3.5"
+                                                    />
+                                                    <text 
+                                                        x="80" 
+                                                        y="97" 
+                                                        textAnchor="middle" 
+                                                        fontSize="46" 
+                                                        fontWeight="900" 
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'semi-circle') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <path
+                                                        d="M23 103 Q23 23, 80 23 Q137 23, 137 103 L23 103 Z"
+                                                        fill="rgba(15,23,42,0.82)"
+                                                        stroke={color}
+                                                        strokeWidth="4"
+                                                    />
+                                                    <text
+                                                        x="80"
+                                                        y="83"
+                                                        textAnchor="middle"
+                                                        fontSize="50"
+                                                        fontWeight="900"
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'circle') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <circle
+                                                        cx="80"
+                                                        cy="80"
+                                                        r="50"
+                                                        fill="rgba(15,23,42,0.82)"
+                                                        stroke={color}
+                                                        strokeWidth="4"
+                                                    />
+                                                    <text 
+                                                        x="80" 
+                                                        y="88" 
+                                                        textAnchor="middle" 
+                                                        fontSize="50" 
+                                                        fontWeight="900" 
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'trapezium') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 10px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <polygon
+                                                        points="40,40 120,40 143,120 17,120"
+                                                        fill="rgba(15,23,42,0.8)"
+                                                        stroke={color}
+                                                        strokeWidth="3.5"
+                                                    />
+                                    <text 
+                                                        x="80" 
+                                                        y="94" 
+                                                        textAnchor="middle" 
+                                                        fontSize="46" 
+                                                        fontWeight="900" 
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'cross') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <path
+                                                        d="M55 25 L105 25 L105 55 L135 55 L135 105 L105 105 L105 135 L55 135 L55 105 L25 105 L25 55 L55 55 Z"
+                                                        fill="rgba(15,23,42,0.82)"
+                                                        stroke={color}
+                                                        strokeWidth="4"
+                                                    />
+                                                    <text
+                                                        x="80"
+                                                        y="88"
+                                                        textAnchor="middle"
+                                                        fontSize="50"
+                                                        fontWeight="900"
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        } else if (shape === 'oval') {
+                                            return (
+                                                <svg 
+                                                    width="160" 
+                                                    height="160" 
+                                                    className="absolute" 
+                                                    style={{ 
+                                                        filter: `drop-shadow(0 0 12px ${color})`,
+                                                        left: `calc(50% + ${position.x}px)`,
+                                                        top: `calc(50% + ${position.y}px)`,
+                                                        transform: 'translate(-50%, -50%)'
+                                                    }}
+                                                >
+                                                    <ellipse
+                                                        cx="80"
+                                                        cy="80"
+                                                        rx="55"
+                                                        ry="40"
+                                                        fill="rgba(15,23,42,0.82)"
+                                                        stroke={color}
+                                                        strokeWidth="4"
+                                                    />
+                                                    <text
+                                                        x="80"
+                                                        y="88"
+                                                        textAnchor="middle"
+                                                        fontSize="50"
+                                                        fontWeight="900"
+                                                        fill={color}
+                                                    >
+                                                        {num}
+                                                    </text>
+                                                </svg>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                    
+                                    {/* Display calculation feedback when holding Show Calculation button */}
+                                    {showCalculation && config.showDeltaFeedback && game.position >= config.level + 1 && (() => {
+                                        const curr = game.numbers[game.position];
+                                        const nBack = game.numbers[game.position - config.level];
+                                        const prev = game.numbers[game.position - 1];
+                                        const nPlusOne = game.numbers[game.position - config.level - 1];
+                                        
+                                        const color = getColor(game.position);
+                                        const originalPosition = getCirclePosition(game.position, config.level);
+                                        
+                                        // Position offset toward center (50% between original position and center)
+                                        const offsetPosition = {
+                                            x: originalPosition.x * 0.5,
+                                            y: originalPosition.y * 0.5
+                                        };
+                                        
+                                        // Create calculation strings
+                                        const deltaA = `|${curr} - ${nBack}|`;
+                                        const deltaB = `|${prev} - ${nPlusOne}|`;
+                                        
+                                        return (
+                                            <div 
+                                                className="absolute"
+                                                style={{
+                                                    left: `calc(50% + ${offsetPosition.x}px)`,
+                                                    top: `calc(50% + ${offsetPosition.y}px)`,
+                                                    transform: 'translate(-50%, -50%)'
+                                                }}
+                                            >
+                                                <div className="bg-gray-900/95 rounded-lg px-3 py-2 border border-white/60 shadow-lg">
+                                                    {config.easyMode ? (
+                                                        <>
+                                                            <div className="text-base font-black text-center whitespace-nowrap text-white">{deltaA}</div>
+                                                            <div className="text-xs text-gray-400 text-center">vs</div>
+                                                            <div className="text-base font-black text-center whitespace-nowrap text-white">{deltaB}</div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="text-xl font-black text-center whitespace-nowrap text-white">{deltaA}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {game.result && config.showCorrectWrong && (
+                                    <div className={`text-center text-2xl font-bold h-12 flex items-center justify-center ${
+                                        game.result.match ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                        {game.result.match ? '✓ Correct' : '✗ Wrong'}
+                                    </div>
+                                )}
+                                {(!game.result || !config.showCorrectWrong) && <div className="h-12"></div>}
+
+                                <div className="grid grid-cols-2 gap-4 mb-2">
+                                    <button
+                                        onClick={() => submitAnswer(true)}
+                                        disabled={game.position < config.level + 1 || game.responded}
+                                        className="py-3 rounded-2xl font-bold text-base border-2 border-green-700/40 bg-green-700/80 text-white cursor-pointer transition-none select-none"
+                                        style={{ 
+                                            WebkitUserSelect: 'none', 
+                                            userSelect: 'none', 
+                                            WebkitTouchCallout: 'none', 
+                                            opacity: game.position < config.level + 1 ? 0.4 : 1 
+                                        }}
+                                    >
+                                        ✓ Match
+                                    </button>
+                                    <button
+                                        onClick={() => submitAnswer(false)}
+                                        disabled={game.position < config.level + 1 || game.responded}
+                                        className="py-3 rounded-2xl font-bold text-base border-2 border-red-700/40 bg-red-700/80 text-white cursor-pointer transition-none select-none"
+                                        style={{ 
+                                            WebkitUserSelect: 'none', 
+                                            userSelect: 'none', 
+                                            WebkitTouchCallout: 'none', 
+                                            opacity: game.position < config.level + 1 ? 0.4 : 1 
+                                        }}
+                                    >
+                                        ✗ Different
+                                    </button>
+                                </div>
+
+                                {config.showDeltaFeedback && (
+                                    <button
+                                        onMouseDown={() => {
+                                            if (game.position >= config.level + 1 && game.responded) {
+                                                setShowCalculation(true);
+                                            }
+                                        }}
+                                        onMouseUp={() => setShowCalculation(false)}
+                                        onMouseLeave={() => setShowCalculation(false)}
+                                        onTouchStart={(e) => {
+                                            if (game.position >= config.level + 1 && game.responded) {
+                                                e.preventDefault();
+                                                setShowCalculation(true);
+                                            }
+                                        }}
+                                        onTouchEnd={(e) => {
+                                            e.preventDefault();
+                                            setShowCalculation(false);
+                                        }}
+                                        className="w-full py-3 rounded-2xl font-bold text-sm bg-gray-800/60 text-gray-400 cursor-pointer transition-none mb-3 select-none border border-purple-900/30"
+                                        style={{ 
+                                            WebkitUserSelect: 'none', 
+                                            userSelect: 'none', 
+                                            WebkitTouchCallout: 'none',
+                                            opacity: game.position < config.level + 1 ? 0.3 : 1
+                                        }}
+                                    >
+                                        👁️ Show Calculation (Hold)
+                                    </button>
+                                )}
+
+                                <div className="h-4"></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'results' && (
+                        <div className="max-w-md mx-auto">
+                            <div className="bg-gray-900/90 backdrop-blur rounded-3xl p-6 shadow-2xl border border-green-500/30">
+                                <h2 className="text-3xl font-bold text-center mb-6 text-purple-400">
+                                    🎯 Session Complete
+                                </h2>
+
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-gray-800/60 rounded-2xl p-6 text-center border border-green-500/20">
+                                        <div className="text-sm text-green-400 mb-2">Accuracy</div>
+                                        <div className="text-4xl font-bold text-green-400">
+                                            {Math.round((game.correct / config.trials || 0) * 100)}%
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-800/60 rounded-2xl p-6 text-center border border-green-500/20">
+                                        <div className="text-sm text-green-400 mb-2">Performance</div>
+                                        <div className="text-4xl font-bold text-purple-400">
+                                            {game.correct}/{config.trials}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-800/60 rounded-2xl p-4 mb-6 border border-green-500/20">
+                                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                                        <div>Depth: <strong className="text-purple-400">{config.level}-Back</strong></div>
+                                        <div>Range: <strong className="text-purple-400">{config.range[0]}-{config.range[1]}</strong></div>
+                                    </div>
+                                </div>
+
+                                <h3 className="text-2xl font-bold text-center mb-4 text-green-400">📊 Session Review</h3>
+                                <div className="bg-gray-800/60 rounded-2xl p-4 mb-6 border border-purple-500/20 overflow-x-auto">
+                                    <table className="w-full text-sm text-gray-300 border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-gray-700">
+                                                <th className="p-2 text-left">Pos</th>
+                                                <th className="p-2 text-left">Number</th>
+                                                <th className="p-2 text-left">ΔB (|prev - n+1 back|)</th>
+                                                <th className="p-2 text-left">ΔA (|curr - n back|)</th>
+                                                <th className="p-2 text-left">Correct</th>
+                                                <th className="p-2 text-left">Your Answer</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {game.numbers.map((num, idx) => {
+                                                const positionColor = getColorByLevel(idx, config.level);
+                                                const positionShape = getShape(idx);
+                                                
+                                                // Helper to render mini shape with number
+                                                const renderMiniShape = (shape, color, number) => {
+                                                    const size = 40; // Small size for table
+                                                    const commonProps = {
+                                                        fill: "rgba(15,23,42,0.9)",
+                                                        stroke: color,
+                                                        strokeWidth: "2"
+                                                    };
+                                                    
+                                                    let shapeElement;
+                                                    if (shape === 'heart') {
+                                                        shapeElement = <path d="M20 8 Q10 1, 4 8 Q1 15, 7 22 Q14 29, 20 35 Q26 29, 33 22 Q39 15, 36 8 Q30 1, 20 8 Z" {...commonProps} />;
+                                                    } else if (shape === 'sun') {
+                                                        shapeElement = <><circle cx="20" cy="20" r="11" {...commonProps} /><path d="M20 0 L20 9 M20 31 L20 40 M0 20 L9 20 M31 20 L40 20 M7 7 L11 11 M29 29 L33 33 M7 33 L11 29 M29 11 L33 7" stroke={color} strokeWidth="2" fill="none" /></>;
+                                                    } else if (shape === 'triangle') {
+                                                        shapeElement = <polygon points="20,4 34,30 6,30" {...commonProps} />;
+                                                    } else if (shape === 'semi-circle') {
+                                                        shapeElement = <path d="M6 26 Q6 6, 20 6 Q34 6, 34 26 L6 26 Z" {...commonProps} />;
+                                                    } else if (shape === 'circle') {
+                                                        shapeElement = <circle cx="20" cy="20" r="12" {...commonProps} />;
+                                                    } else if (shape === 'trapezium') {
+                                                        shapeElement = <polygon points="10,10 30,10 36,30 4,30" {...commonProps} />;
+                                                    } else if (shape === 'hexagon') {
+                                                        shapeElement = <polygon points="20,6 30,13 30,25 20,32 10,25 10,13" {...commonProps} />;
+                                                    } else if (shape === 'diamond') {
+                                                        shapeElement = <polygon points="20,5 35,20 20,35 5,20" {...commonProps} />;
+                                                    } else if (shape === 'cross') {
+                                                        shapeElement = <path d="M14 6 L26 6 L26 14 L34 14 L34 26 L26 26 L26 34 L14 34 L14 26 L6 26 L6 14 L14 14 Z" {...commonProps} />;
+                                                    } else if (shape === 'oval') {
+                                                        shapeElement = <ellipse cx="20" cy="20" rx="14" ry="10" {...commonProps} />;
+                                                    }
+                                                    
+                                                    return (
+                                                        <div className="inline-flex items-center gap-1">
+                                                            <svg width={size} height={size} style={{ filter: `drop-shadow(0 0 3px ${color})` }}>
+                                                                {shapeElement}
+                                                                <text x="20" y="24" textAnchor="middle" fontSize="14" fontWeight="900" fill={color}>{number}</text>
+                                                            </svg>
+                                                        </div>
+                                                    );
+                                                };
+                                                
+                                                if (idx < config.level + 1) {
+                                                    return (
+                                                        <tr key={idx} className="border-b border-gray-800">
+                                                            <td className="p-2">{idx}</td>
+                                                            <td className="p-2">
+                                                                {renderMiniShape(positionShape, positionColor, num)}
+                                                            </td>
+                                                            <td colSpan="4" className="p-2 text-gray-500">N/A (initial sequence)</td>
+                                                        </tr>
+                                                    );
+                                                }
+                                                const res = game.responses.find(r => r.position === idx);
+                                                if (!res) return null;
+                                                
+                                                // Calculate which positions contributed to deltaB and deltaA
+                                                const deltaBPosition = idx - 1; // position of "prev"
+                                                const deltaAPosition = idx; // position of "curr"
+                                                const deltaBColor = getColorByLevel(deltaBPosition, config.level);
+                                                const deltaAColor = getColorByLevel(deltaAPosition, config.level);
+                                                
+                                                const correctText = res.correctAnswer ? 'Match' : 'Different';
+                                                let yourText = '';
+                                                if (res.playerChoice === null) {
+                                                    yourText = 'Missed ✗';
+                                                } else {
+                                                    yourText = (res.playerChoice ? 'Match' : 'Different') + (res.playerChoice === res.correctAnswer ? ' ✓' : ' ✗');
+                                                }
+                                                return (
+                                                    <tr key={idx} className="border-b border-gray-800">
+                                                        <td className="p-2">{idx}</td>
+                                                        <td className="p-2">
+                                                            {renderMiniShape(positionShape, positionColor, num)}
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <span className="font-bold" style={{ color: deltaBColor }}>{res.deltaB}</span>
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <span className="font-bold" style={{ color: deltaAColor }}>{res.deltaA}</span>
+                                                        </td>
+                                                        <td className="p-2">{correctText}</td>
+                                                        <td className="p-2 text-green-400">{yourText}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <button
+                                    onClick={begin}
+                                    className="w-full bg-green-700 hover:bg-green-600 text-white font-bold py-4 rounded-2xl mb-3 transition shadow-lg"
+                                >
+                                    ▶ Train Again
+                                </button>
+
+                                <button
+                                    onClick={restart}
+                                    className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-4 rounded-2xl transition shadow-lg"
+                                >
+                                    🏠 Main Menu
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<NBackTrainer />, document.getElementById('root'));
+    </script>
+</body>
+</html>

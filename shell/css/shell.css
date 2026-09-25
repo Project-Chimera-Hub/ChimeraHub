@@ -319,6 +319,41 @@ h2::after {
 .aside-card p { margin: 0; font-size: .82rem; color: var(--dim); flex: 1 1 20rem; }
 .aside-card b { color: var(--accent-2); font-weight: 600; }
 
+/* ---- the trainers that are not counted ---- *
+ *
+ * A box within the page, dashed like the archive's card because it says the
+ * same thing — here, but not training the day can see. Its own grid inside,
+ * ruled like the one above so the cards still read as a menu. */
+.more {
+  margin-top: 1.4rem;
+  padding: 1rem 1.2rem 1.2rem;
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.more__head {
+  display: flex;
+  align-items: baseline;
+  gap: .7rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: .78rem;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.more__head::-webkit-details-marker { display: none; }
+.more__head::before { content: "▸"; transition: transform .14s; }
+.more[open] > .more__head::before { transform: rotate(90deg); }
+.more__head:hover { color: var(--ink); }
+.more__count { color: var(--accent); letter-spacing: .1em; }
+.more__note { margin: .7rem 0 1rem; font-size: .82rem; color: var(--dim); }
+.more__note b { color: var(--accent-2); font-weight: 600; }
+.more .card { background: transparent; }
+.more .card:hover, .more .card:focus-visible { background: var(--panel-hi); }
+
 /* ---- the appearance row ---- */
 
 .settings {
@@ -497,7 +532,7 @@ h2::after {
 /* A machine that cannot blur what is behind a panel gets an opaque one
    instead, because the alternative is sage text directly on a photograph. */
 @media (prefers-reduced-transparency: reduce) {
-  .today, .card, .aside-card, .settings {
+  .today, .card, .aside-card, .more, .settings {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: #0e1613;

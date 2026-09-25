@@ -63,8 +63,24 @@
   var ARCHIVE = { id: "archive", name: "Training archive", path: "archive/",
                   colour: "var(--dim)", what: "The record. Not training." };
 
+  /* Openable and on the menu, but kept out of TRAINERS for the archive's
+   * reason: TRAINERS is what the meter sums, and none of these has an adapter
+   * yet, so the day cannot see them. They sit in their own box on the hub and
+   * their own directory in the repository, apps/more/. Giving one an adapter
+   * is what moves it up into the list above. */
+  var MORE = [
+    { id: "goated", name: "GOATED n-Back", path: "more/goated/", colour: "#2be3c6",
+      what: "Relational n-back over abstract relationships" },
+    { id: "posner", name: "Adaptive Posner", path: "more/posner/", colour: "#9ecbff",
+      what: "Semantic cueing, adaptive timing" },
+    { id: "schulte", name: "Speed Memory × Schulte", path: "more/schulte/", colour: "#c8b8ff",
+      what: "Schulte tables against a memory span" },
+    { id: "integration", name: "Relational Integration", path: "more/integration/", colour: "#f2cc60",
+      what: "N-back over differences between numbers" },
+  ];
+
   var byId = {};
-  TRAINERS.concat([ARCHIVE]).forEach(function (t) { byId[t.id] = t; });
+  TRAINERS.concat(MORE, [ARCHIVE]).forEach(function (t) { byId[t.id] = t; });
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -274,22 +290,32 @@
     setGoal(Math.min(1440, n));
   }
 
+  function card(t, counted) {
+    var a = document.createElement("a");
+    a.className = "card";
+    a.href = "#/" + t.id;
+    a.innerHTML =
+      '<span class="card__name"><span class="card__dot"></span>' + t.name + "</span>" +
+      '<div class="card__what"></div>' +
+      (counted
+        ? '<div class="card__today" id="today-' + t.id + '">—</div>'
+        : '<div class="card__today">Not counted</div>') +
+      '<span class="card__enter">Enter →</span>';
+    a.querySelector(".card__dot").style.background = t.colour;
+    a.querySelector(".card__what").textContent = t.what;
+    return a;
+  }
+
   function renderGrid() {
     var grid = $("grid");
     grid.textContent = "";
-    TRAINERS.forEach(function (t) {
-      var a = document.createElement("a");
-      a.className = "card";
-      a.href = "#/" + t.id;
-      a.innerHTML =
-        '<span class="card__name"><span class="card__dot"></span>' + t.name + "</span>" +
-        '<div class="card__what"></div>' +
-        '<div class="card__today" id="today-' + t.id + '">—</div>' +
-        '<span class="card__enter">Enter →</span>';
-      a.querySelector(".card__dot").style.background = t.colour;
-      a.querySelector(".card__what").textContent = t.what;
-      grid.appendChild(a);
-    });
+    TRAINERS.forEach(function (t) { grid.appendChild(card(t, true)); });
+
+    var more = $("grid-more");
+    if (!more) return;
+    more.textContent = "";
+    MORE.forEach(function (t) { more.appendChild(card(t, false)); });
+    $("more-count").textContent = String(MORE.length);
   }
 
   /* ---------------------------------------------------------------- *

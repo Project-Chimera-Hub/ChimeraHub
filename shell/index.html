@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindbuild</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=7">
+<link rel="stylesheet" href="css/shell.css?v=8">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -27,6 +27,22 @@
 
   <h2 id="today-h">Trainers</h2>
   <div class="grid" id="grid"></div>
+
+  <!-- Trainers that run here but are not counted toward the day: no adapter
+       reads their storage yet, so the meter cannot see them. Boxed apart from
+       the eight rather than mixed in, for the same reason the archive is —
+       the rule the gate enforces should be visible in the layout. -->
+  <details class="more" id="more" open>
+    <summary class="more__head">
+      <span class="more__title">More trainers</span>
+      <span class="more__count" id="more-count"></span>
+    </summary>
+    <p class="more__note">
+      These run here like the eight above, but <b>their time is not counted</b>
+      toward today or the quota — nothing reads their records yet.
+    </p>
+    <div class="grid" id="grid-more"></div>
+  </details>
 
   <h2>The record</h2>
   <div class="aside-card">
@@ -104,6 +120,6 @@
 <script src="shared/quota.js?v=3"></script>
 <script src="js/today.js?v=3"></script>
 <script src="js/pause.js?v=1"></script>
-<script src="js/shell.js?v=8"></script>
+<script src="js/shell.js?v=9"></script>
 </body>
 </html>

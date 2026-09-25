@@ -100,6 +100,23 @@ log("[build] precision (vite)");
     "--outDir", path.join(DIST, "precision"), "--emptyOutDir"], dir);
 }
 
+/* The trainers under apps/more: offered by the hub in their own box, and not
+   counted toward the quota, because no adapter reads their storage yet. Three
+   are single pages and are copied as they are. GOATED is a Vite app like
+   Precision, and its config already uses a relative base, so it runs at
+   whatever depth it is put and needs no --base. */
+for (const name of ["posner", "schulte", "integration"]) {
+  log(`[copy] more/${name}`);
+  copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
+}
+
+log("[build] more/goated (vite)");
+{
+  const dir = path.join(ROOT, "apps", "more", "goated");
+  ensureDeps(dir);
+  run("npx", ["vite", "build", "--outDir", path.join(DIST, "more", "goated"), "--emptyOutDir"], dir);
+}
+
 /* The record, hoisted where the shell can reach it. The archive remains the
    only place these are edited. */
 log("[copy] shared record");
