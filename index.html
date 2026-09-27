@@ -102,7 +102,7 @@ button{background:none;border:none;cursor:pointer}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
 .field:last-child{margin-bottom:0}
-.field > label{font-size:.8rem;color:var(--fg-dim);font-weight:500}
+.field > label,.field > .field-label{font-size:.8rem;color:var(--fg-dim);font-weight:500}
 .rate-value{font-family:var(--mono);color:var(--fg-faint)}
 
 select,input[type=number]{
@@ -144,7 +144,7 @@ input[type=number]{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 .binds{border:1px solid var(--line);border-radius:11px;overflow:hidden}
 .bind{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:.55rem .85rem;border-bottom:1px solid var(--line-soft)}
-.bind:last-child{border-bottom:none}
+.bind:last-child,.bind.is-last{border-bottom:none}
 .bind > span{font-size:.88rem}
 .keycap{
   min-width:74px;padding:.34rem .6rem;
@@ -175,7 +175,7 @@ input[type=range]::-moz-range-track{height:3px;background:var(--raised);border-r
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5.5px;border-radius:50%;background:var(--accent)}
 input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--accent)}
 
-.switch{display:flex;align-items:center;gap:11px;cursor:pointer;font-size:.9rem;padding:.2rem 0}
+.switch{display:flex;align-items:center;gap:11px;cursor:pointer;font-size:.9rem;padding:.2rem 0;position:relative}
 .switch + .switch{margin-top:10px}
 .switch input{position:absolute;opacity:0;width:0;height:0}
 .track{width:36px;height:20px;flex-shrink:0;background:var(--field);border:1px solid var(--line);border-radius:10px;position:relative;transition:background .15s,border-color .15s}
@@ -192,6 +192,71 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
 }
 .primary-btn:hover:not(:disabled){background:var(--accent-bright)}
 .primary-btn:disabled{opacity:.55;cursor:progress}
+
+/* ------------------------------------------------------- advanced ------- */
+
+.modebar{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid var(--line)}
+.modebar .hint{margin-top:0}
+
+.switch + .field,.hint + .switch,.hint + .field,.field + .switch{margin-top:14px}
+.switch.is-off{opacity:.5;cursor:not-allowed}
+
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sources{display:flex;flex-direction:column;gap:6px}
+.check{
+  display:flex;align-items:center;gap:10px;min-width:0;position:relative;
+  padding:.52rem .7rem;background:var(--field);border:1px solid var(--line);border-radius:9px;
+  font-size:.9rem;cursor:pointer;transition:border-color .15s;
+}
+.check:hover{border-color:var(--raised)}
+.check.is-on{border-color:var(--accent)}
+.check input{position:absolute;opacity:0;width:0;height:0}
+.check > span:not(.box){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.box{width:16px;height:16px;flex-shrink:0;border:1px solid var(--fg-faint);border-radius:4px;position:relative;transition:background .15s,border-color .15s}
+.check input:checked + .box{background:var(--accent);border-color:var(--accent)}
+.check input:checked + .box::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:9px;border:solid #0E1319;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.check input:focus-visible + .box{outline:2px solid var(--accent-bright);outline-offset:2px}
+.check em{margin-left:auto;padding-left:8px;font-style:normal;font-family:var(--mono);font-size:.76rem;color:var(--fg-faint)}
+
+input[type=text]{
+  width:100%;padding:.58rem .7rem;background:var(--field);
+  border:1px solid var(--line);border-radius:9px;font-size:.92rem;transition:border-color .15s;
+}
+input[type=text]::placeholder{color:var(--fg-faint)}
+input[type=color]{width:52px;height:34px;padding:3px;background:var(--field);border:1px solid var(--line);border-radius:9px;cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
+input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
+.inline-field{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px}
+.inline-field > label{font-size:.8rem;color:var(--fg-dim);font-weight:500}
+
+.folders{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.folder{border:1px solid var(--line);border-radius:11px;padding:10px 12px 12px;transition:border-color .15s,background .15s}
+.folder.is-drop{border-color:var(--accent);background:var(--accent-wash)}
+.folder__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.folder__head .folder__name{
+  flex:1;min-width:130px;width:auto;padding:.32rem .5rem;margin-left:-.5rem;
+  background:none;border-color:transparent;font-weight:600;
+}
+.folder__head .folder__name:hover{border-color:var(--line)}
+.folder__head .folder__name:focus{border-color:var(--accent);background:var(--field)}
+.folder__count{font-family:var(--mono);font-size:.76rem;color:var(--fg-faint);margin-right:4px}
+.small-btn{padding:.36rem .7rem;font-size:.8rem;border-radius:8px}
+.danger:hover,.danger.is-armed{border-color:var(--miss);color:var(--miss)}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.thumb{position:relative;width:52px;height:52px;border-radius:7px;overflow:hidden;background:var(--field)}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.thumb button{
+  position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;
+  background:rgba(14,19,25,.85);color:var(--fg);font-size:.85rem;line-height:1;
+  opacity:0;transition:opacity .15s;
+}
+.thumb:hover button,.thumb button:focus-visible{opacity:1}
+@media (hover:none){.thumb button{opacity:1}}
+.folder__note{margin-top:8px;font-size:.8rem;color:var(--fg-faint)}
+.folder__note.is-warn{color:var(--hold)}
+.new-folder{display:flex;gap:8px;margin-top:12px}
+.new-folder input{flex:1;min-width:0}
 
 /* ----------------------------------------------------------- play ------- */
 
@@ -214,24 +279,48 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
 .blockbar__fill{height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear}
 
 .stage{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vh,26px);padding:clamp(12px,3vh,26px) 16px;position:relative;min-height:0;
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-height:0;
+  --pad:clamp(12px,3vh,26px);
+  --gap:clamp(14px,3vh,26px);
   --grid:3;
   --tall:100vh;
   --cell-gap:clamp(6px,1.4vmin,13px);
-  --board:min(92vw,62vh,620px);
+  --cue-h:clamp(24px,4vh,34px);
+  --k-space:0px;                /* the k-back cue row, when variable n-back is on */
+  --dot:clamp(16px,3.2vmin,30px);
+  --dot-gap:clamp(8px,2vmin,18px);
+  --side:0px;                   /* room for the ear circles, when they're on */
+  --ear:#E6B422;
+  --room:calc(var(--tall) - 160px - 2 * var(--pad) - var(--gap) - var(--k-space));
+  --board:min(calc(92vw - 2 * var(--side)),62vh,var(--room),620px);
+  gap:var(--gap);padding:var(--pad) 16px;
 }
 @supports (height:100dvh){.stage{--tall:100dvh}}
+.stage.has-cue{--k-space:var(--cue-h)}
+.stage.has-dots{--side:calc(var(--dot) + var(--dot-gap))}
 /* With the image square above it, the grid gives up some height so both fit on screen */
 .stage.has-picture{
-  --board:min(92vw,max(160px,calc((var(--tall) - 160px - clamp(52px,12vh,104px)) * var(--grid) / (var(--grid) + 1))),620px);
+  --board:min(calc(92vw - 2 * var(--side)),max(100px,calc((var(--room) - var(--gap)) * var(--grid) / (var(--grid) + 1))),620px);
 }
 
+.board-row{display:flex;align-items:center;gap:var(--dot-gap);flex:none}
 .board{
   display:grid;gap:var(--cell-gap);
-  width:var(--board);aspect-ratio:1;
+  width:var(--board);aspect-ratio:1;flex:none;min-height:0;
 }
+.ear-dot{display:none;width:var(--dot);aspect-ratio:1;border-radius:50%;background:var(--ear);visibility:hidden;flex:none}
+.stage.has-dots .ear-dot{display:block}
+.ear-dot.is-on{visibility:visible}
+.cue{
+  display:none;align-items:center;justify-content:center;
+  height:var(--cue-h);margin:calc(var(--gap) / -2) 0;
+  font-family:var(--display);font-weight:700;font-size:calc(var(--cue-h) * .72);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--accent-bright);
+}
+.stage.has-cue .cue{display:flex}
+.stage.is-covered .picture-slot,.stage.is-covered .cue,.stage.is-covered .board-row{visibility:hidden}
 .cell{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4%;min-width:0;min-height:0;
   border:1px solid var(--line-soft);border-radius:10px;padding:5%;
 }
 .disc{
@@ -258,7 +347,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
 .picture.is-on .shot{background:var(--accent-wash);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .picture.is-on .shot canvas{visibility:visible}
 
-.answers{display:flex;gap:10px;justify-content:center;width:var(--board)}
+/* As wide as the grid, but never so narrow that the labels collide (tiny grids on landscape phones) */
+.answers{display:flex;gap:10px;justify-content:center;width:max(var(--board),min(92vw,calc(var(--answers,2) * 76px + (var(--answers,2) - 1) * 10px)))}
 .answer{
   flex:1;min-width:0;
   display:flex;flex-direction:column;align-items:center;gap:5px;
@@ -322,6 +412,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
   .figures{grid-template-columns:1fr 1fr}
   .figures .figure:last-child{grid-column:1/-1}
   .primary-btn{width:100%}
+  .modebar{padding-left:20px;padding-right:20px}
+  .pair--stack{grid-template-columns:1fr}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -347,6 +439,14 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
       </div>
     </header>
 
+    <div class="modebar">
+      <label class="switch">
+        <input type="checkbox" id="advanced"><span class="track"></span>
+        Advanced settings
+      </label>
+      <p class="hint" id="advanced-hint">Mix any stimuli, use your own pictures, and fine-tune difficulty and sound.</p>
+    </div>
+
     <div class="regions">
 
       <div class="region">
@@ -365,13 +465,19 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
           </div>
         </div>
         <div class="field">
-          <label for="mode">Stimuli</label>
+          <label for="mode" id="stimuli-label">Stimuli</label>
           <select id="mode">
             <option value="pos_col">Position + colour</option>
             <option value="pos_aud">Position + voice</option>
             <option value="all">Position + colour + voice</option>
             <option value="all_img">Position + colour + voice + image</option>
           </select>
+          <div class="checks" id="streams" role="group" aria-labelledby="stimuli-label" hidden>
+            <label class="check"><input type="checkbox" data-stream="pos"><span class="box"></span><span>Position</span></label>
+            <label class="check"><input type="checkbox" data-stream="col"><span class="box"></span><span>Colour</span></label>
+            <label class="check"><input type="checkbox" data-stream="aud"><span class="box"></span><span>Voice</span></label>
+            <label class="check"><input type="checkbox" data-stream="img"><span class="box"></span><span>Image</span></label>
+          </div>
           <p class="hint" id="image-hint" hidden></p>
         </div>
         <div class="field">
@@ -397,10 +503,53 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
         <p class="hint" id="session-hint">Runs until you press End. The clock counts up.</p>
       </div>
 
+      <div class="region" id="difficulty-region" data-adv hidden>
+        <h2>Difficulty</h2>
+        <div class="field">
+          <label for="match-rate">Match rate <span class="rate-value" id="match-value">25%</span></label>
+          <input type="range" id="match-rate" min="0" max="100" step="5" value="25">
+          <p class="hint" style="margin-top:0">How often a trial repeats the item it should be compared with.</p>
+        </div>
+        <div class="field">
+          <label for="lure-rate">Interference <span class="rate-value" id="lure-value">25%</span></label>
+          <input type="range" id="lure-rate" min="0" max="100" step="5" value="25">
+          <p class="hint" style="margin-top:0">How often a non-match is a lure: the item from one step nearer or further back. At 0%, recent items only repeat when there aren’t enough to go round.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="variable"><span class="track"></span>
+          Variable n-back
+        </label>
+        <div class="field" id="floor-field">
+          <label for="floor">Floor</label>
+          <input type="number" id="floor" min="1" max="20" value="1">
+          <p class="hint" style="margin-top:0">Each trial asks for a random k from the floor up to n, shown just above the grid.</p>
+        </div>
+      </div>
+
+      <div class="region" id="buzz-region" data-adv hidden>
+        <h2>Mistake sound</h2>
+        <label class="switch">
+          <input type="checkbox" id="buzz-on"><span class="track"></span>
+          Play a sound after a trial with a mistake
+        </label>
+        <div class="field">
+          <label for="buzz-sound">Sound</label>
+          <div class="voice-row">
+            <select id="buzz-sound"></select>
+            <button type="button" class="ghost-btn" id="buzz-test">Hear it</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="buzz-vol">Volume <span class="rate-value" id="buzz-vol-value">60%</span></label>
+          <input type="range" id="buzz-vol" min="0" max="1" step="0.05" value="0.6">
+        </div>
+        <p class="hint">Plays when you miss a match or answer one that wasn’t there. The next trial waits for it to finish, so it never covers a word.</p>
+      </div>
+
       <div class="region" id="controls-region">
         <h2>Controls</h2>
         <div class="binds">
-          <div class="bind"><span>Position</span><button type="button" class="keycap" data-bind="pos" id="cap-pos">Left</button></div>
+          <div class="bind" id="bind-pos"><span>Position</span><button type="button" class="keycap" data-bind="pos" id="cap-pos">Left</button></div>
           <div class="bind" id="bind-col"><span>Colour</span><button type="button" class="keycap" data-bind="col" id="cap-col">Up</button></div>
           <div class="bind" id="bind-aud"><span>Voice</span><button type="button" class="keycap" data-bind="aud" id="cap-aud">Right</button></div>
           <div class="bind" id="bind-img"><span>Image</span><button type="button" class="keycap" data-bind="img" id="cap-img">Down</button></div>
@@ -411,7 +560,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
       <div class="region" id="voice-region">
         <h2>Voice</h2>
         <div class="field">
-          <label for="voice-select">Speaker</label>
+          <label for="voice-select" id="voice-label">Speaker</label>
           <div class="voice-row">
             <select id="voice-select"></select>
             <button type="button" class="ghost-btn" id="test-voice">Hear it</button>
@@ -422,6 +571,50 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
           <label for="voice-rate">Speed <span id="rate-value" class="rate-value">1.1×</span></label>
           <input type="range" id="voice-rate" min="0.6" max="1.8" step="0.05" value="1.1">
         </div>
+        <div id="dichotic-block" data-adv hidden>
+          <label class="switch" id="dichotic-switch">
+            <input type="checkbox" id="dichotic"><span class="track"></span>
+            Dichotic listening
+          </label>
+          <p class="hint" id="dichotic-hint"></p>
+          <div id="dichotic-options" style="margin-top:14px">
+            <div class="field">
+              <label for="right-voice">Right ear speaker</label>
+              <div class="voice-row">
+                <select id="right-voice"></select>
+                <button type="button" class="ghost-btn" id="test-right">Hear it</button>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="ear-help"><span class="track"></span>
+              Show the ear to follow with a circle beside the grid
+            </label>
+            <div class="inline-field" id="ear-color-field">
+              <label for="ear-color">Circle colour</label>
+              <input type="color" id="ear-color" value="#E6B422">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="region region--wide" id="pictures-region" data-adv hidden>
+        <h2>Pictures</h2>
+        <div class="pair pair--stack">
+          <div class="field">
+            <span class="field-label">In the grid</span>
+            <div class="sources" id="grid-sources" role="group" aria-label="Pictures in the grid"></div>
+          </div>
+          <div class="field">
+            <span class="field-label">In the image square</span>
+            <div class="sources" id="square-sources" role="group" aria-label="Pictures in the image square"></div>
+          </div>
+        </div>
+        <div class="folders" id="folders"></div>
+        <div class="new-folder">
+          <input type="text" id="new-folder-name" placeholder="New folder name" maxlength="40" aria-label="New folder name">
+          <button type="button" class="ghost-btn" id="new-folder-btn">Create folder</button>
+        </div>
+        <p class="hint" id="folders-hint">Folders and their pictures are saved in this browser.</p>
       </div>
 
       <div class="region region--wide">
@@ -473,7 +666,12 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
     <div class="picture-slot" id="picture-slot">
       <div class="cell picture" id="picture"><div class="shot"><canvas id="picture-canvas"></canvas></div></div>
     </div>
-    <div class="board" id="board"></div>
+    <div class="cue" id="cue"></div>
+    <div class="board-row">
+      <div class="ear-dot" id="ear-left"></div>
+      <div class="board" id="board"></div>
+      <div class="ear-dot" id="ear-right"></div>
+    </div>
     <div class="answers" id="answers"></div>
   </div>
 </section>
@@ -545,6 +743,14 @@ const FACE_PX = 320;            // faces are pre-scaled to this once, at load
 const IMAGE_PX = 400;           // images too, the first time the image mode is picked
 const MINUTE_PRESETS = [5,10,15,20,30,45];
 const LABELS = {pos:'Position', col:'Colour', aud:'Voice', img:'Image'};
+const ORDER  = ['pos','col','aud','img'];
+
+// Advanced settings
+const EAR_RUN   = [3, 6];       // dichotic: the ear to follow switches after this many trials (random in range)
+const CUE_LEAD  = 0.2;          // seconds between the ear beep and the words
+const POOL_MAX  = 80;           // most pictures used in one session per place (a random pick if you have more)
+const STORE_PX  = 800;          // uploaded pictures are scaled down to this before saving
+const EAR_COLOR = '#E6B422';    // default colour of the ear circle
 
 /* ------------------------------------------------------------------ *
  * Settings and lifetime totals
@@ -556,7 +762,15 @@ const DEFAULTS = {
   sessionMode:'unlimited', minutes:20,
   keys:{pos:'ArrowLeft', col:'ArrowUp', aud:'ArrowRight', img:'ArrowDown'},
   voiceKind:'bank', bankVoice:'af_heart',
-  sysVoiceURI:null, sysVoiceName:null, voiceRate:1.1
+  sysVoiceURI:null, sysVoiceName:null, voiceRate:1.1,
+  // advanced (only used while Advanced settings is on)
+  advanced:false,
+  streams:null,                              // null until first opened: copied from the Stimuli dropdown
+  gridSources:['faces'], squareSources:['images'],
+  matchPct:25, lurePct:25,
+  variable:false, floor:1,
+  buzzOn:false, buzzSound:'beep', buzzVol:0.6,
+  dichotic:false, rightVoice:'same', earHelp:false, earColor:EAR_COLOR
 };
 let S = clone(DEFAULTS);
 let T = {allMs:0, dayKey:'', dayMs:0};
@@ -600,16 +814,34 @@ function load(){
   if (S.voiceKind !== 'sys') S.voiceKind = 'bank';
   S.feedback = S.feedback !== false;
   S.adaptive = S.adaptive !== false;
+  S.advanced = S.advanced === true;
+  const sv = S.streams;
+  S.streams = (sv && typeof sv === 'object') ? {pos:!!sv.pos, col:!!sv.col, aud:!!sv.aud, img:!!sv.img} : null;
+  const ids = v => Array.isArray(v) ? v.filter(x => typeof x === 'string') : null;
+  S.gridSources   = ids(S.gridSources)   || ['faces'];
+  S.squareSources = ids(S.squareSources) || ['images'];
+  S.matchPct = clampInt(S.matchPct, 0, 100, 25);
+  S.lurePct  = clampInt(S.lurePct, 0, 100, 25);
+  S.variable = S.variable === true;
+  S.floor    = clampInt(S.floor, 1, 20, 1);
+  S.buzzOn   = S.buzzOn === true;
+  if (!BUZZ[S.buzzSound]) S.buzzSound = 'beep';
+  S.buzzVol  = clampNum(S.buzzVol, 0, 1, 0.6);
+  S.dichotic = S.dichotic === true;
+  if (typeof S.rightVoice !== 'string') S.rightVoice = 'same';
+  S.earHelp  = S.earHelp === true;
+  if (!/^#[0-9a-f]{6}$/i.test(S.earColor || '')) S.earColor = EAR_COLOR;
   T.allMs = Number(T.allMs) || 0;
   T.dayMs = Number(T.dayMs) || 0;
 }
 
-let saveTimer = 0;
+let saveTimer = 0, savePending = false;
 function saveNow(){
   clearTimeout(saveTimer);
+  savePending = false;
   try { localStorage.setItem(STORE, JSON.stringify({v:3, settings:S, totals:T})); } catch(e){}
 }
-function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
+function save(){ clearTimeout(saveTimer); savePending = true; saveTimer = setTimeout(saveNow, 250); }
 
 /* ------------------------------------------------------------------ *
  * Shortcuts and session state
@@ -622,9 +854,12 @@ const stage = $('stage'), picture = $('picture'), pictureSlot = $('picture-slot'
 const pictureCanvas = $('picture-canvas');
 pictureCanvas.width = pictureCanvas.height = IMAGE_PX;
 const pictureG = pictureCanvas.getContext('2d');
+const cueEl = $('cue'), earDots = {L:$('ear-left'), R:$('ear-right')};
 
 let n = 2, gridSize = 3, stimMs = 1500, isiMs = 1000;
 let activeList = ['pos'], usesColour = false, usesVoice = false, usesImage = false, timedSession = false;
+let advOn = false, variableOn = false, buzzOn = false, dichoticOn = false, earHelpOn = false;
+let gridPool = [], squarePool = [], buzzBuf = null, liveClipsR = null;
 let blockLen = 0, trials = [], responses = {pos:[], col:[], aud:[], img:[]};
 let idx = 0, due = 0, timerId = 0;
 let running = false, paused = false, windowOpen = false, timeUp = false;
@@ -653,10 +888,16 @@ function keyName(k){
 }
 function rateLabel(v){ return parseFloat(Number(v).toFixed(2)) + '\u00d7'; }
 function dayStamp(){ const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+// Which streams are tracked: from the Stimuli dropdown, or the advanced checklist.
 function streamsFor(m){
   const every = m === 'all' || m === 'all_img';
-  return {colour: every || m === 'pos_col', voice: every || m === 'pos_aud', image: m === 'all_img'};
+  return {pos:true, col: every || m === 'pos_col', aud: every || m === 'pos_aud', img: m === 'all_img'};
 }
+function currentStreams(){
+  if (!S.advanced) return streamsFor(S.mode);
+  return S.streams || streamsFor(S.mode);
+}
+function streamCount(st){ return ORDER.filter(t => st[t]).length; }
 
 /* ------------------------------------------------------------------ *
  * Built-in voices: decoded once into AudioBuffers, played via Web Audio.
@@ -667,7 +908,7 @@ const bankById = {};
 BANK.voices.forEach(v => { bankById[v.id] = v; });
 const bankCovers = BANK.voices.length > 0 && WORDS.every(w => BANK.voices.every(v => v.clips && v.clips[w]));
 
-let actx = null, master = null, liveSource = null, liveClips = null, audioWasRunning = false;
+let actx = null, master = null, earBus = null, liveSources = [], liveClips = null, audioWasRunning = false;
 const decodedVoices = {};
 
 function getAudio(){
@@ -678,6 +919,8 @@ function getAudio(){
   catch(e){ try { actx = new AC(); } catch(e2){ return null; } }
   master = actx.createGain();
   master.connect(actx.destination);
+  earBus = actx.createChannelMerger(2);          // input 0 = left ear, input 1 = right ear
+  earBus.connect(master);
   actx.onstatechange = function(){
     if (actx.state === 'running'){ audioWasRunning = true; return; }
     // a phone call or Siri suspends audio on iOS: pause rather than carry on silently
@@ -733,22 +976,220 @@ function decodeVoice(id){
   job.catch(() => { if (decodedVoices[id] === job) delete decodedVoices[id]; });
   return job;
 }
-function playClip(clip){
-  if (!actx || !clip) return;
+// Several sounds can play at once (a word in each ear, a beep); a pause stops them all.
+// ear: 0 = left only, 1 = right only, anything else = both. when: AudioContext time, 0 = now.
+function playBuffer(buffer, offset, ear, when, volume){
+  if (!actx || !buffer) return;
   if (actx.state !== 'running'){ try { actx.resume(); } catch(e){} }
-  stopClip();
   const src = actx.createBufferSource();
-  src.buffer = clip.buffer;
-  src.connect(master);
-  src.onended = function(){ if (liveSource === src) liveSource = null; };
-  src.start(0, clip.offset);
-  liveSource = src;
+  src.buffer = buffer;
+  let out = src;
+  if (volume !== undefined){ out = actx.createGain(); out.gain.value = volume; src.connect(out); }
+  if (ear === 0 || ear === 1) out.connect(earBus, 0, ear); else out.connect(master);
+  src.onended = function(){
+    const i = liveSources.indexOf(src);
+    if (i >= 0) liveSources.splice(i, 1);
+    try { out.disconnect(); } catch(e){}
+  };
+  src.start(when || 0, offset || 0);
+  liveSources.push(src);
 }
+function playClip(clip, ear, when){ if (clip) playBuffer(clip.buffer, clip.offset, ear, when); }
 function stopClip(){
-  if (!liveSource) return;
-  try { liveSource.stop(); } catch(e){}
-  try { liveSource.disconnect(); } catch(e){}
-  liveSource = null;
+  liveSources.splice(0).forEach(src => {
+    try { src.stop(); } catch(e){}
+    try { src.disconnect(); } catch(e){}
+  });
+}
+
+// Dichotic listening: a short blip in the ear to follow, then a word in each ear.
+let cueBuf = null;
+function earCue(){
+  if (cueBuf || !actx) return cueBuf;
+  const sr = actx.sampleRate, len = Math.round(sr * 0.07);
+  cueBuf = actx.createBuffer(1, len, sr);
+  const d = cueBuf.getChannelData(0);
+  for (let i = 0; i < len; i++){
+    const t = i / sr, fade = 1 - i / len;
+    d[i] = Math.sin(2 * Math.PI * 1320 * t) * Math.min(1, t / 0.004) * fade * fade * 0.6;
+  }
+  return cueBuf;
+}
+function sayDichotic(t){
+  const ctx = getAudio();
+  if (!ctx || !liveClips) return;
+  stopClip();
+  const now = ctx.currentTime;
+  playBuffer(earCue(), 0, t.ear === 'L' ? 0 : 1, now);
+  playClip(liveClips[t.wordL], 0, now + CUE_LEAD);
+  playClip((liveClipsR || liveClips)[t.wordR], 1, now + CUE_LEAD);
+}
+
+/* ------------------------------------------------------------------ *
+ * Mistake sounds: synthesised once into a buffer, so they play instantly
+ * and stop with a pause like everything else.
+ * ------------------------------------------------------------------ */
+function tone(c, type, dest, t0, t1){ const o = c.createOscillator(); o.type = type; o.connect(dest); o.start(t0); o.stop(t1); return o; }
+function amp(c, dest, pts){                 // a gain envelope through [time, level] points
+  const g = c.createGain(); g.connect(dest);
+  g.gain.setValueAtTime(pts[0][1], pts[0][0]);
+  for (let i = 1; i < pts.length; i++) g.gain.linearRampToValueAtTime(pts[i][1], pts[i][0]);
+  return g;
+}
+function filt(c, dest, type, freq, q){ const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q !== undefined) f.Q.value = q; f.connect(dest); return f; }
+function noise(c, dest, t0, t1){
+  const len = Math.max(1, Math.round((t1 - t0) * c.sampleRate));
+  const b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const s = c.createBufferSource(); s.buffer = b; s.connect(dest); s.start(t0);
+}
+function gainOf(c, dest, v){ const g = c.createGain(); g.gain.value = v; g.connect(dest); return g; }
+
+const BUZZ = {
+  beep: {label:'Beep', dur:.34, make(c, out){
+    const g = amp(c, filt(c, out, 'lowpass', 6000), [[0,0],[.005,.5],[.27,.5],[.29,0]]);
+    tone(c, 'square', g, 0, .3).frequency.value = 1000;
+  }},
+  buzzer: {label:'Game-show buzzer', dur:.62, make(c, out){
+    const g = amp(c, filt(c, out, 'lowpass', 1800, .7), [[0,0],[.01,.45],[.52,.4],[.58,0]]);
+    [[110,'sawtooth'],[116.5,'sawtooth'],[55.3,'square']].forEach(p => { tone(c, p[1], g, 0, .6).frequency.value = p[0]; });
+  }},
+  fart: {label:'Fart', dur:.95, make(c, out){
+    const T = .82, N = 512;
+    const body = filt(c, filt(c, out, 'lowpass', 520, 5), 'peaking', 160, 1);
+    body.gain.value = 8;
+    const flap = c.createGain(); flap.connect(body);
+    const curve = new Float32Array(N);         // irregular lip flaps, 25–45 a second
+    for (let p = 0; p < N;){
+      const len = Math.max(6, Math.round((N / T) / (25 + Math.random() * 20))), peak = .45 + Math.random() * .55;
+      for (let j = 0; j < len && p < N; j++, p++){
+        const x = j / len, t = p / N * T;
+        const shape = x < .3 ? x / .3 : Math.pow(1 - (x - .3) / .7, 1.5);
+        const env = Math.min(1, t / .03) * (t < .55 ? 1 : 1 - .7 * (t - .55) / (T - .55));
+        curve[p] = peak * shape * env;
+      }
+    }
+    flap.gain.setValueCurveAtTime(curve, 0, T);
+    const pitch = new Float32Array(64);
+    for (let i = 0; i < 64; i++){ const x = i / 63; pitch[i] = (95 - 33 * x) * (1 + .12 * Math.sin(x * 23) + (Math.random() - .5) * .18); }
+    tone(c, 'sawtooth', flap, 0, T).frequency.setValueCurveAtTime(pitch, 0, T);
+    tone(c, 'square', gainOf(c, flap, .35), 0, T).frequency.setValueCurveAtTime(pitch.map(f => f * 1.01), 0, T);
+    noise(c, filt(c, gainOf(c, flap, .25), 'bandpass', 350, .8), 0, T);
+  }},
+  trombone: {label:'Sad trombone', dur:1.1, make(c, out){
+    [[293.66,0,.22],[277.18,.24,.46],[261.63,.48,.7],[246.94,.72,1.06]].forEach((nt, i) => {
+      const f = nt[0], t0 = nt[1], t1 = nt[2], last = i === 3;
+      const lp = filt(c, out, 'lowpass', 350, 4);   // the plunger "wah"
+      lp.frequency.setValueAtTime(350, t0);
+      lp.frequency.linearRampToValueAtTime(1500, t0 + .08);
+      lp.frequency.linearRampToValueAtTime(last ? 900 : 500, t1);
+      const o = tone(c, 'sawtooth', amp(c, lp, [[t0,0],[t0 + .03,.5],[t1 - .04,.45],[t1,0]]), t0, t1);
+      o.frequency.setValueAtTime(f, t0);
+      if (last){
+        o.frequency.setValueAtTime(f, t1 - .15);
+        o.frequency.linearRampToValueAtTime(f * .94, t1);
+        const depth = gainOf(c, o.frequency, 7);
+        tone(c, 'sine', depth, t0 + .12, t1).frequency.value = 6;
+      }
+    });
+  }},
+  honk: {label:'Clown horn', dur:.56, make(c, out){
+    [[0,.2],[.27,.5]].forEach(h => {
+      const t0 = h[0], t1 = h[1];
+      const g = amp(c, filt(c, filt(c, out, 'lowpass', 3200), 'bandpass', 950, 1.4), [[t0,0],[t0 + .015,.8],[t1 - .05,.7],[t1,0]]);
+      [[440,1],[660,.5],[220,.4]].forEach(p => {
+        const o = tone(c, 'sawtooth', gainOf(c, g, p[1]), t0, t1);
+        o.frequency.setValueAtTime(p[0] * 1.03, t0);
+        o.frequency.linearRampToValueAtTime(p[0], t0 + .04);
+        o.frequency.linearRampToValueAtTime(p[0] * .93, t1);
+      });
+    });
+  }},
+  quack: {label:'Duck', dur:.5, make(c, out){
+    [[0,.16],[.23,.41]].forEach(q => {
+      const t0 = q[0], t1 = q[1];
+      const g = amp(c, out, [[t0,0],[t0 + .01,.9],[t0 + .05,.7],[t1,0]]);
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      o.connect(filt(c, g, 'bandpass', 1150, 5));
+      o.connect(filt(c, g, 'bandpass', 2500, 7));
+      o.frequency.setValueAtTime(340, t0);
+      o.frequency.exponentialRampToValueAtTime(210, t1);
+      o.start(t0); o.stop(t1);
+    });
+  }},
+  boing: {label:'Boing', dur:.75, make(c, out){
+    const o = tone(c, 'triangle', amp(c, out, [[0,0],[.006,.8],[.2,.45],[.7,0]]), 0, .72);
+    o.frequency.setValueAtTime(170, 0);
+    o.frequency.linearRampToValueAtTime(300, .65);
+    const depth = c.createGain(); depth.connect(o.frequency);
+    depth.gain.setValueAtTime(110, 0);
+    depth.gain.exponentialRampToValueAtTime(4, .65);
+    tone(c, 'sine', depth, 0, .72).frequency.value = 17;
+  }},
+  bonk: {label:'Bonk', dur:.38, make(c, out){
+    const o = tone(c, 'sine', amp(c, out, [[0,0],[.003,1],[.08,.45],[.34,0]]), 0, .35);
+    o.frequency.setValueAtTime(240, 0);
+    o.frequency.exponentialRampToValueAtTime(58, .14);
+    tone(c, 'triangle', amp(c, out, [[0,0],[.002,.35],[.05,0]]), 0, .06).frequency.value = 900;
+    noise(c, amp(c, filt(c, out, 'bandpass', 1800, 1), [[0,.5],[.03,0]]), 0, .035);
+  }},
+  alarm: {label:'Alarm', dur:.66, make(c, out){
+    const o = tone(c, 'square', amp(c, filt(c, out, 'lowpass', 4000), [[0,0],[.01,.45],[.6,.45],[.63,0]]), 0, .64);
+    for (let i = 0; i < 6; i++) o.frequency.setValueAtTime(i % 2 ? 660 : 880, i * .105);
+  }},
+  whistle: {label:'Slide whistle', dur:.8, make(c, out){
+    const g = amp(c, out, [[0,0],[.03,.6],[.66,.5],[.76,0]]);
+    const o = tone(c, 'sine', g, 0, .78);
+    o.frequency.setValueAtTime(1500, 0);
+    o.frequency.exponentialRampToValueAtTime(320, .74);
+    tone(c, 'sine', gainOf(c, o.frequency, 18), 0, .78).frequency.value = 7;
+    noise(c, filt(c, gainOf(c, g, .06), 'highpass', 3000), 0, .78);
+  }},
+  glitch: {label:'Robot glitch', dur:.5, make(c, out){
+    const gate = c.createGain(); gate.connect(amp(c, filt(c, out, 'lowpass', 5000), [[0,.4],[.46,.4],[.48,0]]));
+    const o = tone(c, 'square', gate, 0, .48);
+    [880,0,1320,220,0,1760,440,110,990,0,660].forEach((f, i) => {
+      o.frequency.setValueAtTime(f || 100, i * .043);
+      gate.gain.setValueAtTime(f ? 1 : 0, i * .043);
+    });
+  }},
+  uhoh: {label:'Uh-oh', dur:.5, make(c, out){
+    [[622.25,0,.17],[523.25,.21,.46]].forEach(nt => {
+      const g = amp(c, out, [[nt[1],0],[nt[1] + .012,.55],[nt[2] - .06,.4],[nt[2],0]]);
+      tone(c, 'triangle', g, nt[1], nt[2]).frequency.value = nt[0];
+      tone(c, 'sine', gainOf(c, g, .3), nt[1], nt[2]).frequency.value = nt[0] * 2;
+    });
+  }}
+};
+
+const buzzJobs = {};
+function renderBuzz(name){
+  if (!BUZZ[name]) name = 'beep';
+  if (buzzJobs[name]) return buzzJobs[name];
+  const spec = BUZZ[name], OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  let job;
+  try {
+    const c = new OAC(1, Math.ceil(44100 * spec.dur), 44100);
+    spec.make(c, c.destination);
+    job = new Promise(resolve => {
+      c.oncomplete = e => resolve(e.renderedBuffer);
+      const p = c.startRendering();
+      if (p && p.then) p.then(resolve, () => resolve(null));
+    }).then(levelled);
+  } catch(e){ job = Promise.resolve(null); }
+  buzzJobs[name] = job;
+  return job;
+}
+// Bring every sound to a similar loudness, so the volume slider means the same for each.
+function levelled(buf){
+  if (!buf) return null;
+  const d = buf.getChannelData(0);
+  let peak = 0, sum = 0;
+  for (let i = 0; i < d.length; i++){ const a = Math.abs(d[i]); if (a > peak) peak = a; sum += d[i] * d[i]; }
+  if (!peak) return buf;
+  const k = Math.min(0.95 / peak, 0.22 / (Math.sqrt(sum / d.length) || 1));
+  for (let i = 0; i < d.length; i++) d[i] *= k;
+  return buf;
 }
 
 /* ------------------------------------------------------------------ *
@@ -804,7 +1245,7 @@ function stopVoice(){
   if (synth){ try { if (synth.speaking || synth.pending) synth.cancel(); } catch(e){} }
 }
 function sayWord(w){
-  if (liveClips && liveClips[w]) playClip(liveClips[w]);
+  if (liveClips && liveClips[w]){ stopClip(); playClip(liveClips[w]); }
   else sysSpeak(w, false);
 }
 
@@ -832,14 +1273,30 @@ function renderVoiceSelect(){
   } else if (S.voiceKind === 'sys' && S.sysVoiceName && !sysSettled){
     g2.appendChild(new Option(S.sysVoiceName + ' (loading)', 'sys:pending'));
   }
-  if (g2.children.length) frag.appendChild(g2);
+  if (g2.children.length){
+    // device voices come out of the speech engine, which can't be sent to one ear
+    if (dichoticSetup()){ g2.disabled = true; g2.label = 'This device (not for dichotic listening)'; }
+    frag.appendChild(g2);
+  }
   voiceSelect.innerHTML = '';
   voiceSelect.appendChild(frag);
   syncVoiceSelect();
 }
 
+function dichoticSetup(){ return S.advanced && S.dichotic && bankCovers; }
+function rightVoiceId(){ return (S.rightVoice !== 'same' && bankById[S.rightVoice]) ? S.rightVoice : S.bankVoice; }
+
+function renderRightVoice(){
+  const sel = $('right-voice');
+  sel.innerHTML = '';
+  sel.appendChild(new Option('Same as left ear', 'same'));
+  BANK.voices.forEach(v => sel.appendChild(new Option(v.label + ' (' + v.accent + ', ' + v.gender + ')', v.id)));
+  sel.value = (S.rightVoice !== 'same' && bankById[S.rightVoice]) ? S.rightVoice : 'same';
+}
+
 function syncVoiceSelect(){
   let value = null;
+  if (S.voiceKind === 'sys' && dichoticSetup()){ S.voiceKind = 'bank'; save(); }
   if (S.voiceKind === 'sys'){
     const i = sysVoiceIndex();
     if (i >= 0) value = 'sys:' + i;
@@ -877,6 +1334,7 @@ function reflectVoice(){
   }
   $('voice-hint').textContent = hint;
   $('rate-field').style.display = S.voiceKind === 'sys' ? '' : 'none';
+  $('voice-label').textContent = dichoticSetup() ? 'Left ear speaker' : 'Speaker';
 }
 
 voiceSelect.addEventListener('change', function(){
@@ -893,14 +1351,24 @@ voiceSelect.addEventListener('change', function(){
   saveNow();
 });
 
+const SAMPLE_WORD = WORDS.indexOf('Victory') >= 0 ? 'Victory' : WORDS[0];
 $('test-voice').addEventListener('click', function(){
   unlockAudio();
-  const sample = WORDS.indexOf('Victory') >= 0 ? 'Victory' : WORDS[0];
   if (S.voiceKind === 'bank' && bankCovers){
-    decodeVoice(S.bankVoice).then(m => playClip(m[sample])).catch(() => sysSpeak(sample, false));
+    const ear = dichoticSetup() ? 0 : undefined;             // left ear, so you can check your headphones
+    decodeVoice(S.bankVoice).then(m => { stopClip(); playClip(m[SAMPLE_WORD], ear); }).catch(() => sysSpeak(SAMPLE_WORD, false));
   } else {
-    sysSpeak(sample, false);
+    sysSpeak(SAMPLE_WORD, false);
   }
+});
+$('test-right').addEventListener('click', function(){
+  unlockAudio();
+  decodeVoice(rightVoiceId()).then(m => { stopClip(); playClip(m[SAMPLE_WORD], 1); }).catch(() => {});
+});
+$('right-voice').addEventListener('change', function(){
+  S.rightVoice = this.value;
+  decodeVoice(rightVoiceId()).catch(() => {});
+  saveNow();
 });
 
 /* ------------------------------------------------------------------ *
@@ -940,25 +1408,414 @@ function preparePicture(src, px, fit){
   });
 }
 
-let faceCanvases = [], facesDone = false;
-const facesReady = Promise.all(FACES.map(src => preparePicture(src, FACE_PX, 'cover')))
-  .then(list => { faceCanvases = list.filter(Boolean); facesDone = true; });
+// Prepared pictures are cached by size, fit and source, so a folder is only
+// decoded once; pictures no session needs any more are let go.
+const prepared = new Map();
+function prepKey(px, fit, url){ return px + '|' + fit + '|' + url; }
+function preparedPool(urls, px, fit){
+  return Promise.all(urls.map(u => {
+    const key = prepKey(px, fit, u);
+    if (!prepared.has(key)) prepared.set(key, preparePicture(u, px, fit));
+    return prepared.get(key).then(c => c ? {key:key, c:c} : null);
+  })).then(list => list.filter(Boolean));
+}
 
-// Images load the first time the image mode is picked. A retry (from Start)
+let facesDone = false;
+const facesReady = preparedPool(FACES, FACE_PX, 'cover').then(() => { facesDone = true; });
+
+// The images folder loads the first time something needs it. A retry (from Start)
 // picks up files added or renamed since, without reloading the page.
-let imageCanvases = [], imagesMissing = [], imagesDone = false, imagesJob = null;
+let imagesFound = 0, imagesMissing = [], imagesDone = false, imagesJob = null;
 function loadImages(retry){
   if (imagesJob && !(retry && imagesDone && imagesMissing.length)) return imagesJob;
+  imagesMissing.forEach(f => prepared.delete(prepKey(IMAGE_PX, IMAGE_FIT, IMAGE_DIR + f)));
   imagesDone = false;
-  imagesJob = Promise.all(IMAGES.map(f => preparePicture(IMAGE_DIR + f, IMAGE_PX, IMAGE_FIT))).then(list => {
-    imageCanvases = list.filter(Boolean);
-    imagesMissing = IMAGES.filter((f, i) => !list[i]);
+  imagesJob = Promise.all(IMAGES.map(f => preparedPool([IMAGE_DIR + f], IMAGE_PX, IMAGE_FIT))).then(lists => {
+    imagesFound = lists.filter(l => l.length).length;
+    imagesMissing = IMAGES.filter((f, i) => !lists[i].length);
     imagesDone = true;
+    renderSources();
     paintImageHint();
     paintSummary();
   });
   return imagesJob;
 }
+function needsImagesFolder(){ const st = currentStreams(); return st.img && sessionSources().square.indexOf('images') >= 0; }
+
+// Where each session's pictures come from: the defaults, or the ticked folders.
+function sessionSources(){
+  return S.advanced ? {grid:S.gridSources, square:S.squareSources} : {grid:['faces'], square:['images']};
+}
+function sourceUrls(ids, place){
+  const urls = [];
+  ids.forEach(id => {
+    if (id === 'faces'){ if (place === 'grid') FACES.forEach(u => urls.push(u)); }
+    else if (id === 'images'){ if (place === 'square') IMAGES.forEach(f => urls.push(IMAGE_DIR + f)); }
+    else { const f = folderById(id); if (f) f.pics.forEach(p => urls.push(p.url)); }
+  });
+  if (urls.length <= POOL_MAX) return urls;
+  shuffle(urls);                                   // a random selection when there are too many
+  return urls.slice(0, POOL_MAX);
+}
+function squareCount(){
+  let count = 0;
+  sessionSources().square.forEach(id => {
+    if (id === 'images') count += imagesDone ? imagesFound : 0;
+    else { const f = folderById(id); if (f) count += f.pics.length; }
+  });
+  return count;
+}
+function preparePools(st){
+  const src = sessionSources();
+  return Promise.all([
+    preparedPool(sourceUrls(src.grid, 'grid'), FACE_PX, 'cover'),
+    st.img ? preparedPool(sourceUrls(src.square, 'square'), IMAGE_PX, IMAGE_FIT) : Promise.resolve([])
+  ]).then(r => {
+    const keep = new Set(r[0].concat(r[1]).map(x => x.key));
+    FACES.forEach(u => keep.add(prepKey(FACE_PX, 'cover', u)));                  // defaults stay warm
+    IMAGES.forEach(f => keep.add(prepKey(IMAGE_PX, IMAGE_FIT, IMAGE_DIR + f)));
+    Array.from(prepared.keys()).forEach(k => { if (!keep.has(k)) prepared.delete(k); });
+    gridPool = r[0].map(x => x.c);
+    squarePool = r[1].map(x => x.c);
+  });
+}
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+
+/* ------------------------------------------------------------------ *
+ * Your folders. Pictures are kept in this browser's IndexedDB, which
+ * has room for them (localStorage doesn't), and survive restarts.
+ * ------------------------------------------------------------------ */
+const DB_NAME = 'affective_nback_pictures';
+let dbJob = null, folders = [], foldersState = 'loading';
+const folderNotes = {};
+
+function idb(){
+  if (dbJob) return dbJob;
+  dbJob = new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('No IndexedDB'));
+    let req;
+    try { req = indexedDB.open(DB_NAME, 1); } catch(e){ return reject(e); }
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains('folders')) d.createObjectStore('folders', {keyPath:'id'});
+      if (!d.objectStoreNames.contains('pictures')) d.createObjectStore('pictures', {keyPath:'id'}).createIndex('folder', 'folder');
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('Storage is busy in another tab'));
+  });
+  return dbJob;
+}
+function readAll(store){
+  return idb().then(d => new Promise((resolve, reject) => {
+    const r = d.transaction(store, 'readonly').objectStore(store).getAll();
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => reject(r.error);
+  }));
+}
+function writeTx(stores, fn){
+  return idb().then(d => new Promise((resolve, reject) => {
+    const t = d.transaction(stores, 'readwrite');
+    fn(t);
+    t.oncomplete = () => resolve();
+    t.onerror = t.onabort = () => reject(t.error || new Error('Couldn’t save'));
+  }));
+}
+function newId(prefix){ return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function folderById(id){ for (let i = 0; i < folders.length; i++) if (folders[i].id === id) return folders[i]; return null; }
+// Ask the browser not to clear this storage when space runs low.
+function keepForever(){ try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch(e){} }
+
+const foldersReady = Promise.all([readAll('folders'), readAll('pictures')]).then(r => {
+  folders = r[0].sort((a, b) => a.created - b.created).map(f => ({id:f.id, name:f.name, created:f.created, pics:[]}));
+  r[1].sort((a, b) => a.added - b.added).forEach(p => {
+    const f = folderById(p.folder);
+    if (f && p.blob) f.pics.push({id:p.id, url:URL.createObjectURL(p.blob)});
+  });
+  foldersState = 'ready';
+}).catch(() => { foldersState = 'error'; }).then(() => {
+  pruneSources();
+  renderPictures();
+  paintImageHint();
+  paintSummary();
+});
+
+// Ticks for folders that no longer exist are dropped.
+function pruneSources(){
+  if (foldersState !== 'ready') return;
+  const ok = id => id === 'faces' || id === 'images' || !!folderById(id);
+  const g = S.gridSources.filter(ok), q = S.squareSources.filter(ok);
+  if (g.length !== S.gridSources.length || q.length !== S.squareSources.length){
+    S.gridSources = g; S.squareSources = q; save();
+  }
+}
+
+function createFolder(name){
+  const rec = {id:newId('f'), name:name, created:Date.now()};
+  return writeTx(['folders'], t => { t.objectStore('folders').put(rec); }).then(() => {
+    folders.push({id:rec.id, name:rec.name, created:rec.created, pics:[]});
+    keepForever();
+    return rec.id;
+  });
+}
+function renameFolder(f, name){
+  f.name = name;
+  return writeTx(['folders'], t => { t.objectStore('folders').put({id:f.id, name:f.name, created:f.created}); });
+}
+function forgetPic(p){
+  prepared.delete(prepKey(FACE_PX, 'cover', p.url));
+  prepared.delete(prepKey(IMAGE_PX, IMAGE_FIT, p.url));
+  URL.revokeObjectURL(p.url);
+}
+function deleteFolder(f){
+  return writeTx(['folders','pictures'], t => {
+    t.objectStore('folders').delete(f.id);
+    const pics = t.objectStore('pictures');
+    f.pics.forEach(p => pics.delete(p.id));
+  }).then(() => {
+    f.pics.forEach(forgetPic);
+    folders = folders.filter(x => x !== f);
+    S.gridSources = S.gridSources.filter(id => id !== f.id);
+    S.squareSources = S.squareSources.filter(id => id !== f.id);
+    saveNow();
+  });
+}
+function removePicture(f, p){
+  return writeTx(['pictures'], t => { t.objectStore('pictures').delete(p.id); }).then(() => {
+    f.pics = f.pics.filter(x => x !== p);
+    forgetPic(p);
+  });
+}
+
+// Big photos are scaled down before saving: plenty for a small square, far lighter to keep.
+function shrink(file){
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h){ URL.revokeObjectURL(url); return resolve(null); }
+      const k = Math.min(1, STORE_PX / Math.max(w, h));
+      if (k === 1 && file.size < 1.5e6){ URL.revokeObjectURL(url); return resolve(file); }
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => {
+        if (b && b.type === 'image/webp') return resolve(b);
+        // this browser can't write WebP: flatten onto the page colour and keep a JPEG
+        const j = document.createElement('canvas');
+        j.width = c.width; j.height = c.height;
+        const jg = j.getContext('2d');
+        jg.fillStyle = '#1B242E'; jg.fillRect(0, 0, j.width, j.height); jg.drawImage(c, 0, 0);
+        j.toBlob(b2 => resolve(b2 || null), 'image/jpeg', 0.9);
+      }, 'image/webp', 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+// Saves files into a folder one by one. Resolves with the names that couldn't be used.
+function addPictures(f, files, onProgress){
+  const failed = [];
+  let chain = Promise.resolve();
+  Array.from(files).forEach((file, i) => {
+    chain = chain.then(() => shrink(file)).then(blob => {
+      if (!blob){ failed.push(file.name); return; }
+      const rec = {id:newId('p'), folder:f.id, blob:blob, name:file.name, added:Date.now() + i};
+      return writeTx(['pictures'], t => { t.objectStore('pictures').put(rec); }).then(() => {
+        f.pics.push({id:rec.id, url:URL.createObjectURL(blob)});
+      });
+    }).catch(() => { failed.push(file.name); }).then(() => { if (onProgress) onProgress(i + 1); });
+  });
+  return chain.then(() => { keepForever(); return failed; });
+}
+
+/* ------------------------------------------------------------------ *
+ * Pictures panel: what goes where, and the folders themselves
+ * ------------------------------------------------------------------ */
+function renderPictures(){
+  renderSources();
+  renderFolders();
+  const hint = $('folders-hint');
+  if (foldersState === 'error'){
+    hint.textContent = 'This browser won’t let the page save pictures, which some browsers refuse for pages opened straight from a file. Chrome allows it, or put the page on a web server.';
+    hint.classList.add('is-warn');
+  } else {
+    hint.textContent = foldersState === 'loading' ? 'Loading your folders…'
+      : 'Folders and their pictures are saved in this browser for next time. You can also drop images onto a folder.';
+    hint.classList.remove('is-warn');
+  }
+  document.querySelector('.new-folder').hidden = foldersState === 'error';
+}
+
+function renderSources(){
+  fillSources($('grid-sources'), 'grid', S.gridSources, {id:'faces', name:'Default faces', count:FACES.length});
+  fillSources($('square-sources'), 'square', S.squareSources,
+    {id:'images', name:'Default images', count:imagesDone ? imagesFound : IMAGES.length});
+}
+function fillSources(box, list, chosen, def){
+  box.innerHTML = '';
+  [def].concat(folders.map(f => ({id:f.id, name:f.name || 'Untitled', count:f.pics.length}))).forEach(s => {
+    const lab = document.createElement('label');
+    lab.className = 'check';
+    const inp = document.createElement('input');
+    inp.type = 'checkbox'; inp.value = s.id; inp.dataset.list = list;
+    inp.checked = chosen.indexOf(s.id) >= 0;
+    const tick = document.createElement('span'); tick.className = 'box';
+    const name = document.createElement('span'); name.textContent = s.name;
+    const count = document.createElement('em'); count.textContent = s.count;
+    lab.append(inp, tick, name, count);
+    lab.classList.toggle('is-on', inp.checked);
+    box.appendChild(lab);
+  });
+}
+function onSourceChange(e){
+  const inp = e.target;
+  if (!inp.dataset.list) return;
+  const key = inp.dataset.list === 'grid' ? 'gridSources' : 'squareSources';
+  const next = S[key].filter(id => id !== inp.value);
+  if (inp.checked) next.push(inp.value);
+  S[key] = next;
+  inp.parentNode.classList.toggle('is-on', inp.checked);
+  if (needsImagesFolder()) loadImages();
+  paintImageHint();
+  paintSummary();
+  saveNow();
+}
+$('grid-sources').addEventListener('change', onSourceChange);
+$('square-sources').addEventListener('change', onSourceChange);
+
+function countText(k){ return k === 1 ? '1 image' : k + ' images'; }
+function renderFolders(){
+  const box = $('folders');
+  box.innerHTML = '';
+  folders.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'folder';
+    card.dataset.id = f.id;
+    card.innerHTML =
+      '<div class="folder__head">' +
+        '<input type="text" class="folder__name" maxlength="40" aria-label="Folder name">' +
+        '<span class="folder__count"></span>' +
+        '<button type="button" class="ghost-btn small-btn" data-act="add">Add images</button>' +
+        '<button type="button" class="ghost-btn small-btn danger" data-act="delete">Delete</button>' +
+      '</div>' +
+      '<div class="thumbs"></div>' +
+      '<p class="folder__note"></p>' +
+      '<input type="file" accept="image/*" multiple hidden>';
+    card.querySelector('.folder__name').value = f.name;
+    card.querySelector('.folder__count').textContent = countText(f.pics.length);
+    const thumbs = card.querySelector('.thumbs');
+    f.pics.forEach(p => {
+      const t = document.createElement('div');
+      t.className = 'thumb';
+      const img = document.createElement('img');
+      img.src = p.url; img.alt = ''; img.decoding = 'async';
+      const x = document.createElement('button');
+      x.type = 'button'; x.textContent = '×'; x.dataset.act = 'remove'; x.dataset.pic = p.id;
+      x.setAttribute('aria-label', 'Remove this image');
+      t.append(img, x);
+      thumbs.appendChild(t);
+    });
+    thumbs.hidden = !f.pics.length;
+    const note = folderNotes[f.id] || (f.pics.length ? null : {text:'No images yet. Add some, or drop them here.'});
+    const noteEl = card.querySelector('.folder__note');
+    noteEl.hidden = !note;
+    if (note){ noteEl.textContent = note.text; noteEl.classList.toggle('is-warn', !!note.warn); }
+    box.appendChild(card);
+  });
+}
+function setFolderNote(f, text, warn){
+  folderNotes[f.id] = {text:text, warn:warn};
+  const el = document.querySelector('.folder[data-id="' + f.id + '"] .folder__note');
+  if (el){ el.hidden = false; el.textContent = text; el.classList.toggle('is-warn', !!warn); }
+}
+function afterPictureChange(){ renderPictures(); paintImageHint(); paintSummary(); }
+
+function upload(f, files){
+  const total = files.length;
+  if (!total) return;
+  const card = document.querySelector('.folder[data-id="' + f.id + '"]');
+  if (card) card.querySelector('[data-act=add]').disabled = true;
+  setFolderNote(f, 'Adding ' + countText(total) + '…', false);
+  addPictures(f, files, done => setFolderNote(f, 'Adding ' + done + ' of ' + total + '…', false)).then(failed => {
+    const added = total - failed.length;
+    folderNotes[f.id] = failed.length
+      ? {text:(added ? 'Added ' + countText(added) + '. ' : '') + 'Couldn’t use ' + failed.join(', ') + '.', warn:true}
+      : {text:'Added ' + countText(added) + '.', warn:false};
+    afterPictureChange();
+  });
+}
+
+$('folders').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  const card = btn && btn.closest('.folder'), f = card && folderById(card.dataset.id);
+  if (!f) return;
+  const act = btn.dataset.act;
+  if (act === 'add'){ card.querySelector('input[type=file]').click(); return; }
+  if (act === 'remove'){
+    const p = f.pics.find(x => x.id === btn.dataset.pic);
+    if (p){ delete folderNotes[f.id]; removePicture(f, p).then(afterPictureChange, () => setFolderNote(f, 'Couldn’t remove that image.', true)); }
+    return;
+  }
+  if (act === 'delete'){
+    if (f.pics.length && !btn.classList.contains('is-armed')){      // a second click confirms
+      btn.classList.add('is-armed');
+      btn.textContent = 'Delete folder and ' + countText(f.pics.length) + '?';
+      setTimeout(() => { if (btn.isConnected){ btn.classList.remove('is-armed'); btn.textContent = 'Delete'; } }, 4000);
+      return;
+    }
+    deleteFolder(f).then(afterPictureChange, () => setFolderNote(f, 'Couldn’t delete this folder.', true));
+  }
+});
+$('folders').addEventListener('change', e => {
+  const t = e.target, card = t.closest('.folder'), f = card && folderById(card.dataset.id);
+  if (!f) return;
+  if (t.type === 'file'){ const files = Array.from(t.files || []); t.value = ''; upload(f, files); }
+  else if (t.classList.contains('folder__name')){
+    const name = t.value.trim() || 'Untitled';
+    t.value = name;
+    renameFolder(f, name).then(renderSources, () => setFolderNote(f, 'Couldn’t rename this folder.', true));
+  }
+});
+$('folders').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('folder__name')){ e.preventDefault(); e.target.blur(); }
+});
+$('folders').addEventListener('dragover', e => {
+  const card = e.target.closest('.folder');
+  if (!card) return;
+  e.preventDefault();
+  card.classList.add('is-drop');
+});
+$('folders').addEventListener('dragleave', e => {
+  const card = e.target.closest('.folder');
+  if (card && !card.contains(e.relatedTarget)) card.classList.remove('is-drop');
+});
+$('folders').addEventListener('drop', e => {
+  const card = e.target.closest('.folder'), f = card && folderById(card.dataset.id);
+  if (!card) return;
+  e.preventDefault();
+  card.classList.remove('is-drop');
+  if (f && e.dataTransfer && e.dataTransfer.files.length) upload(f, Array.from(e.dataTransfer.files));
+});
+
+function newFolder(){
+  const inp = $('new-folder-name');
+  const name = inp.value.trim() || 'Folder ' + (folders.length + 1);
+  createFolder(name).then(id => {
+    inp.value = '';
+    afterPictureChange();
+    const add = document.querySelector('.folder[data-id="' + id + '"] [data-act=add]');
+    if (add) add.focus();
+  }, () => { foldersState = 'error'; renderPictures(); });
+}
+$('new-folder-btn').addEventListener('click', newFolder);
+$('new-folder-name').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); newFolder(); } });
 
 /* ------------------------------------------------------------------ *
  * Settings <-> interface
@@ -982,6 +1839,18 @@ function applySettings(){
   $('adaptive').checked = S.adaptive;
   $('voice-rate').value = S.voiceRate;
   $('rate-value').textContent = rateLabel(S.voiceRate);
+  $('advanced').checked = S.advanced;
+  $('match-rate').value = S.matchPct;
+  $('lure-rate').value = S.lurePct;
+  $('variable').checked = S.variable;
+  $('floor').value = S.floor;
+  $('buzz-on').checked = S.buzzOn;
+  $('buzz-sound').value = S.buzzSound;
+  $('buzz-vol').value = S.buzzVol;
+  $('dichotic').checked = S.dichotic;
+  $('ear-help').checked = S.earHelp;
+  $('ear-color').value = S.earColor;
+  renderRightVoice();
   reflectSettings();
 }
 
@@ -997,19 +1866,37 @@ function reflectSettings(){
     b.classList.toggle('is-on', parseInt(b.dataset.min, 10) === S.minutes);
   });
 
-  const st = streamsFor(S.mode);
-  $('bind-col').style.display = st.colour ? 'flex' : 'none';
-  $('bind-aud').style.display = st.voice ? 'flex' : 'none';
-  $('bind-img').style.display = st.image ? 'flex' : 'none';
-  $('voice-region').style.display = st.voice ? 'block' : 'none';
-  $('controls-region').classList.toggle('region--wide', !st.voice);
+  // Advanced settings: the same menu, with the extra panels and the checklist
+  const adv = S.advanced, st = currentStreams();
+  document.querySelectorAll('[data-adv]').forEach(el => { el.hidden = !adv; });
+  $('mode').hidden = adv;
+  $('streams').hidden = !adv;
+  document.querySelectorAll('#streams input').forEach(inp => {
+    inp.checked = !!st[inp.dataset.stream];
+    inp.parentNode.classList.toggle('is-on', inp.checked);
+  });
+
+  const shown = ORDER.filter(t => st[t]);
+  ORDER.forEach(t => {
+    const row = $('bind-' + t);
+    row.style.display = st[t] ? 'flex' : 'none';
+    row.classList.toggle('is-last', t === shown[shown.length - 1]);
+  });
+  $('voice-region').style.display = st.aud ? 'block' : 'none';
+  $('controls-region').classList.toggle('region--wide', !st.aud);
+
+  $('match-value').textContent = S.matchPct + '%';
+  $('lure-value').textContent = S.lurePct + '%';
+  $('floor-field').hidden = !S.variable;
+  $('buzz-vol-value').textContent = Math.round(S.buzzVol * 100) + '%';
+  reflectDichotic();
 
   $('cap-pos').textContent = keyName(S.keys.pos);
   $('cap-col').textContent = keyName(S.keys.col);
   $('cap-aud').textContent = keyName(S.keys.aud);
   $('cap-img').textContent = keyName(S.keys.img);
 
-  if (st.image) loadImages();
+  if (needsImagesFolder()) loadImages();
   paintImageHint();
   paintSummary();
 
@@ -1017,30 +1904,59 @@ function reflectSettings(){
   $('total-trained').textContent = duration(T.allMs);
 }
 
-function imagesBlocked(){ return streamsFor(S.mode).image && imagesDone && imageCanvases.length < 2; }
+function reflectDichotic(){
+  $('dichotic').disabled = !bankCovers;
+  $('dichotic-switch').classList.toggle('is-off', !bankCovers);
+  $('dichotic-hint').textContent = bankCovers
+    ? 'A different word in each ear. A beep just before each trial marks the ear to follow, and the n-back runs on that ear’s words. It switches every few trials; on a switch both ears hear the same word. Needs headphones.'
+    : 'Needs the built-in voices, and they only know the default words.';
+  const on = dichoticSetup();
+  $('dichotic-options').hidden = !on;
+  $('ear-color-field').hidden = !(on && S.earHelp);
+}
+
+// Could the image square be filled? Only answered once the pictures have loaded.
+function imagesBlocked(){
+  if (!currentStreams().img) return false;
+  if (needsImagesFolder() && !imagesDone) return false;
+  if (S.advanced && foldersState === 'loading') return false;
+  return squareCount() < 2;
+}
 
 // The line beside Start: what the session holds, or why it can't start yet.
 function paintSummary(){
-  const st = streamsFor(S.mode), el = $('setup-summary');
-  const count = 1 + [st.colour, st.voice, st.image].filter(Boolean).length;
-  const blocked = imagesBlocked();
-  el.textContent = blocked
-    ? 'Can’t start until the images are found. See Stimuli above.'
-    : ['', '', 'Two streams', 'Three streams', 'Four streams'][count] + ', ' +
-      (S.sessionMode === 'timed' ? S.minutes + ' minutes' : 'no time limit');
-  el.classList.toggle('is-warn', blocked);
+  const st = currentStreams(), el = $('setup-summary');
+  const count = streamCount(st);
+  let blocked = null;
+  if (!count) blocked = 'Pick at least one stimulus to start.';
+  else if (imagesBlocked()) blocked = S.advanced
+    ? 'Can’t start until the image square has at least 2 pictures. See Stimuli above.'
+    : 'Can’t start until the images are found. See Stimuli above.';
+  el.textContent = blocked ||
+    ['', 'One stream', 'Two streams', 'Three streams', 'Four streams'][count] + ', ' +
+    (S.sessionMode === 'timed' ? S.minutes + ' minutes' : 'no time limit');
+  el.classList.toggle('is-warn', !!blocked);
 }
 
 function paintImageHint(){
   const el = $('image-hint');
-  el.hidden = !streamsFor(S.mode).image;
+  el.hidden = !currentStreams().img;
   if (el.hidden) return;
-  const found = imageCanvases.length, total = IMAGES.length;
+  const useDefault = needsImagesFolder(), total = IMAGES.length;
   let text, warn = true;
-  if (!imagesDone){ text = 'Loading images from the images folder…'; warn = false; }
-  else if (!found) text = 'No images found. Put them in a folder named “images” next to this page.';
-  else if (imagesMissing.length) text = 'Found ' + found + ' of ' + total + ' images. Couldn’t open ' + imagesMissing.join(', ') + '.';
-  else { text = 'All ' + total + ' images found.'; warn = false; }
+  if (useDefault && !imagesDone){ text = 'Loading images from the images folder…'; warn = false; }
+  else if (!S.advanced){
+    if (!imagesFound) text = 'No images found. Put them in a folder named “images” next to this page.';
+    else if (imagesMissing.length) text = 'Found ' + imagesFound + ' of ' + total + ' images. Couldn’t open ' + imagesMissing.join(', ') + '.';
+    else { text = 'All ' + total + ' images found.'; warn = false; }
+  } else {
+    const count = squareCount();
+    if (count < 2) text = count
+      ? 'The image square needs at least 2 pictures. Tick more under Pictures.'
+      : 'Nothing to show in the image square yet. Tick a folder under Pictures.';
+    else if (useDefault && imagesMissing.length) text = count + ' pictures for the image square. Couldn’t open ' + imagesMissing.join(', ') + ' from the images folder.';
+    else { text = count + ' pictures for the image square' + (count > POOL_MAX ? ', ' + POOL_MAX + ' picked at random each session.' : '.'); warn = false; }
+  }
   el.textContent = text;
   el.classList.toggle('is-warn', warn);
 }
@@ -1054,17 +1970,62 @@ function readUI(){
   S.feedback  = $('feedback').checked;
   S.adaptive  = $('adaptive').checked;
   S.voiceRate = clampNum($('voice-rate').value, 0.6, 1.8, 1.1);
+  S.matchPct  = clampInt($('match-rate').value, 0, 100, 25);
+  S.lurePct   = clampInt($('lure-rate').value, 0, 100, 25);
+  S.variable  = $('variable').checked;
+  S.floor     = clampInt($('floor').value, 1, 20, 1);
+  S.buzzOn    = $('buzz-on').checked;
+  S.buzzVol   = clampNum($('buzz-vol').value, 0, 1, 0.6);
+  S.earHelp   = $('ear-help').checked;
   $('rate-value').textContent = rateLabel(S.voiceRate);
   reflectSettings();
   save();
 }
 
-['grid-size','n-level','mode','pace','minutes','feedback','adaptive','voice-rate'].forEach(id => {
+['grid-size','n-level','mode','pace','minutes','feedback','adaptive','voice-rate',
+ 'match-rate','lure-rate','variable','floor','buzz-on','buzz-vol','ear-help'].forEach(id => {
   $(id).addEventListener('change', readUI);
   $(id).addEventListener('input', readUI);
 });
 $('mode-unlimited').addEventListener('click', () => { S.sessionMode = 'unlimited'; reflectSettings(); saveNow(); });
 $('mode-timed').addEventListener('click', () => { S.sessionMode = 'timed'; reflectSettings(); saveNow(); });
+
+$('advanced').addEventListener('change', function(){
+  S.advanced = this.checked;
+  if (S.advanced && !S.streams) S.streams = Object.assign({}, streamsFor(S.mode));   // start from the dropdown's choice
+  renderVoiceSelect();
+  reflectSettings();
+  saveNow();
+});
+document.querySelectorAll('#streams input').forEach(inp => {
+  inp.addEventListener('change', () => {
+    S.streams = Object.assign({}, currentStreams());
+    S.streams[inp.dataset.stream] = inp.checked;
+    reflectSettings();
+    saveNow();
+  });
+});
+$('dichotic').addEventListener('change', function(){
+  S.dichotic = this.checked;
+  renderVoiceSelect();                       // device voices can't do dichotic listening
+  reflectSettings();
+  saveNow();
+});
+$('ear-color').addEventListener('input', function(){ S.earColor = this.value; save(); });
+
+function fillBuzzSelect(){
+  const sel = $('buzz-sound');
+  Object.keys(BUZZ).forEach(k => sel.appendChild(new Option(BUZZ[k].label, k)));
+}
+$('buzz-sound').addEventListener('change', function(){
+  S.buzzSound = this.value;
+  renderBuzz(S.buzzSound);
+  saveNow();
+});
+$('buzz-test').addEventListener('click', function(){
+  unlockAudio();
+  renderBuzz(S.buzzSound).then(buf => { if (buf){ stopClip(); playBuffer(buf, 0, undefined, 0, S.buzzVol); } });
+});
 
 /* ------------------------------------------------------------------ *
  * Key bindings and keyboard play
@@ -1155,8 +2116,9 @@ function commitTime(){
  * Board and answer keys (built once per session, reused every trial)
  * ------------------------------------------------------------------ */
 function buildBoard(){
-  board.style.gridTemplateColumns = 'repeat(' + gridSize + ',1fr)';
-  board.style.gridTemplateRows = 'repeat(' + gridSize + ',1fr)';
+  // minmax(0,1fr): a long word can't widen its column, however small the grid gets
+  board.style.gridTemplateColumns = 'repeat(' + gridSize + ',minmax(0,1fr))';
+  board.style.gridTemplateRows = 'repeat(' + gridSize + ',minmax(0,1fr))';
   board.innerHTML = '';
   cells = [];
   for (let i = 0; i < gridSize * gridSize; i++){
@@ -1198,16 +2160,24 @@ function clearBoard(){
 function showStimulus(t){
   clearBoard();
   const c = cells[t.pos];
-  if (faceCanvases.length) c.g.drawImage(faceCanvases[t.face], 0, 0);
+  if (gridPool.length) c.g.drawImage(gridPool[t.face], 0, 0);
   if (usesColour){ c.word.textContent = t.word; c.word.style.color = COLORS[t.col]; }
   c.el.classList.add('is-on');
   activeCell = c;
-  if (usesImage && imageCanvases[t.img]){
+  if (usesImage && squarePool[t.img]){
     pictureG.clearRect(0, 0, IMAGE_PX, IMAGE_PX);
-    pictureG.drawImage(imageCanvases[t.img], 0, 0);
+    pictureG.drawImage(squarePool[t.img], 0, 0);
     picture.classList.add('is-on');
     pictureOn = true;
   }
+  if (variableOn) cueEl.textContent = t.k ? t.k + '-back' : '';
+  if (earHelpOn) setEarDot(t.ear);
+}
+
+// The circle beside the grid on the side of the ear to follow.
+function setEarDot(ear){
+  earDots.L.classList.toggle('is-on', ear === 'L');
+  earDots.R.classList.toggle('is-on', ear === 'R');
 }
 
 function flash(type, state){
@@ -1223,11 +2193,13 @@ function showOverlay(title, note){
   $('overlay-title').textContent = title;
   $('overlay-note').textContent = note || '';
   overlay.classList.add('is-on');
-  board.style.visibility = pictureSlot.style.visibility = 'hidden';
+  stage.classList.add('is-covered');
+  cueEl.textContent = '';
+  setEarDot(null);
 }
 function hideOverlay(){
   overlay.classList.remove('is-on');
-  board.style.visibility = pictureSlot.style.visibility = 'visible';
+  stage.classList.remove('is-covered');
 }
 
 /* ------------------------------------------------------------------ *
@@ -1247,16 +2219,84 @@ function sequence(range){
   return seq;
 }
 
+// Advanced settings: every scored trial compares with the item k back.
+// A match copies it (match rate). Otherwise, at the interference rate, a lure
+// repeats the item one step nearer or further back. Otherwise the trial takes
+// what has been seen least in the last n+1 trials, never a lure if avoidable,
+// so recent history stays as varied as the pool allows. (16 positions at
+// 32-back: each turns up 1 to 3 times in any 32 trials, twice on average.)
+function designed(range, ks, match, lure){
+  const seq = [];
+  for (let i = 0; i < blockLen; i++){
+    const k = ks[i], target = k ? seq[i - k] : -1;
+    if (k && Math.random() < match){ seq.push(target); continue; }
+    if (k && Math.random() < lure){
+      const v = pickLure(seq, i, k, target);
+      if (v >= 0){ seq.push(v); continue; }
+    }
+    seq.push(pickFresh(seq, i, k, target, range));
+  }
+  return seq;
+}
+function pickLure(seq, i, k, target){
+  let ds = [k - 1, k + 1].filter(d => d >= 1 && d <= i && seq[i - d] !== target);
+  if (!ds.length){                                   // no neighbour works: anything else close by
+    for (let d = 1; d <= Math.min(i, k + 2); d++) if (d !== k && seq[i - d] !== target) ds.push(d);
+  }
+  return ds.length ? seq[i - ds[Math.floor(Math.random() * ds.length)]] : -1;
+}
+function pickFresh(seq, i, k, target, range){
+  const seen = new Array(range).fill(0), last = new Array(range).fill(-1);
+  for (let j = 0; j < i; j++){ last[seq[j]] = j; if (j >= i - n - 1) seen[seq[j]]++; }
+  const near = k ? [k - 1, k + 1].filter(d => d >= 1 && d <= i).map(d => seq[i - d]) : [];
+  let pool = [];
+  for (let v = 0; v < range; v++) if (v !== target || range === 1) pool.push(v);
+  const least = Math.min.apply(null, pool.map(v => seen[v]));
+  pool = pool.filter(v => seen[v] === least);
+  const clear = pool.filter(v => near.indexOf(v) < 0);
+  if (clear.length) pool = clear;
+  if (least > 0){                                    // everything is recent: the one seen longest ago
+    const oldest = Math.min.apply(null, pool.map(v => last[v]));
+    pool = pool.filter(v => last[v] === oldest);
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function makeTrials(){
-  const pos = sequence(gridSize * gridSize);
-  const col = sequence(COLORS.length);
-  const aud = sequence(WORDS.length);
+  // k for each trial: 0 for the first n (nothing to compare yet), else n, or a random floor..n
+  const lo = Math.min(S.floor, n), ks = [];
+  for (let i = 0; i < blockLen; i++)
+    ks.push(i < n ? 0 : variableOn ? lo + Math.floor(Math.random() * (n - lo + 1)) : n);
+  const make = range => advOn ? designed(range, ks, S.matchPct / 100, S.lurePct / 100) : sequence(range);
+  const pos = make(gridSize * gridSize);
+  const col = make(COLORS.length);
+  const aud = make(WORDS.length);
+  const img = make(Math.max(1, squarePool.length));
   const word = sequence(WORDS.length);
-  const face = sequence(Math.max(1, faceCanvases.length));
-  const img = sequence(Math.max(1, imageCanvases.length));
+  const face = sequence(Math.max(1, gridPool.length));
+
+  // Dichotic: the ear to follow, in runs of a few trials. The first trial of each
+  // run is a switch, so both ears get the same word; otherwise the other ear gets
+  // a different one.
+  let ear = Math.random() < 0.5 ? 'L' : 'R', left = 0;
   trials = [];
   for (let i = 0; i < blockLen; i++){
-    trials.push({pos:pos[i], col:col[i], aud:aud[i], img:img[i], face:face[i], word:WORDS[word[i]], spoken:WORDS[aud[i]]});
+    const t = {k:ks[i], pos:pos[i], col:col[i], aud:aud[i], img:img[i], face:face[i],
+               word:WORDS[word[i]], spoken:WORDS[aud[i]]};
+    if (dichoticOn){
+      let switched = i === 0;
+      if (left <= 0){
+        if (i > 0){ ear = ear === 'L' ? 'R' : 'L'; switched = true; }
+        left = EAR_RUN[0] + Math.floor(Math.random() * (EAR_RUN[1] - EAR_RUN[0] + 1));
+      }
+      left--;
+      let other = aud[i];
+      if (!switched) do { other = Math.floor(Math.random() * WORDS.length); } while (other === aud[i]);
+      t.ear = ear;
+      t.wordL = WORDS[ear === 'L' ? aud[i] : other];
+      t.wordR = WORDS[ear === 'R' ? aud[i] : other];
+    }
+    trials.push(t);
   }
 }
 
@@ -1266,29 +2306,41 @@ function makeTrials(){
 function startClicked(){
   if (running) return;
   readUI();
+  const st = currentStreams();
+  if (!streamCount(st)) return;                   // the summary line already says why
   unlockAudio();                                  // inside the click, so mobile allows it
-  const st = streamsFor(S.mode);
-  const wantBank = st.voice && S.voiceKind === 'bank' && bankCovers;
-  if (st.voice && !wantBank && synth){ try { synth.resume(); } catch(e){} sysSpeak(WORDS[0], true); }
+  const dichotic = S.advanced && S.dichotic && st.aud && bankCovers;
+  const wantBank = st.aud && bankCovers && (dichotic || S.voiceKind === 'bank');
+  if (st.aud && !wantBank && synth){ try { synth.resume(); } catch(e){} sysSpeak(WORDS[0], true); }
 
-  const imageJob = st.image ? loadImages(true) : Promise.resolve(null);
   const btn = $('start-btn'), again = $('again-btn');
   btn.disabled = again.disabled = true;
-  btn.textContent = again.textContent = !facesDone ? 'Loading faces…'
-    : (st.image && !imagesDone) ? 'Loading images…' : 'Getting ready…';
+  btn.textContent = again.textContent = (!facesDone || (st.img && !imagesDone && needsImagesFolder()) || (S.advanced && foldersState === 'loading'))
+    ? 'Loading pictures…' : 'Getting ready…';
 
-  const voiceJob = wantBank ? decodeVoice(S.bankVoice).catch(() => null) : Promise.resolve(null);
-  Promise.all([facesReady, voiceJob, imageJob]).then(res => {
+  const rightId = dichotic ? rightVoiceId() : null;
+  const pictureJob = Promise.all([facesReady, S.advanced ? foldersReady : null, needsImagesFolder() ? loadImages(true) : null])
+    .then(() => preparePools(st));
+  Promise.all([
+    wantBank ? decodeVoice(S.bankVoice).catch(() => null) : null,
+    rightId && rightId !== S.bankVoice ? decodeVoice(rightId).catch(() => null) : null,
+    S.advanced && S.buzzOn ? renderBuzz(S.buzzSound) : null,
+    pictureJob
+  ]).then(res => {
     btn.disabled = again.disabled = false;
     btn.textContent = 'Start session';
     again.textContent = 'Train again';
-    if (st.image && imageCanvases.length < 2){     // nothing to remember: stay on setup and say why
+    if (st.img && squarePool.length < 2){           // nothing to remember: stay on setup and say why
       show('setup');
+      paintImageHint();
+      paintSummary();
       const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
       $('image-hint').scrollIntoView({block:'center', behavior: still ? 'auto' : 'smooth'});
       return;
     }
-    liveClips = res[1];                            // null means device voice (or fallback)
+    liveClips = res[0];                            // null means device voice (or fallback)
+    liveClipsR = res[1] || res[0];
+    buzzBuf = res[2] || null;
     begin();
   });
 }
@@ -1301,19 +2353,27 @@ $('pause-btn').addEventListener('click', togglePause);
 
 function begin(){
   if (document.activeElement) document.activeElement.blur();
-  const st = streamsFor(S.mode);
+  const st = currentStreams();
   gridSize = S.grid;
   n = S.level;
   peakN = n;
-  usesColour = st.colour;
-  usesVoice = st.voice;
-  usesImage = st.image;
-  activeList = ['pos'];
-  if (usesColour) activeList.push('col');
-  if (usesVoice) activeList.push('aud');
-  if (usesImage) activeList.push('img');
+  usesColour = st.col;
+  usesVoice = st.aud;
+  usesImage = st.img;
+  activeList = ORDER.filter(t => st[t]);
+  advOn = S.advanced;
+  variableOn = advOn && S.variable;
+  buzzOn = advOn && S.buzzOn && !!buzzBuf;
+  dichoticOn = advOn && S.dichotic && usesVoice && !!liveClips;
+  earHelpOn = dichoticOn && S.earHelp;
   stage.style.setProperty('--grid', gridSize);
+  stage.style.setProperty('--ear', S.earColor);
+  stage.style.setProperty('--answers', activeList.length);
   stage.classList.toggle('has-picture', usesImage);
+  stage.classList.toggle('has-cue', variableOn);
+  stage.classList.toggle('has-dots', earHelpOn);
+  cueEl.textContent = '';
+  setEarDot(null);
 
   const pace = Math.round(S.paceSec * 1000);
   stimMs = Math.round(pace * 0.6);
@@ -1349,13 +2409,13 @@ function startBlock(){
   idx = 0;
   responses = {pos:new Array(blockLen).fill(false), col:new Array(blockLen).fill(false),
                aud:new Array(blockLen).fill(false), img:new Array(blockLen).fill(false)};
-  $('level').textContent = n + '-back';
+  $('level').textContent = levelText();
   $('count').textContent = '1 / ' + blockLen;
   blockbar.style.transform = 'scaleX(0)';
 
   clearBoard();
   windowOpen = false;
-  showOverlay(n + '-back', 'starting in a moment');
+  showOverlay(levelText(), variableOn ? 'k changes every trial, shown above the grid' : 'starting in a moment');
   schedule(performance.now() + 1600, () => {
     if (!running || paused) return;
     hideOverlay();
@@ -1381,7 +2441,7 @@ function runTrial(){
   blockbar.style.transform = 'scaleX(' + ((idx + 1) / blockLen) + ')';
 
   showStimulus(t);
-  if (usesVoice) sayWord(t.spoken);
+  if (usesVoice){ if (dichoticOn) sayDichotic(t); else sayWord(t.spoken); }
   windowOpen = true;
 
   const hideAt = due + stimMs, endAt = hideAt + isiMs;
@@ -1390,38 +2450,60 @@ function runTrial(){
     clearBoard();
     schedule(endAt, () => {
       if (!running || paused) return;
-      closeWindow();
+      const wrong = closeWindow();
       completed++;
       idx++;
       const now = performance.now();
       due = (now - endAt > 60) ? now : endAt;     // stay on the beat unless badly behind
-      runTrial();
+      if (wrong && buzzOn){
+        // the next trial waits for the sound, so it never covers a word
+        playBuffer(buzzBuf, 0, undefined, 0, S.buzzVol);
+        due += Math.round(buzzBuf.duration * 1000) + 80;
+        schedule(due, runTrial);
+      } else runTrial();
     });
   });
+}
+
+function levelText(){
+  const lo = Math.min(S.floor, n);
+  return variableOn && lo < n ? lo + '\u2013' + n + ' back' : n + '-back';
+}
+
+// Trial i is a match when it repeats the item k back (k is n, or random in variable mode).
+function isMatch(i, type){
+  const k = trials[i].k;
+  return !!k && trials[i][type] === trials[i - k][type];
 }
 
 function respond(type){
   if (!running || paused || !windowOpen || idx >= blockLen) return;
   if (responses[type][idx]) return;
   responses[type][idx] = true;
-  if (!S.feedback || idx < n){ flash(type, 'log'); return; }
-  flash(type, trials[idx][type] === trials[idx - n][type] ? 'hit' : 'miss');
+  if (!S.feedback || !trials[idx].k){ flash(type, 'log'); return; }
+  flash(type, isMatch(idx, type) ? 'hit' : 'miss');
 }
 
+// Closes the answer window; says whether any stream went wrong this trial.
 function closeWindow(){
   windowOpen = false;
-  if (!S.feedback || idx < n) return;
+  if (!trials[idx].k) return false;
+  let wrong = false;
   activeList.forEach(type => {
-    if (trials[idx][type] === trials[idx - n][type] && !responses[type][idx]) flash(type, 'miss');
+    const target = isMatch(idx, type), said = responses[type][idx];
+    if (target !== said) wrong = true;
+    if (S.feedback && target && !said) flash(type, 'miss');
   });
+  return wrong;
 }
 
 function scoreBlock(limit){
   const out = {hits:0, misses:0, fa:0};
   limit = Math.min(limit, blockLen);
   activeList.forEach(type => {
-    for (let i = n; i < limit; i++){
-      const isTarget = trials[i][type] === trials[i - n][type];
+    for (let i = 0; i < limit; i++){
+      if (!trials[i].k) continue;
+      const isTarget = isMatch(i, type);
       const said = responses[type][i];
       if (isTarget && said) out.hits++;
       else if (isTarget && !said) out.misses++;
@@ -1541,13 +2623,16 @@ document.addEventListener('visibilitychange', () => {
     requestWakeLock();
   }
 });
-window.addEventListener('pagehide', () => { if (running) commitTime(); saveNow(); });
+// Only flush what's unsaved, so a forgotten second tab can't overwrite newer settings as it closes.
+window.addEventListener('pagehide', () => { if (running) commitTime(); if (running || savePending) saveNow(); });
 
 /* ------------------------------------------------------------------ */
 load();
 buildPresets();
+fillBuzzSelect();
 renderVoiceSelect();
 applySettings();
+renderPictures();
 
 if (synth){
   try { synth.addEventListener('voiceschanged', readSysVoices); } catch(e){ synth.onvoiceschanged = readSysVoices; }
