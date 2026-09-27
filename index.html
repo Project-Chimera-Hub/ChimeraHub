@@ -235,9 +235,17 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 .folder.is-drop{border-color:var(--accent);background:var(--accent-wash)}
 .folder__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .folder__head .folder__name{
-  flex:1;min-width:130px;width:auto;padding:.32rem .5rem;margin-left:-.5rem;
+  flex:1;min-width:130px;width:auto;padding:.32rem .5rem;margin-left:-4px;
   background:none;border-color:transparent;font-weight:600;
 }
+.folder__fold{
+  width:28px;height:28px;flex:none;display:grid;place-items:center;margin-left:-6px;
+  border-radius:7px;color:var(--fg-dim);transition:color .15s,background .15s;
+}
+.folder__fold:hover{color:var(--fg);background:var(--field)}
+.folder__fold svg{width:14px;height:14px;transition:transform .15s}
+.folder.is-folded .folder__fold svg{transform:rotate(-90deg)}
+.folder.is-folded .thumbs,.folder.is-folded .folder__note{display:none}
 .folder__head .folder__name:hover{border-color:var(--line)}
 .folder__head .folder__name:focus{border-color:var(--accent);background:var(--field)}
 .folder__count{font-family:var(--mono);font-size:.76rem;color:var(--fg-faint);margin-right:4px}
@@ -268,55 +276,62 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 .clock.is-low{color:var(--hold)}
 .clock.is-critical{color:var(--miss)}
 .clock-label{font-size:.72rem;color:var(--fg-faint)}
-.level{font-family:var(--display);font-size:1rem;font-weight:600}
-.count{font-family:var(--mono);font-size:.82rem;color:var(--fg-faint);font-variant-numeric:tabular-nums}
+.level{font-family:var(--display);font-size:1rem;font-weight:600;white-space:nowrap}
+.count{font-family:var(--mono);font-size:.82rem;color:var(--fg-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
 .rail-btns{display:flex;gap:8px;flex-shrink:0}
 .rail-btn{padding:.42rem .95rem;border:1px solid var(--line);border-radius:8px;font-size:.84rem;font-weight:500;color:var(--fg-dim);transition:border-color .15s,color .15s}
 .rail-btn:hover{border-color:var(--fg-dim);color:var(--fg)}
+#fs-btn{display:inline-flex;align-items:center;gap:7px}
+#fs-btn[hidden]{display:none}
+#fs-btn svg{width:14px;height:14px;flex:none}
 #end-btn:hover{border-color:var(--miss);color:var(--miss)}
 
 .blockbar{height:2px;background:var(--line-soft);flex-shrink:0;overflow:hidden}
 .blockbar__fill{height:100%;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .18s linear}
 
+/* The play area is sized in JS (fitStage): the grid takes all the room the
+   other pieces leave, in any window, and grows when you go full screen. */
 .stage{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-height:0;
   --pad:clamp(12px,3vh,26px);
   --gap:clamp(14px,3vh,26px);
   --grid:3;
-  --tall:100vh;
   --cell-gap:clamp(6px,1.4vmin,13px);
   --cue-h:clamp(24px,4vh,34px);
-  --k-space:0px;                /* the k-back cue row, when variable n-back is on */
   --dot:clamp(16px,3.2vmin,30px);
   --dot-gap:clamp(8px,2vmin,18px);
-  --side:0px;                   /* room for the ear circles, when they're on */
   --ear:#E6B422;
-  --room:calc(var(--tall) - 160px - 2 * var(--pad) - var(--gap) - var(--k-space));
-  --board:min(calc(92vw - 2 * var(--side)),62vh,var(--room),620px);
-  gap:var(--gap);padding:var(--pad) 16px;
-}
-@supports (height:100dvh){.stage{--tall:100dvh}}
-.stage.has-cue{--k-space:var(--cue-h)}
-.stage.has-dots{--side:calc(var(--dot) + var(--dot-gap))}
-/* With the image square above it, the grid gives up some height so both fit on screen */
-.stage.has-picture{
-  --board:min(calc(92vw - 2 * var(--side)),max(100px,calc((var(--room) - var(--gap)) * var(--grid) / (var(--grid) + 1))),620px);
+  --board:min(92vw,62vh,620px);   /* until fitStage() measures the real space */
+  --col-w:96px;--btn-h:80px;--side-gap:20px;--row-h:66px;
+  gap:var(--gap);padding:var(--pad) clamp(8px,2.5vw,16px);
 }
 
-.board-row{display:flex;align-items:center;gap:var(--dot-gap);flex:none}
+.board-row{display:flex;align-items:center;flex:none}
 .board{
   display:grid;gap:var(--cell-gap);
   width:var(--board);aspect-ratio:1;flex:none;min-height:0;
 }
+.board.is-cube{display:block}
+.board.is-cube canvas{display:block;width:100%;height:100%}
 .ear-dot{display:none;width:var(--dot);aspect-ratio:1;border-radius:50%;background:var(--ear);visibility:hidden;flex:none}
+#ear-left{margin-right:var(--dot-gap)}
+#ear-right{margin-left:var(--dot-gap)}
 .stage.has-dots .ear-dot{display:block}
 .ear-dot.is-on{visibility:visible}
+/* Answer buttons: stacked either side of the grid when that leaves it more room, else in a row beneath */
+.answer-col{display:none;flex-direction:column;justify-content:center;gap:12px;width:var(--col-w);flex:none}
+#answers-left{margin-right:var(--side-gap)}
+#answers-right{margin-left:var(--side-gap)}
+.stage.answers-side .answer-col{display:flex}
+.stage.answers-side .answers{display:none}
+.answer-col .answer{flex:none;height:var(--btn-h)}
 .cue{
   display:none;align-items:center;justify-content:center;
-  height:var(--cue-h);margin:calc(var(--gap) / -2) 0;
+  height:var(--cue-h);margin-bottom:calc(var(--gap) / -2);
   font-family:var(--display);font-weight:700;font-size:calc(var(--cue-h) * .72);letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;color:var(--accent-bright);
 }
+.stage.has-picture .cue{margin-top:calc(var(--gap) / -2)}
 .stage.has-cue .cue{display:flex}
 .stage.is-covered .picture-slot,.stage.is-covered .cue,.stage.is-covered .board-row{visibility:hidden}
 .cell{
@@ -334,7 +349,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 .word{
   min-height:1.2em;
   font-family:var(--display);font-weight:700;
-  font-size:clamp(.72rem,2.1vmin,1.3rem);letter-spacing:-.01em;
+  font-size:clamp(11px,calc(var(--board) / var(--grid) * .12),42px);letter-spacing:-.01em;
   text-align:center;text-shadow:0 2px 6px rgba(0,0,0,.9);
   overflow:hidden;
 }
@@ -348,10 +363,10 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 .picture.is-on .shot canvas{visibility:visible}
 
 /* As wide as the grid, but never so narrow that the labels collide (tiny grids on landscape phones) */
-.answers{display:flex;gap:10px;justify-content:center;width:max(var(--board),min(92vw,calc(var(--answers,2) * 76px + (var(--answers,2) - 1) * 10px)))}
+.answers{display:flex;gap:10px;justify-content:center;height:var(--row-h);width:max(var(--board),min(92vw,calc(var(--answers,2) * 76px + (var(--answers,2) - 1) * 10px)))}
 .answer{
   flex:1;min-width:0;
-  display:flex;flex-direction:column;align-items:center;gap:5px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   padding:.7rem .4rem;
   background:var(--console);border:1px solid var(--line);border-radius:12px;
   user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
@@ -414,6 +429,15 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
   .primary-btn{width:100%}
   .modebar{padding-left:20px;padding-right:20px}
   .pair--stack{grid-template-columns:1fr}
+  .fs-label{display:none}
+}
+@media (max-width:480px){
+  .rail{gap:10px}
+  .readout{gap:12px}
+  .rail-btn{padding:.42rem .7rem}
+}
+@media (max-width:400px){
+  .count{display:none}           /* the progress bar under the rail shows the same thing */
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -457,12 +481,25 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
             <select id="grid-size">
               <option value="3">3 × 3</option>
               <option value="4">4 × 4</option>
+              <option value="3d">3 × 3 × 3 (3D)</option>
             </select>
           </div>
           <div class="field">
             <label for="n-level">Starting level</label>
             <input type="number" id="n-level" min="1" max="20" value="2">
           </div>
+        </div>
+        <div class="field" id="cube-field" hidden>
+          <span class="field-label">3D grid</span>
+          <div class="segmented" role="group" aria-label="3D grid movement">
+            <button type="button" id="cube-still" aria-pressed="true">Static</button>
+            <button type="button" id="cube-spin" aria-pressed="false">Rotating</button>
+          </div>
+          <div class="field" id="spin-field" style="margin:6px 0 0">
+            <label for="spin-speed">Rotation speed <span class="rate-value" id="spin-value">20°/s</span></label>
+            <input type="range" id="spin-speed" min="4" max="90" step="2" value="20">
+          </div>
+          <p class="hint" id="cube-hint" style="margin-top:0"></p>
         </div>
         <div class="field">
           <label for="mode" id="stimuli-label">Stimuli</label>
@@ -651,6 +688,10 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
       <div class="count" id="count">1 / 24</div>
     </div>
     <div class="rail-btns">
+      <button class="rail-btn" id="fs-btn" hidden aria-label="Full screen" title="Full screen">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path id="fs-icon" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="fs-label">Full screen</span>
+      </button>
       <button class="rail-btn" id="pause-btn">Pause</button>
       <button class="rail-btn" id="end-btn">End</button>
     </div>
@@ -668,9 +709,11 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
     </div>
     <div class="cue" id="cue"></div>
     <div class="board-row">
+      <div class="answer-col" id="answers-left"></div>
       <div class="ear-dot" id="ear-left"></div>
       <div class="board" id="board"></div>
       <div class="ear-dot" id="ear-right"></div>
+      <div class="answer-col" id="answers-right"></div>
     </div>
     <div class="answers" id="answers"></div>
   </div>
@@ -761,6 +804,8 @@ const DEFAULTS = {
   feedback:true, adaptive:true,
   sessionMode:'unlimited', minutes:20,
   keys:{pos:'ArrowLeft', col:'ArrowUp', aud:'ArrowRight', img:'ArrowDown'},
+  spin:false, spinSpeed:20,                  // 3D grid: rotating or not, and how fast (degrees a second)
+  folded:[],                                 // picture folders shown folded
   voiceKind:'bank', bankVoice:'af_heart',
   sysVoiceURI:null, sysVoiceName:null, voiceRate:1.1,
   // advanced (only used while Advanced settings is on)
@@ -804,7 +849,10 @@ function load(){
   const taken = ['pos','col','aud'].map(t => S.keys[t]);
   if (taken.indexOf(S.keys.img) >= 0)
     S.keys.img = ['ArrowDown','ArrowUp','ArrowLeft','ArrowRight','s','d','f','j','k','l'].find(k => taken.indexOf(k) < 0);
-  S.grid      = parseInt(S.grid, 10) === 4 ? 4 : 3;
+  S.grid      = S.grid === '3d' ? '3d' : parseInt(S.grid, 10) === 4 ? 4 : 3;
+  S.spin      = S.spin === true;
+  S.spinSpeed = clampInt(S.spinSpeed, 4, 90, 20);
+  S.folded    = Array.isArray(S.folded) ? S.folded.filter(x => typeof x === 'string') : [];
   S.level     = clampInt(S.level, 1, 20, DEFAULTS.level);
   S.paceSec   = clampNum(S.paceSec, 1.2, 6, DEFAULTS.paceSec);
   S.minutes   = clampInt(S.minutes, 1, 180, DEFAULTS.minutes);
@@ -855,8 +903,9 @@ const pictureCanvas = $('picture-canvas');
 pictureCanvas.width = pictureCanvas.height = IMAGE_PX;
 const pictureG = pictureCanvas.getContext('2d');
 const cueEl = $('cue'), earDots = {L:$('ear-left'), R:$('ear-right')};
+const ansLeft = $('answers-left'), ansRight = $('answers-right');
 
-let n = 2, gridSize = 3, stimMs = 1500, isiMs = 1000;
+let n = 2, gridSize = 3, stimMs = 1500, isiMs = 1000, cubeOn = false, answersSide = null;
 let activeList = ['pos'], usesColour = false, usesVoice = false, usesImage = false, timedSession = false;
 let advOn = false, variableOn = false, buzzOn = false, dichoticOn = false, earHelpOn = false;
 let gridPool = [], squarePool = [], buzzBuf = null, liveClipsR = null;
@@ -1547,9 +1596,9 @@ const foldersReady = Promise.all([readAll('folders'), readAll('pictures')]).then
 function pruneSources(){
   if (foldersState !== 'ready') return;
   const ok = id => id === 'faces' || id === 'images' || !!folderById(id);
-  const g = S.gridSources.filter(ok), q = S.squareSources.filter(ok);
-  if (g.length !== S.gridSources.length || q.length !== S.squareSources.length){
-    S.gridSources = g; S.squareSources = q; save();
+  const g = S.gridSources.filter(ok), q = S.squareSources.filter(ok), fo = S.folded.filter(id => !!folderById(id));
+  if (g.length !== S.gridSources.length || q.length !== S.squareSources.length || fo.length !== S.folded.length){
+    S.gridSources = g; S.squareSources = q; S.folded = fo; save();
   }
 }
 
@@ -1580,6 +1629,7 @@ function deleteFolder(f){
     folders = folders.filter(x => x !== f);
     S.gridSources = S.gridSources.filter(id => id !== f.id);
     S.squareSources = S.squareSources.filter(id => id !== f.id);
+    S.folded = S.folded.filter(id => id !== f.id);
     saveNow();
   });
 }
@@ -1700,6 +1750,8 @@ function renderFolders(){
     card.dataset.id = f.id;
     card.innerHTML =
       '<div class="folder__head">' +
+        '<button type="button" class="folder__fold" data-act="fold"><svg viewBox="0 0 14 14" aria-hidden="true">' +
+          '<path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         '<input type="text" class="folder__name" maxlength="40" aria-label="Folder name">' +
         '<span class="folder__count"></span>' +
         '<button type="button" class="ghost-btn small-btn" data-act="add">Add images</button>' +
@@ -1710,6 +1762,7 @@ function renderFolders(){
       '<input type="file" accept="image/*" multiple hidden>';
     card.querySelector('.folder__name').value = f.name;
     card.querySelector('.folder__count').textContent = countText(f.pics.length);
+    showFolded(card, S.folded.indexOf(f.id) >= 0);
     const thumbs = card.querySelector('.thumbs');
     f.pics.forEach(p => {
       const t = document.createElement('div');
@@ -1730,6 +1783,21 @@ function renderFolders(){
     box.appendChild(card);
   });
 }
+// Folded folders keep their name and count but hide their pictures.
+function showFolded(card, folded){
+  card.classList.toggle('is-folded', folded);
+  const btn = card.querySelector('.folder__fold');
+  btn.setAttribute('aria-expanded', String(!folded));
+  btn.setAttribute('aria-label', folded ? 'Show pictures' : 'Hide pictures');
+}
+function setFolded(f, folded){
+  S.folded = S.folded.filter(id => id !== f.id);
+  if (folded) S.folded.push(f.id);
+  const card = document.querySelector('.folder[data-id="' + f.id + '"]');
+  if (card) showFolded(card, folded);
+  saveNow();
+}
+
 function setFolderNote(f, text, warn){
   folderNotes[f.id] = {text:text, warn:warn};
   const el = document.querySelector('.folder[data-id="' + f.id + '"] .folder__note');
@@ -1740,6 +1808,7 @@ function afterPictureChange(){ renderPictures(); paintImageHint(); paintSummary(
 function upload(f, files){
   const total = files.length;
   if (!total) return;
+  if (S.folded.indexOf(f.id) >= 0) setFolded(f, false);      // open it so you can watch them arrive
   const card = document.querySelector('.folder[data-id="' + f.id + '"]');
   if (card) card.querySelector('[data-act=add]').disabled = true;
   setFolderNote(f, 'Adding ' + countText(total) + '…', false);
@@ -1757,6 +1826,7 @@ $('folders').addEventListener('click', e => {
   const card = btn && btn.closest('.folder'), f = card && folderById(card.dataset.id);
   if (!f) return;
   const act = btn.dataset.act;
+  if (act === 'fold'){ setFolded(f, !card.classList.contains('is-folded')); return; }
   if (act === 'add'){ card.querySelector('input[type=file]').click(); return; }
   if (act === 'remove'){
     const p = f.pics.find(x => x.id === btn.dataset.pic);
@@ -1839,6 +1909,7 @@ function applySettings(){
   $('adaptive').checked = S.adaptive;
   $('voice-rate').value = S.voiceRate;
   $('rate-value').textContent = rateLabel(S.voiceRate);
+  $('spin-speed').value = S.spinSpeed;
   $('advanced').checked = S.advanced;
   $('match-rate').value = S.matchPct;
   $('lure-rate').value = S.lurePct;
@@ -1865,6 +1936,17 @@ function reflectSettings(){
   Array.prototype.forEach.call($('presets').children, b => {
     b.classList.toggle('is-on', parseInt(b.dataset.min, 10) === S.minutes);
   });
+
+  // 3D grid: still or turning, and how fast
+  const cube3d = S.grid === '3d';
+  $('cube-field').hidden = !cube3d;
+  $('cube-still').setAttribute('aria-pressed', String(!S.spin));
+  $('cube-spin').setAttribute('aria-pressed', String(S.spin));
+  $('spin-field').hidden = !S.spin;
+  $('spin-value').textContent = S.spinSpeed + '°/s';
+  $('cube-hint').textContent = S.spin
+    ? 'Turns once every ' + Math.round(360 / S.spinSpeed) + ' seconds. Remember where each position is in the cube, not where it was on screen.'
+    : '27 positions in a cube, seen from a fixed angle.';
 
   // Advanced settings: the same menu, with the extra panels and the checklist
   const adv = S.advanced, st = currentStreams();
@@ -1962,7 +2044,9 @@ function paintImageHint(){
 }
 
 function readUI(){
-  S.grid      = parseInt($('grid-size').value, 10) === 4 ? 4 : 3;
+  const gv    = $('grid-size').value;
+  S.grid      = gv === '3d' ? '3d' : gv === '4' ? 4 : 3;
+  S.spinSpeed = clampInt($('spin-speed').value, 4, 90, 20);
   S.level     = clampInt($('n-level').value, 1, 20, 1);
   S.mode      = $('mode').value;
   S.paceSec   = clampNum($('pace').value, 1.2, 6, 2.5);
@@ -1982,11 +2066,13 @@ function readUI(){
   save();
 }
 
-['grid-size','n-level','mode','pace','minutes','feedback','adaptive','voice-rate',
+['grid-size','n-level','mode','pace','minutes','feedback','adaptive','voice-rate','spin-speed',
  'match-rate','lure-rate','variable','floor','buzz-on','buzz-vol','ear-help'].forEach(id => {
   $(id).addEventListener('change', readUI);
   $(id).addEventListener('input', readUI);
 });
+$('cube-still').addEventListener('click', () => { S.spin = false; reflectSettings(); saveNow(); });
+$('cube-spin').addEventListener('click', () => { S.spin = true; reflectSettings(); saveNow(); });
 $('mode-unlimited').addEventListener('click', () => { S.sessionMode = 'unlimited'; reflectSettings(); saveNow(); });
 $('mode-timed').addEventListener('click', () => { S.sessionMode = 'timed'; reflectSettings(); saveNow(); });
 
@@ -2116,11 +2202,21 @@ function commitTime(){
  * Board and answer keys (built once per session, reused every trial)
  * ------------------------------------------------------------------ */
 function buildBoard(){
+  board.innerHTML = '';
+  cells = [];
+  activeCell = null;
+  board.classList.toggle('is-cube', cubeOn);
+  if (cubeOn){
+    board.style.gridTemplateColumns = board.style.gridTemplateRows = '';
+    cube.canvas = document.createElement('canvas');
+    cube.g = cube.canvas.getContext('2d');
+    cube.size = 0; cube.lit = -1; cube.angle = START_TURN;
+    board.appendChild(cube.canvas);
+    return;
+  }
   // minmax(0,1fr): a long word can't widen its column, however small the grid gets
   board.style.gridTemplateColumns = 'repeat(' + gridSize + ',minmax(0,1fr))';
   board.style.gridTemplateRows = 'repeat(' + gridSize + ',minmax(0,1fr))';
-  board.innerHTML = '';
-  cells = [];
   for (let i = 0; i < gridSize * gridSize; i++){
     const el = document.createElement('div'); el.className = 'cell';
     const disc = document.createElement('div'); disc.className = 'disc';
@@ -2130,12 +2226,12 @@ function buildBoard(){
     board.appendChild(el);
     cells.push({el:el, g:cv.getContext('2d'), word:word});
   }
-  activeCell = null;
 }
 
 function buildAnswers(){
-  answersEl.innerHTML = '';
+  answersEl.innerHTML = ansLeft.innerHTML = ansRight.innerHTML = '';
   answerEls = {};
+  answersSide = null;                               // fitStage() puts them where they fit best
   activeList.forEach(type => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'answer';
@@ -2149,8 +2245,163 @@ function buildAnswers(){
   });
 }
 
+// Either half the buttons down each side of the grid (the first half on the left),
+// or all of them in one row beneath it.
+function placeAnswers(side){
+  if (side === answersSide) return;
+  answersSide = side;
+  stage.classList.toggle('answers-side', side);
+  const half = Math.ceil(activeList.length / 2);
+  activeList.forEach((t, i) => { (side ? (i < half ? ansLeft : ansRight) : answersEl).appendChild(answerEls[t]); });
+}
+
+/* ------------------------------------------------------------------ *
+ * Fitting the play area. The grid takes all the room the other pieces
+ * leave, and this runs again whenever the stage changes size: a window
+ * resize, turning a phone, or going full screen.
+ * ------------------------------------------------------------------ */
+function num(v){ return parseFloat(v) || 0; }
+function fitStage(){
+  if (!screens.game.classList.contains('is-active')) return;
+  const cs = getComputedStyle(stage);
+  const W = stage.clientWidth - num(cs.paddingLeft) - num(cs.paddingRight);
+  const H = stage.clientHeight - num(cs.paddingTop) - num(cs.paddingBottom);
+  if (W <= 0 || H <= 0) return;
+  const gap = num(cs.rowGap), G = gridSize;
+  const cg = num(getComputedStyle(board).rowGap);                   // the image square is one cell wide
+  const cueH = variableOn ? cueEl.offsetHeight : 0;
+  const dots = earHelpOn ? 2 * (earDots.L.offsetWidth + num(getComputedStyle(earDots.L).marginRight)) : 0;
+  // buttons at the sides, sized to the window but never smaller than a thumb
+  const colW = Math.round(Math.min(132, Math.max(84, W * 0.1)));
+  const btnH = Math.round(Math.min(110, Math.max(64, H * 0.13)));
+  const sideGap = Math.round(Math.min(32, Math.max(14, W * 0.02)));
+  const perSide = Math.ceil(activeList.length / 2);
+  const colH = perSide * btnH + (perSide - 1) * 12;
+  const rowH = 66;
+  // the biggest grid whose height fits, with the image square and k label above it
+  const tallest = h => usesImage
+    ? (h - gap - cueH + (G - 1) * cg / G) * G / (G + 1)
+    : h - (variableOn ? cueH + gap / 2 : 0);
+  const side  = Math.min(W - dots - 2 * (colW + sideGap), tallest(H));
+  const below = Math.min(W - dots, tallest(H - gap - rowH));
+  const useSide = side >= colH && side >= below;                     // wide screens: the sides win
+  const B = Math.max(60, Math.floor(useSide ? side : below));
+  stage.style.setProperty('--board', B + 'px');
+  stage.style.setProperty('--col-w', colW + 'px');
+  stage.style.setProperty('--btn-h', btnH + 'px');
+  stage.style.setProperty('--side-gap', sideGap + 'px');
+  stage.style.setProperty('--row-h', rowH + 'px');
+  placeAnswers(useSide);
+  if (cubeOn) sizeCube(B);
+}
+if (window.ResizeObserver) new ResizeObserver(() => fitStage()).observe(stage);
+else window.addEventListener('resize', fitStage);
+
+/* ------------------------------------------------------------------ *
+ * The 3 × 3 × 3 grid: 27 positions drawn in perspective on a canvas,
+ * either held at one angle or turning around its upright axis.
+ * ------------------------------------------------------------------ */
+const CUBE_NODES = [], CUBE_LINES = [];
+for (let y = 1; y >= -1; y--) for (let z = -1; z <= 1; z++) for (let x = -1; x <= 1; x++) CUBE_NODES.push([x, y, z]);
+for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++)
+  CUBE_LINES.push([[-1, a, b], [1, a, b]], [[a, -1, b], [a, 1, b]], [[a, b, -1], [a, b, 1]]);
+const TILT = 20 * Math.PI / 180;         // looking down on the cube a little
+const START_TURN = 38 * Math.PI / 180;   // the static view: every position well clear of the others
+const CAMERA = 7;                        // camera distance: enough perspective to read depth
+const cube = {canvas:null, g:null, size:0, dpr:1, lit:-1, face:null, word:'', colour:'', angle:START_TURN, raf:0, last:0};
+let spinDeg = 0;                         // degrees a second this session (0 = static)
+
+function project(p, turn){
+  const ct = Math.cos(turn), st = Math.sin(turn), cp = Math.cos(TILT), sp = Math.sin(TILT);
+  const x = p[0] * ct + p[2] * st, z = -p[0] * st + p[2] * ct;
+  const y = p[1] * cp - z * sp, depth = p[1] * sp + z * cp;
+  const k = CAMERA / (CAMERA - depth);
+  return {x:x * k, y:y * k, k:k, depth:depth};
+}
+// The area the cube covers on screen, at one angle or over a whole turn, so it can be
+// centred and scaled to fill the board.
+function outline(turns){
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  turns.forEach(t => CUBE_NODES.forEach(p => {
+    const q = project(p, t);
+    x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y);
+  }));
+  return {cx:(x0 + x1) / 2, cy:(y0 + y1) / 2, half:Math.max(x1 - x0, y1 - y0) / 2};
+}
+const VIEW_STILL = outline([START_TURN]);
+const VIEW_SPIN = outline(Array.from({length:180}, (_, i) => i * Math.PI / 90));
+
+function sizeCube(B){
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  if (!cube.canvas || (cube.size === B && cube.dpr === dpr)) return;
+  cube.size = B; cube.dpr = dpr;
+  cube.canvas.width = cube.canvas.height = Math.round(B * dpr);
+  drawCube();
+}
+function drawCube(){
+  const g = cube.g, B = cube.size;
+  if (!g || !B) return;
+  g.setTransform(cube.dpr, 0, 0, cube.dpr, 0, 0);
+  g.clearRect(0, 0, B, B);
+  const turn = spinDeg ? cube.angle : START_TURN, v = spinDeg ? VIEW_SPIN : VIEW_STILL;
+  const R = B * 0.405 / v.half, ox = B / 2 - v.cx * R, oy = B / 2 + v.cy * R;   // leaves room for the lit disc
+  const near = d => (d + 1.8) / 3.6;                     // 0 at the back of the cube, 1 at the front
+  const pts = CUBE_NODES.map((p, i) => { const q = project(p, turn); return {i:i, x:ox + q.x * R, y:oy - q.y * R, k:q.k, d:q.depth}; });
+
+  g.lineWidth = 1;
+  CUBE_LINES.forEach(l => {
+    const a = project(l[0], turn), b = project(l[1], turn);
+    g.strokeStyle = 'rgba(148,162,180,' + (0.06 + 0.16 * near((a.depth + b.depth) / 2)).toFixed(3) + ')';
+    g.beginPath(); g.moveTo(ox + a.x * R, oy - a.y * R); g.lineTo(ox + b.x * R, oy - b.y * R); g.stroke();
+  });
+  pts.slice().sort((p, q) => p.d - q.d).forEach(p => {  // back to front, so nearer ones cover farther
+    if (p.i === cube.lit) return;
+    g.beginPath(); g.arc(p.x, p.y, B * 0.022 * p.k, 0, Math.PI * 2);
+    g.fillStyle = '#0E1319'; g.fill();
+    g.strokeStyle = 'rgba(148,162,180,' + (0.22 + 0.55 * near(p.d)).toFixed(3) + ')';
+    g.lineWidth = 1.2; g.stroke();
+  });
+  if (cube.lit < 0) return;
+  const p = pts[cube.lit], r = B * 0.07 * p.k;         // the lit position goes on top: nothing hides it
+  g.save();
+  g.beginPath(); g.arc(p.x, p.y, r, 0, Math.PI * 2);
+  g.fillStyle = '#1D2237'; g.fill();
+  if (cube.face){ g.clip(); g.drawImage(cube.face, p.x - r, p.y - r, 2 * r, 2 * r); }
+  g.restore();
+  g.beginPath(); g.arc(p.x, p.y, r, 0, Math.PI * 2);
+  g.strokeStyle = '#7F89FF'; g.lineWidth = 2; g.stroke();
+  if (cube.word){
+    const fs = Math.max(11, B * 0.045 * p.k);
+    g.font = '700 ' + fs.toFixed(1) + 'px Sora, "IBM Plex Sans", sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'top';
+    const half = g.measureText(cube.word).width / 2 + 4;
+    let ty = p.y + r + fs * 0.25;                        // under the disc, or over it near the bottom edge
+    if (ty + fs * 1.2 > B) ty = p.y - r - fs * 1.3;
+    const tx = Math.min(B - half, Math.max(half, p.x));  // and never cut off at the sides
+    g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 6; g.shadowOffsetY = 2;
+    g.fillStyle = cube.colour;
+    g.fillText(cube.word, tx, ty);
+    g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
+  }
+}
+// Rotation runs on real play time: it holds still while paused or covered.
+function spinLoop(now){
+  cube.raf = 0;
+  if (!spinDeg || !running || paused || stage.classList.contains('is-covered')) return;
+  if (cube.last) cube.angle = (cube.angle + Math.min(0.1, (now - cube.last) / 1000) * spinDeg * Math.PI / 180) % (Math.PI * 2);
+  cube.last = now;
+  drawCube();
+  cube.raf = requestAnimationFrame(spinLoop);
+}
+function startSpin(){ if (spinDeg && !cube.raf){ cube.last = 0; cube.raf = requestAnimationFrame(spinLoop); } }
+function stopSpin(){ if (cube.raf){ cancelAnimationFrame(cube.raf); cube.raf = 0; } }
+
 function clearBoard(){
   if (pictureOn){ picture.classList.remove('is-on'); pictureOn = false; }
+  if (cubeOn){
+    if (cube.lit >= 0){ cube.lit = -1; if (!spinDeg) drawCube(); }
+    return;
+  }
   if (!activeCell) return;
   activeCell.el.classList.remove('is-on');
   activeCell.word.textContent = '';
@@ -2159,11 +2410,19 @@ function clearBoard(){
 
 function showStimulus(t){
   clearBoard();
-  const c = cells[t.pos];
-  if (gridPool.length) c.g.drawImage(gridPool[t.face], 0, 0);
-  if (usesColour){ c.word.textContent = t.word; c.word.style.color = COLORS[t.col]; }
-  c.el.classList.add('is-on');
-  activeCell = c;
+  if (cubeOn){
+    cube.lit = t.pos;
+    cube.face = gridPool.length ? gridPool[t.face] : null;
+    cube.word = usesColour ? t.word : '';
+    cube.colour = COLORS[t.col];
+    if (!spinDeg) drawCube();
+  } else {
+    const c = cells[t.pos];
+    if (gridPool.length) c.g.drawImage(gridPool[t.face], 0, 0);
+    if (usesColour){ c.word.textContent = t.word; c.word.style.color = COLORS[t.col]; }
+    c.el.classList.add('is-on');
+    activeCell = c;
+  }
   if (usesImage && squarePool[t.img]){
     pictureG.clearRect(0, 0, IMAGE_PX, IMAGE_PX);
     pictureG.drawImage(squarePool[t.img], 0, 0);
@@ -2200,6 +2459,7 @@ function showOverlay(title, note){
 function hideOverlay(){
   overlay.classList.remove('is-on');
   stage.classList.remove('is-covered');
+  if (running && !paused) startSpin();
 }
 
 /* ------------------------------------------------------------------ *
@@ -2268,7 +2528,7 @@ function makeTrials(){
   for (let i = 0; i < blockLen; i++)
     ks.push(i < n ? 0 : variableOn ? lo + Math.floor(Math.random() * (n - lo + 1)) : n);
   const make = range => advOn ? designed(range, ks, S.matchPct / 100, S.lurePct / 100) : sequence(range);
-  const pos = make(gridSize * gridSize);
+  const pos = make(cubeOn ? 27 : gridSize * gridSize);
   const col = make(COLORS.length);
   const aud = make(WORDS.length);
   const img = make(Math.max(1, squarePool.length));
@@ -2354,7 +2614,9 @@ $('pause-btn').addEventListener('click', togglePause);
 function begin(){
   if (document.activeElement) document.activeElement.blur();
   const st = currentStreams();
-  gridSize = S.grid;
+  cubeOn = S.grid === '3d';
+  gridSize = cubeOn ? 3 : S.grid;                 // the cube sizes its image square like a 3 × 3 grid
+  spinDeg = cubeOn && S.spin ? S.spinSpeed : 0;
   n = S.level;
   peakN = n;
   usesColour = st.col;
@@ -2394,6 +2656,7 @@ function begin(){
   buildBoard();
   buildAnswers();
   show('game');
+  fitStage();                                     // measure the real space before anything shows
   requestWakeLock();
   startBlock();
 }
@@ -2535,6 +2798,7 @@ function togglePause(){
     sessionMs += now - lastTick; lastTick = now;
     paused = true;
     clearTimeout(timerId);
+    stopSpin();
     stopVoice();
     windowOpen = false;
     clearBoard();
@@ -2562,6 +2826,7 @@ function endSession(reason){
   if (!paused){ const now = performance.now(); sessionMs += now - lastTick; }
   running = false; paused = false; windowOpen = false;
   clearTimeout(timerId);
+  stopSpin();
   stopVoice();
   hideOverlay();
   clearBoard();
@@ -2601,6 +2866,30 @@ function show(name){
   screens[name].classList.add('is-active');
   if (name === 'setup') applySettings();
 }
+
+/* ------------------------------------------------------------------ *
+ * Full screen: the grid grows into it, since fitStage() runs on resize
+ * ------------------------------------------------------------------ */
+function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+$('fs-btn').hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+$('fs-btn').addEventListener('click', () => {
+  const root = document.documentElement;
+  try {
+    const p = fsElement()
+      ? (document.exitFullscreen || document.webkitExitFullscreen).call(document)
+      : (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+    if (p && p.catch) p.catch(() => {});
+  } catch(e){}
+  if (document.activeElement) document.activeElement.blur();
+});
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
+  const on = !!fsElement(), label = on ? 'Exit full screen' : 'Full screen';
+  document.querySelector('.fs-label').textContent = label;
+  $('fs-btn').setAttribute('aria-label', label);
+  $('fs-btn').title = label;
+  $('fs-icon').setAttribute('d', on ? 'M6 2v4H2M10 2v4h4M14 10h-4v4M2 10h4v4' : 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4');
+  fitStage();
+}));
 
 /* ------------------------------------------------------------------ *
  * Tab switches, screen sleep, closing the page
