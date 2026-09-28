@@ -15,6 +15,7 @@
 
 const assert = require("assert");
 const path = require("path");
+const { readFileSync } = require("fs");
 
 /* `today.js` reads a global `localStorage` and calls the global `readFile` that
    `adapters.js` defines. Under node both have to be put where it will look —
@@ -583,6 +584,121 @@ test("precision pauses its transport and discounts the time it was hidden", () =
     "precision still records wall-clock duration, so the hub menu counts as training");
   assert.ok(src.includes("removeEventListener(\"visibilitychange\"", ),
     "the handler outlives the component");
+});
+
+/* ------------------------------------------------------------------ *
+ * Isomorph carries the hub's preset, and carries Syllogimous's copy    *
+ * ------------------------------------------------------------------ *
+ *
+ * Isomorph is a second build of the Syllogimous codebase, brought in finished
+ * — there is no source here, so the Mindbuild preset could not arrive the way
+ * it did in Syllogimous, by being written in `theme.service.ts`. It is an edit
+ * to the bundle, which makes it the one deviation of the four that is not in
+ * the head of the file, because the Appearance page lists the presets object
+ * and there is no way into that object from outside.
+ *
+ * Two things follow, and this is both of them. A build dropped over
+ * `index.html` takes the edit out again, silently — the app still works, the
+ * preset is simply gone. And with the preset written in two places, the two
+ * can drift: a colour changed in Syllogimous would leave the trainer either
+ * side of the hub's frame looking like two applications, which is the exact
+ * thing the preset exists to prevent.
+ *
+ * So the values are not asserted against a copy kept here. They are read out
+ * of both files and compared, which is the only arrangement where "they agree"
+ * cannot rot.
+ */
+
+const THEME_SRC = path.join(
+  __dirname, "..", "apps", "syllogimous", "src", "app", "syllogimous",
+  "services", "theme.service.ts");
+const ISOMORPH = path.join(__dirname, "..", "apps", "isomorph", "index.html");
+
+/**
+ * The object literal that follows `head`, as a value.
+ *
+ * Brace-matched rather than regexed, and safe to match naively because no
+ * value in this preset contains a brace — the test below checks that, so the
+ * day one does, this says so rather than reading half an object.
+ */
+function objectAfter(src, head, dropSpread) {
+  const at = src.indexOf(head);
+  if (at < 0) return null;
+  const open = src.indexOf("{", at + head.length - 1);
+  let depth = 0, i = open;
+  for (; i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}" && --depth === 0) break;
+  }
+  const body = src
+    .slice(open, i + 1)
+    .replace(/\/\*[\s\S]*?\*\//g, "")     // the reasoning, which is not data
+    .replace(dropSpread, "");            // the default it overrides
+  // Our own two files, and the parse is the point — a hand-rolled reader would
+  // be a third opinion about what the preset says.
+  return new Function("return (" + body + ")")();
+}
+
+test("Isomorph's Mindbuild preset is the one Syllogimous defines", () => {
+  const fromSource = objectAfter(
+    readFileSync(THEME_SRC, "utf8"), '"Mindbuild": {', /\.\.\.MOONLIT,/);
+  assert.ok(fromSource, "the Mindbuild preset is gone from theme.service.ts");
+
+  const fromBundle = objectAfter(
+    readFileSync(ISOMORPH, "utf8"), '"Mindbuild":{', /\.\.\.V,/);
+  assert.ok(fromBundle,
+    "Isomorph has no Mindbuild preset — a dropped build took the edit with it");
+
+  assert.deepStrictEqual(
+    Object.keys(fromBundle).sort(), Object.keys(fromSource).sort(),
+    "the two Mindbuild presets set different things");
+
+  for (const key of Object.keys(fromSource)) {
+    assert.strictEqual(fromBundle[key], fromSource[key],
+      `Mindbuild's ${key} differs between Syllogimous and Isomorph, so the two`
+      + " trainers read as two applications either side of the hub's frame");
+  }
+
+  /* The brace assumption the reader above rests on. */
+  for (const [key, value] of Object.entries(fromSource)) {
+    if (typeof value !== "string") continue;
+    assert.ok(!/[{}]/.test(value),
+      `Mindbuild's ${key} now contains a brace, which the preset reader cannot`
+      + " match through — it needs a real parser before this value can ship");
+  }
+});
+
+/**
+ * And the values reach the page as CSS variables rather than sitting unused.
+ *
+ * Isomorph is an older build of the codebase, so a preset written against
+ * today's Syllogimous can name a setting this bundle has never heard of: it
+ * would be accepted, stored, and quietly do nothing. Every key is checked
+ * against the bundle's own default theme and its own variable table.
+ */
+test("every setting Mindbuild names is one Isomorph's build knows", () => {
+  const bundle = readFileSync(ISOMORPH, "utf8");
+  const fromSource = objectAfter(
+    readFileSync(THEME_SRC, "utf8"), '"Mindbuild": {', /\.\.\.MOONLIT,/);
+
+  /* The default theme every preset is an override of. */
+  const at = bundle.indexOf('V={bg:"#05070c"');
+  assert.ok(at > 0, "the bundle's default theme is not where the preset was put");
+  const defaults = new Set(
+    [...bundle.slice(at, bundle.indexOf("},J={", at)).matchAll(/(?:^|[{,])([A-Za-z][A-Za-z0-9]*):/g)]
+      .map(m => m[1]));
+
+  /* And the table that turns a setting into a `--th-*` variable. */
+  const declared = new Set(
+    [...bundle.matchAll(/key:"([A-Za-z0-9]+)",label:/g)].map(m => m[1]));
+
+  for (const key of Object.keys(fromSource)) {
+    assert.ok(defaults.has(key),
+      `Mindbuild sets ${key}, which this build's default theme does not have`);
+    assert.ok(declared.has(key),
+      `Mindbuild sets ${key}, which this build turns into no CSS variable —`
+      + " it would be stored and do nothing");
+  }
 });
 
 /* ------------------------------------------------------------------ */

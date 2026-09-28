@@ -47,12 +47,13 @@ rather than grafted with `git subtree` like the other eight, because a finished
 build was what there was.
 
 The practical consequence: a fix to Isomorph is not a fix made here. It is a
-new build, dropped over this file, and then re-read against the three edits
-below — which is the reason each of them is written into the head of the file
-with its reasoning next to it rather than applied by a script nobody would
-think to run again.
+new build, dropped over this file, and then re-read against the four edits
+below — which is the reason the first three are written into the head of the
+file with the reasoning next to them rather than applied by a script nobody
+would think to run again. The fourth cannot be, and is held in place by a test
+instead.
 
-## The three things that are not the shipped build
+## The four things that are not the shipped build
 
 **A relative `<base href>`.** It shipped pointing at
 `/tools/meta-relational-reasoning-training.html`, which is one path on one
@@ -68,9 +69,40 @@ nothing.
 
 **A `localStorage` shim, which is the important one.** See below.
 
+**The Mindbuild theme preset**, which is the one edit that is not in the head.
+See below.
+
 `<meta charset>` and a viewport meta were added too, since the file had neither
 — it was being served with the encoding in an HTTP header, and without the
 viewport the phone build would render it at 980px.
+
+## Why the theme preset is in the bundle
+
+Isomorph is framed by the hub, and two different dark schemes either side of an
+iframe border read as two applications rather than one. Syllogimous answers that
+with a `Mindbuild` preset — the hub's own tokens, square and unlit — and this
+build predates it.
+
+Every other deviation here is a few lines in the head, which the bundle knows
+nothing about. This one cannot be. The Appearance page lists whatever is in the
+presets object, and that object is a module-local const inside a minified
+bundle: there is no way to add to it from outside, and a preset that is not in
+it is a preset nobody can pick. Applying the palette from the head instead would
+mean a stylesheet fighting the inline variables the theme system writes on
+`<html>` — and would leave no way to choose it, or to go back.
+
+So the preset is inserted into the presets object itself, immediately after the
+default, which is where Syllogimous lists it too. The values are not retyped:
+they are the ones in `theme.service.ts`, the wallpaper SVG included, and
+`test/run.js` reads the preset out of both files and compares them. That is the
+part worth keeping. Two consequences follow from an edit that lives inside a
+file nobody here can rebuild, and the test covers both — a build dropped over
+this one takes the preset out again silently, and a preset written in two places
+can drift, which would put the two trainers back to looking like two
+applications. A second test checks that every setting the preset names is one
+this older build actually has, since a preset written against today's
+Syllogimous could otherwise name a variable this bundle has never heard of and
+quietly do nothing.
 
 ## Why the storage is prefixed
 
