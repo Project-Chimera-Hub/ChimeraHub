@@ -37,7 +37,7 @@ is idempotent: running it twice costs nothing and changes nothing.
   file, not its name, because a third-party export always arrives called
   `export (3).json`.
 - **Drop the archive itself** to restore it after a reset.
-- **Read this browser** pulls straight from Syllogimous, RNB, CCT, eWMT and Synth when the page is
+- **Read this browser** pulls straight from Syllogimous, Isomorph, RNB, CCT, eWMT and Synth when the page is
   served from the same origin they are — on GitHub Pages every repo of one
   account shares an origin, so on the deployed site no export is needed. Locally
   they are separate origins and it finds nothing.
@@ -195,6 +195,15 @@ standard library, so the raw format is implemented in that file — small, and a
 better trade than a dependency in a project whose one promise is that it still
 runs in five years. Chromium keeps its localStorage in LevelDB instead, which is
 not implemented.
+
+**Isomorph** is a second build of the Syllogimous codebase and writes the same
+key names, so its page keeps every one of them behind an `ISO/` prefix (see
+`apps/isomorph/README.md`). `readIsomorph` takes the prefix off and reads what
+is under it with the Syllogimous reader — same format, same code — under its own
+source name and its own unit, `isomorph-level`. A backup Isomorph exports itself
+comes out unprefixed and is otherwise indistinguishable from a Syllogimous one;
+what tells them apart is `SYL_APP`, a key the shim keeps in storage and the
+app's own export carries out with it.
 
 Syllogimous **v3** is read too, from `sllgms-v3-app-state`. It is kept as its own
 source rather than folded in with v4, for the reason units are kept apart

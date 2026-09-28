@@ -201,13 +201,33 @@ def syllogimous_from(store):
     return out if (out.get("SYL_HISTORY") or out.get("SYL_HISTORY_IDX")) else None
 
 
-def syllogimous_items(syl):
+ISOMORPH_PREFIX = "ISO/"
+
+
+def isomorph_from(store):
+    """Isomorph, which is the same codebase writing the same key names.
+
+    The two share an origin wherever mindbuild is deployed, so Isomorph's page
+    keeps every key it writes behind a prefix (see apps/isomorph/index.html).
+    That prefix is also the only thing that tells the two apart on disk — the
+    keys under it are `SYL_HISTORY_IDX` and the rest, exactly — so it is left
+    on: `readIsomorph` in the archive's adapters is what takes it off.
+
+    Asked before `syllogimous_from`, which must not see these keys.
+    """
+    out = {k: v for k, v in store.items() if k.startswith(ISOMORPH_PREFIX)}
+    return out if (out.get(ISOMORPH_PREFIX + "SYL_HISTORY")
+                   or out.get(ISOMORPH_PREFIX + "SYL_HISTORY_IDX")) else None
+
+
+def syllogimous_items(syl, prefix=""):
     """How many questions a snapshot holds, chunked or not."""
     try:
-        index = json.loads(syl.get("SYL_HISTORY_IDX") or "null")
+        index = json.loads(syl.get(prefix + "SYL_HISTORY_IDX") or "null")
         if isinstance(index, list):
-            return sum(len(json.loads(syl.get("SYL_HISTORY_C:%s" % n) or "[]")) for n in index)
-        return len(json.loads(syl.get("SYL_HISTORY") or "[]"))
+            return sum(len(json.loads(syl.get(prefix + "SYL_HISTORY_C:%s" % n) or "[]"))
+                       for n in index)
+        return len(json.loads(syl.get(prefix + "SYL_HISTORY") or "[]"))
     except (ValueError, TypeError):
         return 0
 
@@ -421,6 +441,16 @@ def main():
 
             label = origin_label(origin)
             safe = "".join(c if c.isalnum() else "-" for c in label)[:60]
+
+            iso = isomorph_from(store)
+            if iso:
+                iso["__origin"] = label
+                path = os.path.join(args.outdir, "isomorph-%s.json" % safe)
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(iso, fh)
+                print("  isomorph     %-52s %5d items"
+                      % (label, syllogimous_items(iso, ISOMORPH_PREFIX)))
+                written.append(path)
 
             syl = syllogimous_from(store)
             if syl:

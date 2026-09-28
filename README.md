@@ -1,10 +1,10 @@
 # mindbuild
 
-Eight trainers, one record, one day's total — and a quota the desktop enforces.
+Nine trainers, one record, one day's total — and a quota the desktop enforces.
 
 ```
-apps/       the eight grafted in with git subtree, histories intact — and rrt,
-            which was written here
+apps/       the eight grafted in with git subtree, histories intact; rrt,
+            which was written here; and isomorph, which arrived as one file
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
 tools/      the build
@@ -29,7 +29,7 @@ each app lands, and nothing else touches an app's source.
 
 Not the menu. The meter.
 
-The archive already had adapters that turn any of eight storage formats into
+The archive already had adapters that turn any of these storage formats into
 minutes-per-day — that is the only code in this project that understands all of
 them, and it already has to be right for the archive to be worth anything. The
 shell hands it the same snapshots and reads the same numbers back:
@@ -156,7 +156,7 @@ happened is true either way.
 It is one generated file. `tools/build-site.mjs` takes `shell/index.html`, cuts
 between the `gate:begin`/`gate:end` markers, sets `data-gate="off"`, and points
 every asset at the parent directory — the same stylesheet, the same scripts,
-the same adapters, the same eight trainers, not copies of any of them. Nothing
+the same adapters, the same nine trainers, not copies of any of them. Nothing
 here can drift from the site above it, because there is nothing here to drift:
 one attribute, and `shell/js/shell.js` reads it.
 
@@ -196,10 +196,49 @@ The default is drawn rather than photographed — three stands of firs, seeded a
 rejection-sampled onto a sloped ground, with fog between them, as an inline SVG.
 No request to anybody, nothing to license, nothing to go 404 in a year.
 
-One thing is deliberately not sage: the eight colour dots on the trainer cards.
-They are the same eight hues as the segments in the day's bar, and that pairing
+One thing is deliberately not sage: the nine colour dots on the trainer cards.
+They are the same nine hues as the segments in the day's bar, and that pairing
 is the only thing tying a card to its share of the day. They are data, not
 decoration.
+
+## Isomorph, and the one collision this repository has had
+
+Isomorph is the ninth trainer and the only one that arrived as a *build* rather
+than as a repository: one 2.2 MB file, Angular compiled to nothing but itself,
+with no source here to build it from again. It is kept the way everything else
+here is kept — exactly as it came, copied rather than processed — and the two
+edits it did get are in the head of the file with the reasons beside them: a
+relative `<base href>` so it runs at a path other than the one it was built
+for, and the two Google Fonts imports cut, which were requests to a third party
+for a face nothing in the file uses.
+
+The third change is the one worth reading. Isomorph is a second build of the
+**Syllogimous codebase**, and it writes the same localStorage keys —
+`SYL_HISTORY_C:0`, `SYL_PG_SETTINGSv1`, `syllogimous-ability:…`, every one of
+them. Everything here shares an origin, and localStorage is per origin rather
+than per path, so dropped in as it came this page would have opened onto the
+Syllogimous history, appended its own questions to it, and served both a
+progression model trained on two different sets of modes. It would not have
+looked like a collision. It would have looked like the app forgetting things.
+
+So the page shims `localStorage` before anything else in it runs, and every key
+it touches lands under `ISO/`. The app is not modified and does not know: it
+asks for `SYL_HISTORY_IDX` and gets `ISO/SYL_HISTORY_IDX`, which is the same
+promise the shell makes to every trainer here, kept from the other side.
+
+`readIsomorph` in `apps/archive/js/adapters.js` takes the prefix off again, and
+reads what is underneath with the Syllogimous reader — same code, because it is
+the same format — under its own source name and its own difficulty unit. A
+level of 27 on Isomorph's modes is not a level of 27 on Syllogimous's, and the
+archive's rule is that a difficulty never travels without what it was measured
+in.
+
+One case the prefix cannot cover: a backup Isomorph exports *itself* is written
+from inside the shim, so the keys in the file come out plain, and the file is
+then indistinguishable from a Syllogimous backup. The shim therefore keeps one
+key the app did not ask for, `SYL_APP`, which the app's own export sweeps up
+with the rest — so the file says which app it came from, and the archive files
+it under that app rather than under a guess.
 
 ## The archive is not a trainer
 

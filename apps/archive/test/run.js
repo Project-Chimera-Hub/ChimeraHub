@@ -21,7 +21,7 @@ const path = require("path");
 const { mergeRecords, hashRow, makeRecord } = require("../js/record.js");
 const insight = require("../js/insight.js");
 const N = require("../js/notes.js");
-const { readFile, readSyllogimous, readRnb, readCct, readRrt, readEwmt, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
+const { readFile, readSyllogimous, readIsomorph, readRnb, readCct, readRrt, readEwmt, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
 const { execFileSync } = require("child_process");
 const A = require("../js/archive.js");
 
@@ -65,6 +65,124 @@ test("syllogimous: the legacy single key still reads", () => {
 test("syllogimous: a missing chunk is skipped, not fatal", () => {
   const snap = { SYL_HISTORY_IDX: JSON.stringify([2, 1]), "SYL_HISTORY_C:1": JSON.stringify([sylQ(Date.UTC(2026, 8, 1, 9))]) };
   assert.strictEqual(readSyllogimous(snap).records.length, 1);
+});
+
+/* ------------------------------------------------------------------ *
+ * Isomorph, which writes Syllogimous's keys                           *
+ * ------------------------------------------------------------------ *
+ *
+ * The two are builds of one codebase and store under the same names. On the
+ * deployed site they share an origin, so the only thing between one app's
+ * history and the other's is the prefix Isomorph's page keeps its keys behind
+ * — and the only thing between one app's *records* and the other's is that
+ * these two readers each say no to the other's bag. Both halves are here
+ * because both fail silently: the wrong reader wins, the minutes still look
+ * right, and the questions are filed under an app that never asked them.
+ */
+
+const isoSnap = (questions) => {
+  const bag = {
+    "ISO/SYL_APP": "isomorph",
+    "ISO/SYL_HISTORY_IDX": JSON.stringify([0]),
+    "ISO/SYL_HISTORY_C:0": JSON.stringify(questions),
+  };
+  return bag;
+};
+
+const isoQ = (at) => ({ answeredAt: at, createdAt: at - 20000, answered: true,
+                        type: "RCC8 Regions", answerMode: "select",
+                        userAnswer: true, isValid: true,
+                        difficulty: { level: 27.6, premises: 5 } });
+
+test("isomorph: a prefixed browser bag is read as isomorph", () => {
+  const r = readIsomorph(isoSnap([isoQ(Date.UTC(2026, 8, 14, 10, 0))]));
+  assert.ok(r, "Isomorph's own storage read as nothing at all");
+  assert.strictEqual(r.source, "isomorph");
+  assert.strictEqual(r.records.length, 1);
+  assert.strictEqual(r.records[0].label, "RCC8 Regions");
+});
+
+test("isomorph: its difficulty is on its own scale, not Syllogimous's", () => {
+  /* A level of 27 prices Isomorph's modes and Syllogimous's differently, so
+     sharing the unit would put two scales in one column and invite exactly the
+     comparison the archive's unit rule exists to refuse. */
+  const r = readIsomorph(isoSnap([isoQ(Date.UTC(2026, 8, 14, 10, 0))]));
+  assert.strictEqual(r.records[0].unit, "isomorph-level");
+  const noLevel = isoQ(Date.UTC(2026, 8, 14, 10, 0));
+  delete noLevel.difficulty;
+  noLevel.premises = ["a", "b", "c"];
+  assert.strictEqual(readIsomorph(isoSnap([noLevel])).records[0].unit, "isomorph-premises");
+});
+
+test("isomorph: the app's own export names itself, so it is not read as Syllogimous", () => {
+  /* Exported from inside the shim, so the keys come out unprefixed — identical
+     to a Syllogimous backup but for the marker the shim keeps in storage. */
+  const backup = {
+    SYL_APP: "isomorph",
+    SYL_HISTORY_IDX: JSON.stringify([0]),
+    "SYL_HISTORY_C:0": JSON.stringify([isoQ(Date.UTC(2026, 8, 14, 10, 0))]),
+  };
+  assert.strictEqual(readFile(JSON.stringify(backup)).source, "isomorph");
+  assert.strictEqual(readSyllogimous(backup), null,
+    "an Isomorph backup was claimed by the Syllogimous adapter");
+});
+
+test("isomorph: neither adapter claims the other's storage", () => {
+  const iso = isoSnap([isoQ(Date.UTC(2026, 8, 14, 10, 0))]);
+  const syl = {
+    SYL_HISTORY_IDX: JSON.stringify([0]),
+    "SYL_HISTORY_C:0": JSON.stringify([sylQ(Date.UTC(2026, 8, 14, 10, 0))]),
+  };
+  assert.strictEqual(readSyllogimous(iso), null,
+    "the Syllogimous adapter claimed Isomorph's storage");
+  assert.strictEqual(readIsomorph(syl), null,
+    "the Isomorph adapter claimed Syllogimous's storage");
+  assert.strictEqual(readFile(JSON.stringify(iso)).source, "isomorph");
+  assert.strictEqual(readFile(JSON.stringify(syl)).source, "syllogimous");
+});
+
+test("isomorph: one browser holding both keeps them two sources", () => {
+  /* The case the prefix exists for. Read separately, as the meter and the
+     archive read them, the day has to come back split rather than doubled or
+     merged. */
+  const iso = readFile(JSON.stringify(isoSnap([isoQ(Date.UTC(2026, 8, 14, 10, 0))])));
+  const syl = readFile(JSON.stringify({
+    SYL_HISTORY_IDX: JSON.stringify([0]),
+    "SYL_HISTORY_C:0": JSON.stringify([sylQ(Date.UTC(2026, 8, 14, 11, 0))]),
+  }));
+  assert.strictEqual(iso.source, "isomorph");
+  assert.strictEqual(syl.source, "syllogimous");
+  const merged = mergeRecords(iso.records, syl.records);
+  assert.strictEqual(merged.records.length, 2, "two apps' answers folded into one");
+});
+
+test("isomorph: an empty bag is not a reading", () => {
+  assert.strictEqual(readIsomorph({ "ISO/syllogimous-theme-vars": "{}" }), null);
+  assert.strictEqual(readIsomorph({}), null);
+  assert.strictEqual(readIsomorph(null), null);
+});
+
+test("isomorph: the page keeps every key it writes behind the prefix", () => {
+  /* Static, over the shipped page. The shim is the whole of what stops this
+     app from opening onto somebody's Syllogimous history, and it is three
+     dozen lines in front of a bundle nobody here can rebuild — so what is
+     asserted is that it is still there and still in front. */
+  const page = fs.readFileSync(
+    path.join(__dirname, "..", "..", "isomorph", "index.html"), "utf8");
+  const head = page.slice(0, page.indexOf("<app-root>"));
+
+  const shim = head.indexOf('Object.defineProperty(window, "localStorage"');
+  assert.ok(shim > 0, "the storage shim is gone from apps/isomorph/index.html");
+
+  /* In front of the theme script, which is the first thing in the page that
+     reads storage — and in front of every bundle, which all come after
+     <app-root>. */
+  assert.ok(shim < head.indexOf("syllogimous-theme-vars"),
+    "the shim no longer runs before the first read of storage");
+
+  assert.ok(/var PREFIX = "ISO\/";/.test(head), "the prefix changed without the readers");
+  assert.ok(!/fonts\.googleapis\.com/.test(page),
+    "a webfont import came back: this page has to load with the network off");
 });
 
 /* ------------------------------------------------------------------ *
@@ -147,7 +265,18 @@ const find = (pattern) => {
   } catch (e) { return []; }
 };
 
-const sylFiles = find(/^syllogimous-export.*\.json$/);
+/*
+ * Isomorph exports under this same name — it is the same codebase, and the
+ * filename is one of the things it did not change — so the pattern alone picks
+ * up files from two different apps. They are told apart by what is in them,
+ * which is the rule this whole page works by, and the marker is exactly what
+ * `readIsomorph` reads.
+ */
+const notIsomorph = (f) => {
+  try { return JSON.parse(fs.readFileSync(f, "utf8")).SYL_APP !== "isomorph"; }
+  catch (e) { return true; }
+};
+const sylFiles = find(/^syllogimous-export.*\.json$/).filter(notIsomorph);
 const rnbFiles = find(/^rnb-.*\.json$/);
 
 if (!sylFiles.length || !rnbFiles.length) {

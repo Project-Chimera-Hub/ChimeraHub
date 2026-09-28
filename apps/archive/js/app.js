@@ -37,6 +37,7 @@ var WEEKS_NEEDED = 20;
  */
 var SOURCE_NAMES = {
   syllogimous: "Syllogimous",
+  isomorph: "Isomorph",
   rnb: "Relational N-back",
   precision: "Precision N-back",
   rotation: "3D Rotation",
@@ -314,6 +315,23 @@ function importNeighbours() {
       }
     }
     if (syl.SYL_HISTORY || syl.SYL_HISTORY_IDX) { importText(JSON.stringify(syl), "syllogimous (this browser)"); found++; }
+  } catch (e) { /* storage off */ }
+
+  /* Isomorph, which is the same codebase writing the same key names under a
+     prefix its own page keeps them behind — see apps/isomorph/index.html. The
+     sweep above cannot pick it up: `ISO/SYL_HISTORY_IDX` does not start with
+     `SYL_`, and if it did the two records would arrive as one app. Handed on
+     with the prefix still on, because that is what identifies it. */
+  try {
+    var iso = {}, hasIso = false;
+    for (var n = 0; n < localStorage.length; n++) {
+      var isoKey = localStorage.key(n);
+      if (isoKey && isoKey.indexOf("ISO/") === 0) {
+        iso[isoKey] = localStorage.getItem(isoKey);
+        if (isoKey === "ISO/SYL_HISTORY" || isoKey === "ISO/SYL_HISTORY_IDX") hasIso = true;
+      }
+    }
+    if (hasIso) { importText(JSON.stringify(iso), "isomorph (this browser)"); found++; }
   } catch (e) { /* storage off */ }
 
   /* Sources that keep everything under a single localStorage key. The first two

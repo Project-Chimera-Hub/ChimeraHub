@@ -71,17 +71,36 @@ var Today = (function () {
     }
 
     /* Syllogimous spreads itself over many keys and is recognised by the shape
-       of the whole bag, so it is gathered before it is read. */
+       of the whole bag, so it is gathered before it is read.
+
+       Isomorph is the same codebase writing the same key names, behind a
+       prefix its own page keeps them under — see apps/isomorph/index.html. One
+       sweep fills both bags, and the `ISO/` test comes first because it has to:
+       a key is Isomorph's or Syllogimous's, never both, and only the prefix
+       says which. */
     try {
-      var syl = {}, found = false;
+      var syl = {}, iso = {}, found = false, foundIso = false;
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
-        if (k && (k.indexOf("SYL_") === 0 || k.indexOf("syllogimous-") === 0)) {
+        if (!k) continue;
+        if (k.indexOf("ISO/") === 0) {
+          iso[k.slice(4)] = localStorage.getItem(k);
+          foundIso = true;
+        } else if (k.indexOf("SYL_") === 0 || k.indexOf("syllogimous-") === 0) {
           syl[k] = localStorage.getItem(k);
           found = true;
         }
       }
       if (found && (syl.SYL_HISTORY || syl.SYL_HISTORY_IDX)) take(readOne(JSON.stringify(syl)));
+      /* Handed back with the prefix on, because that is what identifies it:
+         `readIsomorph` strips it, and a bare bag is a Syllogimous one. */
+      if (foundIso && (iso.SYL_HISTORY || iso.SYL_HISTORY_IDX)) {
+        var wrapped = {};
+        for (var ik in iso) {
+          if (Object.prototype.hasOwnProperty.call(iso, ik)) wrapped["ISO/" + ik] = iso[ik];
+        }
+        take(readOne(JSON.stringify(wrapped)));
+      }
     } catch (e) { /* storage off */ }
 
     for (var s = 0; s < SINGLE_KEY.length; s++) {

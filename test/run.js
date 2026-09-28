@@ -124,6 +124,38 @@ test("a chunked Syllogimous history reaches the meter", () => {
     "the meter still asked for SYL_HISTORY and saw no Syllogimous");
 });
 
+test("Isomorph reaches the meter, and does not arrive as Syllogimous", () => {
+  reset();
+  const q = (at) => ({ answeredAt: at, createdAt: at - 30000, answered: true,
+                       type: "RCC8 Regions", userAnswer: true, isValid: true });
+  store["ISO/SYL_APP"] = "isomorph";
+  store["ISO/SYL_HISTORY_IDX"] = JSON.stringify([0]);
+  store["ISO/SYL_HISTORY_C:0"] = JSON.stringify([q(at(9)), q(at(9) + 60000)]);
+  const by = Today.minutesOn(DAY);
+  assert.strictEqual(Math.round(by.isomorph * 60), 60);
+  assert.ok(!("syllogimous" in by), "Isomorph's answers were credited to Syllogimous");
+});
+
+test("both builds in one browser are two trainers, not one", () => {
+  /* Isomorph and Syllogimous write the same key names and share this origin.
+     The prefix on Isomorph's keys is the only thing between them, and the
+     failure it prevents is silent: one app's day swallowing the other's, with
+     a plausible total either way. */
+  reset();
+  const q = (at, type) => ({ answeredAt: at, createdAt: at - 30000, answered: true,
+                             type: type, userAnswer: true, isValid: true });
+  store["ISO/SYL_APP"] = "isomorph";
+  store["ISO/SYL_HISTORY_IDX"] = JSON.stringify([0]);
+  store["ISO/SYL_HISTORY_C:0"] = JSON.stringify([q(at(9), "Frames")]);
+  store.SYL_HISTORY_IDX = JSON.stringify([0]);
+  store["SYL_HISTORY_C:0"] = JSON.stringify([q(at(10), "Syllogism")]);
+
+  const by = Today.minutesOn(DAY);
+  assert.strictEqual(Math.round(by.isomorph * 60), 30);
+  assert.strictEqual(Math.round(by.syllogimous * 60), 30);
+  assert.strictEqual(Math.round(Today.totalMinutes(DAY) * 60), 60);
+});
+
 /* ------------------------------------------------------------------ *
  * What the quota may not include                                      *
  * ------------------------------------------------------------------ */
@@ -179,6 +211,15 @@ test("every key the shell watches is one an adapter recognises", () => {
     ["nback-performance", JSON.stringify([{ date: new Date(at(9)).toISOString(), duration: 60000, settings: {}, totalMatches: 5, hits: 4, falseAlarms: 0 }])],
     ["spatial-rotation.progress.v1", JSON.stringify({ history: [{ ts: at(9), seconds: 60, attempts: 20, accuracy: 0.8, mode: "m" }] })],
   ];
+  /* Isomorph needs two keys to be recognised at all — the index and the chunk
+     it names — so it cannot be a one-key probe like the rest. */
+  reset();
+  store["ISO/SYL_HISTORY_IDX"] = JSON.stringify([0]);
+  store["ISO/SYL_HISTORY_C:0"] = JSON.stringify([{ answeredAt: at(9), createdAt: at(9) - 60000,
+    answered: true, type: "Frames", userAnswer: true, isValid: true }]);
+  assert.ok(Today.totalMinutes(DAY) > 0,
+    "Isomorph produced no minutes — its adapter stopped matching");
+
   for (const [key, value] of probes) {
     reset();
     store[key] = value;

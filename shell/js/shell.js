@@ -5,9 +5,9 @@
    ============================================================
 
    A hub, a frame to run a trainer in, and a meter. That is all it is, and the
-   restraint is the design: seven working trainers were merged here by moving
-   them, not by rewriting them, and every line this file adds to their runtime
-   is a line that can break one of them.
+   restraint is the design: the trainers were merged here by moving them, not
+   by rewriting them, and every line this file adds to their runtime is a line
+   that can break one of them.
 
    So the shell never touches a trainer's storage, never injects script into a
    frame, and never asks a trainer to report anything. It reads the same keys
@@ -33,6 +33,13 @@
   var TRAINERS = [
     { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#6cb6ff",
       what: "Relational and syllogistic reasoning" },
+    /* The ninth hue went into the one wide gap the other eight left, between
+       the amber and the green. It is the trainer nearest Syllogimous in what
+       it asks and the furthest from it on the dial, which is the right way
+       round: the two that are easiest to confuse in a sentence are the two
+       that must never be confused in the bar. */
+    { id: "isomorph", name: "Isomorph", path: "isomorph/", colour: "#b7dd5f",
+      what: "Relations about relations" },
     { id: "rnb", name: "Relational N-back", path: "rnb/", colour: "#3fb950",
       what: "N-back over relations, with a ladder" },
     { id: "precision", name: "Precision N-back", path: "precision/", colour: "#d29922",
@@ -303,7 +310,7 @@
    * request. The Android build's server does not: Capacitor answers any path
    * whose last segment has no dot with the application's own root index, which
    * is the usual way a single-page app keeps its routes working. Here it meant
-   * every trainer's frame was served the hub again — eight cards that opened
+   * every trainer's frame was served the hub again — nine cards that opened
    * onto a copy of the page they were on.
    *
    * Naming the file is the whole fix, and it is the same request everywhere

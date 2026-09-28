@@ -87,7 +87,16 @@ function syllogimousHistory(data) {
   return null;
 }
 
-function readSyllogimous(data) {
+/**
+ * One bag of Syllogimous-shaped storage, read as whichever app wrote it.
+ *
+ * Two apps here write these keys. `source` and `unit` are what tell them
+ * apart downstream, and neither may be guessed from the contents: a level of
+ * 27 means one thing on Syllogimous's modes and another on Isomorph's, and
+ * the archive's whole rule about difficulty is that the number never travels
+ * without what it was measured in.
+ */
+function readSyllogimousShaped(data, source, unit) {
   var history = syllogimousHistory(data);
   if (!history) return null;
 
@@ -121,7 +130,7 @@ function readSyllogimous(data) {
     }
 
     records.push(_makeRecord({
-      source: "syllogimous",
+      source: source,
       id: id,
       at: q.answeredAt,
       kind: "item",
@@ -149,7 +158,7 @@ function readSyllogimous(data) {
        * with what it is measured in.
        */
       difficulty: syllogimousDifficulty(q),
-      unit: syllogimousUnit(q),
+      unit: syllogimousUnit(q, unit),
       label: q.type || "unknown",
       /*
        * **The whole question, kept.**
@@ -215,11 +224,70 @@ function readSyllogimous(data) {
   }
 
   return {
-    source: "syllogimous",
+    source: source,
     records: records,
     minutes: minutes,
     state: Object.keys(state).length ? state : null,
   };
+}
+
+/** The prefix Isomorph's page puts in front of every key it writes. */
+var ISOMORPH_PREFIX = "ISO/";
+
+/**
+ * Isomorph's storage, taken out of the prefix its page keeps it under.
+ *
+ * Isomorph is a second build of the Syllogimous codebase and writes the same
+ * key names, so on one origin the two would be one bag. `apps/isomorph/
+ * index.html` shims `localStorage` to prefix everything it stores, and this is
+ * the other end of that: strip `ISO/` and what is left is exactly what the
+ * reader above expects.
+ *
+ * Two shapes arrive, and only these two identify the app rather than guessing
+ * at it. A snapshot of a browser or of a Firefox profile carries the prefix on
+ * every key. A backup the app exported itself does not — it wrote the file
+ * from inside the shim, where the keys are the plain ones — so it is
+ * recognised by `SYL_APP`, which the shim keeps in storage for exactly this
+ * and which the app's own export sweeps up with the rest of `SYL_`.
+ *
+ * Without that marker an Isomorph backup is indistinguishable from a
+ * Syllogimous one: identical keys, and six mode names in common. It would
+ * import, the minutes would even be right, and every question would be filed
+ * under the wrong app.
+ */
+function isomorphBag(data) {
+  if (!data || typeof data !== "object") return null;
+
+  var out = null;
+  for (var key in data) {
+    if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
+    if (key.lastIndexOf(ISOMORPH_PREFIX, 0) === 0) {
+      if (!out) out = {};
+      out[key.slice(ISOMORPH_PREFIX.length)] = data[key];
+    } else if (key === "__origin") {
+      if (!out) out = {};
+      out[key] = data[key];
+    }
+  }
+  if (out && (out.SYL_HISTORY || out.SYL_HISTORY_IDX)) return out;
+
+  if (data.SYL_APP === "isomorph") return data;
+  return null;
+}
+
+function readIsomorph(data) {
+  var bag = isomorphBag(data);
+  if (!bag) return null;
+  return readSyllogimousShaped(bag, "isomorph", "isomorph");
+}
+
+function readSyllogimous(data) {
+  /* Isomorph first, and this is the guard that keeps it first whatever order
+     the dispatch table ends up in. An Isomorph bag answers every question this
+     reader asks — same keys, same question shape — so without saying no here
+     it would be read as Syllogimous by whichever of the two is tried first. */
+  if (isomorphBag(data)) return null;
+  return readSyllogimousShaped(data, "syllogimous", "syllogimous");
 }
 
 /**
@@ -248,10 +316,11 @@ function syllogimousDifficulty(q) {
   return Array.isArray(q && q.premises) ? q.premises.length : null;
 }
 
-function syllogimousUnit(q) {
+function syllogimousUnit(q, base) {
   var d = q && q.difficulty;
-  if (d && typeof d.level === "number" && isFinite(d.level)) return "syllogimous-level";
-  return "syllogimous-premises";
+  base = base || "syllogimous";
+  if (d && typeof d.level === "number" && isFinite(d.level)) return base + "-level";
+  return base + "-premises";
 }
 
 function scoreSyllogimous(q) {
@@ -1164,6 +1233,10 @@ var ADAPTERS = [
      else needs to be asked whether it recognises them. */
   { name: "archive", read: readArchiveExport },
   { name: "prepared", read: readPrepared },
+  /* Before Syllogimous, though it does not have to be: the two write the same
+     keys and each says no to the other's bag. Ordered this way so the cheaper
+     answer is the one that reads as it looks. */
+  { name: "isomorph", read: readIsomorph },
   { name: "syllogimous", read: readSyllogimous },
   { name: "rnb", read: readRnb },
   { name: "cct", read: readCct },
@@ -1196,7 +1269,15 @@ function readFile(text) {
      unrecognised file, and saying so saves the guess. Syllogimous will export
      just a theme, which is a real backup of a real thing and holds no history. */
   if (parsed && typeof parsed === "object") {
+    if (parsed.SYL_APP === "isomorph") {
+      return { error: "An Isomorph backup with no history in it — a theme or "
+        + "settings export rather than a full one." };
+    }
     for (var key in parsed) {
+      if (key.indexOf(ISOMORPH_PREFIX) === 0) {
+        return { error: "An Isomorph backup with no history in it — a theme or "
+          + "settings export rather than a full one." };
+      }
       if (key.indexOf("SYL_") === 0 || key.indexOf("syllogimous-") === 0) {
         return { error: "A Syllogimous backup with no history in it — a theme or "
           + "settings export rather than a full one." };
@@ -1211,6 +1292,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     readFile: readFile,
     readSyllogimous: readSyllogimous,
+    readIsomorph: readIsomorph,
     syllogimousHistory: syllogimousHistory,
     readRnb: readRnb,
     readCct: readCct,

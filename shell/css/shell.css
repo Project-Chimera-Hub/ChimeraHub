@@ -216,14 +216,16 @@ h2::after {
 }
 
 /* Cards butt against one another with a hairline between rather than floating
-   apart: eight separate rectangles read as eight things, one block ruled into
-   eight reads as a menu, and this is a menu.
+   apart: nine separate rectangles read as nine things, one block ruled into
+   nine reads as a menu, and this is a menu.
  *
  * The hairline is each card's own 1px outer shadow bridging the 1px gap, not a
- * fill showing through from the grid behind. Eight cards in three columns
- * leave a ninth cell empty, and a grid with a background paints that empty cell
- * too — a bright panel in the corner with nothing in it. Drawing the rules on
- * the cards means the block simply ends where the cards do. */
+ * fill showing through from the grid behind. Any count that is not a multiple
+ * of three leaves the last row short — eight did, nine happens not to, and the
+ * tenth trainer will again — and a grid with a background paints those empty
+ * cells too: a bright panel in the corner with nothing in it. Drawing the rules
+ * on the cards means the block simply ends where the cards do, at whatever
+ * number of them there turns out to be. */
 .card {
   display: flex;
   flex-direction: column;
@@ -262,7 +264,7 @@ h2::after {
   text-transform: uppercase;
 }
 /* The source's colour, the same one it has in the bar above — the only thing
-   tying a card to its share of the day. Eight hues that stay eight hues: they
+   tying a card to its share of the day. Nine hues that stay nine hues: they
    are deliberately not derived from the accent, because six colours rotated
    off one accent are six colours that look alike, and telling them apart at a
    glance is the entire job. They are the one place this theme is not sage, and

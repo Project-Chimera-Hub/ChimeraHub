@@ -68,9 +68,12 @@ function ensureDeps(dir) {
 rmrf(DIST);
 fs.mkdirSync(DIST, { recursive: true });
 
-/* The six that are already a website. They use relative paths throughout —
-   checked, not assumed — so they run at whatever depth they are put. */
-for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "archive"]) {
+/* The seven that are already a website. They use relative paths throughout —
+   checked, not assumed — so they run at whatever depth they are put. Isomorph
+   is an Angular build rather than a hand-written page, but it arrived as one
+   finished file with a relative `<base href>`, so it is copied like the rest
+   and not built like Syllogimous: there is no source here to build from. */
+for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "isomorph", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
 }
