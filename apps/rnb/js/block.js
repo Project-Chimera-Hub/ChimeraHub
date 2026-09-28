@@ -109,6 +109,7 @@ function startBlock() {
   state.history = []; state.chain = []; state.judgments = []; state.presses.clear();
   state.trial = 0; state.scored = 0; state.tally = {};
   state.lureTally = null; state.currentTrial = null; state.cued = true;
+  state.metaDrawn = null;
   state.presses_log = []; state.stimAt = 0;
   state.tickAt = 0; state.lastSnap = null; clearTimeout(state.buzzTimer);
   state.paused = false; state.interrupted = false; state.ending = false;
@@ -136,6 +137,20 @@ function startBlock() {
 
   keepAwake();
   updateHUD();
+  /* The axes first, if they are off and there is no other way to see them. The
+     clock starts with the trials, not with the look at the cube. */
+  if (showDirectionIntro()) {
+    state.introTimer = setTimeout(() => {
+      hideDirectionIntro();
+      if (state.running) beginTrials();
+    }, DIRECTION_INTRO_MS);
+  } else {
+    beginTrials();
+  }
+}
+
+function beginTrials() {
+  state.sessionStart = Date.now();
   tick();
   state.timer = setInterval(tick, cfg.interval);
 }
@@ -163,6 +178,7 @@ function stopBlock(silent) {
   clearCells();
   hideLagCue();
   hideMoveArrow();
+  hideDirectionIntro();
   /*
    * Active time, not elapsed time.
    *

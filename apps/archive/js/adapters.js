@@ -90,13 +90,19 @@ function syllogimousHistory(data) {
 /**
  * One bag of Syllogimous-shaped storage, read as whichever app wrote it.
  *
- * Two apps here write these keys. `source` and `unit` are what tell them
+ * Two apps here write these keys. `source` and `units` are what tell them
  * apart downstream, and neither may be guessed from the contents: a level of
  * 27 means one thing on Syllogimous's modes and another on Isomorph's, and
  * the archive's whole rule about difficulty is that the number never travels
  * without what it was measured in.
+ *
+ * `units` is `{ level, premises }`, spelled out by each caller rather than
+ * built from the source name. Every unit this file emits has to be findable by
+ * searching it for the string — `ability.js` carries a ladder per unit and the
+ * suite checks the two lists against each other by doing exactly that — and a
+ * unit assembled from a variable is a unit that search does not find.
  */
-function readSyllogimousShaped(data, source, unit) {
+function readSyllogimousShaped(data, source, units) {
   var history = syllogimousHistory(data);
   if (!history) return null;
 
@@ -158,7 +164,7 @@ function readSyllogimousShaped(data, source, unit) {
        * with what it is measured in.
        */
       difficulty: syllogimousDifficulty(q),
-      unit: syllogimousUnit(q, unit),
+      unit: syllogimousUnit(q, units),
       label: q.type || "unknown",
       /*
        * **The whole question, kept.**
@@ -278,7 +284,7 @@ function isomorphBag(data) {
 function readIsomorph(data) {
   var bag = isomorphBag(data);
   if (!bag) return null;
-  return readSyllogimousShaped(bag, "isomorph", "isomorph");
+  return readSyllogimousShaped(bag, "isomorph", ISOMORPH_UNITS);
 }
 
 function readSyllogimous(data) {
@@ -287,7 +293,7 @@ function readSyllogimous(data) {
      reader asks — same keys, same question shape — so without saying no here
      it would be read as Syllogimous by whichever of the two is tried first. */
   if (isomorphBag(data)) return null;
-  return readSyllogimousShaped(data, "syllogimous", "syllogimous");
+  return readSyllogimousShaped(data, "syllogimous", SYLLOGIMOUS_UNITS);
 }
 
 /**
@@ -316,12 +322,17 @@ function syllogimousDifficulty(q) {
   return Array.isArray(q && q.premises) ? q.premises.length : null;
 }
 
-function syllogimousUnit(q, base) {
+function syllogimousUnit(q, units) {
   var d = q && q.difficulty;
-  base = base || "syllogimous";
-  if (d && typeof d.level === "number" && isFinite(d.level)) return base + "-level";
-  return base + "-premises";
+  units = units || SYLLOGIMOUS_UNITS;
+  if (d && typeof d.level === "number" && isFinite(d.level)) return units.level;
+  return units.premises;
 }
+
+/* Written out rather than composed, so a search of this file for a unit name
+   finds it — see `readSyllogimousShaped`. */
+var SYLLOGIMOUS_UNITS = { level: "syllogimous-level", premises: "syllogimous-premises" };
+var ISOMORPH_UNITS = { level: "isomorph-level", premises: "isomorph-premises" };
 
 function scoreSyllogimous(q) {
   if (Array.isArray(q.seriesAnswers) && Array.isArray(q.series) && q.series.length > 1) {

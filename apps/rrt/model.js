@@ -5,20 +5,26 @@
    Everything here is pure, so node can test it without a browser; index.html
    only draws what this decides.
 
-   THE TASK. You hold `s` symbols in your head, each with a rank on each of `d`
-   axes (height, then width, then size). Every beat shows one new symbol
-   placed relative to one symbol you already hold: above or below it, left or
-   right of it, bigger or smaller than it — one relation per axis, all at once.
-   The new symbol slots in right next to that one on every axis, and when that
-   makes one too many, the OLDEST symbol leaves and everything closes up. You
-   answer the new symbol's rank on one axis.
+   THE TASK. A board of `s` slots on each of `d` axes (height, then width,
+   then depth, then size) holds `s` symbols, one per slot on every axis. An
+   episode opens by showing the whole board. Every beat after that shows one
+   new symbol placed some number of steps from one symbol you hold — above or
+   below it, left or right of it, and so on, one count per axis. The new
+   symbol takes that slot, the symbol that was in it leaves, and nothing else
+   moves. You answer the new symbol's rank on one axis.
 
-   Why this shape, rather than CCT's "combine with the previous one":
+   It used to be an insertion: the new symbol slotted in next to the
+   reference, everything past it shifted a rank, and then the oldest left and
+   everything closed up again. That moved symbols the card never mentioned,
+   which made the bookkeeping the hard part rather than the relations. Fixed
+   slots keep what mattered:
 
-   - No card contains its answer. The rank depends on where the reference sits
-     now, which depends on every insertion and departure before it.
-   - Each symbol carries two bindings — where it is and how old it is — and both
-     change every beat. Discarding the stale ones is part of the work.
+   - No card contains its answer. The rank is the reference's rank plus the
+     steps on the card, and where the reference is depends on the cards before.
+   - What leaves is decided by the card, not by age. Leaving by age in a board
+     where nothing moves would put the new symbols into the slots in the same
+     order every lap, and the answers would be a rhythm to learn instead of a
+     board to hold.
    - The symbols are generated, not drawn from a set, so no symbol ever comes to
      mean anything. A task whose stimuli keep a fixed meaning automatises, and a
      task that has automatised has stopped loading what it was chosen to load.
@@ -174,32 +180,50 @@
      with it (what is held, plus what has only just left — a symbol that has
      only just gone is still in the head). A generated mark is an array of
      stroke indices; an animal is `{name, path}`, a silhouette drawn on the
-     same kind of grid and coloured the same way. Nothing in the model looks
-     inside either. The drawings live in animals.js, with their credit. */
+     same kind of grid and coloured the same way; a picture is
+     `{name, image}`, a photograph. Nothing in the model looks inside any of them. The
+     animal drawings live in animals.js, with their credit. */
   var ANIMALS = (typeof module !== "undefined" && module.exports)
     ? require("./animals.js")
     : (root.RunningOrderAnimals || []);
 
   /** An animal that is not one of `avoid`, uniformly among those that are left. */
-  function newAnimal(avoid, rnd) {
+  function newAnimal(avoid, rnd) { return fromPool(ANIMALS, avoid, rnd); }
+
+  /* PICTURES go one step further than the animals: real photographs, in
+     colour, of things from all over the house and the garden, each with a
+     name that can be said aloud. They come from Wikimedia Commons under
+     licences that allow it — tools/fetch-pictures.mjs fetches them, and
+     pictures/pictures.js lists each with its author and licence. The files
+     are part of the site, so the APK has them offline like everything else. */
+  var PICTURES = (typeof module !== "undefined" && module.exports)
+    ? (function () { try { return require("./pictures/pictures.js"); } catch (e) { return []; } })()
+    : (root.RunningOrderPictures || []);
+
+  /** One of `pool` whose name is not in `avoid`, uniformly among the rest. */
+  function fromPool(pool, avoid, rnd) {
     rnd = rnd || Math.random;
     var taken = {};
     (avoid || []).forEach(function (a) { if (a && a.name) taken[a.name] = true; });
-    var free = ANIMALS.filter(function (a) { return !taken[a.name]; });
-    var pool = free.length ? free : ANIMALS;
-    return pool[Math.floor(rnd() * pool.length)];
+    var free = pool.filter(function (a) { return !taken[a.name]; });
+    var from = free.length ? free : pool;
+    return from[Math.floor(rnd() * from.length)];
   }
+
+  function newPicture(avoid, rnd) { return fromPool(PICTURES, avoid, rnd); }
 
   var SETS = {
     glyphs: { id: "glyphs", label: "Generated marks", next: newGlyph },
-    animals: { id: "animals", label: "Animals", next: newAnimal },
+    animals: { id: "animals", label: "Animals", next: newAnimal, named: true },
+    pictures: { id: "pictures", label: "Pictures", next: newPicture, named: true },
   };
 
   /** The named set, or the generated marks for anything unrecognised — and for
       the animals when their drawings did not load, which beats a blank card. */
   function stimulusSet(id) {
     var set = SETS[id];
-    if (!set || (set === SETS.animals && !ANIMALS.length)) return SETS.glyphs;
+    if (!set || (set === SETS.animals && !ANIMALS.length)
+        || (set === SETS.pictures && !PICTURES.length)) return SETS.glyphs;
     return set;
   }
 
@@ -207,11 +231,25 @@
    * The model                                                           *
    * ------------------------------------------------------------------ */
 
-  /* Axis 0 is height, 1 is width, 2 is size. Rank 0 is top, left, biggest —
-     the end a reader meets first. A direction of -1 means "toward rank 0". */
+  /*
+   * Axis 0 is height, 1 is longitude, 2 is latitude, 3 is size. Rank 0 is top,
+   * left, back, biggest — the end a reader meets first. A direction of -1 means
+   * "toward rank 0".
+   *
+   * The first three are one box: height up the page, longitude across it,
+   * latitude into it. Longitude comes before latitude so that two dimensions is
+   * still a flat plane — height and across — and the third is what turns the
+   * plane into a box, rather than 2D being a page seen edge-on.
+   *
+   * Size is last and deliberately outside the box. It is the one axis that is a
+   * property of the symbol rather than a place, so it cannot be drawn as one
+   * more direction; and once it is an axis of its own, nothing else may use
+   * scale — which is why depth is carried by offset and the drawn frame alone.
+   */
   var AXES = [
     { id: "height", before: "above", after: "below" },
-    { id: "width", before: "left of", after: "right of" },
+    { id: "longitude", before: "left of", after: "right of" },
+    { id: "latitude", before: "behind", after: "in front of" },
     { id: "size", before: "bigger than", after: "smaller than" },
   ];
 
@@ -219,97 +257,188 @@
     return { d: d, s: s, items: [], clock: 0, nextId: 1 };
   }
 
-  /** The first symbol of an episode: it has nothing to be placed against. */
-  function seed(model, glyph) {
-    var ranks = [];
-    for (var a = 0; a < model.d; a++) ranks.push(0);
-    var item = { id: model.nextId++, glyph: glyph, ranks: ranks, born: ++model.clock };
-    model.items.push(item);
-    return item;
-  }
-
-  /* Where every rank ends up if a symbol goes in next to `ref`, in `dirs`, and
-     the oldest then leaves when there is one too many. Returns the new symbol's
-     ranks, and the item that left. Pure: works on copies. */
-  function simulate(model, ref, dirs) {
-    var ranks = model.items.map(function (it) { return it.ranks.slice(); });
-    var refIdx = model.items.indexOf(ref);
-    var x = [];
-    for (var a = 0; a < model.d; a++) {
-      var at = ranks[refIdx][a] + (dirs[a] < 0 ? 0 : 1);
-      for (var i = 0; i < ranks.length; i++) if (ranks[i][a] >= at) ranks[i][a]++;
-      x.push(at);
+  /* A random order of 0..n-1. */
+  function shuffled(n, rnd) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(i);
+    for (var j = n - 1; j > 0; j--) {
+      var k = Math.floor(rnd() * (j + 1)), t = out[j];
+      out[j] = out[k]; out[k] = t;
     }
-    var removed = -1;
-    if (model.items.length + 1 > model.s) {
-      removed = 0;
-      for (var j = 1; j < model.items.length; j++) {
-        if (model.items[j].born < model.items[removed].born) removed = j;
-      }
-      for (var b = 0; b < model.d; b++) {
-        var gone = ranks[removed][b];
-        if (x[b] > gone) x[b]--;
-        for (var k = 0; k < ranks.length; k++) if (ranks[k][b] > gone) ranks[k][b]--;
-      }
-    }
-    return { x: x, ranks: ranks, removed: removed };
+    return out;
   }
 
   /**
-   * The next card: which symbol it is placed against, in which directions, and
-   * which axis is asked about.
+   * The board an episode opens with: `s` symbols, one in every slot on every
+   * axis, shown all at once to be learnt before the first card. From here on
+   * the board is always full and a slot is a slot — nothing ever renumbers.
+   */
+  function fill(model, stims, rnd) {
+    rnd = rnd || Math.random;
+    var perms = [];
+    for (var a = 0; a < model.d; a++) perms.push(shuffled(model.s, rnd));
+    model.items = [];
+    for (var i = 0; i < model.s; i++) {
+      var ranks = [];
+      for (var b = 0; b < model.d; b++) ranks.push(perms[b][i]);
+      model.items.push({ id: model.nextId++, glyph: stims[i], ranks: ranks, born: ++model.clock });
+    }
+    return model.items;
+  }
+
+  /**
+   * The next card: the slot the new symbol lands in (the symbol there now is
+   * the one it replaces), the held symbol it is placed against, how many steps
+   * away that slot is on every axis, and which axis is asked about.
    *
-   * Picking all of that uniformly would pile the answers up in the middle
-   * ranks, and a player who learned to press the middle key would score for it.
-   * So the answer is picked first, uniformly among the ranks this model can
-   * produce on the asked axis, and then a placement that produces it. The
-   * other axes' directions are free.
+   * The slot is picked first and uniformly, so the answers come out even over
+   * the ranks and pressing one key forever scores exactly chance. The
+   * reference is any other symbol, except one exactly the whole board away on
+   * the asked axis: "all the way up" would say the answer without needing to
+   * know where anything is.
    */
   function planCard(model, rnd) {
     rnd = rnd || Math.random;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
-    var byAnswer = {};
-    var answers = [];
-    model.items.forEach(function (ref) {
-      [-1, 1].forEach(function (dir) {
-        var dirs = [];
-        for (var a = 0; a < model.d; a++) dirs.push(a === axis ? dir : (rnd() < 0.5 ? -1 : 1));
-        var r = simulate(model, ref, dirs).x[axis];
-        if (!byAnswer[r]) { byAnswer[r] = []; answers.push(r); }
-        byAnswer[r].push({ ref: ref, dirs: dirs });
-      });
+    var target = pick(model.items);
+    var refs = model.items.filter(function (it) {
+      return it !== target && Math.abs(target.ranks[axis] - it.ranks[axis]) < model.s - 1;
     });
-    var chosen = pick(byAnswer[pick(answers)]);
-    return { ref: chosen.ref, dirs: chosen.dirs, axis: axis };
+    var ref = pick(refs);
+    var dist = [];
+    for (var a = 0; a < model.d; a++) dist.push(target.ranks[a] - ref.ranks[a]);
+    return { ref: ref, target: target, dist: dist, axis: axis };
   }
 
-  /** Put the card's symbol in, drop the oldest if needed. */
+  /**
+   * A relation probe: is the step from one held symbol to another this one?
+   *
+   * The other kind of conclusion — a claim about a single relation rather than
+   * about two of them. It asks the same thing an analogy asks of a pair, minus
+   * the second pair to compare it against, so it is the shallower of the two
+   * and the one worth mixing in rather than replacing with.
+   *
+   * The claimed step is drawn, never written: its size is a count of pips and
+   * its sign is which way the arrow points, so nothing here has to be read as
+   * a word.
+   *
+   * A false claim is off by a real step in the same space — never by a
+   * direction the axis does not have, and never by zero, which would be two
+   * symbols in one slot and is not a claim the board can make.
+   */
+  function planRelation(model, rnd) {
+    rnd = rnd || Math.random;
+    var items = model.items;
+    if (items.length < 2) return null;
+    var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
+    var i = Math.floor(rnd() * items.length);
+    var j = Math.floor(rnd() * (items.length - 1));
+    if (j >= i) j++;
+    var a = items[i], b = items[j];
+    var real = b.ranks[axis] - a.ranks[axis];
+    var truth = rnd() < 0.5;
+    var claim = real;
+    if (!truth) {
+      /* Every other step this board could state, so a wrong claim is always a
+         step some pair really is apart. */
+      var others = [];
+      for (var v = -(model.s - 1); v <= model.s - 1; v++) {
+        if (v !== 0 && v !== real) others.push(v);
+      }
+      if (!others.length) return null;
+      claim = others[Math.floor(rnd() * others.length)];
+    }
+    return { kind: "relation", axis: axis, truth: truth,
+             pair: [a, b], claim: claim };
+  }
+
+  /**
+   * An analogy probe: is the step from one held symbol to another the same as
+   * the step from a third to a fourth, on one axis?
+   *
+   * A probe, not a card — nothing is placed and the board does not change. It
+   * asks whether the board is held rather than adding to it, so it is the one
+   * beat that is pure retrieval, and the only one whose answer is a claim
+   * rather than a position.
+   *
+   * All four symbols are distinct, which is why it needs a board of four: on
+   * three, the only two pairs with the same step share a symbol, and "A is to B
+   * as B is to C" is a chain rather than an analogy. Below that the caller
+   * deals an ordinary card instead.
+   *
+   * Half the probes are true, drawn as the claim BEFORE the pairs that state
+   * it, so neither answer is the one to press when unsure.
+   */
+  function planAnalogy(model, rnd) {
+    rnd = rnd || Math.random;
+    var items = model.items;
+    if (items.length < 4) return null;
+    var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
+    var step = function (p) { return p[1].ranks[axis] - p[0].ranks[axis]; };
+    var pairs = [];
+    for (var i = 0; i < items.length; i++) {
+      for (var j = 0; j < items.length; j++) if (i !== j) pairs.push([items[i], items[j]]);
+    }
+    var truth = rnd() < 0.5;
+    /* Shuffled, or a first pair with no mate would bias the draw toward
+       whichever pairs happen to come first in item order. */
+    var order = shuffled(pairs.length, rnd);
+    for (var n = 0; n < order.length; n++) {
+      var a = pairs[order[n]];
+      var mates = pairs.filter(function (b) {
+        return b[0] !== a[0] && b[0] !== a[1] && b[1] !== a[0] && b[1] !== a[1]
+            && (step(b) === step(a)) === truth;
+      });
+      if (mates.length) {
+        return { kind: "analogy", axis: axis, truth: truth,
+                 pair: a, mate: mates[Math.floor(rnd() * mates.length)] };
+      }
+    }
+    return null;
+  }
+
+  /** The card's symbol takes the target's slot; the target leaves. Nothing
+      else moves. */
   function apply(model, plan, glyph) {
-    var sim = simulate(model, plan.ref, plan.dirs);
-    var removed = sim.removed >= 0 ? model.items[sim.removed] : null;
-    model.items.forEach(function (it, i) { it.ranks = sim.ranks[i]; });
-    if (removed) model.items.splice(sim.removed, 1);
-    var x = { id: model.nextId++, glyph: glyph, ranks: sim.x, born: ++model.clock };
+    var i = model.items.indexOf(plan.target);
+    var x = { id: model.nextId++, glyph: glyph, ranks: plan.target.ranks.slice(), born: ++model.clock };
+    model.items.splice(i, 1);
     model.items.push(x);
-    return { item: x, removed: removed, answer: sim.x[plan.axis] + 1 };
+    return { item: x, removed: plan.target, answer: x.ranks[plan.axis] + 1 };
   }
 
   /* ------------------------------------------------------------------ *
    * Levels and the controller                                           *
    * ------------------------------------------------------------------ */
 
-  /* Ordered by what is carried — d·log2(s) bits — and it happens to rise
-     monotonically: 1D·7 holds 2.81 bits, 2D·3 holds 3.17. Size first, then a
-     dimension, and adding a dimension drops the size back. */
-  var SIZES = { 1: [3, 4, 5, 6, 7], 2: [3, 4, 5], 3: [3, 4, 5] };
+  /* Span first, then a dimension, and adding a dimension drops the span back:
+     1D·7 holds 2.81 bits, 2D·3 holds 3.17. */
+  var SIZES = { 1: [3, 4, 5, 6, 7], 2: [3, 4, 5], 3: [3, 4, 5], 4: [3, 4, 5] };
 
-  function ladder(maxD) {
+  /*
+   * Ordered by what is carried, d·log2(s) bits — sorted rather than assumed.
+   *
+   * Nesting the loops happened to produce that order for three dimensions and
+   * stops doing so at four: 4D·3 carries 6.34 bits and 3D·5 carries 6.97, so a
+   * fourth dimension does not simply go on the end. Sorting states the rule the
+   * comment always claimed, and leaves the first eleven rungs in exactly the
+   * order they were in.
+   */
+  function ladder(maxD, minD) {
     var out = [];
-    for (var d = 1; d <= Math.max(1, Math.min(3, maxD || 3)); d++) {
+    var top = Math.max(1, Math.min(4, maxD || 4));
+    /* A floor as well as a ceiling. Picking a dimension used only to say which
+       levels were ALLOWED, so "3D" still started at 1D·3 and climbed through
+       everything below it — which is not what picking 3D looks like it means.
+       With the floor equal to the ceiling the ladder is that dimension's spans
+       and nothing else, and the span is what adapts. */
+    for (var d = Math.max(1, Math.min(top, minD || 1)); d <= top; d++) {
       SIZES[d].forEach(function (s) { out.push({ d: d, s: s }); });
     }
-    return out;
+    return out.sort(function (a, b) {
+      return carriedBits(a.d, a.s) - carriedBits(b.d, b.s);
+    });
   }
 
   function levelIndex(levels, level) {
@@ -406,7 +535,11 @@
     var bits = 0, secs = 0;
     trials.forEach(function (t) {
       if (t.k < 2) return;
-      bits += credit(t) * carriedBits(t.d, t.k);
+      /* `t.bits` where the trial carried something other than its answer's
+         width — an analogy probe is answered from two options and holds the
+         whole board. Records from before probes existed have no `bits` and are
+         read the way they always were. */
+      bits += credit(t) * (t.bits != null ? t.bits : carriedBits(t.d, t.k));
       secs += t.interval / 1000;
     });
     return secs > 0 ? Math.max(0, bits / secs) : 0;
@@ -425,10 +558,11 @@
   }
 
   var api = {
-    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, SETS: SETS,
+    SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, PICTURES: PICTURES, SETS: SETS,
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
-    newAnimal: newAnimal, stimulusSet: stimulusSet,
-    createModel: createModel, seed: seed, planCard: planCard, apply: apply, simulate: simulate,
+    newAnimal: newAnimal, newPicture: newPicture, stimulusSet: stimulusSet,
+    createModel: createModel, fill: fill, planCard: planCard, apply: apply,
+    planAnalogy: planAnalogy, planRelation: planRelation,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,
     credit: credit, throughput: throughput, peakThroughput: peakThroughput,

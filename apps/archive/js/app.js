@@ -12,7 +12,7 @@
 
 /* global emptyArchive, fold, foldNotes, days, dayRow, overlap, sourceSummary, cacheSave,
    cacheLoad, readFile, makeNote, noteId, tombstone, mergeNotes, visibleNotes, notesOn,
-   measureSeries, tagCounts */
+   measureSeries, tagCounts, estimate, tierLabel, TIERS */
 
 var archive = cacheLoad() || emptyArchive();
 if (!Array.isArray(archive.notes)) archive.notes = [];
@@ -49,6 +49,34 @@ var SOURCE_NAMES = {
 
 function sourceName(id) {
   return SOURCE_NAMES[id] || id;
+}
+
+/*
+ * And what colour it is. The hub's, source for source: the dot on a trainer's
+ * card there is the segment of the day's bar it filled, and the same hue here
+ * — on the sidebar, down the edge of its card, in its chart — is what lets a
+ * reader carry a source from one screen to the other without reading a label.
+ *
+ * A source with no colour of its own (Anki, one added later) is grey, which
+ * reads as "not one of the eight" rather than borrowing a hue that means one.
+ */
+var SOURCE_COLOURS = {
+  syllogimous: "#6cb6ff",
+  rnb: "#3fb950",
+  precision: "#d29922",
+  rotation: "#db6d9d",
+  cct: "#a371f7",
+  ewmt: "#ff7b72",
+  rrt: "#ffa657",
+  synth: "#56d4dd",
+};
+
+function sourceColour(id) {
+  return SOURCE_COLOURS[id] || "#8b8b9c";
+}
+
+function dot(id) {
+  return "<span class='nav-dot' style='--c:" + sourceColour(id) + "'></span>";
 }
 
 function fmt(n, digits) { return Number(n).toFixed(digits == null ? 0 : digits); }
@@ -158,7 +186,7 @@ function watchSections() {
   if (typeof IntersectionObserver !== "function") return;
 
   var links = {};
-  var anchors = document.querySelectorAll(".topbar__links a");
+  var anchors = document.querySelectorAll(".sidebar-nav a.nav-item[href^='#']");
   for (var i = 0; i < anchors.length; i++) {
     links[anchors[i].getAttribute("href").slice(1)] = anchors[i];
   }
@@ -173,7 +201,7 @@ function watchSections() {
     }
     for (var id in links) {
       if (Object.prototype.hasOwnProperty.call(links, id)) {
-        links[id].classList.toggle("is-current", id === current);
+        links[id].classList.toggle("active", id === current);
       }
     }
   }
@@ -189,8 +217,8 @@ function watchSections() {
      * degrade — it throws a SyntaxError out of the constructor. That threw out
      * of `DOMContentLoaded`, which is where every listener on this page is
      * attached, so the file input, the drop zone and paste were all left
-     * unwired: importing did nothing at all, silently. 64px is the 4rem the
-     * topbar is tall. */
+     * unwired: importing did nothing at all, silently. 64px clears the bar
+     * the sidebar turns into on a phone, and costs nothing on a desktop. */
   }, { rootMargin: "-64px 0px -70% 0px" });
 
   for (var j = 0; j < sections.length; j++) observer.observe(sections[j]);
@@ -381,9 +409,10 @@ function importNeighbours() {
  * ------------------------------------------------------------------ */
 
 function render() {
-  renderStreaks();
+  renderStats();
   renderHeatmap();
   renderSources();
+  renderAbility();
   renderCharts();
   renderModes();
   renderOverlap();
@@ -405,17 +434,46 @@ function render() {
  * The year                                                            *
  * ------------------------------------------------------------------ */
 
-function renderStreaks() {
-  var s = streaks(archive);
-  var host = $("streaks");
-  if (!archive.records.length) { host.innerHTML = ""; return; }
+/*
+ * The four figures across the top: how much, how often, how long a day's
+ * training runs, and whether it is still going. All four are read off the
+ * same `minutes` table the heatmap draws, so the row and the year under it can
+ * never disagree.
+ */
+function renderStats() {
+  var host = $("stats");
+  var total = 0, perDay = {};
+  var names = Object.keys(archive.minutes);
+  names.forEach(function (n) {
+    var byDay = archive.minutes[n] || {};
+    for (var day in byDay) {
+      if (!Object.prototype.hasOwnProperty.call(byDay, day)) continue;
+      total += byDay[day];
+      perDay[day] = (perDay[day] || 0) + byDay[day];
+    }
+  });
+  var trained = Object.keys(perDay).filter(function (d) { return perDay[d] >= 1; }).length;
+  var none = !archive.records.length;
+  var s = none ? { current: 0, longest: 0, uncertain: 0 } : streaks(archive);
+
+  function card(icon, label, value, sub, dim) {
+    return "<div class='stat-card'>"
+      + "<div class='stat-label'><svg class='icon'><use href='#i-" + icon + "'/></svg>" + label + "</div>"
+      + "<div class='stat-value" + (dim ? " none" : "") + "'>" + value + "</div>"
+      + "<div class='stat-sub'>" + sub + "</div></div>";
+  }
 
   host.innerHTML =
-    "<span><b>" + s.current + "</b> day streak</span>"
-    + "<span><b>" + s.longest + "</b> longest</span>"
-    + (s.uncertain
-        ? "<span class='dim'>" + s.uncertain + " unevidenced day(s) inside it</span>"
-        : "");
+    card("clock", "Total hours", fmt(total / 60, 1),
+      "across " + names.length + " source" + (names.length === 1 ? "" : "s"), none)
+    + card("calendar", "Days trained", String(trained),
+      archive.records.length + " record" + (archive.records.length === 1 ? "" : "s"), none)
+    + card("trend", "Avg / day", fmt(trained ? total / trained : 0) + "<small> min</small>",
+      "per day trained", none)
+    + card("flame", "Streak", String(s.current),
+      "longest " + s.longest
+        + (s.uncertain ? " · " + s.uncertain + " unevidenced inside it" : ""),
+      !s.current);
 }
 
 /**
@@ -455,6 +513,110 @@ function renderHeatmap() {
   });
 
   host.innerHTML = html;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ability                                                             *
+ * ------------------------------------------------------------------ */
+
+/**
+ * One position on the benchmark's ladder, and the arithmetic behind it.
+ *
+ * The table is not decoration. This is the only screen in the project that puts
+ * eight trainers on one axis, and the only thing stopping it becoming a number
+ * nobody can argue with is showing every term: what each trainer said about
+ * itself, in its own units, where that lands, and how much of the total it
+ * moved. A reader who disagrees with the letter can see which row to disagree
+ * with.
+ *
+ * **Nothing here can withhold the estimate.** A thin reading is reported thin;
+ * it is never reported as nothing, and no single trainer's setting can suppress
+ * the rest of the archive.
+ */
+function renderAbility() {
+  var head = $("abilityHead");
+  var parts = $("abilityParts");
+  var line = $("abilityBadge");
+  var unused = $("abilityUnused");
+
+  var est = estimate(archive);
+
+  unused.innerHTML = est.unused.map(function (u) {
+    return "<li>" + sourceName(u.source) + " — " + esc(u.why) + "</li>";
+  }).join("");
+
+  if (est.level == null) {
+    head.innerHTML = "<p class='dim'>No trainer has recorded a difficulty yet.</p>";
+    parts.innerHTML = "";
+    line.innerHTML = "";
+    return;
+  }
+
+  /* A rung per band, filled to where the estimate stands. The part-filled one
+     is the whole reason this is a bar and not a letter: a climb from the bottom
+     of a band to the top of it is months, and a badge reading the same at both
+     ends makes those months invisible. */
+  var rungs = TIERS.map(function (t, i) {
+    var fill = Math.max(0, Math.min(1, est.level - i + 1));
+    return "<i class='rung' style='--fill:" + fmt2(fill) + "'><b>" + t + "</b></i>";
+  }).join("");
+
+  head.innerHTML =
+    "<div class='ability__now'>"
+    + "<span class='ability__tier'>" + est.tier + "</span>"
+    + "<span class='ability__level'>" + fmt2(est.level + 1) + " of " + TIERS.length + "</span>"
+    + "</div>"
+    + "<div class='ability__scale'>" + rungs + "</div>"
+    + "<p class='dim'>"
+    + "<b>" + fmt(est.confidence * 100) + "%</b> confidence — the share of the weight "
+    + "that could speak for you which actually did, after how long each trainer has "
+    + "been trained and how long ago. It is a figure to read beside the letter, not a "
+    + "bar to clear. Window " + est.from + " to " + est.to + "."
+    + "</p>";
+
+  var body = est.used.map(function (u) {
+    return "<tr" + (u.disagrees ? " class='warn'" : "") + ">"
+      + "<td>" + sourceName(u.source) + "</td>"
+      + "<td>" + fmt2(u.difficulty) + " <span class='dim'>" + esc(u.unit) + "</span></td>"
+      + "<td class='dim'>" + esc(u.note) + "</td>"
+      + "<td>" + tierLabel(u.level) + " " + fmt2(u.level + 1) + "</td>"
+      + "<td>" + fmt(u.share * 100) + "%</td>"
+      + "<td class='dim'>" + u.days + "d"
+      + (u.daysSince > 30 ? ", last " + u.daysSince + "d ago" : "")
+      + (u.disagrees
+        ? " · <b>disagrees with what it is serving (" + tierLabel(u.crossCheck)
+          + ") — one of the two is stale</b>"
+        : "")
+      + "</td></tr>";
+  }).join("");
+
+  parts.innerHTML = "<table>"
+    + "<tr><th>source</th>"
+    + "<th title=\"The reading, in this trainer's own units\">reading</th>"
+    + "<th title=\"Where it came from. A trainer's own estimate is used where it"
+    + " keeps one, because it has already applied its own target accuracy and its"
+    + " own chance correction\">from</th>"
+    + "<th title=\"Where that lands on the benchmark's ladder\">tier</th>"
+    + "<th title=\"Share of the weight behind the estimate above\">weight</th>"
+    + "<th title=\"Days trained, and whether the two readings of this trainer agree\">evidence</th>"
+    + "</tr>" + body + "</table>";
+
+  /*
+   * The spread, which is what replaced the benchmark's conjunctive badge.
+   *
+   * That badge was withheld whenever one of three columns had no evidence, and
+   * it was the wrong instrument: a single unideal setting in one trainer could
+   * silence a reading the rest of the archive had earned. The spread says the
+   * same useful thing — where the trainers disagree — without ever refusing,
+   * and it points at where the next hour is worth spending.
+   */
+  var sp = est.spread;
+  line.innerHTML = sp.tiers < 0.5
+    ? "Your trainers agree: everything sits around <b>" + est.tier + "</b>."
+    : "Spread: <b>" + sourceName(sp.low.source) + "</b> at " + tierLabel(sp.low.level)
+      + " up to <b>" + sourceName(sp.high.source) + "</b> at " + tierLabel(sp.high.level)
+      + " — " + fmt2(sp.tiers) + " tiers apart. The letter above is the weighted middle; "
+      + "the low end is where an hour buys the most.";
 }
 
 /* ------------------------------------------------------------------ *
@@ -552,7 +714,8 @@ function renderCharts() {
 
     var div = document.createElement("div");
     div.className = "chart";
-    div.innerHTML = "<h3>" + sourceName(name) + " <small class='dim'>"
+    div.id = "chart-" + name;
+    div.innerHTML = "<h3>" + dot(name) + sourceName(name) + " <small class='dim'>"
       + pts.length + " days · bars are minutes, peak " + fmt(peak) + "m"
       + (dHi == null
           ? " · no difficulty recorded"
@@ -563,7 +726,8 @@ function renderCharts() {
                   + " measured differently, not drawn"
                 : ""))
       + "</small></h3>"
-      + "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none'>"
+      + "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none'"
+      + " style='--c:" + sourceColour(name) + "'>"
       + "<g class='bars'>" + bars + "</g>"
       + "<path class='acc' d='" + line + "'></path>"
       + "</svg>";
@@ -628,7 +792,7 @@ function renderModes() {
       + "<th>time</th></tr>";
 
     var div = document.createElement("div");
-    div.innerHTML = "<h3>" + sourceName(name) + "</h3><table>" + head + body + "</table>";
+    div.innerHTML = "<h3>" + dot(name) + sourceName(name) + "</h3><table>" + head + body + "</table>";
     host.appendChild(div);
   });
 }
@@ -729,28 +893,45 @@ function unitLine(name, main) {
 function renderSources() {
   var names = Object.keys(archive.minutes).sort();
   var host = $("sourceCards");
+  var nav = $("navSources");
   host.innerHTML = "";
 
   if (!names.length) {
-    host.innerHTML = "<p class='dim'>No sources yet.</p>";
+    host.innerHTML = "<p class='dim'>No sources yet. Drop an export above, or read this browser.</p>";
+    nav.innerHTML = "";
     return;
   }
 
   names.forEach(function (name) {
     var s = sourceSummary(archive, name);
     var div = document.createElement("div");
-    div.className = "card";
-    div.innerHTML = "<h3>" + sourceName(name) + "</h3>"
-      + "<p><b>" + (s ? s.records : 0) + "</b> " + (s ? s.kind : "record") + "s"
-      + " · <b>" + fmt(s ? s.minutes : 0) + "</b> min"
-      + " · <b>" + (s ? s.days : 0) + "</b> days</p>"
-      + (s && s.accuracy != null
-        ? "<p class='dim'>" + fmt(s.accuracy * 100) + "% correct · "
-          + s.first + " to " + s.last + "</p>"
-        : "")
-      + (s && s.unit ? unitLine(name, s.unit) : "");
+    div.className = "category-card";
+    div.id = "src-" + name;
+    /* The colour is set on an inner wrapper rather than on the card itself,
+       so it arrives in the one string the card is built from. */
+    div.innerHTML = "<div style='--c:" + sourceColour(name) + "'>"
+      + "<div class='cat-header'><span class='cat-abbr'>" + sourceName(name) + "</span>"
+      + (s ? "<span class='cat-full'>" + s.first + " to " + s.last + "</span>" : "")
+      + "</div>"
+      + "<div class='cat-hours'>" + fmt((s ? s.minutes : 0) / 60, 1) + " <span>hrs</span></div>"
+      + "<div class='cat-meta'><b>" + (s ? s.records : 0) + "</b> " + (s ? s.kind : "record") + "s"
+      + " · <b>" + (s ? s.days : 0) + "</b> days"
+      + (s && s.accuracy != null ? " · <b>" + fmt(s.accuracy * 100) + "%</b> correct" : "")
+      + "</div>"
+      + (s && s.unit ? unitLine(name, s.unit) : "")
+      + "</div>";
     host.appendChild(div);
   });
+
+  /* The same sources in the sidebar, each a jump to its card with its hours
+     beside it. */
+  nav.innerHTML = "<span class='nav-label'>Sources</span>" + names.map(function (name) {
+    var mins = 0, byDay = archive.minutes[name] || {};
+    for (var d in byDay) if (Object.prototype.hasOwnProperty.call(byDay, d)) mins += byDay[d];
+    return "<a class='nav-item' href='#src-" + name + "' title='" + sourceName(name) + "'>"
+      + dot(name) + "<span class='nav-name'>" + sourceName(name) + "</span>"
+      + "<span class='nav-meta'>" + fmt(mins / 60, 1) + "h</span></a>";
+  }).join("");
 }
 
 /**

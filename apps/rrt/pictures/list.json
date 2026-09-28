@@ -1,0 +1,277 @@
+[
+ {
+  "name": "apple",
+  "query": "red apple fruit"
+ },
+ {
+  "name": "banana",
+  "query": "banana fruit single"
+ },
+ {
+  "name": "pear",
+  "query": "pear fruit"
+ },
+ {
+  "name": "strawberry",
+  "query": "strawberry fruit"
+ },
+ {
+  "name": "watermelon",
+  "query": "watermelon slice"
+ },
+ {
+  "name": "lemon",
+  "query": "lemon fruit"
+ },
+ {
+  "name": "sheep",
+  "query": "sheep"
+ },
+ {
+  "name": "corn",
+  "query": "corn cob maize"
+ },
+ {
+  "name": "mushroom",
+  "query": "mushroom fungus"
+ },
+ {
+  "name": "broccoli",
+  "query": "broccoli head",
+  "reject": [
+   "File:Romanesco broccoli 2025 G2.jpg"
+  ]
+ },
+ {
+  "name": "cheese",
+  "query": "cheese wheel",
+  "reject": [
+   "File:Wedge salad with blue cheese dressing - San Francisco, CA.jpg",
+   "File:K\u00e4se auf dem Viktualienmarkt M\u00fcnchen 01.jpg"
+  ]
+ },
+ {
+  "name": "pizza",
+  "query": "pizza margherita",
+  "reject": [
+   "File:Vegetarian Pizza.jpg"
+  ]
+ },
+ {
+  "name": "doughnut",
+  "query": "glazed doughnut",
+  "reject": [
+   "File:Doughnut (economic model).jpg"
+  ]
+ },
+ {
+  "name": "cake",
+  "query": "birthday cake candles",
+  "reject": [
+   "File:My birthday cake! Oops there's only half left!.jpg",
+   "File:Chocolate cake and Victoria sponge.jpg"
+  ]
+ },
+ {
+  "name": "dog",
+  "query": "dog golden retriever",
+  "reject": [
+   "File:Human\u2013canine friendship - girl hugging her dog tightly at golden hour in Laos.jpg"
+  ]
+ },
+ {
+  "name": "cat",
+  "query": "cat portrait"
+ },
+ {
+  "name": "frog",
+  "query": "green frog"
+ },
+ {
+  "name": "pig",
+  "query": "domestic pig"
+ },
+ {
+  "name": "cow",
+  "query": "cow cattle"
+ },
+ {
+  "name": "monkey",
+  "query": "monkey"
+ },
+ {
+  "name": "chicken",
+  "query": "chicken hen"
+ },
+ {
+  "name": "penguin",
+  "query": "penguin"
+ },
+ {
+  "name": "lion",
+  "query": "lion male"
+ },
+ {
+  "name": "elephant",
+  "query": "african elephant"
+ },
+ {
+  "name": "giraffe",
+  "query": "giraffe"
+ },
+ {
+  "name": "turtle",
+  "query": "tortoise"
+ },
+ {
+  "name": "octopus",
+  "query": "octopus"
+ },
+ {
+  "name": "butterfly",
+  "query": "butterfly"
+ },
+ {
+  "name": "bee",
+  "query": "honey bee"
+ },
+ {
+  "name": "fish",
+  "query": "clownfish Amphiprion ocellaris",
+  "reject": [
+   "File:Fountain with goldfish in Jard\u00ed del Bisbe 03.jpg",
+   "File:Fountain with goldfish in Jard\u00ed del Bisbe 02.jpg"
+  ]
+ },
+ {
+  "name": "car",
+  "query": "red car",
+  "reject": [
+   "File:Red car toy.jpg"
+  ]
+ },
+ {
+  "name": "bicycle",
+  "query": "bicycle side view",
+  "reject": [
+   "File:Parked bicycle with graffitied building facade and doors in Amsterdam.jpg"
+  ]
+ },
+ {
+  "name": "aeroplane",
+  "query": "airliner landing",
+  "reject": [
+   "File:Airliner Contrail.jpg"
+  ]
+ },
+ {
+  "name": "rocket",
+  "query": "rocket launch pad",
+  "reject": [
+   "File:First NASA ISINGLASS rocket launch.jpg"
+  ]
+ },
+ {
+  "name": "sailboat",
+  "query": "sailboat"
+ },
+ {
+  "name": "house",
+  "query": "house"
+ },
+ {
+  "name": "alarm clock",
+  "query": "alarm clock"
+ },
+ {
+  "name": "owl",
+  "query": "owl"
+ },
+ {
+  "name": "balloon",
+  "query": "red balloon"
+ },
+ {
+  "name": "guitar",
+  "query": "acoustic guitar",
+  "reject": [
+   "File:Man playing an acoustic brazilian guitar (Viol\u00e3o) on Marco Zero Square, Refice, Pernambuco, Brazil.jpg"
+  ]
+ },
+ {
+  "name": "football",
+  "query": "football ball grass",
+  "reject": [
+   "File:Jakarta old football.jpg"
+  ]
+ },
+ {
+  "name": "zebra",
+  "query": "zebra"
+ },
+ {
+  "name": "shoe",
+  "query": "shoe"
+ },
+ {
+  "name": "horse",
+  "query": "horse"
+ },
+ {
+  "name": "cactus",
+  "query": "cactus"
+ },
+ {
+  "name": "sunflower",
+  "query": "sunflower"
+ },
+ {
+  "name": "moon",
+  "query": "full moon"
+ },
+ {
+  "name": "candle",
+  "query": "burning candle",
+  "reject": [
+   "File:Candle light projected through a glass orb.jpg"
+  ]
+ },
+ {
+  "name": "fire",
+  "query": "campfire flames",
+  "reject": [
+   "File:Campfire and sparks in Anttoora 3.jpg"
+  ]
+ },
+ {
+  "name": "rainbow",
+  "query": "rainbow"
+ },
+ {
+  "name": "snowman",
+  "query": "snowman"
+ },
+ {
+  "name": "light bulb",
+  "query": "light bulb"
+ },
+ {
+  "name": "books",
+  "query": "stack of books",
+  "reject": [
+   "File:Stack of Books for decor.jpg"
+  ]
+ },
+ {
+  "name": "scissors",
+  "query": "scissors"
+ },
+ {
+  "name": "hedgehog",
+  "query": "hedgehog"
+ },
+ {
+  "name": "teapot",
+  "query": "teapot"
+ }
+]

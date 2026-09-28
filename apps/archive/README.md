@@ -119,6 +119,135 @@ against the hypothesis; against control modes, since a lift that appears
 everywhere equally is practice; and with a permutation null shown beside the
 number, along with how many pairs were tested.
 
+## The ability estimate
+
+One position on one ladder, out of every trainer at once — and it is always
+shown. There is no bar to clear and no trainer that can withhold it.
+
+The tiers are the six bands of the Guanxinandu S11 benchmark, α to ζ, used for
+their **calibration** rather than their test protocol:
+
+```
+tier   relational reasoning     quad n-back    relational n-back
+α      Space 2D, 6 premises     Quad 3-back    character+position 2-back
+β      Space 3D, 6 premises     Quad 4-back    character+position 3-back
+γ      Space 5D, 6 premises     Quad 5-back    character+position 4-back
+δ      Space 6D, 6 premises     Quad 6-back    character+position 5-back
+ε      Space 7D, 6 premises     Quad 7-back    character+position 6-back
+ζ      (unset)                  Quad 8-back    character+position 7-back
+```
+
+What that table supplies is the one thing no amount of staring at a load and a
+level can: what "about this good" looks like in five different trainers' own
+units. That is why the archive's rule survives intact — a difficulty still never
+leaves its own scale, and nothing here averages one app's number with another's.
+Each trainer is read against its own published anchor, and the whole mapping
+lives in one table, `LADDERS` in `js/ability.js`.
+
+The benchmark's rows are priced by the apps' own difficulty functions rather
+than estimated. Six premises of Space 5D is `MODE_SCALE.Space5D.weight × 6 =
+11.4` on the scale `levelOf` prices — which is also the scale Syllogimous's own
+ability posterior is stated in, so its estimate lands on this ladder with no
+conversion at all. Character and position at 4-back is `computeLoad`'s
+`10n + 13`.
+
+### Where a trainer states its own ability, that is what is read
+
+Most of them do, and it is already in the archive: `state` keeps every
+non-history key an export carried, and that is exactly where the trainers write
+this down.
+
+| source | what is read |
+| --- | --- |
+| Relational N-back | `bestLoad` — the hardest load a block cleared at the player's own target |
+| Syllogimous | `syllogimous-ability:scale` — the aggregate ability posterior |
+| eWMT | `bestN` |
+| Running Order | `bestPeakBits` |
+| 3D Rotation | the established level of its best mode |
+
+Reading those rather than rebuilding them is the rule the adapters already
+follow for Syllogimous difficulty: a second copy of a formula is a second source
+of truth, and the two drift in the direction nobody notices. It is also the
+robust choice — a trainer that changes its target, its scoring or its chance
+correction changes its own number, and this keeps reporting it correctly with
+nothing here to update.
+
+Where an app keeps no such number, the reading falls back to the difficulty its
+own controller has settled on in the records, recency-weighted with a
+three-week half-life. That path needs no knowledge of any app at all, so a new
+source works the day its adapter lands.
+
+### Accuracy is not interpreted, anywhere
+
+This is the correction that rewrote the module, and it was three mistakes that
+were all the same mistake — re-deriving what the trainers had already worked out.
+
+The first version required **75% accuracy** before it would report anything.
+That figure is the benchmark's, and the benchmark measures a fixed test. An
+adaptive trainer does the opposite: it moves difficulty until accuracy sits at
+*its own* target, so its logged accuracy is pinned somewhere that has nothing to
+do with 75%. On a real archive it refused every source.
+
+It also read those figures as raw accuracy, and most of them are not. RNB's
+block score maps "never pressed" to 0 and perfect to 1, so about **0.50 there is
+roughly four answers in five**; Running Order compares its target against a
+guessing-corrected figure; eWMT's is hits over hits plus false alarms plus
+misses. Three scales, one comparison, no meaning.
+
+And the fix that suggests itself — a table of each app's target accuracy and
+which scale it sits on — is worse than the bug. That is eight apps' internals
+copied into a ninth, and `tune.targetAccuracy` in a real RNB export reads 0.7
+where the shipped default is 0.4. The copy is stale the first time anybody moves
+a slider.
+
+So accuracy is not second-guessed. Every trainer has already applied its own
+target and its own chance correction; what comes out is a difficulty it has
+settled you at, and that is the reading.
+
+### Robustness
+
+Every layer is optional and falls through, because the point is to survive
+changes rather than to be right about today's versions:
+
+- A **state reader** is one small guarded function per source. A key that moves,
+  a shape that changes, a version that never had one — any of them returns null
+  and the source drops to the records path. `test/run.js` runs five broken
+  shapes through it and requires the source to survive all five.
+- A **unit rename** would otherwise change everybody's estimate silently. The
+  page names the source and the unit it could not place, and the suite fails on
+  it.
+- Syllogimous's posterior is a grid whose floor and spacing are fixed and which
+  only ever grows by appending, which the app documents and relies on — so the
+  array's own length is read rather than assumed, and a grown grid still
+  decodes.
+- Where both readings of one trainer exist and **disagree by more than two
+  tiers**, the app's own number is still used and the row says so. One of the
+  two is stale, and splitting the difference would hide exactly that.
+
+### What comes out
+
+A weighted mean of the per-source positions. Syllogimous and Relational N-back
+carry it at three times anything else: two of the benchmark's three columns, the
+two most developed ability models here, and the two broadest tasks in the
+archive. Each source is then discounted by how many **days** it has been trained
+(days, not sittings — sittings can be racked up in one evening) and by how long
+ago, halving every ninety days.
+
+`confidence` is the share of the weight that could speak for you which actually
+did. It is a figure to read beside the letter, not a bar to clear.
+
+Beside it is the **spread** — which trainer sits lowest and which highest. That
+replaced a conjunctive badge the first version withheld whenever one of three
+columns had no evidence, which was the wrong instrument: a single unideal
+setting in one trainer could silence a reading the rest of the archive had
+earned. The spread says the same useful thing, never refuses, and points at
+where the next hour buys the most.
+
+Two things are still not on this ladder, and the page names each rather than
+dropping it: **Anki**, which records no difficulty on purpose, and **pre-level
+Syllogimous records**, which carry a premise count — not a level, which is the
+whole reason the adapter keeps two units.
+
 ## Building it from this machine
 
 ```

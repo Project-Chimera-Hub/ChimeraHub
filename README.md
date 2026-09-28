@@ -5,6 +5,7 @@ Nine trainers, one record, one day's total — and a quota the desktop enforces.
 ```
 apps/       the eight grafted in with git subtree, histories intact; rrt,
             which was written here; and isomorph, which arrived as one file
+apps/more/  trainers the hub offers in their own box, not yet counted
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
 tools/      the build
@@ -246,6 +247,27 @@ It is the record, it is a file, and the file is the point — nothing a browser
 holds survives clearing site data. Time spent maintaining it is not training and
 is never counted toward the quota: a quota that could be met by tidying is a
 quota that will be.
+
+## More trainers, not counted
+
+`apps/more/` holds trainers the hub opens like any other but keeps in a box of
+their own, below the nine: none has an adapter yet, so the meter cannot see
+them and their minutes do not count toward the day or the quota. Writing one
+an adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
+
+- `goated/` — [GOATED Relational n-Back](https://github.com/find-1-bug/goated-relational-nback-2),
+  grafted with `git subtree` and history. A Vite app, built like Precision.
+  Its own licence: free for non-commercial use, the Syllogimous-derived
+  generator CC BY-NC 3.0.
+- `posner/`, `schulte/` — single pages, as they were.
+- `dorsalflow/` — a Vite app's built output, as it was published: the page,
+  one script and one stylesheet in `assets/`. There is no source for it here,
+  only the build, so it is kept as it is rather than edited.
+- `integration/` — a single page that loaded React, Babel and Tailwind from
+  CDNs. The three are copied into `vendor/` and `tailwind.css` (React and
+  Babel MIT, Tailwind MIT), so it runs with the network off like everything
+  else here. Its code is unchanged. Change a class in it and regenerate the
+  stylesheet: `npx tailwindcss@3 --content index.html -o tailwind.css --minify`.
 
 ## Third-party art
 

@@ -26,12 +26,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          # Two apps have lockfiles and both are cached; the other six have no
+          # Three apps have lockfiles and all are cached; the rest have no
           # build at all.
           cache: npm
           cache-dependency-path: |
             apps/syllogimous/package-lock.json
             apps/precision/package-lock.json
+            apps/more/goated/package-lock.json
 
       - name: Build the site
         run: node tools/build-site.mjs

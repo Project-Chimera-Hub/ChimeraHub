@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light theme (default if no `.dark` class on <html>). The app shipped as
+     dark-only for a long time, so the inline script in index.html sets the
+     'dark' class by default — light mode is opt-in via the dashboard toggle.
+     Tunings vs. the first draft:
+       - background pushed slightly off-white so panels feel distinct.
+       - secondary darkened (92% → 88%) to separate cards from background.
+       - border darkened sharply (84% → 70%) — was almost invisible before.
+       - muted-foreground deepened (38% → 28%) so /40 /60 opacity classes
+         still read on a light surface.
+       - primary / accent saturated up so tinted overlays (bg-primary/15,
+         border-accent/40) actually look coloured. */
+  :root {
+    --background: 220 22% 96%;
+    --foreground: 220 28% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 28% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 28% 10%;
+    --primary: 168 80% 28%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary lives at 78% L so /40, /30, /20 tints (used heavily for
+       cards, buttons, stream backgrounds) still read against a 96% L bg.
+       Perceptually we need a much larger ABSOLUTE drop in light mode than
+       in dark mode to feel like "the same contrast". */
+    --secondary: 220 18% 78%;
+    --secondary-foreground: 220 24% 12%;
+    --muted: 220 18% 86%;
+    --muted-foreground: 220 14% 26%;
+    --accent: 260 65% 44%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 78% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 62%;
+    --input: 220 14% 62%;
+    --ring: 168 80% 28%;
+    --chart-1: 168 80% 28%;
+    --chart-2: 260 65% 44%;
+    --chart-3: 30 92% 42%;
+    --chart-4: 340 75% 44%;
+    --chart-5: 200 80% 38%;
+    --radius: 0.5rem;
+    --sidebar-background: 220 18% 86%;
+    --sidebar-foreground: 220 28% 10%;
+    --sidebar-primary: 168 80% 28%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 18% 92%;
+    --sidebar-accent-foreground: 220 28% 10%;
+    --sidebar-border: 220 14% 62%;
+    --sidebar-ring: 168 80% 28%;
+
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Inter', sans-serif;
+  }
+
+  /* Dark theme (the long-standing default — kept in sync with the deep
+     navy / teal palette the app was designed around). */
+  .dark {
+    --background: 220 20% 6%;
+    --foreground: 210 20% 92%;
+    --card: 220 18% 10%;
+    --card-foreground: 210 20% 92%;
+    --popover: 220 18% 10%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 168 80% 50%;
+    --primary-foreground: 220 20% 6%;
+    --secondary: 220 16% 16%;
+    --secondary-foreground: 210 20% 80%;
+    --muted: 220 16% 14%;
+    --muted-foreground: 210 10% 50%;
+    --accent: 260 60% 60%;
+    --accent-foreground: 210 20% 92%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 16% 18%;
+    --input: 220 16% 18%;
+    --ring: 168 80% 50%;
+    --chart-1: 168 80% 50%;
+    --chart-2: 260 60% 60%;
+    --chart-3: 30 90% 60%;
+    --chart-4: 340 75% 55%;
+    --chart-5: 200 80% 55%;
+    --sidebar-background: 220 18% 8%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 168 80% 50%;
+    --sidebar-primary-foreground: 220 20% 6%;
+    --sidebar-accent: 220 16% 14%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 220 16% 18%;
+    --sidebar-ring: 168 80% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html, body, #root {
+    @apply h-full;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Better feel on iOS: prevent rubber-band scroll inside the game, allow text selection only where intended. */
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Honor iOS safe-areas (notches / home indicator). */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Custom range slider thumb sizes for touch */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    border: 2px solid hsl(var(--background));
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    border: 2px solid hsl(var(--background));
+    cursor: pointer;
+  }
+}

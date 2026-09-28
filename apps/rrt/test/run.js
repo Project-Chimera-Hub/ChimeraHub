@@ -25,67 +25,85 @@ function assertPermutations(model) {
   }
 }
 
+function stims(set, n, rnd) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(set.next(out, rnd));
+  return out;
+}
+
 function run(d, s, beats, rnd, setId) {
   const set = R.stimulusSet(setId);
   const m = R.createModel(d, s);
-  R.seed(m, set.next([], rnd));
+  R.fill(m, stims(set, s, rnd), rnd);
+  assertPermutations(m);
   const out = [];
   for (let i = 0; i < beats; i++) {
+    const before = new Map(m.items.map(it => [it.id, it.ranks.slice()]));
     const plan = R.planCard(m, rnd);
     const res = R.apply(m, plan, set.next(m.items.map(it => it.glyph), rnd));
-    out.push({ plan, res, size: m.items.length });
+    out.push({ plan, res, size: m.items.length, before });
     assertPermutations(m);
   }
   return { m, out };
 }
 
-test("the worked example: new above the 2nd of three answers 1", () => {
+test("the worked example: new two above the 3rd of three answers 1", () => {
   const m = R.createModel(1, 3);
-  const dot = R.seed(m, [0]);
-  const tri = { id: 90, glyph: [1], ranks: [1], born: ++m.clock };
-  const sq = { id: 91, glyph: [2], ranks: [2], born: ++m.clock };
-  m.items.push(tri, sq);
-  const res = R.apply(m, { ref: tri, dirs: [-1], axis: 0 }, [3]);
-  assert.strictEqual(res.removed, dot);
+  const [a, b, c] = R.fill(m, [[0], [1], [2]], lcg(1));
+  a.ranks = [0]; b.ranks = [1]; c.ranks = [2];
+  const res = R.apply(m, { ref: c, target: a, dist: [-2], axis: 0 }, [3]);
+  assert.strictEqual(res.removed, a);
   assert.strictEqual(res.answer, 1);
   assert.deepStrictEqual(m.items.map(it => it.ranks[0]), [1, 2, 0]);
 });
 
-test("placing below the bottom symbol puts it last", () => {
-  const m = R.createModel(1, 5);
-  const a = R.seed(m, [0]);
-  const r = R.apply(m, { ref: a, dirs: [1], axis: 0 }, [1]);
-  assert.strictEqual(r.answer, 2);
-  assert.strictEqual(r.removed, null);
-});
-
-test("every axis stays a permutation, in every dimension, for long runs", () => {
-  for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 300, lcg(d * 10 + s));
-});
-
-test("the model grows to s and then holds there", () => {
-  const { out } = run(2, 4, 20, lcg(7));
-  assert.deepStrictEqual(out.map(o => o.size).slice(0, 5), [2, 3, 4, 4, 4]);
-  assert.ok(out.slice(3).every(o => o.res.removed), "no departure at full size");
-});
-
-test("the oldest symbol is the one that leaves", () => {
-  const rnd = lcg(3);
-  const m = R.createModel(1, 3);
-  R.seed(m, R.newGlyph([], rnd));
-  for (let i = 0; i < 50; i++) {
-    const oldest = m.items.reduce((a, b) => (a.born < b.born ? a : b));
-    const full = m.items.length === 3;
-    const r = R.apply(m, R.planCard(m, rnd), R.newGlyph([], rnd));
-    assert.strictEqual(r.removed, full ? oldest : null);
+test("the board starts full, one symbol per slot on every axis", () => {
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) {
+    const m = R.createModel(d, s);
+    R.fill(m, stims(R.stimulusSet("glyphs"), s, lcg(d + s)), lcg(d * s));
+    assert.strictEqual(m.items.length, s);
+    assertPermutations(m);
   }
 });
 
-test("answers are close to uniform over the ranks at full size", () => {
+test("every axis stays a permutation, in every dimension, for long runs", () => {
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 300, lcg(d * 10 + s));
+});
+
+test("nothing moves but the new symbol: every other slot is where it was", () => {
+  const m = R.createModel(2, 4);
+  R.fill(m, stims(R.stimulusSet("glyphs"), 4, lcg(2)), lcg(2));
+  for (let i = 0; i < 200; i++) {
+    const keep = m.items.map(it => [it, it.ranks.slice()]);
+    const plan = R.planCard(m, lcg(i));
+    R.apply(m, plan, [i]);
+    keep.forEach(([it, r]) => { if (it !== plan.target) assert.deepStrictEqual(it.ranks, r); });
+  }
+});
+
+test("the new symbol lands where the card says: reference plus steps", () => {
+  const { out } = run(4, 4, 800, lcg(47));
+  out.forEach(o => {
+    const refRanks = o.before.get(o.plan.ref.id);
+    o.res.item.ranks.forEach((r, a) => assert.strictEqual(r, refRanks[a] + o.plan.dist[a]));
+    o.plan.dist.forEach(v => assert.ok(v !== 0, "a zero step"));
+  });
+});
+
+test("the symbol in the landing slot is the one that leaves, and the board stays full", () => {
+  const { out } = run(2, 5, 300, lcg(3));
+  out.forEach(o => {
+    assert.strictEqual(o.res.removed, o.plan.target);
+    assert.notStrictEqual(o.plan.ref, o.plan.target);
+    assert.strictEqual(o.size, 5);
+  });
+});
+
+test("answers are close to uniform over the ranks", () => {
   for (const [d, s] of [[1, 3], [1, 7], [2, 4], [3, 5]]) {
     const { out } = run(d, s, 6000, lcg(d * 100 + s));
     const counts = new Array(s).fill(0);
-    out.slice(s).forEach(o => counts[o.res.answer - 1]++);
+    out.forEach(o => counts[o.res.answer - 1]++);
     const n = counts.reduce((a, b) => a + b, 0);
     counts.forEach((c, i) =>
       assert.ok(Math.abs(c / n - 1 / s) < 0.035, `${d}D s${s}: rank ${i + 1} at ${(c / n).toFixed(3)}`));
@@ -95,16 +113,33 @@ test("answers are close to uniform over the ranks at full size", () => {
 test("pressing one key always scores chance, corrected to zero", () => {
   const s = 5;
   const { out } = run(1, s, 5000, lcg(11));
-  const oks = out.slice(s).map(o => o.res.answer === 3);
+  const oks = out.map(o => o.res.answer === 3);
   assert.ok(Math.abs(R.correctedAccuracy(oks, s)) < 0.03, R.correctedAccuracy(oks, s));
 });
 
-test("the direction on the card alone does not give the answer", () => {
-  /* After "above", every rank is still possible — even the last, when the
-     reference was the oldest and leaves on the same beat. */
-  const { out } = run(1, 5, 3000, lcg(5));
-  const seen = new Set(out.slice(5).filter(o => o.plan.dirs[0] < 0).map(o => o.res.answer));
-  assert.deepStrictEqual([...seen].sort(), [1, 2, 3, 4, 5]);
+test("the steps on the card alone never give the answer", () => {
+  /* For every step count the card can show, at least two answers are possible:
+     the rank still depends on where the reference is. */
+  for (const s of [3, 5, 7]) {
+    const { out } = run(1, s, 3000, lcg(s));
+    const byDist = new Map();
+    out.forEach(o => {
+      const k = o.plan.dist[0];
+      if (!byDist.has(k)) byDist.set(k, new Set());
+      byDist.get(k).add(o.res.answer);
+    });
+    byDist.forEach((ans, k) => assert.ok(ans.size >= 2, `s${s} step ${k} always answers ${[...ans]}`));
+  }
+});
+
+test("the landing slots do not fall into a rhythm", () => {
+  /* The failure fixed slots invite: if the slot were chosen by age, the answers
+     would repeat with period s. */
+  const s = 4;
+  const { out } = run(1, s, 400, lcg(53));
+  const a = out.map(o => o.res.answer);
+  const same = a.slice(s).filter((v, i) => v === a[i]).length / (a.length - s);
+  assert.ok(same < 0.4, same);
 });
 
 test("the asked axis is spread over all axes", () => {
@@ -146,7 +181,7 @@ test("a glyph is zero from its own mirror image", () => {
 test("an animal is never one that is held or has only just left", () => {
   const rnd = lcg(29);
   const m = R.createModel(1, 5);
-  R.seed(m, R.newAnimal([], rnd));
+  R.fill(m, stims(R.stimulusSet("animals"), 5, rnd), rnd);
   const gone = [];
   for (let i = 0; i < 400; i++) {
     const avoid = m.items.map(it => it.glyph).concat(gone);
@@ -179,8 +214,30 @@ test("every animal is a named silhouette, and no two share either", () => {
   });
 });
 
+test("every picture has a name and a photograph, none shared, and avoids what is held", () => {
+  if (!R.PICTURES.length) { console.log("       (no pictures fetched yet)"); return; }
+  const fs = require("fs"), path = require("path");
+  assert.ok(R.PICTURES.length > 10, R.PICTURES.length);
+  assert.strictEqual(new Set(R.PICTURES.map(p => p.name)).size, R.PICTURES.length);
+  assert.strictEqual(new Set(R.PICTURES.map(p => p.image)).size, R.PICTURES.length);
+  R.PICTURES.forEach(p => {
+    assert.ok(fs.existsSync(path.join(__dirname, "..", p.image)), p.image + " is missing");
+    assert.ok(p.author && p.licence && p.source, p.name + " has no credit");
+  });
+  const rnd = lcg(59);
+  for (let i = 0; i < 300; i++) {
+    const held = [];
+    for (let k = 0; k < 10; k++) held.push(R.newPicture(held, rnd));
+    assert.strictEqual(new Set(held.map(p => p.name)).size, held.length);
+  }
+  assert.strictEqual(R.stimulusSet("pictures").id, "pictures");
+  assert.ok(R.stimulusSet("pictures").named && R.stimulusSet("animals").named);
+  assert.ok(!R.stimulusSet("glyphs").named);
+});
+
 test("the model does not care which set the stimuli come from", () => {
-  for (const d of [1, 2, 3]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
+  for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 20 + s), "animals");
+  if (R.PICTURES.length) for (const d of [1, 2, 3, 4]) for (const s of R.SIZES[d]) run(d, s, 200, lcg(d * 30 + s), "pictures");
   const { m } = run(3, 5, 50, lcg(37), "animals");
   m.items.forEach(it => assert.ok(it.glyph && typeof it.glyph.path === "string", JSON.stringify(it.glyph)));
 });
@@ -192,7 +249,107 @@ test("an unknown set id falls back to the generated marks", () => {
   assert.ok(Array.isArray(R.stimulusSet("glyphs").next([], lcg(41))));
 });
 
+test("a relation probe claims a real step, right or wrong", () => {
+  for (const [d, span] of [[1, 3], [2, 5], [4, 5]]) {
+    const rnd = lcg(d * 17 + span);
+    const m = R.createModel(d, span);
+    const glyphs = [];
+    for (let i = 0; i < span; i++) glyphs.push(R.makeGlyph(rnd));
+    R.fill(m, glyphs, rnd);
+    let t = 0;
+    for (let i = 0; i < 2000; i++) {
+      const q = R.planRelation(m, rnd);
+      assert.ok(q, `${d}D\u00b7${span} drew nothing`);
+      const real = q.pair[1].ranks[q.axis] - q.pair[0].ranks[q.axis];
+      assert.strictEqual(q.claim === real, q.truth, "the claim does not match the board");
+      assert.notStrictEqual(q.claim, 0, "two symbols cannot share a slot");
+      assert.ok(Math.abs(q.claim) < span, "a step wider than the board");
+      assert.strictEqual(q.pair[0] === q.pair[1], false, "a symbol against itself");
+      if (q.truth) t++;
+    }
+    assert.ok(Math.abs(t / 2000 - 0.5) < 0.05, `${d}\u00b7${span}: ${t / 2000} true`);
+  }
+});
+
+test("a chosen dimension can be the floor as well as the ceiling", () => {
+  /* Picking 3D used only to say which levels were allowed, so it still began
+     at 1D\u00b73 \u2014 which is not what picking 3D looks like it means. */
+  assert.deepStrictEqual(R.ladder(3, 3).map(l => `${l.d}D\u00b7${l.s}`),
+    ["3D\u00b73", "3D\u00b74", "3D\u00b75"]);
+  assert.deepStrictEqual(R.ladder(1, 1).map(l => l.s), [3, 4, 5, 6, 7]);
+  /* A floor above the ceiling is the ceiling, not an empty ladder. */
+  assert.ok(R.ladder(2, 4).length > 0);
+  /* And the default is unchanged, so every saved level still resolves. */
+  assert.strictEqual(R.ladder(3).length, 11);
+});
+
+test("an analogy probe is four distinct symbols and a claim about two steps", () => {
+  for (const [d, span] of [[1, 4], [2, 5], [4, 5], [1, 7]]) {
+    const rnd = lcg(d * 31 + span);
+    const m = R.createModel(d, span);
+    const glyphs = [];
+    for (let i = 0; i < span; i++) glyphs.push(R.makeGlyph(rnd));
+    R.fill(m, glyphs, rnd);
+    let t = 0;
+    for (let i = 0; i < 2000; i++) {
+      const q = R.planAnalogy(m, rnd);
+      assert.ok(q, `${d}D\u00b7${span} drew nothing`);
+      const step = p => p[1].ranks[q.axis] - p[0].ranks[q.axis];
+      assert.strictEqual(step(q.pair) === step(q.mate), q.truth,
+        "the claim does not match the board");
+      assert.strictEqual(new Set([q.pair[0], q.pair[1], q.mate[0], q.mate[1]]).size, 4,
+        "a symbol appears in both pairs");
+      assert.ok(q.axis >= 0 && q.axis < d, "axis outside the space");
+      if (q.truth) t++;
+    }
+    /* Half true, or pressing one key would be a strategy. */
+    assert.ok(Math.abs(t / 2000 - 0.5) < 0.05, `${d}\u00b7${span}: ${t / 2000} true`);
+  }
+});
+
+test("a board of three is too small to state an analogy", () => {
+  /* Two pairs with the same step must share a symbol on three, and "A is to B
+     as B is to C" is a chain. The caller deals an ordinary card instead. */
+  const rnd = lcg(7);
+  const m = R.createModel(2, 3);
+  const glyphs = [R.makeGlyph(rnd), R.makeGlyph(rnd), R.makeGlyph(rnd)];
+  R.fill(m, glyphs, rnd);
+  for (let i = 0; i < 200; i++) assert.strictEqual(R.planAnalogy(m, rnd), null);
+});
+
+test("a probe is credited for the board it interrogates, not its two options", () => {
+  /* Its answer is one bit wide; the board behind it is not. A trial carrying
+     an explicit `bits` is read by that, and older records by their `k`. */
+  const probe = { k: 2, d: 3, s: 5, bits: R.carriedBits(3, 5), ok: true, interval: 1000 };
+  const card = { k: 5, d: 3, s: 5, ok: true, interval: 1000 };
+  assert.strictEqual(R.throughput([probe]), R.throughput([card]));
+  const old = { k: 2, d: 3, ok: true, interval: 1000 };
+  assert.strictEqual(R.throughput([old]), R.carriedBits(3, 2));
+});
+
+test("every axis has a name, a pair of words and a glyph", () => {
+  assert.strictEqual(R.AXES.length, 4);
+  assert.deepStrictEqual(R.AXES.map(a => a.id),
+    ["height", "longitude", "latitude", "size"]);
+  /* Longitude before latitude: two dimensions has to stay a flat plane, or the
+     third has nothing left to turn into a box. */
+  assert.ok(R.AXES.findIndex(a => a.id === "longitude")
+          < R.AXES.findIndex(a => a.id === "latitude"));
+});
+
 test("the ladder rises in carried bits", () => {
+  const L = R.ladder(4);
+  for (let i = 1; i < L.length; i++) {
+    assert.ok(R.carriedBits(L[i].d, L[i].s) > R.carriedBits(L[i - 1].d, L[i - 1].s),
+      `${L[i].d}D·${L[i].s} does not carry more than ${L[i-1].d}D·${L[i-1].s}`);
+  }
+  /* 4D·3 carries 6.34 bits and 3D·5 carries 6.97, so a fourth dimension does
+     not go on the end of the ladder — it interleaves. */
+  const at = L.findIndex(l => l.d === 4 && l.s === 3);
+  assert.deepStrictEqual([L[at - 1], L[at + 1]], [{ d: 3, s: 4 }, { d: 3, s: 5 }]);
+});
+
+test("the ladder rises in carried bits (3D cap)", () => {
   const L = R.ladder(3);
   for (let i = 1; i < L.length; i++)
     assert.ok(R.carriedBits(L[i].d, L[i].s) > R.carriedBits(L[i - 1].d, L[i - 1].s), JSON.stringify(L[i]));
