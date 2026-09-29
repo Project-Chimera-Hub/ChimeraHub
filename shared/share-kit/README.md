@@ -185,6 +185,6 @@ know rather than guess.
 
 ## Licence
 
-MIT. Copy `share-kit.js` into your project and change what you like. If you
+MIT — see [LICENSE](LICENSE). Copy `share-kit.js` (keep its header) into your project and change what you like. If you
 change the format, change `format` too, so files from different schemas are
 never mistaken for each other.

@@ -1,7 +1,7 @@
 /*!
  * share-kit — let players share their training answers, on purpose.
  *
- * One file, no dependencies, MIT. Works in a browser (as `window.ShareKit`)
+ * One file, no dependencies. MIT licence, (c) 2026 Gagafutzi — see LICENSE. Works in a browser (as `window.ShareKit`)
  * and in Node (`require`). See README.md beside this file for why and how.
  *
  * The shape of the idea: the tool turns its own answer history into a small,
