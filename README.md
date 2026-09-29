@@ -90,6 +90,16 @@ the build, not written into `shell/index.html`, so the source, a local build
 without the variable, and the APK make no outbound request at all. The
 trainers themselves are never touched.
 
+## Sharing data
+
+The hub's **Share your data** card lets a player save an anonymised file of
+their Syllogimous and Isomorph answers and upload it through a MEGA file
+request. Nothing is sent by the page itself. The code is a standalone,
+reusable kit — [`shared/share-kit/`](shared/share-kit/README.md), which also
+explains what the system is for and how to add it to another tool — and
+`node tools/check-shared.mjs <folder>` validates and merges the uploads into
+`mindbuild-dataset/`, which is ignored by git.
+
 ## Android
 
 ```bash

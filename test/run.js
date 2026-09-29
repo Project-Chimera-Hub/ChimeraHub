@@ -212,6 +212,52 @@ test("the participant id is made once and kept", () => {
     "a second file got a new id, so one player's files cannot be joined or deleted together");
 });
 
+const Kit = require("../shared/share-kit/share-kit.js");
+
+function kitFile(answers, participant) {
+  return Kit.makeFile(answers, { tool: "test", participant: participant || "0123456789abcdef", now: at(23) }).file;
+}
+const ans = (h, mode, extra) => ({ app: "demo", mode, at: at(h), correct: true, seconds: 12.34, ...extra });
+
+test("share-kit writes only files its own validator accepts", () => {
+  const { file, skipped } = Kit.makeFile([
+    ans(9, "Linear Arrangement", { level: 5.678, rungs: ["third-axis", "<b>"] }),
+    ans(10, "=cmd()"),                   // would open as a formula in a spreadsheet
+    ans(11, "Frames", { secret: "me" }), // an unknown field is dropped, not carried
+  ], { tool: "test", participant: "0123456789abcdef", now: at(23) });
+  assert.strictEqual(skipped, 1);
+  assert.deepStrictEqual(Kit.validate(file), { ok: true, errors: [] });
+  assert.deepStrictEqual(file.rows[0].rungs, ["third-axis"]);
+  assert.strictEqual(file.rows[0].level, 5.68);
+  assert.ok(!JSON.stringify(file).includes("secret"));
+});
+
+test("share-kit turns away every way a file can be tampered with", () => {
+  const good = kitFile([ans(9, "Syllogism"), ans(10, "Syllogism")]);
+  const bad = (edit) => { const f = JSON.parse(JSON.stringify(good)); edit(f); return Kit.validate(f).ok; };
+  assert.ok(bad(() => {}), "the untouched file was rejected");
+  assert.ok(!bad((f) => { f.rows[0].name = "Jo"; }), "an extra field in a row");
+  assert.ok(!bad((f) => { f.email = "a@b.c"; }), "an extra top-level field");
+  assert.ok(!bad((f) => { f.rows[0].mode = "<img onerror=x>"; }), "markup in a mode");
+  assert.ok(!bad((f) => { f.rows[0].correct = 7; }), "a score out of range");
+  assert.ok(!bad((f) => { f.rows.pop(); }), "counts that no longer match the rows");
+  assert.ok(!bad((f) => { f.participant = "jo@example.com"; }), "an identifying participant");
+  assert.ok(!bad((f) => { f.rows[0].day = "2999-01-01"; }), "a day after the file was made");
+  /* JSON.parse makes these ordinary keys, and a bare lookup in an object
+     literal finds them on the prototype — the bug this line exists for. */
+  assert.ok(!Kit.validate(JSON.parse(JSON.stringify(good).replace('"rows":[{', '"rows":[{"constructor":1,'))).ok);
+  assert.ok(!Kit.validate(JSON.parse(JSON.stringify(good).replace("{", '{"__proto__":{"x":1},'))).ok);
+});
+
+test("uploading twice counts each answer once", () => {
+  const morning = kitFile([ans(9, "A"), ans(10, "B")]);
+  const evening = kitFile([ans(9, "A"), ans(10, "B"), ans(20, "C")]);
+  const other = kitFile([ans(9, "A")], "fedcba9876543210");
+  const rows = Kit.merge([evening, morning, other]);
+  assert.strictEqual(rows.length, 4);
+  assert.deepStrictEqual(rows.filter((r) => r.participant === "0123456789abcdef").map((r) => r.mode), ["A", "B", "C"]);
+});
+
 /* ------------------------------------------------------------------ *
  * What the quota may not include                                      *
  * ------------------------------------------------------------------ */

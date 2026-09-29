@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>share-kit example</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 16px; }
+  button:disabled { opacity: .5; }
+  .note { color: GrayText; }
+</style>
+</head>
+<body>
+
+<!--
+  A complete integration. Replace `collectAnswers` with a read of your own
+  tool's history and UPLOAD_URL with your file-request link. Everything else
+  can stay as it is.
+-->
+
+<h2>Share your data</h2>
+<p>
+  Optional. The file holds, per answer, the mode, whether it was right, how long
+  it took, the day and a random participant id — nothing else. Open it before
+  uploading if you want to check.
+</p>
+<label><input type="checkbox" id="ok"> I agree to share this file for research on this trainer.</label>
+<p>
+  <button id="make" disabled>Create my data file</button>
+  <a id="upload" target="_blank" rel="noopener">Upload ↗</a>
+</p>
+<p class="note" id="note"></p>
+
+<script src="share-kit.js"></script>
+<script>
+  var UPLOAD_URL = "https://example.com/your-file-request";
+
+  /* Your tool's history → the kit's shape. Here, three made-up answers. */
+  function collectAnswers() {
+    var now = Date.now();
+    return [
+      { app: "example", mode: "Linear", at: now - 3 * 60000, correct: true, seconds: 8.2, level: 3 },
+      { app: "example", mode: "Linear", at: now - 2 * 60000, correct: false, seconds: 14.9, level: 4 },
+      { app: "example", mode: "Spatial", at: now - 60000, correct: true, seconds: 21.0, level: 2 },
+    ];
+  }
+
+  var ok = document.getElementById("ok");
+  var make = document.getElementById("make");
+  var note = document.getElementById("note");
+  document.getElementById("upload").href = UPLOAD_URL;
+
+  ok.addEventListener("change", function () { make.disabled = !ok.checked; });
+  make.addEventListener("click", function () {
+    var made = ShareKit.makeFile(collectAnswers(), { tool: "example" });
+    note.textContent = ShareKit.summary(made.file);
+    if (made.file.answers) ShareKit.download(made.file);
+  });
+</script>
+</body>
+</html>

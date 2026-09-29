@@ -9,3 +9,6 @@ tools/apk/android/
 # Rooted. Unanchored, `apk/` matches a directory of that name at any depth —
 # including tools/apk/, which is the wrapper itself and has to be committed.
 /apk/
+
+# Merged uploads from "Share your data" — personal data, never committed.
+/mindbuild-dataset/
