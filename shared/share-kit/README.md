@@ -76,6 +76,10 @@ share-kit takes a different route, and the benefits follow from it:
 
 ## Integrating it
 
+**Using an AI coding assistant?** [`INTEGRATE-PROMPT.md`](INTEGRATE-PROMPT.md)
+is a ready-made prompt that walks it through the steps below, with the rules
+it must keep.
+
 ### 1. Include the file
 
 ```html
