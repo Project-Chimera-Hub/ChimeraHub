@@ -82,6 +82,14 @@ gate taken out. See below.
 own when it was grafted in; GitHub reads workflows from the root only, so those
 are inert history rather than eight competing deploys.
 
+**Visit counts.** Set a repository variable `GOATCOUNTER` to a
+[GoatCounter](https://www.goatcounter.com) site code and the deployed hub
+counts page views, one per hub visit and one per trainer opened (`/#/rrt`,
+`/#/syllogimous`, …). No cookies and no personal data. The snippet is added by
+the build, not written into `shell/index.html`, so the source, a local build
+without the variable, and the APK make no outbound request at all. The
+trainers themselves are never touched.
+
 ## Android
 
 ```bash

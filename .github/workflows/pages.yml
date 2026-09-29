@@ -40,6 +40,9 @@ jobs:
           # The repository name is the path a project Pages site is served
           # under, and getting it wrong is a blank page rather than an error.
           BASE: /${{ github.event.repository.name }}/
+          # A GoatCounter site code, set under Settings → Secrets and variables →
+          # Actions → Variables. Unset, the site is built without a counter.
+          GOATCOUNTER: ${{ vars.GOATCOUNTER }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

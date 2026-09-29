@@ -26,6 +26,39 @@ const DIST = path.join(ROOT, "dist");
    deployed site. */
 const BASE = (process.env.BASE || "/mindbuild/").replace(/\/*$/, "/");
 
+/* A visit counter for the published website, and only for that.
+ *
+ * GoatCounter: no cookies, no personal data, and nothing but a page count per
+ * path. It is written in here rather than into shell/index.html because the
+ * hub's source has to stay a page that runs with the network off — opened from
+ * the repository, from a USB stick, or inside the APK, it makes no request to
+ * anyone. So the snippet exists only in a build that asks for it
+ * (GOATCOUNTER=<site code>, which the Pages workflow reads from a repository
+ * variable), never in the APK's, and never inside a trainer: the hub counts
+ * which trainer was opened from its own route, and no app's source is touched.
+ *
+ * Unset means off, so a build with no account behaves exactly as before. */
+const GOATCOUNTER = process.env.APK ? "" : (process.env.GOATCOUNTER || "").trim();
+if (GOATCOUNTER && !/^[a-z0-9-]+$/.test(GOATCOUNTER)) {
+  throw new Error(`GOATCOUNTER should be a site code like "mindbuild", not ${JSON.stringify(GOATCOUNTER)}`);
+}
+
+/* The hub routes by hash (#/syllogimous), which GoatCounter ignores by default,
+ * so the route is added to the path: one count per hub visit and one per
+ * trainer opened. */
+function withAnalytics(html) {
+  if (!GOATCOUNTER) return html;
+  const snippet = [
+    `<script>window.goatcounter = { path: function (p) { return p + (location.hash || ""); } };`,
+    `window.addEventListener("hashchange", function () {`,
+    `  if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: location.pathname + location.hash });`,
+    `});</script>`,
+    `<script data-goatcounter="https://${GOATCOUNTER}.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>`,
+  ].join("\n");
+  if (!html.includes("</head>")) throw new Error("hub index.html has no </head> to put the counter before");
+  return html.replace("</head>", snippet + "\n</head>");
+}
+
 /* Copied out of an app rather than linked from it. `git subtree` gives each app
    its own directory and no way to reach across, and a symlink does not survive
    `actions/upload-pages-artifact`. The archive keeps the originals; these are a
@@ -140,7 +173,7 @@ copyDir(path.join(ROOT, "shell"), DIST);
    base has to be written into it at build time rather than guessed at runtime
    from location.pathname — which is wrong the moment a trainer is open. */
 const idx = path.join(DIST, "index.html");
-fs.writeFileSync(idx, fs.readFileSync(idx, "utf8").replace("%BASE%", BASE));
+fs.writeFileSync(idx, withAnalytics(fs.readFileSync(idx, "utf8").replace("%BASE%", BASE)));
 
 /* The same hub with nothing in it that talks to this machine.
  *
@@ -186,7 +219,7 @@ log("[copy] shell (gate-free, at open/)");
 {
   const open = path.join(DIST, "open");
   fs.mkdirSync(open, { recursive: true });
-  fs.writeFileSync(path.join(open, "index.html"), gateFreeIndex("../"));
+  fs.writeFileSync(path.join(open, "index.html"), withAnalytics(gateFreeIndex("../")));
 }
 
 /* The Android build wraps this directory in a WebView, where the gate is not
