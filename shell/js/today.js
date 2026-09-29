@@ -73,11 +73,14 @@ var Today = (function () {
     /* Syllogimous spreads itself over many keys and is recognised by the shape
        of the whole bag, so it is gathered before it is read.
 
-       Isomorph is the same codebase writing the same key names, behind a
-       prefix its own page keeps them under — see apps/isomorph/index.html. One
-       sweep fills both bags, and the `ISO/` test comes first because it has to:
-       a key is Isomorph's or Syllogimous's, never both, and only the prefix
-       says which. */
+       Isomorph was a second build of the same codebase writing the same key
+       names, behind a prefix its own page shimmed `localStorage` to keep them
+       under. **The trainer is gone — every one of its modes is a Syllogimous
+       mode now — and this stays**, because a browser that played it still holds
+       those keys and they are still that player's training. One sweep fills
+       both bags, and the `ISO/` test comes first because it has to: a key is
+       Isomorph's or Syllogimous's, never both, and only the prefix says
+       which. */
     try {
       var syl = {}, iso = {}, found = false, foundIso = false;
       for (var i = 0; i < localStorage.length; i++) {

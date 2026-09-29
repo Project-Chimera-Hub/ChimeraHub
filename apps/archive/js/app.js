@@ -345,11 +345,12 @@ function importNeighbours() {
     if (syl.SYL_HISTORY || syl.SYL_HISTORY_IDX) { importText(JSON.stringify(syl), "syllogimous (this browser)"); found++; }
   } catch (e) { /* storage off */ }
 
-  /* Isomorph, which is the same codebase writing the same key names under a
-     prefix its own page keeps them behind — see apps/isomorph/index.html. The
-     sweep above cannot pick it up: `ISO/SYL_HISTORY_IDX` does not start with
-     `SYL_`, and if it did the two records would arrive as one app. Handed on
-     with the prefix still on, because that is what identifies it. */
+  /* Isomorph, which was the same codebase writing the same key names under a
+     prefix its own page kept them behind. The trainer is gone and this is not,
+     because this browser may still hold what it wrote. The sweep above cannot
+     pick it up: `ISO/SYL_HISTORY_IDX` does not start with `SYL_`, and if it did
+     the two records would arrive as one app. Handed on with the prefix still
+     on, because that is what identifies it. */
   try {
     var iso = {}, hasIso = false;
     for (var n = 0; n < localStorage.length; n++) {

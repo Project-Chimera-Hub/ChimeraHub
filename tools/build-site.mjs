@@ -101,12 +101,16 @@ function ensureDeps(dir) {
 rmrf(DIST);
 fs.mkdirSync(DIST, { recursive: true });
 
-/* The seven that are already a website. They use relative paths throughout —
-   checked, not assumed — so they run at whatever depth they are put. Isomorph
-   is an Angular build rather than a hand-written page, but it arrived as one
-   finished file with a relative `<base href>`, so it is copied like the rest
-   and not built like Syllogimous: there is no source here to build from. */
-for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "isomorph", "archive"]) {
+/* The six that are already a website, and the archive. They use relative paths
+   throughout — checked, not assumed — so they run at whatever depth they are
+   put, and they are copied rather than built: only Syllogimous has a toolchain.
+
+   Isomorph used to be copied here too, and is not: every one of its modes is a
+   Syllogimous mode now, so it was a second build of the same codebase offering
+   a subset of the same trainer. What reads its *records* stays — see the
+   archive's `readIsomorph` — because a file somebody exported in 2025 is still
+   their training history. */
+for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
 }

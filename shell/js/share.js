@@ -82,7 +82,7 @@ var Share = (function () {
     make.addEventListener("click", function () {
       var file;
       try { file = build(); } catch (e) { note.textContent = "Could not read this device's answers."; return; }
-      note.textContent = file.answers ? Kit.summary(file) : "No Syllogimous or Isomorph answers on this device yet.";
+      note.textContent = file.answers ? Kit.summary(file) : "No answers on this device yet.";
       if (file.answers) Kit.download(file);
     });
   }

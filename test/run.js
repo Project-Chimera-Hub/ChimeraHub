@@ -688,118 +688,105 @@ test("precision pauses its transport and discounts the time it was hidden", () =
 });
 
 /* ------------------------------------------------------------------ *
- * Isomorph carries the hub's preset, and carries Syllogimous's copy    *
+ * The archive wears the hub's theme, and the copy cannot drift         *
  * ------------------------------------------------------------------ *
  *
- * Isomorph is a second build of the Syllogimous codebase, brought in finished
- * — there is no source here, so the Mindbuild preset could not arrive the way
- * it did in Syllogimous, by being written in `theme.service.ts`. It is an edit
- * to the bundle, which makes it the one deviation of the four that is not in
- * the head of the file, because the Appearance page lists the presets object
- * and there is no way into that object from outside.
+ * The archive is published as its own repository and has no build step, so it
+ * cannot import the hub's stylesheet — the theme is a *copy*, including the
+ * 24 kB drawing of the forest. A copy nobody checks is how two pages one click
+ * apart end up looking like two applications, which is the thing the shared
+ * look exists to prevent.
  *
- * Two things follow, and this is both of them. A build dropped over
- * `index.html` takes the edit out again, silently — the app still works, the
- * preset is simply gone. And with the preset written in two places, the two
- * can drift: a colour changed in Syllogimous would leave the trainer either
- * side of the hub's frame looking like two applications, which is the exact
- * thing the preset exists to prevent.
- *
- * So the values are not asserted against a copy kept here. They are read out
- * of both files and compared, which is the only arrangement where "they agree"
- * cannot rot.
+ * So the values are not asserted against a third list kept here. They are read
+ * out of both stylesheets and compared, which is the only arrangement where
+ * "they agree" cannot rot. The names differ on purpose: the archive keeps the
+ * tracker's vocabulary (`--bg-card`) because every rule in its file is written
+ * against it, and only the values moved. The mapping is written out below, so
+ * a rename on either side fails here rather than silently stopping the check.
  */
 
-const THEME_SRC = path.join(
-  __dirname, "..", "apps", "syllogimous", "src", "app", "syllogimous",
-  "services", "theme.service.ts");
-const ISOMORPH = path.join(__dirname, "..", "apps", "isomorph", "index.html");
+const SHELL_CSS = path.join(__dirname, "..", "shell", "css", "shell.css");
+const ARCHIVE_CSS = path.join(__dirname, "..", "apps", "archive", "css", "base.css");
 
 /**
- * The object literal that follows `head`, as a value.
+ * The custom properties a stylesheet's `:root` sets.
  *
- * Brace-matched rather than regexed, and safe to match naively because no
- * value in this preset contains a brace — the test below checks that, so the
- * day one does, this says so rather than reading half an object.
+ * Read to the matching `}` rather than to the first one: `--bg-image` is an
+ * SVG data URI with braces nowhere in it but semicolons everywhere, and the
+ * naive split takes the picture apart.
  */
-function objectAfter(src, head, dropSpread) {
-  const at = src.indexOf(head);
-  if (at < 0) return null;
-  const open = src.indexOf("{", at + head.length - 1);
-  let depth = 0, i = open;
-  for (; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}" && --depth === 0) break;
+function rootTokens(file) {
+  const src = readFileSync(file, "utf8");
+  const at = src.indexOf(":root {");
+  assert.ok(at >= 0, `${path.basename(file)} has no :root block`);
+  const body = src.slice(at + ":root {".length, src.indexOf("\n}", at));
+
+  const out = {};
+  for (const m of body.matchAll(/(--[\w-]+)\s*:\s*([\s\S]*?);\s*(?=\n|$)/g)) {
+    out[m[1]] = m[2].replace(/\s+/g, " ").trim();
   }
-  const body = src
-    .slice(open, i + 1)
-    .replace(/\/\*[\s\S]*?\*\//g, "")     // the reasoning, which is not data
-    .replace(dropSpread, "");            // the default it overrides
-  // Our own two files, and the parse is the point — a hand-rolled reader would
-  // be a third opinion about what the preset says.
-  return new Function("return (" + body + ")")();
+  return out;
 }
 
-test("Isomorph's Mindbuild preset is the one Syllogimous defines", () => {
-  const fromSource = objectAfter(
-    readFileSync(THEME_SRC, "utf8"), '"Mindbuild": {', /\.\.\.MOONLIT,/);
-  assert.ok(fromSource, "the Mindbuild preset is gone from theme.service.ts");
+/* Same name on both sides, and the same value. */
+const SHARED = [
+  "--bg", "--accent", "--accent-2", "--accent-rgb", "--ok", "--bad",
+  "--radius", "--shadow", "--font-display", "--font-body", "--bg-image",
+];
 
-  const fromBundle = objectAfter(
-    readFileSync(ISOMORPH, "utf8"), '"Mindbuild":{', /\.\.\.V,/);
-  assert.ok(fromBundle,
-    "Isomorph has no Mindbuild preset — a dropped build took the edit with it");
+/* Different name, same value: the archive's own vocabulary over the hub's. */
+const RENAMED = {
+  "--bg-card": "--panel",
+  "--bg-hover": "--panel-hi",
+  "--text-primary": "--ink-strong",
+  "--text-secondary": "--ink",
+  "--text-muted": "--dim",
+};
 
-  assert.deepStrictEqual(
-    Object.keys(fromBundle).sort(), Object.keys(fromSource).sort(),
-    "the two Mindbuild presets set different things");
+test("the archive's theme is the hub's, value for value", () => {
+  const hub = rootTokens(SHELL_CSS);
+  const archive = rootTokens(ARCHIVE_CSS);
 
-  for (const key of Object.keys(fromSource)) {
-    assert.strictEqual(fromBundle[key], fromSource[key],
-      `Mindbuild's ${key} differs between Syllogimous and Isomorph, so the two`
-      + " trainers read as two applications either side of the hub's frame");
+  for (const name of SHARED) {
+    assert.ok(name in hub, `the hub no longer defines ${name}`);
+    assert.ok(name in archive, `the archive no longer defines ${name}`);
+    assert.strictEqual(archive[name], hub[name],
+      `${name} differs between the hub and the archive, so the two pages read`
+      + " as two applications one click apart");
   }
 
-  /* The brace assumption the reader above rests on. */
-  for (const [key, value] of Object.entries(fromSource)) {
-    if (typeof value !== "string") continue;
-    assert.ok(!/[{}]/.test(value),
-      `Mindbuild's ${key} now contains a brace, which the preset reader cannot`
-      + " match through — it needs a real parser before this value can ship");
+  for (const [here, there] of Object.entries(RENAMED)) {
+    assert.ok(here in archive, `the archive no longer defines ${here}`);
+    assert.ok(there in hub, `the hub no longer defines ${there}`);
+    assert.strictEqual(archive[here], hub[there],
+      `the archive's ${here} is no longer the hub's ${there}`);
   }
+
+  /* The picture is the expensive half of the copy, and the one a careless edit
+     would truncate rather than change — so it is checked for being there at
+     full length as well as for matching. */
+  assert.ok(archive["--bg-image"].length > 20000,
+    "the archive's forest is a fraction of its size — the copy was truncated");
 });
 
 /**
- * And the values reach the page as CSS variables rather than sitting unused.
+ * And the shapes came over with the colours.
  *
- * Isomorph is an older build of the codebase, so a preset written against
- * today's Syllogimous can name a setting this bundle has never heard of: it
- * would be accepted, stored, and quietly do nothing. Every key is checked
- * against the bundle's own default theme and its own variable table.
+ * The theme's own rule is that nothing is rounded, and a stylesheet keeps a
+ * `--radius: 0` token so the rules that used it still read as shape decisions.
+ * A rule that hard-codes its own radius slips straight past that, which is how
+ * the tracker's 10px cards would come back one panel at a time.
  */
-test("every setting Mindbuild names is one Isomorph's build knows", () => {
-  const bundle = readFileSync(ISOMORPH, "utf8");
-  const fromSource = objectAfter(
-    readFileSync(THEME_SRC, "utf8"), '"Mindbuild": {', /\.\.\.MOONLIT,/);
+test("nothing in the archive rounds a corner behind the token's back", () => {
+  const src = readFileSync(ARCHIVE_CSS, "utf8");
+  const hard = [...src.matchAll(/border-radius:\s*([^;]+);/g)]
+    .map(m => m[1].trim())
+    /* The source dot is round, and the hub's own is too: six colours telling
+       six trainers apart is data rather than decoration. */
+    .filter(v => v !== "50%" && !v.startsWith("var(--radius"));
 
-  /* The default theme every preset is an override of. */
-  const at = bundle.indexOf('V={bg:"#05070c"');
-  assert.ok(at > 0, "the bundle's default theme is not where the preset was put");
-  const defaults = new Set(
-    [...bundle.slice(at, bundle.indexOf("},J={", at)).matchAll(/(?:^|[{,])([A-Za-z][A-Za-z0-9]*):/g)]
-      .map(m => m[1]));
-
-  /* And the table that turns a setting into a `--th-*` variable. */
-  const declared = new Set(
-    [...bundle.matchAll(/key:"([A-Za-z0-9]+)",label:/g)].map(m => m[1]));
-
-  for (const key of Object.keys(fromSource)) {
-    assert.ok(defaults.has(key),
-      `Mindbuild sets ${key}, which this build's default theme does not have`);
-    assert.ok(declared.has(key),
-      `Mindbuild sets ${key}, which this build turns into no CSS variable —`
-      + " it would be stored and do nothing");
-  }
+  assert.deepStrictEqual(hard, [],
+    `the archive rounds a corner the theme does not: ${hard.join(", ")}`);
 });
 
 /* ------------------------------------------------------------------ */

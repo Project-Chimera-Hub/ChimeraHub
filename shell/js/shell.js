@@ -33,13 +33,6 @@
   var TRAINERS = [
     { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#6cb6ff",
       what: "Relational and syllogistic reasoning" },
-    /* The ninth hue went into the one wide gap the other eight left, between
-       the amber and the green. It is the trainer nearest Syllogimous in what
-       it asks and the furthest from it on the dial, which is the right way
-       round: the two that are easiest to confuse in a sentence are the two
-       that must never be confused in the bar. */
-    { id: "isomorph", name: "Isomorph", path: "isomorph/", colour: "#b7dd5f",
-      what: "Relations about relations" },
     { id: "rnb", name: "Relational N-back", path: "rnb/", colour: "#3fb950",
       what: "N-back over relations, with a ladder" },
     { id: "precision", name: "Precision N-back", path: "precision/", colour: "#d29922",

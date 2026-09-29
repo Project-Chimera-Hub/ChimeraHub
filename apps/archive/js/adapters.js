@@ -243,11 +243,16 @@ var ISOMORPH_PREFIX = "ISO/";
 /**
  * Isomorph's storage, taken out of the prefix its page keeps it under.
  *
- * Isomorph is a second build of the Syllogimous codebase and writes the same
- * key names, so on one origin the two would be one bag. `apps/isomorph/
- * index.html` shims `localStorage` to prefix everything it stores, and this is
- * the other end of that: strip `ISO/` and what is left is exactly what the
- * reader above expects.
+ * Isomorph was a second build of the Syllogimous codebase and wrote the same
+ * key names, so on one origin the two would have been one bag. Its page shimmed
+ * `localStorage` to prefix everything it stored, and this is the other end of
+ * that: strip `ISO/` and what is left is exactly what the reader above expects.
+ *
+ * **The trainer has been removed and this reader has not**, which is the whole
+ * point of an archive. Every Isomorph mode is a Syllogimous mode now, so there
+ * is nothing left to play — but a file somebody exported, or a browser they
+ * still have, holds months of their training under this prefix, and a record
+ * that stops being readable when an app is retired is not a record.
  *
  * Two shapes arrive, and only these two identify the app rather than guessing
  * at it. A snapshot of a browser or of a Firefox profile carries the prefix on

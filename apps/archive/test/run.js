@@ -163,29 +163,6 @@ test("isomorph: an empty bag is not a reading", () => {
   assert.strictEqual(readIsomorph(null), null);
 });
 
-test("isomorph: the page keeps every key it writes behind the prefix", () => {
-  /* Static, over the shipped page. The shim is the whole of what stops this
-     app from opening onto somebody's Syllogimous history, and it is three
-     dozen lines in front of a bundle nobody here can rebuild — so what is
-     asserted is that it is still there and still in front. */
-  const page = fs.readFileSync(
-    path.join(__dirname, "..", "..", "isomorph", "index.html"), "utf8");
-  const head = page.slice(0, page.indexOf("<app-root>"));
-
-  const shim = head.indexOf('Object.defineProperty(window, "localStorage"');
-  assert.ok(shim > 0, "the storage shim is gone from apps/isomorph/index.html");
-
-  /* In front of the theme script, which is the first thing in the page that
-     reads storage — and in front of every bundle, which all come after
-     <app-root>. */
-  assert.ok(shim < head.indexOf("syllogimous-theme-vars"),
-    "the shim no longer runs before the first read of storage");
-
-  assert.ok(/var PREFIX = "ISO\/";/.test(head), "the prefix changed without the readers");
-  assert.ok(!/fonts\.googleapis\.com/.test(page),
-    "a webfont import came back: this page has to load with the network off");
-});
-
 /* ------------------------------------------------------------------ *
  * The merge                                                           *
  * ------------------------------------------------------------------ */
