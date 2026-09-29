@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindbuild</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=8">
+<link rel="stylesheet" href="css/shell.css?v=9">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -53,6 +53,25 @@
       not count toward the quota.
     </p>
     <a class="btn" id="archive-link" href="archive/">Open archive</a>
+  </div>
+
+  <!-- Built and saved here, uploaded by the player. The hub sends nothing
+       itself; see js/share.js for what the file holds and what it leaves out. -->
+  <h2>Share your data</h2>
+  <div class="aside-card share">
+    <p>
+      Optional, and it helps tune the trainers — what the carousel costs, how
+      each mode's difficulty grows. The file holds, per Syllogimous and
+      Isomorph answer, <b>the mode, its difficulty, how it was shown, whether it
+      was right and how long it took</b>, the day, and a random participant id.
+      No premises, no settings, no time of day. Quote the id in an issue on the
+      repository to have your files deleted.
+    </p>
+    <label class="share__ok"><input type="checkbox" id="share-ok">
+      I agree to share this file for research on these trainers.</label>
+    <button class="btn" type="button" id="share-make" disabled>Create my data file</button>
+    <a class="btn" href="https://mega.nz/filerequest/F-2QAaKjCMY" target="_blank" rel="noopener">Upload ↗</a>
+    <span class="settings__note" id="share-note"></span>
   </div>
 
   <!-- gate:begin --><!-- Dropped wholesale by the gate-free build; see
@@ -119,6 +138,7 @@
 <script src="shared/adapters.js?v=3"></script>
 <script src="shared/quota.js?v=3"></script>
 <script src="js/today.js?v=3"></script>
+<script src="js/share.js?v=1"></script>
 <script src="js/pause.js?v=1"></script>
 <script src="js/shell.js?v=10"></script>
 </body>

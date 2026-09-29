@@ -158,6 +158,61 @@ test("both builds in one browser are two trainers, not one", () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * The file a player shares                                            *
+ * ------------------------------------------------------------------ */
+
+const Share = require("../shell/js/share.js");
+
+test("the shared file keeps the numbers and none of the words", () => {
+  /* The whole promise on the hub card: per answer, how hard, how shown,
+     whether right — and nothing a player wrote, read or configured. */
+  reset();
+  const q = (t, type, extra) => ({
+    answeredAt: t, createdAt: t - 20000, answered: true, type,
+    userAnswer: true, isValid: true, answerMode: "boolean",
+    premises: ["<span class=\"subject\">Wallet</span> is left of Scale", "Scale is left of Puppy"],
+    conclusion: "Wallet is left of Puppy",
+    timerTypeOnAnswer: "2", gameModeOnAnswer: "1",
+    difficulty: { level: 6.2, premises: 2, rungs: ["negation"], seconds: 40, carousel: true },
+    ...extra,
+  });
+  store.SYL_HISTORY_IDX = JSON.stringify([0]);
+  store["SYL_HISTORY_C:0"] = JSON.stringify([q(at(10), "Syllogism"), q(at(9), "Linear Arrangement", { userAnswer: false })]);
+  store.SYL_KEYBINDS = JSON.stringify({ answerTrue: "ArrowUp" });
+  store["ISO/SYL_APP"] = "isomorph";
+  store["ISO/SYL_HISTORY_IDX"] = JSON.stringify([0]);
+  store["ISO/SYL_HISTORY_C:0"] = JSON.stringify([q(at(11), "Frames", { gameModeOnAnswer: undefined })]);
+
+  const file = Share.build(localStorage, Date.parse(DAY));
+  const text = JSON.stringify(file);
+  for (const leak of ["Wallet", "Puppy", "ArrowUp", "subject", String(at(9))]) {
+    assert.ok(!text.includes(leak), `the shared file carries ${JSON.stringify(leak)}`);
+  }
+
+  assert.strictEqual(file.answers, 3);
+  assert.deepStrictEqual(file.apps, { syllogimous: 2, isomorph: 1 });
+  assert.deepStrictEqual(file.rows.map((r) => [r.mode, r.seq]),
+    [["Linear Arrangement", 1], ["Syllogism", 2], ["Frames", 3]], "not in the order answered");
+  const [wrong, right, iso] = file.rows;
+  assert.deepStrictEqual(right, {
+    app: "syllogimous", mode: "Syllogism", level: 6.2, premises: 2, rungs: ["negation"],
+    clock: 40, presentation: "1", timer: "2", answerMode: "boolean", correct: 1,
+    seconds: 20, day: DAY, seq: 2,
+  });
+  assert.strictEqual(wrong.correct, 0);
+  assert.strictEqual(iso.app, "isomorph");
+  assert.strictEqual(iso.presentation, null, "an unrecorded presentation was guessed");
+});
+
+test("the participant id is made once and kept", () => {
+  reset();
+  const a = Share.build(localStorage).participant;
+  assert.match(a, /^[0-9a-f]{16}$/);
+  assert.strictEqual(Share.build(localStorage).participant, a,
+    "a second file got a new id, so one player's files cannot be joined or deleted together");
+});
+
+/* ------------------------------------------------------------------ *
  * What the quota may not include                                      *
  * ------------------------------------------------------------------ */
 
