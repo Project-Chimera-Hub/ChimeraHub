@@ -118,6 +118,16 @@ h1 {
   color: var(--ink-strong);
 }
 
+/* The title and the community invite on one line; the invite wraps under the
+   title on a phone rather than squeezing it. */
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem 1.2rem;
+}
+
 /* Tracked-out caps, small, dim, with a rule running off to the right. A
    heading here is a label on a section rather than a title over it. */
 h2 {
