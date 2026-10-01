@@ -204,6 +204,16 @@ function series(archive, source, minItems) {
        */
       difficulty: dominant(d.byUnit).mean,
       unit: dominant(d.byUnit).unit,
+      /* Every unit the day was measured in, each its own mean — never mixed.
+         The chart draws one line per unit, so a day measured two ways is not
+         a day half-missing from the picture. */
+      units: (function () {
+        var out = {};
+        for (var u in d.byUnit) {
+          if (Object.prototype.hasOwnProperty.call(d.byUnit, u)) out[u] = d.byUnit[u].sum / d.byUnit[u].n;
+        }
+        return out;
+      })(),
       accuracy: d.n >= floor ? d.right / d.n : null,
     };
   });

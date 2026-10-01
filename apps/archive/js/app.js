@@ -649,68 +649,86 @@ function renderCharts() {
     var W = 720, H = 120, pad = 4;
 
     /*
-     * One line, one unit.
+     * One line per unit, each on its own scale.
      *
-     * This took whichever unit came last and scaled every day against one
-     * range, which was harmless while a source reported the same quantity
-     * forever. Syllogimous now reports its own difficulty level where it used
-     * to report a premise count, so a window that straddles the change holds
-     * days measured in both — and drawn this way that is a line climbing from
-     * five to thirty and a caption naming one of the two scales.
+     * Syllogimous reports its own difficulty level where it used to report a
+     * premise count, so a window that straddles the change holds days measured
+     * both ways. Averaging them, or drawing one through the other's range,
+     * would be a trend between two different quantities. Leaving the minority
+     * out — which is what this did — hid the days measured the other way.
      *
-     * The window is drawn in the unit most of its days are in. Days in another
-     * are counted and said, and the line breaks across them, for exactly the
-     * reason it already breaks across a day nobody played: a segment drawn
-     * through them would read as a trend, and it would be a trend between two
-     * different quantities.
+     * So each unit gets its own line, scaled to its own range: solid for the
+     * unit most days are in, dashed for the rest, and the caption names each
+     * with its range. The lines share a time axis and nothing else — heights
+     * are not comparable between them, only shapes and timing. Each line still
+     * breaks over days it has no reading for.
      */
+    var unitOf = function (u) { return u || null; };
     var counts = {};
     pts.forEach(function (p) {
-      if (p.difficulty == null) return;
-      counts[p.unit || ""] = (counts[p.unit || ""] || 0) + 1;
+      var us = p.units || (p.difficulty == null ? {} : (function () { var o = {}; o[p.unit || ""] = p.difficulty; return o; })());
+      p._units = us;
+      Object.keys(us).forEach(function (u) { counts[u] = (counts[u] || 0) + 1; });
     });
-    var unit = null, best = 0, otherDays = 0;
-    Object.keys(counts).forEach(function (u) {
-      if (counts[u] > best) { best = counts[u]; unit = u || null; }
-    });
-    Object.keys(counts).forEach(function (u) {
-      if ((u || null) !== unit) otherDays += counts[u];
-    });
+    var units = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
 
-    var inUnit = function (p) {
-      return p.difficulty != null && (p.unit || null) === unit;
-    };
-
-    var peak = 1, dHi = null, dLo = null;
-    pts.forEach(function (p) {
-      if (p.minutes > peak) peak = p.minutes;
-      if (!inUnit(p)) return;
-      if (dHi === null || p.difficulty > dHi) dHi = p.difficulty;
-      if (dLo === null || p.difficulty < dLo) dLo = p.difficulty;
-    });
+    var peak = 1;
+    pts.forEach(function (p) { if (p.minutes > peak) peak = p.minutes; });
     var step = (W - pad * 2) / Math.max(1, pts.length);
-    var range = (dHi != null && dHi > dLo) ? dHi - dLo : 1;
 
-    var bars = "", line = "", open = false;
+    var bars = "";
     pts.forEach(function (p, i) {
       var x = pad + i * step;
       var h = (H - pad * 2) * (p.minutes / peak);
+      var said = Object.keys(p._units).map(function (u) {
+        return fmt(p._units[u], 1) + " " + (unitOf(u) || "difficulty");
+      }).join(", ");
       bars += "<rect x='" + fmt(x, 1) + "' y='" + fmt(H - pad - h, 1)
         + "' width='" + fmt(Math.max(1, step - 1), 1) + "' height='" + fmt(h, 1)
         + "'><title>" + p.day + " — " + fmt(p.minutes) + "m, " + p.n + " items"
-        + (p.difficulty == null ? "" : ", " + fmt(p.difficulty, 1) + " " + (p.unit || "difficulty"))
+        + (said ? ", " + said : "")
         + (p.accuracy == null ? "" : ", " + fmt(100 * p.accuracy) + "% right")
         + "</title></rect>";
+    });
 
+    var DASHES = ["", "6 4", "2 3", "10 3 2 3"];
+    var lines = "", legend = [];
+    units.forEach(function (u, k) {
+      var lo = null, hi = null;
+      pts.forEach(function (p) {
+        var v = p._units[u];
+        if (v == null) return;
+        if (lo === null || v < lo) lo = v;
+        if (hi === null || v > hi) hi = v;
+      });
+      var range = hi > lo ? hi - lo : 1;
       /*
-       * The line breaks where the day has no difficulty rather than jumping the
-       * gap. A straight segment across a fortnight nobody played reads as a
-       * trend through it, which is the one thing the picture must not say.
+       * The line breaks where the day has no reading in this unit rather than
+       * jumping the gap. A straight segment across a fortnight nobody played
+       * reads as a trend through it, which is the one thing the picture must
+       * not say.
        */
-      if (!inUnit(p)) { open = false; return; }
-      var y = pad + (H - pad * 2) * (1 - (p.difficulty - dLo) / range);
-      line += (open ? " L" : " M") + fmt(x + step / 2, 1) + " " + fmt(y, 1);
-      open = true;
+      var d = "", open = false;
+      pts.forEach(function (p, i) {
+        var v = p._units[u];
+        if (v == null) { open = false; return; }
+        var x = pad + i * step + step / 2;
+        var y = pad + (H - pad * 2) * (1 - (hi > lo ? (v - lo) / range : 0.5));
+        d += (open ? " L" : " M") + fmt(x, 1) + " " + fmt(y, 1);
+        open = true;
+      });
+      /* A lone day is a point, and a path of one move draws nothing. */
+      if (d.indexOf("L") < 0 && d) {
+        d = d.replace(/M([\d.]+) ([\d.]+)/g, function (_, x, y) {
+          return "M" + x + " " + y + " l0.01 0";
+        });
+      }
+      var dash = DASHES[Math.min(k, DASHES.length - 1)];
+      lines += "<path class='acc" + (k ? " acc--alt" : "") + "' d='" + d + "'"
+        + (dash ? " stroke-dasharray='" + dash + "'" : "") + "></path>";
+      legend.push((k === 0 ? "line is " : (k === 1 ? "dashed " : "dotted ")) + "<b>"
+        + esc(unitOf(u) || "difficulty") + "</b>, " + fmt(lo, 1) + "&ndash;" + fmt(hi, 1)
+        + (k ? " (" + counts[u] + " day" + (counts[u] === 1 ? "" : "s") + ")" : ""));
     });
 
     var div = document.createElement("div");
@@ -718,19 +736,15 @@ function renderCharts() {
     div.id = "chart-" + name;
     div.innerHTML = "<h3>" + dot(name) + sourceName(name) + " <small class='dim'>"
       + pts.length + " days · bars are minutes, peak " + fmt(peak) + "m"
-      + (dHi == null
+      + (!units.length
           ? " · no difficulty recorded"
-          : " · line is " + (unit || "difficulty") + ", "
-            + fmt(dLo, 1) + "&ndash;" + fmt(dHi, 1)
-            + (otherDays
-                ? " · " + otherDays + " day" + (otherDays === 1 ? "" : "s")
-                  + " measured differently, not drawn"
-                : ""))
+          : " · " + legend.join(" · ")
+            + (units.length > 1 ? " · each line on its own scale" : ""))
       + "</small></h3>"
       + "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none'"
       + " style='--c:" + sourceColour(name) + "'>"
       + "<g class='bars'>" + bars + "</g>"
-      + "<path class='acc' d='" + line + "'></path>"
+      + lines
       + "</svg>";
     host.appendChild(div);
   });

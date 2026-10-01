@@ -572,6 +572,13 @@ function readCct(data) {
         durationSec: seconds,
         nback: h.nback == null ? null : h.nback,
         ict: !!h.ict,
+        /* Newer sessions also carry the interval at which an always-on 80%
+           posterior placed you, and that figure weighted for the n-back depth.
+           Carried, not charted: `difficulty` stays the peak rate, which is
+           what the ability ladder is aligned to. */
+        thresholdISI: h.thresholdISI == null ? null : Number(h.thresholdISI),
+        load: h.difficulty == null ? null : Number(h.difficulty),
+        adapt: h.adapt || null,
       },
     }));
 

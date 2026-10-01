@@ -869,6 +869,9 @@ tr:last-child td { border-block-end: 0; }
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+/* A second unit: same colour, so it reads as the same trainer, but quieter and
+   dashed, so it never reads as a continuation of the first. */
+.chart .acc--alt { stroke-width: 1.6; opacity: .75; }
 
 /*
  * Not `.cards`. That grid is `minmax(15rem, 1fr)`, and a four-column table of
