@@ -415,5 +415,55 @@ test("peak throughput finds the best stretch", () => {
   assert.ok(Math.abs(R.peakThroughput(trials, 20) - Math.log2(3)) < 1e-9);
 });
 
+/* The forgetting horizon. */
+function forgetRun(d, s, memory, beats, seed, probes) {
+  const rnd = lcg(seed);
+  const m = R.createModel(d, s, memory);
+  R.fill(m, stims(R.stimulusSet("glyphs"), s, rnd), rnd);
+  const out = [];
+  for (let i = 0; i < beats; i++) {
+    const age = it => m.clock - it.born;
+    if (probes) {
+      const q = R.planAnalogy(m, rnd) || R.planRelation(m, rnd);
+      if (q) out.push({ kind: "probe", ages: [q.pair[0], q.pair[1]].concat(q.mate || []).map(age) });
+    }
+    const plan = R.planCard(m, rnd);
+    out.push({ kind: "card", ages: [age(plan.ref)] });
+    R.apply(m, plan, R.newGlyph(m.items.map(it => it.glyph), rnd));
+    assertPermutations(m);
+  }
+  return out;
+}
+
+test("with a horizon, no card is placed against a forgotten symbol", () => {
+  for (const [d, s, mem] of [[1, 3, 1], [1, 5, 4], [1, 7, 6], [2, 4, 3], [3, 5, 8], [4, 3, 2]]) {
+    for (let seed = 1; seed <= 20; seed++) {
+      forgetRun(d, s, mem, 200, seed, false).forEach(b =>
+        b.ages.forEach(a => assert.ok(a < mem, `${d}D·${s} forget ${mem}: ref aged ${a}`)));
+    }
+  }
+});
+
+test("with a horizon, no conclusion asks about a forgotten symbol", () => {
+  for (const [d, s, mem] of [[1, 5, 3], [2, 5, 4], [1, 7, 10]]) {
+    for (let seed = 1; seed <= 20; seed++) {
+      forgetRun(d, s, mem, 150, seed, true).filter(b => b.kind === "probe").forEach(b =>
+        b.ages.forEach(a => assert.ok(a < mem, `probe on a symbol aged ${a}`)));
+    }
+  }
+});
+
+test("without a horizon, old references still happen (the cap is what stops them)", () => {
+  const ages = forgetRun(1, 7, 0, 2000, 3, false).map(b => b.ages[0]);
+  assert.ok(Math.max(...ages) >= 20, "max ref age " + Math.max(...ages));
+});
+
+test("the opening board ages as one: none of it is forgotten before the first card", () => {
+  const rnd = lcg(9);
+  const m = R.createModel(1, 7, 2);
+  R.fill(m, stims(R.stimulusSet("glyphs"), 7, rnd), rnd);
+  assert.strictEqual(R.remembered(m).length, 7);
+});
+
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log("\nall passed");

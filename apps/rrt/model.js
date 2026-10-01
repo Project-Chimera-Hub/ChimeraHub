@@ -253,8 +253,28 @@
     { id: "size", before: "bigger than", after: "smaller than" },
   ];
 
-  function createModel(d, s) {
-    return { d: d, s: s, items: [], clock: 0, nextId: 1 };
+  /* `memory` is the forgetting horizon: a symbol is forgotten once that many
+     newer symbols have been placed, and 0 (or nothing) means never. */
+  function createModel(d, s, memory) {
+    return { d: d, s: s, items: [], clock: 0, nextId: 1, memory: memory || 0 };
+  }
+
+  /**
+   * The symbols a card or a conclusion may use.
+   *
+   * Without a horizon a symbol stays usable for as long as nobody lands on its
+   * slot, and on a board of five that is twenty cards about one time in a
+   * hundred — long after anyone could say where it was put. With one, a symbol
+   * is forgotten once `memory` newer symbols have arrived: it keeps its slot,
+   * so a card can still land there and replace it, but it is never again the
+   * reference of a card or one side of a conclusion. Forgetting it is then the
+   * right move rather than a lapse.
+   *
+   * The opening board is one moment, so its symbols age together.
+   */
+  function remembered(model) {
+    if (!model.memory) return model.items;
+    return model.items.filter(function (it) { return model.clock - it.born < model.memory; });
   }
 
   /* A random order of 0..n-1. */
@@ -278,10 +298,11 @@
     var perms = [];
     for (var a = 0; a < model.d; a++) perms.push(shuffled(model.s, rnd));
     model.items = [];
+    var born = ++model.clock;
     for (var i = 0; i < model.s; i++) {
       var ranks = [];
       for (var b = 0; b < model.d; b++) ranks.push(perms[b][i]);
-      model.items.push({ id: model.nextId++, glyph: stims[i], ranks: ranks, born: ++model.clock });
+      model.items.push({ id: model.nextId++, glyph: stims[i], ranks: ranks, born: born });
     }
     return model.items;
   }
@@ -296,16 +317,25 @@
    * reference is any other symbol, except one exactly the whole board away on
    * the asked axis: "all the way up" would say the answer without needing to
    * know where anything is.
+   *
+   * The reference is always a remembered symbol (see `remembered`). With a
+   * horizon set, the slot is uniform over those that have such a reference —
+   * nearly always all of them; the one way to lose a slot is a single
+   * remembered symbol at the far end of the asked axis.
    */
   function planCard(model, rnd) {
     rnd = rnd || Math.random;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
-    var target = pick(model.items);
-    var refs = model.items.filter(function (it) {
-      return it !== target && Math.abs(target.ranks[axis] - it.ranks[axis]) < model.s - 1;
-    });
-    var ref = pick(refs);
+    var pool = remembered(model);
+    var refsFor = function (target) {
+      return pool.filter(function (it) {
+        return it !== target && Math.abs(target.ranks[axis] - it.ranks[axis]) < model.s - 1;
+      });
+    };
+    var targets = model.items.filter(function (it) { return refsFor(it).length > 0; });
+    var target = pick(targets);
+    var ref = pick(refsFor(target));
     var dist = [];
     for (var a = 0; a < model.d; a++) dist.push(target.ranks[a] - ref.ranks[a]);
     return { ref: ref, target: target, dist: dist, axis: axis };
@@ -329,7 +359,7 @@
    */
   function planRelation(model, rnd) {
     rnd = rnd || Math.random;
-    var items = model.items;
+    var items = remembered(model);
     if (items.length < 2) return null;
     var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
     var i = Math.floor(rnd() * items.length);
@@ -372,7 +402,7 @@
    */
   function planAnalogy(model, rnd) {
     rnd = rnd || Math.random;
-    var items = model.items;
+    var items = remembered(model);
     if (items.length < 4) return null;
     var axis = model.d > 1 ? Math.floor(rnd() * model.d) : 0;
     var step = function (p) { return p[1].ranks[axis] - p[0].ranks[axis]; };
@@ -561,7 +591,7 @@
     SEGMENTS: SEGMENTS, AXES: AXES, SIZES: SIZES, ANIMALS: ANIMALS, PICTURES: PICTURES, SETS: SETS,
     makeGlyph: makeGlyph, newGlyph: newGlyph, glyphDistance: glyphDistance, glyphPath: glyphPath,
     newAnimal: newAnimal, newPicture: newPicture, stimulusSet: stimulusSet,
-    createModel: createModel, fill: fill, planCard: planCard, apply: apply,
+    createModel: createModel, remembered: remembered, fill: fill, planCard: planCard, apply: apply,
     planAnalogy: planAnalogy, planRelation: planRelation,
     ladder: ladder, levelIndex: levelIndex, carriedBits: carriedBits,
     correctedAccuracy: correctedAccuracy, createController: createController, update: update,

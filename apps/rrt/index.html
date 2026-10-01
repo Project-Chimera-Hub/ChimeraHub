@@ -570,6 +570,16 @@
           <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
         </div>
         <div class="field" style="margin-top:.9rem">
+          <label class="label">Forget after</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="memorySlider"></div><span class="slider-val" id="memoryVal"></span></div>
+          <p class="hint">A cap on how far back you are asked to remember. Once this many newer
+            symbols have arrived, a symbol is forgotten: it keeps its slot until a card lands
+            there, but no card is placed against it and no conclusion asks about it. Off,
+            a symbol stays in play for as long as nobody lands on its slot — on a board of
+            five that is twenty cards about one time in a hundred. A capped session keeps
+            its own best score, one per cap.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
           <label class="label">Conclusion beats</label>
           <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="probeRateSlider"></div><span class="slider-val" id="probeRateVal"></span></div>
           <div class="slider-row" id="probeMixRow"><div class="slider-wrap"><input type="range" class="slider" id="probeMixSlider"></div><span class="slider-val" id="probeMixVal"></span></div>
@@ -969,7 +979,7 @@ const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, t
    it applies in both session modes rather than being overridden by one. */
 const DEFAULTS = Object.assign({
   mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
-  probeRate: 0, probeMix: 0.5, climb: false,
+  probeRate: 0, probeMix: 0.5, climb: false, memory: 0,
   showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
   padScale: 1, stageScale: 1, speak: false,
 }, STANDARD);
@@ -1085,6 +1095,8 @@ const painters = [
   wireSlider('probeMixSlider', 'probeMixVal', 'probeMix', 0, 1, 0.1,
              v => v === 0 ? 'all relations' : v === 1 ? 'all analogies'
                                             : Math.round(v * 100) + '% analogies'),
+  wireSlider('memorySlider', 'memoryVal', 'memory', 0, 30, 1,
+             v => v === 0 ? 'never' : v + ' newer symbol' + (v === 1 ? '' : 's')),
   wireToggle('climbToggle', 'climb', null, paintLevel),
   wireToggle('resumeToggle', 'resumeLevel', null, paintLevel),
   wireToggle('truthToggle', 'showTruth'),
@@ -1849,6 +1861,10 @@ let sessionSet = 'glyphs';
 /* Fixed with it: a spoken session is kept apart in the records. */
 let sessionSpoken = false;
 let sessionProbed = false;
+/* The forgetting horizon this session plays with, fixed at its start like the
+   set: changing it mid-session would change what the best score was earned
+   with. 0 is never. */
+let sessionMemory = 0;
 const nextStim = avoid => R.stimulusSet(sessionSet).next(avoid, Math.random);
 /* Set while the walkthrough is running its practice beats: a session with the
    pace pinned, a beat budget instead of a clock, and no record kept. */
@@ -1995,7 +2011,7 @@ function beat() {
      so no symbol has to be carried across a change in the rules. */
   if (needEpisode) {
     needEpisode = false;
-    model = R.createModel(lvl.d, lvl.s);
+    model = R.createModel(lvl.d, lvl.s, sessionMemory);
     recentlyGone = [];
     const fresh = [];
     for (let i = 0; i < lvl.s; i++) fresh.push(nextStim(fresh));
@@ -2155,6 +2171,7 @@ function startSession(opts) {
   sessionSet = R.stimulusSet(settings.stimset).id;
   sessionSpoken = speaks();
   sessionProbed = eff('probeRate') > 0;
+  sessionMemory = practice ? 0 : (settings.memory | 0);
   if (sessionSet === 'pictures') warmPhotos();
   trials = []; cur = null; model = null; needEpisode = true; streak = 0;
   peakLevel = ctrl.level;
@@ -2223,7 +2240,10 @@ function showResults() {
      options where a card is answered from `s`, so the two are not the same
      trial at all, and the record should say which it was earned with. */
   const bestKey = sessionSet + (sessionSpoken ? '+spoken' : '')
-                + (sessionProbed ? '+analogy' : '');
+                + (sessionProbed ? '+analogy' : '')
+                /* Forgetting caps how far back a card can reach, which is most of
+                   what makes a long episode hard, so each cap is its own record. */
+                + (sessionMemory ? '+forget' + sessionMemory : '');
   const prog = loadProgress();
   if (total > 0) {
     prog.sessions = (prog.sessions || 0) + 1;
@@ -2252,6 +2272,7 @@ function showResults() {
       peakBits: Math.round(peakBits * 1000) / 1000,
       lowestISI, d: endLevel.d, s: endLevel.s, peakD: topLevel.d, peakS: topLevel.s,
       set: sessionSet, spoken: sessionSpoken,
+      ...(sessionMemory ? { forgetAfter: sessionMemory } : {}),
     });
     if (prog.history.length > 1000) prog.history.length = 1000;
     saveProgress(prog);

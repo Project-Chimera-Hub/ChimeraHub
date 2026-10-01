@@ -103,6 +103,20 @@ working-memory training find far transfer weak at best. What the design can
 honestly claim is that it keeps the task at the edge of capacity and measures it
 cleanly.
 
+## Forgetting
+
+Off by default. Without it a symbol stays in play for as long as no card lands
+on its slot, and on a board of five that is twenty cards about one time in a
+hundred — a placement nobody could still recall, asked about anyway.
+
+**Forget after** sets a horizon in symbols. Once that many newer symbols have
+arrived, a symbol is forgotten: it keeps its slot, so a card may still land
+there and replace it, but no card is placed against it and no conclusion asks
+about it. The opening board is learnt as one, so its symbols age together.
+
+A capped session keeps its own best, one per cap, since the cap removes most of
+what makes a long episode hard.
+
 ## Conclusion beats
 
 Off by default. Turned up, some beats ask a question instead of dealing a card.
