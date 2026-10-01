@@ -318,10 +318,20 @@
    * the asked axis: "all the way up" would say the answer without needing to
    * know where anything is.
    *
-   * The reference is always a remembered symbol (see `remembered`). With a
-   * horizon set, the slot is uniform over those that have such a reference —
-   * nearly always all of them; the one way to lose a slot is a single
-   * remembered symbol at the far end of the asked axis.
+   * With a horizon set (see `remembered`), the reference is always a
+   * remembered symbol, and the new one lands on a forgotten symbol's slot,
+   * uniformly among them. Landing anywhere meant evicting a symbol still being
+   * held a third to a half of the time, so the two or three you were holding
+   * kept knocking each other out of the same slots. Now a held symbol leaves
+   * only by ageing out, and the forgotten slots are the free ones.
+   *
+   * But never fewer than two slots to choose from: with one free slot the
+   * answer is wherever the forgotten symbol was, and the card is not needed.
+   * Short of two, the oldest held symbols — the next to be forgotten anyway —
+   * make up the number, so the most a player can know without the card is
+   * about a coin flip (a little more on a board of three, where the full-width
+   * rule can rule a candidate out). While nothing is forgotten — the opening
+   * board — that is the whole board, as with no horizon.
    */
   function planCard(model, rnd) {
     rnd = rnd || Math.random;
@@ -333,12 +343,28 @@
         return it !== target && Math.abs(target.ranks[axis] - it.ranks[axis]) < model.s - 1;
       });
     };
-    var targets = model.items.filter(function (it) { return refsFor(it).length > 0; });
-    var target = pick(targets);
-    var ref = pick(refsFor(target));
-    var dist = [];
-    for (var a = 0; a < model.d; a++) dist.push(target.ranks[a] - ref.ranks[a]);
-    return { ref: ref, target: target, dist: dist, axis: axis };
+    var usable = function (it) { return refsFor(it).length > 0; };
+    if (!model.memory) return finish(pick(model.items.filter(usable)));
+    var targets = model.items.filter(function (it) { return pool.indexOf(it) < 0 && usable(it); });
+    if (targets.length < 2) {
+      /* Oldest first; symbols born together are shuffled so none is favoured. */
+      var held = pool.filter(usable);
+      var order = shuffled(held.length, rnd).map(function (i) { return held[i]; })
+        .sort(function (x, y) { return x.born - y.born; });
+      var oldest = order.length ? order[0].born : 0;
+      for (var h = 0; h < order.length && targets.length < 2; h++) targets.push(order[h]);
+      /* The opening board ages as one: if the oldest held are all one cohort,
+         every one of them is a candidate, not just the first two shuffled. */
+      if (order.length && order[order.length - 1].born === oldest) targets = model.items.filter(usable);
+    }
+    return finish(pick(targets));
+
+    function finish(target) {
+      var ref = pick(refsFor(target));
+      var dist = [];
+      for (var a = 0; a < model.d; a++) dist.push(target.ranks[a] - ref.ranks[a]);
+      return { ref: ref, target: target, dist: dist, axis: axis };
+    }
   }
 
   /**

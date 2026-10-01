@@ -573,8 +573,9 @@
           <label class="label">Forget after</label>
           <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="memorySlider"></div><span class="slider-val" id="memoryVal"></span></div>
           <p class="hint">A cap on how far back you are asked to remember. Once this many newer
-            symbols have arrived, a symbol is forgotten: it keeps its slot until a card lands
-            there, but no card is placed against it and no conclusion asks about it. Off,
+            symbols have arrived, a symbol is forgotten: no card is placed against it and no
+            conclusion asks about it, and its slot is free — new symbols land on forgotten
+            slots, so a symbol you are still holding is never overwritten. Off,
             a symbol stays in play for as long as nobody lands on its slot — on a board of
             five that is twenty cards about one time in a hundred. A capped session keeps
             its own best score, one per cap.</p>

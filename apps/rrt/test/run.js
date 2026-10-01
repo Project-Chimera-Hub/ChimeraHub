@@ -458,6 +458,62 @@ test("without a horizon, old references still happen (the cap is what stops them
   assert.ok(Math.max(...ages) >= 20, "max ref age " + Math.max(...ages));
 });
 
+test("with a horizon, a held symbol is never replaced while a forgotten slot is free", () => {
+  for (const [d, s, mem] of [[1, 5, 2], [1, 7, 3], [2, 5, 4], [3, 4, 2]]) {
+    for (let seed = 1; seed <= 20; seed++) {
+      const rnd = lcg(seed);
+      const m = R.createModel(d, s, mem);
+      R.fill(m, stims(R.stimulusSet("glyphs"), s, rnd), rnd);
+      for (let i = 0; i < 200; i++) {
+        const held = R.remembered(m);
+        const plan = R.planCard(m, rnd);
+        if (m.items.length - held.length >= 2) {
+          assert.ok(held.indexOf(plan.target) < 0, `${d}D·${s} forget ${mem}: evicted a held symbol`);
+        }
+        R.apply(m, plan, R.newGlyph(m.items.map(it => it.glyph), rnd));
+      }
+    }
+  }
+});
+
+test("with a horizon, the landing slots still spread over the whole board", () => {
+  const rnd = lcg(5), s = 5;
+  const m = R.createModel(1, s, 3);
+  R.fill(m, stims(R.stimulusSet("glyphs"), s, rnd), rnd);
+  const counts = Array(s).fill(0), n = 5000;
+  for (let i = 0; i < n; i++) {
+    const res = R.apply(m, R.planCard(m, rnd), R.newGlyph(m.items.map(it => it.glyph), rnd));
+    counts[res.answer - 1]++;
+  }
+  counts.forEach(c => assert.ok(c > n / s * 0.7 && c < n / s * 1.3, "counts " + counts));
+});
+
+test("with a horizon, the landing slot is never the only one it could have been", () => {
+  /* Forget after 4 on a board of 5 leaves one forgotten slot; landing only there
+     would give the answer away without the card. */
+  for (const [s, mem] of [[5, 4], [3, 2], [4, 3], [5, 5], [7, 6]]) {
+    const rnd = lcg(11);
+    const m = R.createModel(1, s, mem);
+    R.fill(m, stims(R.stimulusSet("glyphs"), s, rnd), rnd);
+    const counts = Array(s).fill(0);
+    for (let i = 0; i < 3000; i++) {
+      const res = R.apply(m, R.planCard(m, rnd), R.newGlyph(m.items.map(it => it.glyph), rnd));
+      counts[res.answer - 1]++;
+    }
+    // Replay: how often was the answer the single forgotten slot? Bounded by a coin flip.
+    const rnd2 = lcg(12), m2 = R.createModel(1, s, mem);
+    R.fill(m2, stims(R.stimulusSet("glyphs"), s, rnd2), rnd2);
+    let forced = 0, n = 0;
+    for (let i = 0; i < 3000; i++) {
+      const free = m2.items.filter(it => R.remembered(m2).indexOf(it) < 0);
+      const plan = R.planCard(m2, rnd2);
+      if (free.length === 1) { n++; if (plan.target === free[0]) forced++; }
+      R.apply(m2, plan, R.newGlyph(m2.items.map(it => it.glyph), rnd2));
+    }
+    if (n > 100) assert.ok(forced / n < 0.67, `${s}/${mem}: lone free slot taken ${(forced / n * 100).toFixed(0)}%`);
+  }
+});
+
 test("the opening board ages as one: none of it is forgotten before the first card", () => {
   const rnd = lcg(9);
   const m = R.createModel(1, 7, 2);

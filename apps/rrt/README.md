@@ -114,6 +114,16 @@ arrived, a symbol is forgotten: it keeps its slot, so a card may still land
 there and replace it, but no card is placed against it and no conclusion asks
 about it. The opening board is learnt as one, so its symbols age together.
 
+With a horizon, new symbols land on **forgotten** slots, at random among them,
+and a symbol still held is never overwritten — it leaves only by ageing out.
+Landing anywhere evicted a held symbol a third to a half of the time, so the few
+symbols being held kept knocking each other out of the same slots. There are
+always at least two slots it could land on: with one forgotten slot the answer
+would be wherever that symbol was, so the oldest held symbol, the next to go
+anyway, is added as a candidate. The cost is that the answer comes from fewer
+slots than the board is wide, which is part of why a capped session keeps its
+own best.
+
 A capped session keeps its own best, one per cap, since the cap removes most of
 what makes a long episode hard.
 
