@@ -192,6 +192,7 @@
     var total = q.total;
 
     $("fig").innerHTML = fmt(total) + "<small> min today</small>";
+    renderWall();
 
     var n = Today.streak();
     $("streak").textContent = n > 1 ? n + " day streak" : n === 1 ? "1 day" : "";
@@ -371,6 +372,8 @@
      * the number that was true when you left the trainer.
      */
     Pause.setFrameHidden($("frame"), true);
+    wallTick();
+    wallSave();
     $("stage").hidden = true;
     $("hub").hidden = false;
     document.title = "mindbuild";
@@ -415,7 +418,60 @@
     else home();
   }
 
+  /* ---------------------------------------------------------------- *
+   * The plain clock                                                  *
+   * ---------------------------------------------------------------- *
+   *
+   * Every minute with any page open in the frame — a trainer, one of the
+   * uncounted ones, the archive — added up for the UTC day, with nothing
+   * taken off: no caps, no pauses, no adapter's idea of what a session was.
+   * It is shown beside the real figure, greyed, and nothing reads it. The
+   * quota and the bar stay on the adapters' count; this is only there so the
+   * time you actually sat here is a number you can see.
+   *
+   * Counted by the shell's own one-second tick rather than by the trainers,
+   * so it needs nothing from them. Only while the window is visible, and a
+   * gap between ticks is capped — a laptop closed with a trainer open is not
+   * an hour of training. Saved every few seconds rather than every tick: the
+   * write is a storage event in the frame, and a timing-critical trainer is
+   * running in it. */
+  var WALL_KEY = "mindbuild.wallclock.v1";
+  var WALL_GAP_MS = 5000, WALL_SAVE_MS = 15000;
+  var wall = (function () {
+    try { return JSON.parse(localStorage.getItem(WALL_KEY)) || {}; } catch (e) { return {}; }
+  })();
+  var wallTickAt = 0, wallSavedAt = 0;
+
+  function wallToday() {
+    var day = new Date().toISOString().slice(0, 10);
+    if (wall.day !== day) wall = { day: day, ms: 0 };
+    return wall;
+  }
+
+  function wallSave() {
+    wallSavedAt = Date.now();
+    try { localStorage.setItem(WALL_KEY, JSON.stringify(wallToday())); } catch (e) { /* storage off */ }
+  }
+
+  function wallTick() {
+    var now = Date.now();
+    var running = !$("stage").hidden && current && document.visibilityState === "visible";
+    if (running && wallTickAt) {
+      wallToday().ms += Math.min(now - wallTickAt, WALL_GAP_MS);
+      if (now - wallSavedAt >= WALL_SAVE_MS) wallSave();
+    }
+    wallTickAt = running ? now : 0;
+  }
+
+  function renderWall() {
+    var el = $("wall");
+    if (!el) return;
+    var mins = wallToday().ms / 60000;
+    el.textContent = fmt(mins) + " min total";
+  }
+
   function tick() {
+    wallTick();
     if ($("stage").hidden || !openedAt) return;
     var s = Math.floor((Date.now() - openedAt) / 1000);
     $("clock").textContent =
@@ -687,6 +743,17 @@
      context on the same origin — so the meter follows a session without the
      shell polling for it and without the trainer reporting anything. */
   window.addEventListener("storage", function (e) {
+    /* Another hub tab saved its clock. Take the larger, so two tabs open on
+       one day do not keep writing each other's minutes away. */
+    if (e && e.key === WALL_KEY) {
+      try {
+        var theirs = JSON.parse(e.newValue) || {};
+        var ours = wallToday();
+        if (theirs.day === ours.day && theirs.ms > ours.ms) ours.ms = theirs.ms;
+      } catch (err) { /* not ours to read */ }
+      if (!$("hub").hidden) renderWall();
+      return;
+    }
     invalidate();
     if (!$("hub").hidden) renderToday();
     /* The open hub and the gated one are the same origin and share the key, so
@@ -697,6 +764,10 @@
   /* Coming back to the hub is the other moment the number is worth having, and
      it is a moment when nothing is being timed. */
   setInterval(tick, 1000);
+  /* The last few seconds before the window goes, which the periodic save
+     would otherwise lose. */
+  window.addEventListener("pagehide", function () { wallTick(); wallSave(); });
+  document.addEventListener("visibilitychange", function () { wallTick(); wallSave(); });
 
   renderGoal();
   $("goal-set").addEventListener("click", commitGoal);

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindbuild</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=10">
+<link rel="stylesheet" href="css/shell.css?v=11">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -21,6 +21,10 @@
     <div class="today__head">
       <div>
         <div class="today__figure" id="fig">—<small> min today</small></div>
+        <!-- Every minute in any page here, nothing taken off. Shown, never
+             read: the quota and the bar stay on the figure above. -->
+        <div class="today__wall" id="wall"
+             title="All time with a trainer or the archive open today, nothing deducted. For reference only — the quota uses the figure beside it."></div>
       </div>
       <div class="dim" id="streak"></div>
     </div>
@@ -144,6 +148,6 @@
 <script src="shared/share-kit/share-kit.js?v=1"></script>
 <script src="js/share.js?v=2"></script>
 <script src="js/pause.js?v=1"></script>
-<script src="js/shell.js?v=10"></script>
+<script src="js/shell.js?v=11"></script>
 </body>
 </html>

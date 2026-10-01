@@ -180,6 +180,24 @@ h2::after {
   color: var(--ink-strong);
   font-variant-numeric: tabular-nums;
 }
+/* The plain clock: beside the figure, quieter than it, and plainly not it. */
+.today__head > div:first-child {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .2rem 1.1rem;
+}
+.today__wall {
+  font-size: .8rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  opacity: .55;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.today__wall:empty { display: none; }
+
 .today__figure small {
   font-size: .8rem;
   letter-spacing: .2em;
