@@ -88,7 +88,7 @@ button{background:none;border:none;cursor:pointer}
 .trained span{font-size:.72rem;color:var(--fg-faint)}
 
 .regions{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft)}
-.region{background:var(--console);padding:22px 28px}
+.region{background:var(--console);padding:22px 28px;min-width:0}   /* long titles and voice names shorten instead of widening the page */
 .region--wide{grid-column:1/-1}
 .region > h2{
   font-family:var(--display);
@@ -310,9 +310,119 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 .reset-row{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft)}
 .reset-row .hint{margin-top:0;flex:1;min-width:220px}
 
+/* Sync: recording your words in the built-in voices */
+.sync{margin:12px 0 14px;padding:12px 14px 13px;border:1px solid var(--line);border-radius:11px}
+.sync.is-busy{border-color:var(--accent)}
+.sync__status{font-size:.86rem;line-height:1.45}
+.sync__status.is-warn{color:var(--hold)}
+.sync__note{font-size:.8rem;color:var(--fg-dim);margin-top:6px;line-height:1.45}
+.sync__note.is-warn{color:var(--hold)}
+.meter{height:4px;margin-top:10px;background:var(--field);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .3s}
+.meter.is-unknown i{width:30% !important;animation:sweep 1.3s ease-in-out infinite alternate}
+@keyframes sweep{from{transform:translateX(-10%)}to{transform:translateX(243%)}}
+.sync__btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.sync__btns:empty{display:none}
+.sync .hint{margin-top:9px}
+.words-note .link-btn{margin-left:4px}
+.link-btn{padding:0;font-size:inherit;font-weight:600;color:var(--accent-bright);text-decoration:underline;text-underline-offset:2px}
+.link-btn:hover{color:var(--fg)}
+
+/* Background video: the list, in playing order */
+.video-switch{margin-bottom:4px}
+.vlist{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.vlist:empty{display:none}
+.vrow{
+  display:flex;align-items:center;gap:10px;min-width:0;
+  padding:7px 8px 7px 4px;background:var(--field);border:1px solid var(--line);border-radius:10px;
+  transition:border-color .15s,opacity .15s;
+}
+.vrow.is-dragging{border-color:var(--accent);box-shadow:0 8px 22px rgba(0,0,0,.45);position:relative;z-index:2}
+.vrow.is-new{animation:chip-in 1.6s ease-out}
+.vrow__grip{
+  width:26px;height:36px;flex:none;display:grid;place-items:center;border-radius:6px;
+  color:var(--fg-faint);cursor:grab;touch-action:none;transition:color .15s,background .15s;
+}
+.vrow__grip:hover{color:var(--fg);background:var(--raised)}
+.vrow.is-dragging .vrow__grip{cursor:grabbing;color:var(--accent-bright)}
+.vrow__grip svg{width:12px;height:16px}
+.vrow__pick{position:relative;display:grid;place-items:center;width:22px;height:22px;flex:none;cursor:pointer}
+.vrow__pick input{position:absolute;opacity:0;width:0;height:0}
+.vrow__pick input:checked + .box{background:var(--accent);border-color:var(--accent)}
+.vrow__pick input:checked + .box::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:9px;border:solid #0E1319;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.vrow__pick input:focus-visible + .box{outline:2px solid var(--accent-bright);outline-offset:2px}
+.vrow__pick input:disabled + .box{opacity:.35}
+.vrow__thumb{
+  width:64px;height:36px;flex:none;border-radius:5px;overflow:hidden;position:relative;
+  background:var(--raised);display:grid;place-items:center;color:var(--fg-faint);
+}
+.vrow__thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vrow__thumb svg{width:18px;height:18px}
+.vrow__num{
+  position:absolute;left:3px;top:3px;min-width:16px;padding:0 4px;border-radius:4px;
+  background:rgba(14,19,25,.82);font-family:var(--mono);font-size:.66rem;line-height:16px;text-align:center;color:var(--fg);
+}
+.vrow__text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.vrow__title{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vrow__sub{font-size:.75rem;color:var(--fg-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vrow__sub b{font-weight:500;color:var(--accent-bright)}
+.vrow.is-err{border-color:rgba(255,107,107,.45)}
+.vrow.is-err .vrow__sub{color:var(--miss);white-space:normal;line-height:1.4}
+.vrow.is-off .vrow__thumb,.vrow.is-off .vrow__dur,.vrow.is-off:not(.is-err) .vrow__text{opacity:.45}
+.vrow.is-err .vrow__title{opacity:.6}
+.vrow__dur{flex:none;min-width:44px;text-align:right;font-family:var(--mono);font-size:.82rem;color:var(--fg-dim);font-variant-numeric:tabular-nums}
+.vrow.is-checking .vrow__dur{color:var(--fg-faint)}
+.vrow__btns{display:flex;gap:2px;flex:none}
+.icon-btn{
+  width:30px;height:30px;display:grid;place-items:center;border-radius:7px;
+  color:var(--fg-faint);font-size:1.05rem;line-height:1;transition:color .15s,background .15s;
+}
+.icon-btn svg{width:14px;height:14px}
+.icon-btn:hover{color:var(--fg);background:var(--raised)}
+.icon-btn:disabled{opacity:.3;cursor:default;background:none;color:var(--fg-faint)}
+.icon-btn.is-remove:hover{color:var(--miss);background:rgba(255,107,107,.12)}
+.text-btn{padding:0 .55rem;height:30px;border-radius:7px;font-size:.8rem;font-weight:500;color:var(--fg-dim);transition:color .15s,background .15s}
+.text-btn:hover{color:var(--fg);background:var(--raised)}
+.vtotal{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:10px;padding:0 4px;font-size:.8rem;color:var(--fg-dim)}
+.vtotal b{font-family:var(--mono);font-weight:600;color:var(--fg);font-variant-numeric:tabular-nums}
+.vopts{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft)}
+.vopts .field{margin-bottom:10px}
+.vopts .segmented{max-width:none}
+.vresume{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-top:8px}
+.vresume .hint{margin-top:0}
+
+@media (max-width:560px){
+  .vrow{gap:7px}
+  .vrow__thumb{display:none}
+  .vrow__btns .is-step{display:none}       /* drag the handle instead */
+  .vopts{grid-template-columns:1fr}
+}
+
 /* ----------------------------------------------------------- play ------- */
 
 #game-screen.is-active{display:flex;flex-direction:column}
+#game-screen{position:relative;overflow:hidden}
+
+/* Background video: behind everything on the play screen, never clickable,
+   so the keyboard and answer buttons always stay with the game. */
+.backdrop{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:#000;display:none}
+#game-screen.has-video .backdrop{display:block}
+#game-screen > .rail,#game-screen > .blockbar,#game-screen > .stage{position:relative;z-index:1}
+.backdrop__video{position:absolute;inset:0}
+.backdrop__video > iframe,.backdrop__video > video,.backdrop__video > div{
+  position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);border:0;display:block;
+}
+.backdrop__video video{object-fit:contain;background:#000}
+.backdrop.is-cover .backdrop__video video{object-fit:cover}
+.backdrop__shade{position:absolute;inset:0;background:var(--page);opacity:.45;transition:opacity .3s}
+#game-screen.has-video .rail{background:linear-gradient(rgba(14,19,25,.9),rgba(14,19,25,.62))}
+#game-screen.has-video .blockbar{background:rgba(31,40,51,.7)}
+#game-screen.has-video .overlay{background:rgba(14,19,25,.8)}
+#game-screen.has-video .cell{background:rgba(14,19,25,.3);border-color:rgba(148,162,180,.24)}
+#game-screen.has-video .disc{border-color:rgba(148,162,180,.24)}
+#game-screen.has-video .shot{background:rgba(14,19,25,.3);border-color:rgba(148,162,180,.24)}
+.probe-host{position:fixed;right:0;bottom:0;width:4px;height:4px;overflow:hidden;opacity:0;pointer-events:none;z-index:-1}
+.probe-host > *{width:356px;height:200px}   /* YouTube wants at least 200 × 200 */
 
 .rail{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px clamp(12px,3vw,22px)}
 .readout{display:flex;align-items:baseline;gap:18px;min-width:0}
@@ -652,6 +762,18 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
           </div>
           <p class="hint" id="voice-hint"></p>
         </div>
+        <div class="sync" id="sync-box" hidden>
+          <p class="sync__status" id="sync-status" role="status" aria-live="polite"></p>
+          <div class="meter" id="sync-meter" hidden><i id="sync-fill"></i></div>
+          <p class="sync__note" id="sync-note" hidden></p>
+          <div class="sync__btns">
+            <button type="button" class="ghost-btn small-btn" id="sync-btn">Sync words</button>
+            <button type="button" class="ghost-btn small-btn" id="sync-all">Sync all voices</button>
+            <button type="button" class="ghost-btn small-btn" id="sync-stop" hidden>Stop</button>
+            <button type="button" class="ghost-btn small-btn danger" id="sync-clear" hidden>Delete recordings</button>
+          </div>
+          <p class="hint" id="sync-hint"></p>
+        </div>
         <div class="field" id="rate-field">
           <label for="voice-rate">Speed <span id="rate-value" class="rate-value">1.1×</span></label>
           <input type="range" id="voice-rate" min="0.6" max="1.8" step="0.05" value="1.1">
@@ -692,7 +814,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
           </button>
         </div>
         <ul class="chips" id="word-chips" aria-label="Words in use"></ul>
-        <p class="words-note" id="words-voice" hidden></p>
+        <p class="words-note" id="words-voice" hidden><span id="words-voice-text"></span><button type="button" class="link-btn" id="words-sync" hidden>Sync now</button></p>
         <div class="word-add">
           <input type="text" id="word-input" placeholder="New words, separated by spaces" aria-label="Words to add"
                  autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -728,6 +850,66 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
         <p class="hint" id="folders-hint">Folders and their pictures are saved in this browser.</p>
       </div>
 
+      <div class="region region--wide" id="video-region">
+        <div class="region-head">
+          <h2>Background video</h2>
+          <span class="words-count" id="video-count"></span>
+        </div>
+        <label class="switch video-switch">
+          <input type="checkbox" id="video-on"><span class="track"></span>
+          Play videos behind the grid while you train
+        </label>
+        <div class="word-add">
+          <input type="text" id="video-input" inputmode="url" placeholder="Paste a video link" aria-label="Video link"
+                 autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" class="ghost-btn" id="video-add">Add</button>
+        </div>
+        <p class="words-note" id="video-status" role="status" aria-live="polite" hidden></p>
+        <ol class="vlist" id="video-list" aria-label="Videos, in playing order"></ol>
+        <div class="vtotal" id="video-total" hidden>
+          <span id="video-total-text"></span>
+          <span>Total <b id="video-total-time">0:00</b><span id="video-total-live"></span></span>
+        </div>
+        <div class="vopts">
+          <div>
+            <div class="field">
+              <label for="video-vol">Volume <span class="rate-value" id="video-vol-value">50%</span></label>
+              <input type="range" id="video-vol" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <div class="field">
+              <label for="video-bright">Brightness <span class="rate-value" id="video-bright-value">55%</span></label>
+              <input type="range" id="video-bright" min="0.15" max="1" step="0.05" value="0.55">
+            </div>
+          </div>
+          <div>
+            <div class="field">
+              <span class="field-label">Picture</span>
+              <div class="segmented" role="group" aria-label="How the video fits the screen">
+                <button type="button" id="video-cover" aria-pressed="true">Fill the screen</button>
+                <button type="button" id="video-contain" aria-pressed="false">Whole frame</button>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="video-loop"><span class="track"></span>
+              Start the list again when it ends
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="video-resume"><span class="track"></span>
+              Pick up where the last session stopped
+            </label>
+            <div class="vresume" id="video-resume-row" hidden>
+              <p class="hint" id="video-resume-text"></p>
+              <button type="button" class="link-btn" id="video-restart">Start from the top</button>
+            </div>
+          </div>
+        </div>
+        <div class="word-tools">
+          <button type="button" class="ghost-btn small-btn danger" id="video-clear" disabled>Remove all</button>
+        </div>
+        <p class="hint" id="video-hint"></p>
+        <p class="hint is-warn" id="video-warn" hidden></p>
+      </div>
+
       <div class="region region--wide">
         <label class="switch">
           <input type="checkbox" id="feedback" checked><span class="track"></span>
@@ -739,7 +921,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
         </label>
         <div class="reset-row">
           <button type="button" class="ghost-btn small-btn danger" id="reset-all">Reset all settings</button>
-          <p class="hint">Puts every setting back to its default, your word list included. Picture folders and training time are kept.</p>
+          <p class="hint">Puts every setting back to its default, your word list included. Picture folders, recorded words, your video list and training time are kept.</p>
         </div>
       </div>
 
@@ -756,6 +938,10 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 
 <!-- ============================================================= PLAY -->
 <section id="game-screen" class="screen">
+  <div class="backdrop" id="backdrop" aria-hidden="true">
+    <div class="backdrop__video" id="backdrop-video"></div>
+    <div class="backdrop__shade" id="backdrop-shade"></div>
+  </div>
   <div class="rail">
     <div class="readout">
       <div>
@@ -846,7 +1032,8 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:6px}
 /* ------------------------------------------------------------------ *
  * Stimuli. WORDS is the default list; Advanced settings can swap in
  * your own (the Words panel). The built-in voices were recorded for
- * these exact words, so a list with any others uses a device voice.
+ * these exact words; Sync records any others in the same voices, on
+ * this device (see "Your words in the built-in voices" below).
  * ------------------------------------------------------------------ */
 const NEGATIVE = ['Murder','Rape','Failure','Exam','Genocide','Worthless'];
 const POSITIVE = ['Successful','Victory','Gift','Miracle','Money','Loved'];
@@ -896,7 +1083,9 @@ const DEFAULTS = {
   buzzOn:false, buzzSound:'beep', buzzVol:0.6,
   dichotic:false, rightVoice:'same', earHelp:false, earColor:EAR_COLOR,
   words:null,                                // your word list; null = the default WORDS
-  wordsFolded:false                          // the Words panel shows its list, or just the count
+  wordsFolded:false,                         // the Words panel shows its list, or just the count
+  // background video (the list itself is kept apart, so a settings reset leaves it alone)
+  videoOn:false, videoVol:0.5, videoBright:0.55, videoFit:'cover', videoLoop:true, videoResume:true
 };
 let S = clone(DEFAULTS);
 let T = {allMs:0, dayKey:'', dayMs:0};
@@ -962,6 +1151,12 @@ function load(){
   if (!/^#[0-9a-f]{6}$/i.test(S.earColor || '')) S.earColor = EAR_COLOR;
   S.words = Array.isArray(S.words) ? tidyWords(S.words) : null;
   S.wordsFolded = S.wordsFolded === true;
+  S.videoOn     = S.videoOn === true;
+  S.videoVol    = clampNum(S.videoVol, 0, 1, DEFAULTS.videoVol);
+  S.videoBright = clampNum(S.videoBright, 0.15, 1, DEFAULTS.videoBright);
+  if (S.videoFit !== 'contain') S.videoFit = 'cover';
+  S.videoLoop   = S.videoLoop !== false;
+  S.videoResume = S.videoResume !== false;
   T.allMs = Number(T.allMs) || 0;
   T.dayMs = Number(T.dayMs) || 0;
 }
@@ -991,7 +1186,7 @@ const ansLeft = $('answers-left'), ansRight = $('answers-right');
 let n = 2, gridSize = 3, stimMs = 1500, isiMs = 1000, cubeOn = false, answersSide = null;
 let activeList = ['pos'], usesColour = false, usesVoice = false, usesImage = false, timedSession = false;
 let advOn = false, variableOn = false, buzzOn = false, dichoticOn = false, earHelpOn = false;
-let gridPool = [], squarePool = [], buzzBuf = null, liveClipsR = null, sessionWords = WORDS;
+let gridPool = [], squarePool = [], buzzBuf = null, liveClipsR = null, liveVoices = null, sessionWords = WORDS;
 let blockLen = 0, trials = [], responses = {pos:[], col:[], aud:[], img:[]};
 let idx = 0, due = 0, timerId = 0;
 let running = false, paused = false, windowOpen = false, timeUp = false;
@@ -1043,9 +1238,30 @@ const bankWords = new Set();
 if (BANK.voices.length) Object.keys(BANK.voices[0].clips || {}).forEach(w => {
   if (BANK.voices.every(v => v.clips && v.clips[w])) bankWords.add(w.toLowerCase());
 });
-// Can the built-in voices say every word in the list? Changes with the list (updateCoverage).
-let bankCovers = false;
-function updateCoverage(){ bankCovers = BANK.voices.length > 0 && wordList().every(w => bankWords.has(w.toLowerCase())); }
+// Words recorded on this device by Sync, per voice, in lower case (read from storage at start-up).
+const synced = {};
+BANK.voices.forEach(v => { synced[v.id] = new Set(); });
+let syncedLoaded = false;
+// Can this built-in voice say this (lower-case) word: one of the defaults, or one recorded here?
+function knows(id, lw){ return bankWords.has(lw) || (!!synced[id] && synced[id].has(lw)); }
+// The words in the list a voice can't say yet, as typed.
+function missingWords(id){ return wordList().filter(w => !knows(id, w.toLowerCase())); }
+function covers(id){ return !!bankById[id] && wordList().every(w => knows(id, w.toLowerCase())); }
+// Does the list have words beyond the defaults (the ones that need recording)?
+function hasOwnWords(){ return wordList().some(w => !bankWords.has(w.toLowerCase())); }
+
+// What a session with these settings speaks with: built-in voices (one, or one per ear for
+// dichotic listening) or a device voice. ready: the built-in voices can say every word.
+function voicePlan(){
+  const dich = dichoticSetup();
+  if (BANK.voices.length && (dich || S.voiceKind === 'bank')){
+    const L = bankById[S.bankVoice] ? S.bankVoice : BANK.voices[0].id;
+    const R = dich ? rightVoiceId() : null;
+    const ids = R && R !== L ? [L, R] : [L];
+    return {bank:true, dichotic:dich, L:L, R:R, ids:ids, ready:ids.every(covers)};
+  }
+  return {bank:false, dichotic:false, L:null, R:null, ids:[], ready:false};
+}
 // Decoded clips are keyed in lower case, so "money" plays the clip recorded as "Money".
 function clipFor(clips, w){ return clips && w ? clips[String(w).toLowerCase()] || null : null; }
 
@@ -1116,6 +1332,33 @@ function decodeVoice(id){
   decodedVoices[id] = job;
   job.catch(() => { if (decodedVoices[id] === job) delete decodedVoices[id]; });
   return job;
+}
+// The clips one voice needs for a set of (lower-case) words: the built-in ones, plus the words
+// recorded on this device, read from storage the first time they're wanted and kept decoded.
+const recDecoded = {};                      // voice id → Map(word → clip)
+function voiceClips(id, words){
+  return decodeVoice(id).then(bank => {
+    const have = recDecoded[id] || (recDecoded[id] = new Map());
+    if (have.size > SYNC_KEEP * 2) Array.from(have.keys()).forEach(w => { if (!words.has(w)) have.delete(w); });
+    const want = [];
+    words.forEach(w => { if (!bank[w] && !have.has(w) && synced[id] && synced[id].has(w)) want.push(w); });
+    return readClips(want.map(w => clipId(id, w))).then(recs => {
+      recs.forEach((r, i) => { const c = toClip(r); if (c) have.set(want[i], c); });
+      const out = Object.assign({}, bank);
+      words.forEach(w => { const c = have.get(w); if (c) out[w] = c; });
+      return out;
+    });
+  });
+}
+// A recording is kept as 16-bit samples; this makes it playable.
+function toClip(rec){
+  const ctx = getAudio();
+  if (!ctx || !rec || !rec.pcm) return null;
+  try {
+    const pcm = new Int16Array(rec.pcm), buf = ctx.createBuffer(1, Math.max(1, pcm.length), rec.rate || 24000), d = buf.getChannelData(0);
+    for (let i = 0; i < pcm.length; i++) d[i] = pcm[i] / 32768;
+    return {buffer:buf, offset:0};          // already trimmed to the word
+  } catch(e){ return null; }
 }
 // Several sounds can play at once (a word in each ear, a beep); a pause stops them all.
 // ear: 0 = left only, 1 = right only, anything else = both. when: AudioContext time, 0 = now.
@@ -1392,18 +1635,24 @@ function sayWord(w){
 }
 
 /* ------------------------------------------------------------------ *
- * Voice picker
+ * Voice picker. A built-in voice that hasn't recorded every word in
+ * your list stays selectable: it says how many words are left to sync,
+ * and until they are, a device voice reads the list (dichotic listening
+ * waits for them instead, since a device voice can't go to one ear).
  * ------------------------------------------------------------------ */
+function voiceName(v){ return v.label + ' (' + v.accent + ', ' + v.gender + ')'; }
+function toSync(id){
+  if (!syncedLoaded) return '';
+  const k = missingWords(id).length;
+  return k ? ' · ' + k + ' to sync' : '';
+}
+
 function renderVoiceSelect(){
   const frag = document.createDocumentFragment();
   if (BANK.voices.length){
     const g = document.createElement('optgroup');
-    g.label = bankCovers ? 'Built in (plays instantly)' : 'Built in (default words only)';
-    BANK.voices.forEach(v => {
-      const o = new Option(v.label + ' (' + v.accent + ', ' + v.gender + ')', 'bank:' + v.id);
-      o.disabled = !bankCovers;
-      g.appendChild(o);
-    });
+    g.label = 'Built in (plays instantly)';
+    BANK.voices.forEach(v => g.appendChild(new Option(voiceName(v) + toSync(v.id), 'bank:' + v.id)));
     frag.appendChild(g);
   }
   const g2 = document.createElement('optgroup');
@@ -1412,7 +1661,7 @@ function renderVoiceSelect(){
     sysVoices.forEach((v, i) => {
       g2.appendChild(new Option(v.name + ' (' + v.lang + (v.localService ? '' : ', online') + ')', 'sys:' + i));
     });
-  } else if ((S.voiceKind === 'sys' || !bankCovers) && S.sysVoiceName && !sysSettled){
+  } else if (S.voiceKind === 'sys' && S.sysVoiceName && !sysSettled){
     g2.appendChild(new Option(S.sysVoiceName + ' (loading)', 'sys:pending'));
   }
   if (g2.children.length){
@@ -1425,31 +1674,32 @@ function renderVoiceSelect(){
   syncVoiceSelect();
 }
 
-function dichoticSetup(){ return S.advanced && S.dichotic && bankCovers; }
+// Dichotic listening uses the built-in voices, for any word list (new words get synced first).
+function dichoticSetup(){ return S.advanced && S.dichotic && BANK.voices.length > 0; }
 function rightVoiceId(){ return (S.rightVoice !== 'same' && bankById[S.rightVoice]) ? S.rightVoice : S.bankVoice; }
 
 function renderRightVoice(){
   const sel = $('right-voice');
   sel.innerHTML = '';
   sel.appendChild(new Option('Same as left ear', 'same'));
-  BANK.voices.forEach(v => sel.appendChild(new Option(v.label + ' (' + v.accent + ', ' + v.gender + ')', v.id)));
+  BANK.voices.forEach(v => sel.appendChild(new Option(voiceName(v) + toSync(v.id), v.id)));
   sel.value = (S.rightVoice !== 'same' && bankById[S.rightVoice]) ? S.rightVoice : 'same';
 }
 
-// While the word list has words the built-in voices don't know, a device voice stands in:
-// your saved device voice, else the first one. S.voiceKind keeps your choice, so the
-// built-in voice comes back as soon as the list allows it.
+// The menu shows your choice. A saved device voice that isn't on this device gives way to
+// the built-in voice.
 function syncVoiceSelect(){
   let value = null;
+  if (!BANK.voices.length) S.voiceKind = 'sys';
   if (S.voiceKind === 'sys' && dichoticSetup()){ S.voiceKind = 'bank'; save(); }
-  if (S.voiceKind === 'sys' || !bankCovers){
+  if (S.voiceKind === 'sys'){
     const i = sysVoiceIndex();
     if (i >= 0) value = 'sys:' + i;
     else if (!sysVoices.length && !sysSettled && S.sysVoiceName) value = 'sys:pending';
-    else if (S.voiceKind === 'sys' && bankCovers){ S.voiceKind = 'bank'; save(); }   // saved voice isn't on this device
+    else if (BANK.voices.length){ S.voiceKind = 'bank'; save(); }   // saved voice isn't on this device
     else if (sysVoices.length) value = 'sys:0';
   }
-  if (S.voiceKind === 'bank' && bankCovers){
+  if (S.voiceKind === 'bank'){
     if (!bankById[S.bankVoice]) S.bankVoice = BANK.voices[0].id;
     value = 'bank:' + S.bankVoice;
   }
@@ -1458,21 +1708,36 @@ function syncVoiceSelect(){
 }
 
 function reflectVoice(){
-  const bank = S.voiceKind === 'bank' && bankCovers;
-  let hint;
-  if (bank){
+  const plan = voicePlan(), dich = plan.dichotic;
+  let hint, warn = false;
+  if (plan.bank && plan.ready){
     hint = 'Plays instantly and stays locked to the grid, pauses included.';
-  } else if (!bankCovers && BANK.voices.length){
-    hint = 'Built-in voices only know the default words, so while your word list has others, a device voice reads them. These can lag.';
+  } else if (plan.bank && !syncedLoaded){
+    hint = 'Checking which of your words this voice has recorded…';
+  } else if (plan.bank){
+    hint = dich
+      ? 'Plays instantly, once your words are synced (below).'
+      : 'Until your words are synced (below), a device voice reads the list instead, and that can lag.';
   } else {
     const v = currentSysVoice();
     hint = (v && !v.localService)
       ? 'Online voice: every word makes a trip to a server, so it will fall behind the grid.'
-      : 'Your device’s own voice. Timing depends on the browser and can drift, especially after pausing.';
+      : 'Your device’s own voice. Timing depends on the browser and can drift, especially after pausing. It can’t be used for dichotic listening.';
   }
-  $('voice-hint').textContent = hint;
-  $('rate-field').style.display = bank ? 'none' : '';
-  $('voice-label').textContent = dichoticSetup() ? 'Left ear speaker' : 'Speaker';
+  const el = $('voice-hint');
+  el.textContent = hint;
+  el.classList.toggle('is-warn', warn);
+  $('rate-field').style.display = (plan.bank && (plan.ready || dich)) ? 'none' : '';
+  $('voice-label').textContent = dich ? 'Left ear speaker' : 'Speaker';
+  paintSync();
+}
+
+// After anything that changes which voices are in use or which words they must know:
+// the two voice menus (with their "to sync" counts), the sync panel, the hints and Start.
+function refreshVoices(){
+  renderVoiceSelect();
+  renderRightVoice();
+  reflectSettings();
 }
 
 voiceSelect.addEventListener('change', function(){
@@ -1483,39 +1748,39 @@ voiceSelect.addEventListener('change', function(){
     decodeVoice(key).catch(() => {});
   } else if (kind === 'sys' && key !== 'pending'){
     const v = sysVoices[parseInt(key, 10)];
-    if (v){
-      if (bankCovers) S.voiceKind = 'sys';     // with built-in voices unavailable, this only picks the stand-in
-      S.sysVoiceURI = v.voiceURI; S.sysVoiceName = v.name;
-    }
+    if (v){ S.voiceKind = 'sys'; S.sysVoiceURI = v.voiceURI; S.sysVoiceName = v.name; }
   }
-  reflectVoice();
   saveNow();
+  refreshVoices();
 });
 
-// "Hear it" says a word from the list in use: Victory when it's there, else the first.
-function sampleWord(){
-  const list = wordList();
-  return list.find(w => w.toLowerCase() === 'victory') || list[0] || 'Victory';
+// "Hear it" says a word from the list in use that the voice can say: Victory when it's
+// there, else the first such word (a default word if none is recorded yet).
+function sampleWord(id){
+  const list = wordList(), can = w => !id || knows(id, w.toLowerCase());
+  return list.find(w => w.toLowerCase() === 'victory' && can(w)) || list.find(can) || 'Victory';
+}
+function hearBank(id, ear){
+  const w = sampleWord(id);
+  voiceClips(id, new Set([w.toLowerCase()]))
+    .then(m => { stopClip(); playClip(clipFor(m, w), ear); })
+    .catch(() => {});
 }
 $('test-voice').addEventListener('click', function(){
   unlockAudio();
-  const w = sampleWord();
-  if (S.voiceKind === 'bank' && bankCovers){
-    const ear = dichoticSetup() ? 0 : undefined;             // left ear, so you can check your headphones
-    decodeVoice(S.bankVoice).then(m => { stopClip(); playClip(clipFor(m, w), ear); }).catch(() => sysSpeak(w, false));
-  } else {
-    sysSpeak(w, false);
-  }
+  const plan = voicePlan();
+  if (plan.bank) hearBank(plan.L, plan.dichotic ? 0 : undefined);   // left ear, so you can check your headphones
+  else sysSpeak(sampleWord(null), false);
 });
 $('test-right').addEventListener('click', function(){
   unlockAudio();
-  const w = sampleWord();
-  decodeVoice(rightVoiceId()).then(m => { stopClip(); playClip(clipFor(m, w), 1); }).catch(() => {});
+  hearBank(rightVoiceId(), 1);
 });
 $('right-voice').addEventListener('change', function(){
   S.rightVoice = this.value;
   decodeVoice(rightVoiceId()).catch(() => {});
   saveNow();
+  refreshVoices();
 });
 
 /* ------------------------------------------------------------------ *
@@ -2121,26 +2386,14 @@ function reflectWords(st){
   reset.disabled = dflt;
   if (clear.disabled) disarm(clear);
   if (reset.disabled) disarm(reset);
-  let note = '', warn = false;
-  if (st.aud && list.length === 1){ note = 'The voice needs at least 2 words to compare.'; warn = true; }
-  else if (st.aud && list.length && !bankCovers && BANK.voices.length)
-    note = 'The built-in voices only know the default words, so a device voice will read this list. See Voice above.';
-  const el = $('words-voice');
-  el.textContent = note;
-  el.hidden = !note;
-  el.classList.toggle('is-warn', warn);
+  // the voice note under the words (how many still need syncing) is paintWordsVoice's
 }
 
-// After any change to the list: which voices can read it, the panel, the Start line. Then save.
+// After any change to the list: which voices can read it (the menus' "to sync" counts, the
+// sync panel), the panel, the Start line. Then save.
 function wordsChanged(){
-  const had = bankCovers;
-  updateCoverage();
-  if (had !== bankCovers){
-    renderVoiceSelect();                            // built-in voices come and go with the list
-    if (bankCovers && S.voiceKind === 'bank') decodeVoice(S.bankVoice).catch(() => {});
-  }
-  reflectSettings();
   saveNow();
+  refreshVoices();
 }
 
 // Buttons that throw words away ask first: one click arms them for a few seconds, a second one acts.
@@ -2292,7 +2545,1414 @@ $('word-reset').addEventListener('click', function(){
 // Words the ticked streams need: two to tell apart by ear, one to show in colour.
 function wordsNeeded(st){ return st.aud ? 2 : st.col ? 1 : 0; }
 function wordsShort(st){ return wordList().length < wordsNeeded(st); }
-function cantSpeak(st){ return st.aud && !bankCovers && !synth; }
+// No voice at all: the built-in one can't say every word yet and the browser has none of its own.
+function cantSpeak(st){
+  if (!st.aud) return false;
+  const plan = voicePlan();
+  return !(plan.bank && plan.ready) && !plan.dichotic && !synth;
+}
+// Dichotic listening waits until both ears' voices can say every word.
+function dichoticBlocked(st){
+  if (!st.aud) return false;
+  const plan = voicePlan();
+  return plan.dichotic && !plan.ready;
+}
+
+/* ------------------------------------------------------------------ *
+ * Your words in the built-in voices. The built-in voices were made with
+ * Kokoro, an open-source text-to-speech model. Sync runs that same model
+ * here, on this device, to record the words in your list they don't
+ * have yet, in the same voices. Each new word is trimmed and levelled
+ * to match the built-in clips, kept in this browser, and played through
+ * Web Audio exactly like them, so it can go to one ear as well.
+ * ------------------------------------------------------------------ */
+const KOKORO_LIB   = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+const KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+const KOKORO_DTYPE = 'q8';      // the smallest copy of the model, about 92 MB
+const ENGINE_MB    = 115;       // everything the first sync downloads: model, runtime and voices
+const CLIP_DB      = -21.4;     // the built-in clips' loudness while speaking (RMS, dBFS), so new words match
+const CLIP_PEAK    = 0.89;      // and never above −1 dBFS
+const SYNC_KEEP    = 400;       // lists up to this long load all their recordings when a session starts;
+                                // longer ones load each block's words as the block begins
+const VOICE_DB     = 'affective_nback_voices';
+
+/* Storage: one record per voice and word, in IndexedDB. Where a browser won't allow that
+   (some do for pages opened straight from a file), recordings live until the page closes. */
+let vdbJob = null, clipsKept = true;
+const memClips = new Map();
+function vdb(){
+  if (vdbJob) return vdbJob;
+  vdbJob = new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('No IndexedDB'));
+    let req;
+    try { req = indexedDB.open(VOICE_DB, 1); } catch(e){ return reject(e); }
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains('clips')) d.createObjectStore('clips', {keyPath:'id'});
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('Storage is busy in another tab'));
+  });
+  vdbJob.catch(() => { clipsKept = false; });
+  return vdbJob;
+}
+function clipId(voice, lw){ return voice + '|' + lw; }
+function storeClip(rec){
+  if (!clipsKept){ memClips.set(rec.id, rec); return Promise.resolve(); }
+  return vdb().then(d => new Promise((resolve, reject) => {
+    const t = d.transaction('clips', 'readwrite');
+    t.objectStore('clips').put(rec);
+    t.oncomplete = () => resolve();
+    t.onerror = t.onabort = () => reject(t.error || new Error('Couldn’t save'));
+  })).catch(err => {
+    if (err && err.name === 'QuotaExceededError') throw err;   // out of room: the sync stops and says so
+    clipsKept = false;                                         // no storage at all: keep it for this visit
+    memClips.set(rec.id, rec);
+  });
+}
+function readClips(ids){
+  const out = ids.map(id => memClips.get(id) || null), want = [];
+  out.forEach((r, i) => { if (!r) want.push(i); });
+  if (!want.length || !clipsKept) return Promise.resolve(out);
+  return vdb().then(d => new Promise(resolve => {
+    const t = d.transaction('clips', 'readonly'), store = t.objectStore('clips');
+    want.forEach(i => { const r = store.get(ids[i]); r.onsuccess = () => { out[i] = r.result || null; }; });
+    t.oncomplete = () => resolve(out);
+    t.onerror = t.onabort = () => resolve(out);
+  })).catch(() => out);
+}
+function clipKeys(){
+  return vdb().then(d => new Promise(resolve => {
+    const r = d.transaction('clips', 'readonly').objectStore('clips').getAllKeys();
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => resolve([]);
+  })).catch(() => []).then(keys => keys.concat(Array.from(memClips.keys())));
+}
+function deleteClips(){
+  memClips.clear();
+  if (!clipsKept) return Promise.resolve();
+  return vdb().then(d => new Promise((resolve, reject) => {
+    const t = d.transaction('clips', 'readwrite');
+    t.objectStore('clips').clear();
+    t.oncomplete = () => resolve();
+    t.onerror = t.onabort = () => reject(t.error);
+  }));
+}
+function recordingCount(){ let k = 0; Object.keys(synced).forEach(id => { k += synced[id].size; }); return k; }
+
+const syncedReady = clipKeys().then(keys => {
+  keys.forEach(key => {
+    const i = key.indexOf('|'), id = key.slice(0, i);
+    if (i > 0 && synced[id]) synced[id].add(key.slice(i + 1));
+  });
+}).then(() => { syncedLoaded = true; refreshVoices(); });
+
+/* The engine. It runs in a worker, so the page stays responsive while it works (or in the
+   page itself where a worker can't start). The first time, it downloads the model; the
+   browser keeps a copy where it can, so later syncs start faster. */
+const ENGINE_SRC = `
+let tts = null;
+async function handle(m, post){
+  if (m.type === 'load'){
+    try {
+      const lib = await import(m.lib);
+      tts = await lib.KokoroTTS.from_pretrained(m.model, {dtype:m.dtype, device:'wasm',
+        progress_callback: p => post({type:'progress', status:p.status, file:p.file || '', loaded:p.loaded, total:p.total})});
+      post({type:'ready'});
+    } catch(e){ post({type:'failed', message:String((e && e.message) || e)}); }
+  } else if (m.type === 'say'){
+    try {
+      const a = await tts.generate(m.text, {voice:m.voice, speed:1});
+      const d = new Float32Array(a.audio);
+      post({type:'clip', id:m.id, rate:a.sampling_rate, data:d}, [d.buffer]);
+    } catch(e){ post({type:'clip', id:m.id, error:String((e && e.message) || e)}); }
+  }
+}`;
+let engineCloser = null;
+function openEngine(onProgress){
+  return new Promise((resolve, reject) => {
+    let worker = null, url = null, inline = null, settled = false, broken = false, seq = 0, heard = Date.now();
+    const waiting = new Map();
+    const fail = err => { if (!settled){ settled = true; close(); reject(err); } };
+    // nothing heard for two minutes while loading: the download has stalled
+    const watch = setInterval(() => {
+      if (settled) return clearInterval(watch);
+      if (Date.now() - heard > 120000) fail(new Error('The download stalled'));
+    }, 5000);
+    const receive = m => {
+      if (!m) return;
+      heard = Date.now();
+      if (m.type === 'progress') onProgress(m);
+      else if (m.type === 'ready'){ if (!settled){ settled = true; resolve(api); } }
+      else if (m.type === 'failed') fail(new Error(m.message));
+      else if (m.type === 'clip'){
+        const w = waiting.get(m.id);
+        if (!w) return;
+        waiting.delete(m.id);
+        clearTimeout(w.timer);
+        if (m.error) w.reject(new Error(m.error)); else w.resolve({data:m.data, rate:m.rate});
+      }
+    };
+    const send = m => {
+      if (worker) worker.postMessage(m);
+      else if (inline) inline(m, msg => setTimeout(() => receive(msg), 0));
+    };
+    function close(){
+      clearInterval(watch);
+      if (worker){ worker.terminate(); worker = null; }
+      if (url){ URL.revokeObjectURL(url); url = null; }
+      inline = null;
+      waiting.forEach(w => { clearTimeout(w.timer); w.reject(new Error('The voice engine stopped.')); });
+      waiting.clear();
+      if (engineCloser === close) engineCloser = null;
+      if (!settled){ settled = true; reject(new Error('stopped')); }
+    }
+    const api = {
+      say(text, voice){
+        return new Promise((res, rej) => {
+          if (broken || (!worker && !inline)) return rej(Object.assign(new Error('The voice engine stopped.'), {fatal:true}));
+          const id = ++seq;
+          // a word takes a second or two (the very first longer, while it warms up); far longer
+          // than that and the engine has died, perhaps for lack of memory
+          const timer = setTimeout(() => {
+            if (!waiting.has(id)) return;
+            waiting.delete(id);
+            rej(Object.assign(new Error('The voice engine stopped answering'), {fatal:true}));
+          }, seq === 1 ? 120000 : 45000);
+          waiting.set(id, {resolve:res, reject:rej, timer:timer});
+          send({type:'say', id:id, text:text, voice:voice});
+        });
+      },
+      close:close
+    };
+    engineCloser = close;
+    const load = {type:'load', lib:KOKORO_LIB, model:KOKORO_MODEL, dtype:KOKORO_DTYPE};
+    const inPage = () => {
+      try { inline = new Function(ENGINE_SRC + '\nreturn handle;')(); }
+      catch(e){ return fail(e); }
+      send(load);
+    };
+    try {
+      url = URL.createObjectURL(new Blob([ENGINE_SRC + '\nself.onmessage = e => handle(e.data, (m, t) => self.postMessage(m, t || []));'],
+        {type:'text/javascript'}));
+      worker = new Worker(url, {type:'module'});
+      worker.onmessage = e => receive(e.data);
+      worker.onerror = e => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (settled){                                   // it broke mid-way: whatever was asked fails
+          broken = true;
+          waiting.forEach(w => { clearTimeout(w.timer); w.reject(Object.assign(new Error('The voice engine stopped.'), {fatal:true})); });
+          waiting.clear();
+          return;
+        }
+        worker.terminate(); worker = null;              // couldn't start a worker at all: run in the page
+        inPage();
+      };
+      worker.postMessage(load);
+    } catch(e){
+      worker = null;
+      inPage();
+    }
+  });
+}
+
+// A new word, trimmed to the speech (4 ms of lead-in, like the built-in clips, and a short
+// tail that fades out) and levelled to their loudness. 16-bit samples, or null if there's
+// no speech in it (a word the engine can't read).
+function shapeClip(d, rate){
+  let peak = 0;
+  for (let i = 0; i < d.length; i++){ const a = d[i] < 0 ? -d[i] : d[i]; if (a > peak) peak = a; }
+  if (!(peak > 0.005)) return null;
+  const thr = peak * 0.02;
+  let on = 0, off = d.length - 1;
+  while (on < d.length && Math.abs(d[on]) <= thr) on++;
+  while (off > on && Math.abs(d[off]) <= thr) off--;
+  if ((off - on) / rate < 0.08) return null;
+  let sum = 0;
+  for (let i = on; i <= off; i++) sum += d[i] * d[i];
+  const rms = Math.sqrt(sum / (off - on + 1));
+  const gain = Math.min(Math.pow(10, CLIP_DB / 20) / rms, CLIP_PEAK / peak);
+  const start = Math.max(0, on - Math.round(rate * 0.004));
+  const end = Math.min(d.length, off + 1 + Math.round(rate * 0.07));
+  const n = end - start, fade = Math.max(1, Math.round(rate * 0.015)), out = new Int16Array(n);
+  for (let i = 0; i < n; i++){
+    let v = d[start + i] * gain;
+    if (i >= n - fade) v *= (n - i) / fade;
+    out[i] = Math.max(-32768, Math.min(32767, Math.round(v * 32767)));
+  }
+  return out;
+}
+
+/* A sync fills in the words its voices are missing, one voice at a time, so the first is
+   ready soonest. Words added to the list meanwhile are included; removed ones are skipped.
+   It waits while a session runs, so it never competes with the game for the processor. */
+const syncJob = {
+  on:false, phase:'', stop:false,
+  voices:[],                  // the voices it's filling in
+  voice:'', made:0, todo:0,   // the voice in hand: words recorded, and to record
+  dl:{},                      // the engine download: file → [loaded, total]
+  failed:new Map(),           // 'voice|word' → the word, when it couldn't be recorded
+  note:'', noteWarn:false     // how the last sync went
+};
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+function nextToRecord(){
+  for (let v = 0; v < syncJob.voices.length; v++){
+    const id = syncJob.voices[v];
+    const left = missingWords(id).filter(w => !syncJob.failed.has(clipId(id, w.toLowerCase())));
+    if (left.length) return {id:id, word:left[0], left:left.length};
+  }
+  return null;
+}
+function syncVoices(ids){
+  ids = ids.filter((id, i) => bankById[id] && ids.indexOf(id) === i);
+  if (!ids.length) return;
+  if (syncJob.on){                                   // already going: just widen it
+    ids.forEach(id => { if (syncJob.voices.indexOf(id) < 0) syncJob.voices.push(id); });
+    paintSync();
+    return;
+  }
+  Object.assign(syncJob, {on:true, phase:'engine', stop:false, voices:ids, voice:'', made:0, todo:0, dl:{}, note:'', noteWarn:false});
+  syncJob.failed.clear();
+  keepForever();
+  paintSync();
+  runSync();
+}
+let syncPaintQueued = false;
+function paintSyncSoon(){
+  if (syncPaintQueued) return;
+  syncPaintQueued = true;
+  setTimeout(() => { syncPaintQueued = false; paintSync(); }, 120);
+}
+function trackDownload(p){
+  if (!p.file) return;
+  if (p.status === 'progress' && p.total) syncJob.dl[p.file] = [p.loaded || 0, p.total];
+  else if (p.status === 'done' && syncJob.dl[p.file]) syncJob.dl[p.file][0] = syncJob.dl[p.file][1];
+  paintSyncSoon();
+}
+async function runSync(){
+  let engine = null, recorded = 0, misfires = 0;
+  const words = new Set(), voices = new Set();
+  try {
+    engine = await openEngine(trackDownload);
+    syncJob.phase = 'record';
+    paintSync();
+    for (;;){
+      if (syncJob.stop) return endSync('stopped', recorded, null, engine);
+      if (running){ await wait(500); continue; }            // a session is on: carry on when it ends
+      const next = nextToRecord();
+      if (!next) return endSync('done', recorded, null, engine);
+      if (next.id !== syncJob.voice){
+        if (syncJob.voice) refreshVoices();                  // the last voice is done: it can be used now
+        syncJob.voice = next.id; syncJob.made = 0;
+      }
+      syncJob.todo = syncJob.made + next.left;
+      paintSync();
+      const lw = next.word.toLowerCase(), id = clipId(next.id, lw);
+      let res = null;
+      try { res = await engine.say(next.word, next.id); misfires = 0; }
+      catch(e){
+        if (syncJob.stop) continue;
+        if (e.fatal || ++misfires >= 3) throw e;             // the engine itself is in trouble
+      }
+      const pcm = res && shapeClip(res.data, res.rate);
+      if (!pcm){ syncJob.failed.set(id, next.word); continue; }
+      await storeClip({id:id, voice:next.id, word:next.word, rate:res.rate, pcm:pcm.buffer, made:Date.now()});
+      synced[next.id].add(lw);
+      if (recDecoded[next.id]) recDecoded[next.id].delete(lw);
+      recorded++;
+      words.add(lw); voices.add(next.id);
+      syncJob.made++;
+    }
+  } catch(err){
+    return endSync(syncJob.stop ? 'stopped' : 'error', recorded, err, engine);
+  }
+  function endSync(how, recorded, err, engine){ return finishSync(how, recorded, err, engine, words.size, voices.size); }
+}
+function finishSync(how, recorded, err, engine, nWords, nVoices){
+  if (engine) engine.close();
+  else if (engineCloser) engineCloser();
+  const phase = syncJob.phase;
+  syncJob.on = false; syncJob.stop = false; syncJob.phase = ''; syncJob.voice = '';
+  const failed = Array.from(new Set(Array.from(syncJob.failed.values())));
+  const made = !recorded ? '' : 'Recorded ' + wordsText(nWords, 'word') + (nVoices > 1 ? ' in ' + nVoices + ' voices' : '') + '. ';
+  let note = '', warn = false;
+  if (how === 'error'){
+    warn = true;
+    const msg = String((err && err.message) || err || '').slice(0, 160);
+    if (err && err.name === 'QuotaExceededError')
+      note = made + 'This browser ran out of room to keep recordings. Free some disk space, or delete recordings you don’t need, then sync again.';
+    else if (phase === 'engine' && (navigator.onLine === false || /fetch|network|import|module|locate|load|40\d|50\d/i.test(msg)))
+      note = 'Couldn’t download the voice engine. Sync needs an internet connection the first time (about ' + ENGINE_MB + ' MB); after that it works offline. Try again when you’re online.';
+    else if (phase === 'engine')
+      note = 'Couldn’t start the voice engine in this browser' + (msg ? ' (' + msg + ')' : '') + '. Chrome or Edge work best.';
+    else note = made + 'The voice engine stopped' + (msg && msg !== 'stopped' ? ' (' + msg + ')' : '') + '. Try again, or try Chrome or Edge.';
+  } else if (how === 'stopped'){
+    note = 'Stopped. ' + made + 'The rest can be synced any time.';
+  } else {
+    note = recorded ? 'Done. ' + made.trim() : '';
+  }
+  if (failed.length){
+    warn = true;
+    note += (note ? ' ' : '') + 'Couldn’t record ' + quoted(failed.slice(0, 6)) + (failed.length > 6 ? ' and ' + (failed.length - 6) + ' more' : '') +
+      '. These voices read English, so words in other alphabets or made of symbols can’t be recorded: remove ' + (failed.length === 1 ? 'it' : 'them') + ' from the list, or use a device voice.';
+  }
+  syncJob.note = note; syncJob.noteWarn = warn;
+  refreshVoices();
+}
+
+/* The sync panel (under Voice) and its echo in the Words panel */
+function voiceLabel(id){ return bankById[id] ? bankById[id].label : id; }
+function paintSync(){
+  const box = $('sync-box');
+  const st = currentStreams(), plan = voicePlan();
+  const own = hasOwnWords();
+  const show = st.aud && S.advanced && BANK.voices.length > 0 && syncedLoaded &&
+               (syncJob.on || (plan.bank && (own || !!syncJob.note)));
+  box.hidden = !show;
+  paintWordsVoice(st, plan);
+  if (!show) return;
+
+  const status = $('sync-status'), meter = $('sync-meter'), fill = $('sync-fill');
+  const syncBtn = $('sync-btn'), allBtn = $('sync-all'), stopBtn = $('sync-stop'), clearBtn = $('sync-clear');
+  const need = plan.bank ? plan.ids.map(id => ({id:id, k:missingWords(id).length})) : [];
+  const short = need.filter(x => x.k);
+  const total = short.reduce((a, x) => a + x.k, 0);
+  const others = BANK.voices.some(v => plan.ids.indexOf(v.id) < 0 && missingWords(v.id).length);
+  let text = '', warn = false, hint = '', frac = -1;
+
+  if (syncJob.on){
+    if (syncJob.phase === 'engine'){
+      let got = 0, size = 0;
+      Object.keys(syncJob.dl).forEach(f => { got += syncJob.dl[f][0]; size += syncJob.dl[f][1]; });
+      text = size > 2e6 && got < size
+        ? 'Downloading the voice engine: ' + Math.round(got / 1e6) + ' of ' + Math.round(size / 1e6) + ' MB'
+        : 'Starting the voice engine…';
+      if (size > 2e6 && got < size) frac = got / size;
+      hint = 'First time only: about ' + ENGINE_MB + ' MB. It runs on this device; your words aren’t sent anywhere.';
+    } else if (!syncJob.voice){
+      text = 'Starting the voice engine…';
+    } else {
+      const k = syncJob.voices.length, at = syncJob.voices.indexOf(syncJob.voice) + 1;
+      text = 'Recording ' + voiceLabel(syncJob.voice) + (k > 1 ? ' (voice ' + at + ' of ' + k + ')' : '') + ': ' +
+             Math.min(syncJob.made + 1, syncJob.todo) + ' of ' + wordsText(syncJob.todo, 'word');
+      frac = syncJob.todo ? syncJob.made / syncJob.todo : 0;
+      hint = running ? 'Waiting while you train; it carries on when the session ends.'
+                     : 'Usually a second or two a word. You can keep changing settings meanwhile.';
+    }
+    if (syncJob.stop) text = 'Stopping after this word…';
+  } else if (plan.bank && total){
+    const n = wordList().length;
+    if (short.length === 1){
+      const x = short[0], ear = plan.dichotic && plan.ids.length > 1 ? (x.id === plan.L ? ' (left ear)' : ' (right ear)') : '';
+      text = voiceLabel(x.id) + ear + ' hasn’t recorded ' + (x.k === n ? (n === 1 ? 'your word' : 'any of your ' + n + ' words') : x.k + ' of your ' + n + ' words') + ' yet.';
+    } else {
+      text = voiceLabel(short[0].id) + ' (left ear) and ' + voiceLabel(short[1].id) + ' (right ear) still need ' + short[0].k + ' and ' + short[1].k + ' of your ' + n + ' words.';
+    }
+    warn = true;
+    hint = 'Sync records them in the same voice, here on this device, with the engine the built-in voices were made with. ' +
+           'The first time it downloads that engine (about ' + ENGINE_MB + ' MB), so you need to be online; after that it takes a second or two a word, and the recordings stay in this browser.';
+  } else if (plan.bank){
+    const names = plan.ids.map(voiceLabel);
+    text = (names.length > 1 ? names.join(' and ') + ' know' : names[0] + ' knows') + ' every word in your list.';
+  }
+  status.textContent = text;
+  status.classList.toggle('is-warn', warn && !syncJob.on);
+  box.classList.toggle('is-busy', syncJob.on);
+  meter.hidden = !syncJob.on;
+  meter.classList.toggle('is-unknown', syncJob.on && frac < 0);
+  fill.style.width = frac >= 0 ? Math.round(frac * 100) + '%' : '';
+
+  const note = $('sync-note');
+  note.textContent = syncJob.note || (!clipsKept ? 'This browser won’t keep recordings for this page (some don’t for a page opened straight from a file), so they last until you close it. Chrome keeps them.' : '');
+  note.hidden = !note.textContent;
+  note.classList.toggle('is-warn', !!syncJob.note ? syncJob.noteWarn : true);
+
+  syncBtn.hidden = syncJob.on || !total;
+  syncBtn.textContent = short.length > 1 ? 'Sync both voices (' + total + ' words)' : 'Sync ' + wordsText(total, 'word');
+  allBtn.hidden = syncJob.on || !others;
+  allBtn.textContent = 'Sync all ' + BANK.voices.length + ' voices';
+  stopBtn.hidden = !syncJob.on;
+  stopBtn.disabled = syncJob.stop;
+  clearBtn.hidden = syncJob.on || !recordingCount();
+  if (clearBtn.hidden) disarm(clearBtn);
+  const h = $('sync-hint');
+  h.textContent = hint;
+  h.hidden = !hint;
+}
+// The Words panel says the same in a line, next to the words themselves.
+function paintWordsVoice(st, plan){
+  const el = $('words-voice'), list = panelWords();
+  let text = '', warn = false, offer = false;
+  if (st.aud && list.length === 1){ text = 'The voice needs at least 2 words to compare.'; warn = true; }
+  else if (st.aud && list.length && plan.bank && syncedLoaded){
+    if (syncJob.on) text = syncJob.phase === 'record' && syncJob.voice
+      ? 'Recording your words in ' + voiceLabel(syncJob.voice) + '’s voice: ' + syncJob.made + ' of ' + syncJob.todo + ' done. See Voice above.'
+      : 'Getting the voice engine ready to record your words. See Voice above.';
+    else if (!plan.ready){
+      const lacking = new Set();
+      plan.ids.forEach(id => missingWords(id).forEach(w => lacking.add(w.toLowerCase())));
+      const k = lacking.size;
+      text = (k === 1 ? '1 of these words isn’t' : k + ' of these words aren’t') + ' recorded in the built-in voice' + (plan.ids.length > 1 ? 's' : '') + ' yet' +
+             (plan.dichotic ? ', and dichotic listening needs ' + (k === 1 ? 'it.' : 'them.') : ', so for now a device voice reads the list.');
+      offer = true;
+    }
+  }
+  $('words-voice-text').textContent = text;
+  $('words-sync').hidden = !offer;
+  el.hidden = !text;
+  el.classList.toggle('is-warn', warn);
+}
+
+$('sync-btn').addEventListener('click', () => syncVoices(voicePlan().ids));
+$('words-sync').addEventListener('click', () => {
+  syncVoices(voicePlan().ids);
+  const box = $('sync-box');
+  if (!box.hidden) reveal(box);
+});
+$('sync-all').addEventListener('click', () => {
+  const plan = voicePlan();
+  syncVoices(plan.ids.concat(BANK.voices.map(v => v.id)));   // the ones in use first
+});
+$('sync-stop').addEventListener('click', () => {
+  if (!syncJob.on) return;
+  syncJob.stop = true;
+  if (syncJob.phase === 'engine' && engineCloser) engineCloser();   // still downloading: stop now
+  paintSync();
+});
+$('sync-clear').addEventListener('click', function(){
+  const k = recordingCount();
+  if (!k || !confirmFirst(this, 'Delete all ' + wordsText(k, 'recording') + '?')) return;
+  deleteClips().then(() => {
+    Object.keys(synced).forEach(id => synced[id].clear());
+    Object.keys(recDecoded).forEach(id => { delete recDecoded[id]; });
+    syncJob.note = 'Deleted the recordings. The built-in voices know just the default words again.';
+    syncJob.noteWarn = false;
+    refreshVoices();
+  }, () => {
+    syncJob.note = 'Couldn’t delete the recordings.';
+    syncJob.noteWarn = true;
+    paintSync();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Background video: a list of links, played one after another behind
+ * the grid while you train. YouTube and Vimeo play through their own
+ * players; any other link is tried as a video file. The video pauses
+ * with the session, can't be clicked, and never takes the keyboard.
+ * The list is kept apart from the settings, so a reset leaves it be.
+ * ------------------------------------------------------------------ */
+const VSTORE     = 'affective_nback_videos';
+const YT_API     = 'https://www.youtube.com/iframe_api';
+const VIMEO_API  = 'https://player.vimeo.com/api/player.js';
+const HLS_LIB    = 'https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js';
+const MAX_VIDEOS = 300;
+const PROBES     = 3;                       // links checked at the same time
+const FILE_PAGE  = location.protocol === 'file:';
+const FILE_PAGE_YT = 'YouTube won’t play inside a page opened straight from a file. Open this page from a web address instead (a local server works) to use YouTube links.';
+
+let videos = [];      // {id, url, kind:'yt'|'vimeo'|'file'|'hls', ref, hash, start, title, sub, thumb, dur, live, on, err, state}
+let videoAt = null;   // where the last session stopped: {id, t}
+
+function str(v, max){ return typeof v === 'string' ? v.slice(0, max || 300) : ''; }
+function safeUrl(u){ return typeof u === 'string' && /^https?:\/\//i.test(u) ? u : ''; }
+function videoById(id){ for (let i = 0; i < videos.length; i++) if (videos[i].id === id) return videos[i]; return null; }
+function playable(){ return videos.filter(v => v.on && v.state === 'ok'); }
+
+function loadVideos(){
+  const d = readJSON(VSTORE);
+  const items = d && Array.isArray(d.items) ? d.items : [];
+  videos = items.filter(x => x && typeof x.url === 'string' && typeof x.ref === 'string' && /^(yt|vimeo|file|hls)$/.test(x.kind))
+    .slice(0, MAX_VIDEOS).map(x => ({
+      id: typeof x.id === 'string' && x.id ? x.id : newId('v'),
+      url: str(x.url, 2000), kind: x.kind, ref: str(x.ref, 2000), hash: str(x.hash, 40), label: str(x.label, 40),
+      start: Math.max(0, Number(x.start) || 0),
+      title: str(x.title), sub: str(x.sub), thumb: safeUrl(x.thumb),
+      dur: Math.max(0, Number(x.dur) || 0), live: x.live === true, on: x.on !== false,
+      err: str(x.err, 400), state: x.err ? 'error' : x.ok ? 'ok' : 'checking'
+    }));
+  const at = d && d.at;
+  videoAt = at && typeof at.id === 'string' ? {id:at.id, t:Math.max(0, Number(at.t) || 0)} : null;
+}
+function saveVideos(){
+  try {
+    localStorage.setItem(VSTORE, JSON.stringify({v:1, at:videoAt, items:videos.map(x => ({
+      id:x.id, url:x.url, kind:x.kind, ref:x.ref, hash:x.hash || undefined, label:x.label || undefined, start:x.start || undefined,
+      title:x.title, sub:x.sub, thumb:x.thumb || undefined, dur:Math.round(x.dur * 10) / 10,
+      live:x.live || undefined, on:x.on, err:x.err || undefined, ok:x.state === 'ok' || undefined
+    }))}));
+  } catch(e){}
+}
+
+/* Links: which player each one needs */
+function parseStart(s){
+  if (!s) return 0;
+  s = String(s);
+  if (/^\d+(\.\d+)?s?$/.test(s)) return parseFloat(s);
+  const m = s.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+}
+// Sites whose videos can't be played, paused and followed from another page.
+const CLOSED_SITES = [
+  [/(^|\.)tiktok\.com$/, 'TikTok'], [/(^|\.)instagram\.com$/, 'Instagram'], [/(^|\.)(facebook\.com|fb\.watch)$/, 'Facebook'],
+  [/(^|\.)(twitter|x)\.com$/, 'X'], [/(^|\.)netflix\.com$/, 'Netflix'], [/(^|\.)primevideo\.com$/, 'Prime Video'],
+  [/(^|\.)(hotstar|jiohotstar|jiocinema)\.com$/, 'JioHotstar'], [/(^|\.)disneyplus\.com$/, 'Disney+'], [/(^|\.)sonyliv\.com$/, 'SonyLIV'],
+  [/(^|\.)zee5\.com$/, 'ZEE5'], [/(^|\.)twitch\.tv$/, 'Twitch'], [/(^|\.)dailymotion\.com$|^dai\.ly$/, 'Dailymotion'],
+  [/(^|\.)reddit\.com$|^redd\.it$/, 'Reddit'], [/(^|\.)bilibili\.com$/, 'Bilibili'], [/(^|\.)spotify\.com$/, 'Spotify'],
+  [/(^|\.)linkedin\.com$/, 'LinkedIn'], [/(^|\.)snapchat\.com$/, 'Snapchat'], [/(^|\.)rumble\.com$/, 'Rumble'],
+  [/(^|\.)hulu\.com$/, 'Hulu'], [/(^|\.)max\.com$/, 'Max'], [/(^|\.)tv\.apple\.com$/, 'Apple TV']
+];
+const WORKING_LINKS = 'YouTube and Vimeo links work, and so do links that go straight to a video file (.mp4, .webm, .mov, .m3u8).';
+function parseLink(raw){
+  let s = String(raw || '').trim().replace(/^<|>$/g, '');
+  if (!s) return null;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = 'https://' + s;            // "youtu.be/…" without the https://
+  let u;
+  try { u = new URL(s); } catch(e){ return {notLink:raw}; }
+  if (!/^https?:$/.test(u.protocol)) return {error:'Only web links (http or https) can be played.'};
+  if (!/\./.test(u.hostname) && u.hostname !== 'localhost') return {notLink:raw};     // a word, not an address
+  const host = u.hostname.toLowerCase().replace(/^(www|m|music)\./, '');
+  const qs = u.searchParams;
+  if (host === 'youtu.be' || host === 'youtube.com' || host === 'youtube-nocookie.com' || /\.youtube\.com$/.test(host)){
+    let id = host === 'youtu.be' ? u.pathname.split('/')[1] : qs.get('v');
+    if (!id){ const m = u.pathname.match(/^\/(?:embed|shorts|live|v|e)\/([^/?#]+)/); if (m) id = m[1]; }
+    const start = parseStart(qs.get('t') || qs.get('start'));
+    if (id && /^[\w-]{11}$/.test(id)) return {kind:'yt', ref:id, start:start};
+    const list = qs.get('list');
+    if (list && /^[\w-]+$/.test(list)) return {kind:'ytlist', ref:list};
+    return {error:'Couldn’t find a video in that YouTube link.'};
+  }
+  if (host === 'vimeo.com' || host === 'player.vimeo.com'){
+    const parts = u.pathname.split('/').filter(Boolean);
+    let k = -1;
+    parts.forEach((x, i) => { if (/^\d{4,}$/.test(x)) k = i; });
+    if (k >= 0){
+      const hash = parts[k + 1] && /^[0-9a-f]{6,}$/i.test(parts[k + 1]) ? parts[k + 1] : (qs.get('h') || '');
+      return {kind:'vimeo', ref:parts[k], hash:hash, start:parseStart((u.hash.match(/t=([\dhms.]+)/) || [])[1])};
+    }
+    return {error:'Couldn’t find a video in that Vimeo link.'};
+  }
+  if (host === 'dropbox.com' || host === 'dl.dropbox.com'){              // a share link: ask for the file itself
+    qs.delete('dl'); qs.set('raw', '1');
+    return {kind:'file', ref:u.href};
+  }
+  if (host === 'drive.google.com'){
+    const m = u.pathname.match(/\/file\/d\/([\w-]+)/), id = m ? m[1] : qs.get('id');
+    if (id) return {kind:'file', ref:'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id), label:'Google Drive'};
+    return {error:'Couldn’t find a file in that Google Drive link.'};
+  }
+  for (let i = 0; i < CLOSED_SITES.length; i++){
+    if (CLOSED_SITES[i][0].test(host)) return {closed:CLOSED_SITES[i][1]};
+  }
+  return {kind: /\.m3u8$/i.test(u.pathname) ? 'hls' : 'file', ref:u.href};   // anything else: try it as a video file
+}
+
+/* Players' scripts, fetched the first time they're needed */
+function loadScript(src, ready, name){
+  return new Promise((resolve, reject) => {
+    const got = ready();
+    if (got) return resolve(got);
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = () => { const g = ready(); if (g) resolve(g); else reject(new Error('Couldn’t start ' + name + '.')); };
+    s.onerror = () => { s.remove(); reject(new Error('Couldn’t reach ' + name + '. Check your internet connection.')); };
+    document.head.appendChild(s);
+  });
+}
+let ytJob = null, vimeoJob = null, hlsJob = null;
+function ytApi(){
+  if (ytJob) return ytJob;
+  ytJob = new Promise((resolve, reject) => {
+    if (window.YT && window.YT.Player) return resolve(window.YT);
+    const prev = window.onYouTubeIframeAPIReady;
+    const t = setTimeout(() => reject(new Error('YouTube didn’t answer. Check your internet connection.')), 15000);
+    window.onYouTubeIframeAPIReady = function(){
+      clearTimeout(t);
+      if (typeof prev === 'function'){ try { prev(); } catch(e){} }
+      resolve(window.YT);
+    };
+    const s = document.createElement('script');
+    s.src = YT_API; s.async = true;
+    s.onerror = () => { clearTimeout(t); s.remove(); reject(new Error('Couldn’t reach YouTube. Check your internet connection.')); };
+    document.head.appendChild(s);
+  });
+  ytJob.catch(() => { ytJob = null; });
+  return ytJob;
+}
+function vimeoApi(){
+  if (!vimeoJob){
+    vimeoJob = loadScript(VIMEO_API, () => window.Vimeo && window.Vimeo.Player ? window.Vimeo : null, 'Vimeo');
+    vimeoJob.catch(() => { vimeoJob = null; });
+  }
+  return vimeoJob;
+}
+function hlsLib(){
+  if (!hlsJob){
+    hlsJob = loadScript(HLS_LIB, () => window.Hls || null, 'the stream player');
+    hlsJob.catch(() => { hlsJob = null; });
+  }
+  return hlsJob;
+}
+function ytVars(extra){
+  const p = {autoplay:0, controls:0, disablekb:1, fs:0, iv_load_policy:3, modestbranding:1, playsinline:1, rel:0};
+  if (/^https?:$/.test(location.protocol)) p.origin = location.origin;
+  return Object.assign(p, extra || {});
+}
+function ytErrorText(code){
+  if (code === 2) return 'YouTube says this isn’t a valid video link.';
+  if (code === 100) return 'This video is private or has been removed.';
+  if (FILE_PAGE || code === 153) return FILE_PAGE_YT;      // YouTube refuses pages that don't come from a web address
+  if (code === 101 || code === 150) return 'The owner doesn’t allow this video to be played on other sites.';
+  if (code === 5) return 'YouTube couldn’t play this video in this browser.';
+  return 'YouTube couldn’t play this video (error ' + code + ').';
+}
+function vimeoUrl(v){ return 'https://vimeo.com/' + v.ref + (v.hash ? '/' + v.hash : ''); }
+function vimeoOpts(v, extra){
+  const o = {autopause:false, autoplay:false, byline:false, controls:false, dnt:true, keyboard:false, pip:false,
+             playsinline:true, portrait:false, title:false, transparent:false, width:640};
+  if (v.hash) o.url = vimeoUrl(v); else o.id = Number(v.ref);
+  return Object.assign(o, extra || {});
+}
+function vimeoErrorText(e){
+  const n = e && e.name;
+  if (n === 'PrivacyError') return 'The owner doesn’t allow this video to be played here.';
+  if (n === 'PasswordError') return 'This Vimeo video needs a password.';
+  if (n === 'NotFoundError' || n === 'TypeError') return 'This Vimeo video doesn’t exist, or it’s private.';
+  return 'Vimeo couldn’t play this video' + (e && e.message ? ' (' + String(e.message).slice(0, 120) + ').' : '.');
+}
+function nativeHls(){
+  const t = document.createElement('video');
+  return !!(t.canPlayType && t.canPlayType('application/vnd.apple.mpegurl'));
+}
+// Points a <video> at a link: straight in, or through hls.js for a stream this browser can't play itself.
+function attachSource(el, v){
+  if (v.kind !== 'hls' || nativeHls()){ el.src = v.ref; return Promise.resolve(null); }
+  return hlsLib().then(Hls => {
+    if (!Hls.isSupported()) throw new Error('This browser can’t play streams (.m3u8).');
+    const h = new Hls({maxBufferLength:30});
+    h.loadSource(v.ref);
+    h.attachMedia(el);
+    return h;
+  });
+}
+function fileErrorText(e){
+  const code = e && e.code;
+  if (code === 3) return 'This browser can’t play the video at this link (its format isn’t supported).';
+  if (code === 2) return 'The video stopped loading (a network error). Check the link opens in a new tab.';
+  return 'Couldn’t find a video at this link. ' + WORKING_LINKS;
+}
+function hlsErrorText(d){
+  return d && d.type === 'mediaError'
+    ? 'This browser can’t play this stream’s format.'
+    : 'Couldn’t load this stream. The server may not let other sites play it.';
+}
+function fileTitle(v, label){
+  try {
+    const u = new URL(v.ref), last = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || '');
+    if (label) return label + ' video';
+    return last ? last.replace(/\.[a-z0-9]{2,5}$/i, '') : u.hostname;
+  } catch(e){ return 'Video'; }
+}
+function hostOf(url){ try { return new URL(url).hostname.replace(/^www\./, ''); } catch(e){ return ''; } }
+
+/* Checking a link: can it play here, and how long is it? */
+function probeHost(){
+  let h = document.querySelector('.probe-host');
+  if (!h){
+    h = document.createElement('div');
+    h.className = 'probe-host';
+    h.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(h);
+  }
+  return h;
+}
+function ytProbe(v){
+  return ytApi().then(YT => new Promise((resolve, reject) => {
+    const el = document.createElement('div');
+    probeHost().appendChild(el);
+    let player = null, done = false, poll = 0;
+    const finish = (err, info) => {
+      if (done) return;
+      done = true; clearTimeout(timer); clearInterval(poll);
+      setTimeout(() => { try { if (player) player.destroy(); } catch(e){} el.remove(); }, 0);
+      if (err) reject(err); else resolve(info);
+    };
+    const timer = setTimeout(() => finish(new Error(FILE_PAGE ? FILE_PAGE_YT : 'YouTube didn’t answer about this video. Try again.')), 20000);
+    const read = () => {
+      let d = 0, data = null;
+      try { d = player.getDuration(); data = player.getVideoData(); } catch(e){}
+      const live = !!(data && data.isLive);
+      if (!(d > 0) && !live) return false;
+      finish(null, {title:(data && data.title) || 'YouTube video', sub:'YouTube' + (data && data.author ? ' · ' + data.author : ''),
+                    thumb:'https://i.ytimg.com/vi/' + v.ref + '/mqdefault.jpg', dur:live ? 0 : d, live:live});
+      return true;
+    };
+    player = new YT.Player(el, {width:356, height:200, videoId:v.ref, playerVars:ytVars({mute:1}), events:{
+      onReady(){
+        if (read()) return;
+        try { player.mute(); player.playVideo(); } catch(e){}      // some videos only say how long they are once playing
+        poll = setInterval(read, 400);
+      },
+      onStateChange(e){ if (e.data === 1) read(); },
+      onError(e){ finish(new Error(ytErrorText(e.data))); }
+    }});
+  }));
+}
+function ytPlaylist(list){
+  return ytApi().then(YT => new Promise((resolve, reject) => {
+    const el = document.createElement('div');
+    probeHost().appendChild(el);
+    let player = null, done = false, poll = 0;
+    const finish = (err, ids) => {
+      if (done) return;
+      done = true; clearTimeout(timer); clearInterval(poll);
+      setTimeout(() => { try { if (player) player.destroy(); } catch(e){} el.remove(); }, 0);
+      if (err) reject(err); else resolve(ids);
+    };
+    const timer = setTimeout(() => finish(new Error(FILE_PAGE ? FILE_PAGE_YT : 'Couldn’t read this playlist. Add its videos one at a time instead.')), 20000);
+    player = new YT.Player(el, {width:356, height:200, playerVars:ytVars({listType:'playlist', list:list, mute:1}), events:{
+      onReady(){
+        poll = setInterval(() => {
+          let ids = null;
+          try { ids = player.getPlaylist(); } catch(e){}
+          if (ids && ids.length) finish(null, ids.slice(0, MAX_VIDEOS));
+        }, 300);
+      },
+      onError(e){ finish(new Error(e.data === 2 || e.data === 100 ? 'This playlist is private or doesn’t exist.' : ytErrorText(e.data))); }
+    }});
+  }));
+}
+function vimeoProbe(v){
+  return fetch('https://vimeo.com/api/oembed.json?width=320&url=' + encodeURIComponent(vimeoUrl(v)))
+    .then(r => {
+      if (r.ok) return r.json();
+      const e = new Error(r.status === 404 ? 'This Vimeo video doesn’t exist, or it’s private.'
+        : r.status === 403 ? 'The owner doesn’t allow this video to be played on other sites.'
+        : 'Vimeo couldn’t share this video (error ' + r.status + ').');
+      e.final = true;
+      throw e;
+    })
+    .then(j => ({title:str(j.title) || 'Vimeo video', sub:'Vimeo' + (j.author_name ? ' · ' + str(j.author_name) : ''),
+                 thumb:safeUrl(j.thumbnail_url), dur:Number(j.duration) || 0, live:false}))
+    .catch(err => (err && err.final) ? Promise.reject(err) : vimeoPlayerProbe(v));   // no answer: ask the player instead
+}
+function vimeoPlayerProbe(v){
+  return vimeoApi().then(V => new Promise((resolve, reject) => {
+    const el = document.createElement('div');
+    probeHost().appendChild(el);
+    let p = null, done = false;
+    const finish = (err, info) => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      try { if (p) p.destroy().catch(() => {}); } catch(e){}
+      el.remove();
+      if (err) reject(err); else resolve(info);
+    };
+    const timer = setTimeout(() => finish(new Error('Vimeo didn’t answer. Check your internet connection.')), 20000);
+    try { p = new V.Player(el, vimeoOpts(v, {muted:true})); } catch(e){ return finish(new Error(vimeoErrorText(e))); }
+    p.ready()
+      .then(() => Promise.all([p.getDuration(), p.getVideoTitle().catch(() => '')]))
+      .then(r => finish(null, {title:str(r[1]) || 'Vimeo video', sub:'Vimeo', thumb:'', dur:Number(r[0]) || 0, live:false}),
+            e => finish(new Error(vimeoErrorText(e))));
+  }));
+}
+function fileProbe(v){
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('video');
+    el.muted = true; el.preload = 'metadata'; el.playsInline = true;
+    let hls = null, done = false;
+    const finish = (err, info) => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      if (hls){ try { hls.destroy(); } catch(e){} }
+      el.removeAttribute('src');
+      try { el.load(); } catch(e){}
+      if (err) reject(err); else resolve(info);
+    };
+    const timer = setTimeout(() => finish(new Error('The link didn’t answer in time. Check that it opens in a new tab.')), 25000);
+    el.addEventListener('loadedmetadata', () => {
+      const d = el.duration, live = !isFinite(d), audio = !el.videoWidth;
+      const size = el.videoWidth ? el.videoWidth + '×' + el.videoHeight : '';
+      finish(null, {title:fileTitle(v, v.label), sub:[v.label || hostOf(v.ref), audio ? 'sound only' : size].filter(Boolean).join(' · '),
+                    thumb:'', dur:live ? 0 : d, live:live});
+    });
+    el.addEventListener('error', () => finish(new Error(fileErrorText(el.error))));
+    attachSource(el, v).then(h => {
+      hls = h;
+      if (h && window.Hls) h.on(window.Hls.Events.ERROR, (e, d) => { if (d && d.fatal) finish(new Error(hlsErrorText(d))); });
+      if (done && h){ try { h.destroy(); } catch(e){} }
+    }, err => finish(err));
+  });
+}
+function probe(v){
+  if (v.kind === 'yt') return ytProbe(v);
+  if (v.kind === 'vimeo') return vimeoProbe(v);
+  return fileProbe(v);
+}
+const probeQueue = [];
+let probing = 0;
+function queueProbe(v){
+  v.state = 'checking'; v.err = '';
+  if (probeQueue.indexOf(v) < 0) probeQueue.push(v);
+  pumpProbes();
+}
+function pumpProbes(){
+  while (probing < PROBES && probeQueue.length){
+    const v = probeQueue.shift();
+    if (videos.indexOf(v) < 0) continue;                 // removed meanwhile
+    probing++;
+    probe(v).then(info => {
+      v.title = info.title || v.title; v.sub = info.sub || v.sub; v.thumb = info.thumb || v.thumb;
+      v.dur = info.dur || 0; v.live = !!info.live; v.state = 'ok'; v.err = '';
+    }, err => {
+      v.state = 'error';
+      v.err = String((err && err.message) || 'Couldn’t play a video from this link.').slice(0, 400);
+    }).then(() => {
+      probing--;
+      if (videos.indexOf(v) >= 0){ saveVideos(); paintVideoRow(v); paintVideoTotals(); }
+      pumpProbes();
+    });
+  }
+}
+
+/* Adding links */
+function newVideo(p, url){
+  return {id:newId('v'), url:url, kind:p.kind, ref:p.ref, hash:p.hash || '', start:p.start || 0, label:p.label || '',
+          title:'', sub:'', thumb:p.kind === 'yt' ? 'https://i.ytimg.com/vi/' + p.ref + '/mqdefault.jpg' : '',
+          dur:0, live:false, on:true, err:'', state:'checking'};
+}
+function sameVideo(a, b){ return a.kind === b.kind && a.ref === b.ref && (a.hash || '') === (b.hash || ''); }
+function videoStatus(text, warn){
+  const el = $('video-status');
+  el.textContent = text || '';
+  el.hidden = !text;
+  el.classList.toggle('is-warn', !!warn);
+}
+function addVideoLinks(text){
+  const links = String(text || '').split(/\s+/).filter(Boolean);
+  if (!links.length) return;
+  const added = [], problems = [], notLinks = [], closed = [];
+  let dup = 0, full = 0, lists = 0;
+  links.forEach(raw => {
+    const p = parseLink(raw);
+    if (!p) return;
+    if (p.notLink){ notLinks.push(p.notLink); return; }
+    if (p.closed){ if (closed.indexOf(p.closed) < 0) closed.push(p.closed); return; }
+    if (p.error){ if (problems.indexOf(p.error) < 0) problems.push(p.error); return; }
+    if (p.kind === 'ytlist'){ lists++; addPlaylist(p.ref); return; }
+    if (videos.length >= MAX_VIDEOS){ full++; return; }
+    if (videos.some(x => sameVideo(x, p))){ dup++; return; }
+    const v = newVideo(p, raw);
+    videos.push(v);
+    added.push(v);
+  });
+  if (added.length){
+    renderVideos(added);
+    added.forEach(queueProbe);
+    saveVideos();
+    paintVideoTotals();
+  }
+  const out = [];
+  if (dup) out.push(dup === 1 && links.length === 1 ? 'That video is already in the list.' : 'Skipped ' + wordsText(dup, 'video') + ' already in the list.');
+  if (full) out.push('The list is full (' + MAX_VIDEOS + ' videos).');
+  if (notLinks.length) out.push(notLinks.length === 1 ? '“' + notLinks[0].slice(0, 60) + '” isn’t a link.' : 'Skipped ' + notLinks.length + ' bits of text that aren’t links.');
+  if (closed.length) out.push(quoted(closed).replace(/[“”]/g, '') + (closed.length === 1 ? ' doesn’t' : ' don’t') +
+    ' let other pages play and pause ' + (closed.length === 1 ? 'its' : 'their') + ' videos, so they can’t be streamed here.');
+  problems.forEach(t => out.push(t));
+  if (notLinks.length || closed.length || problems.length) out.push(WORKING_LINKS);
+  if (out.length) videoStatus(out.join(' '), true);
+  else if (!lists) videoStatus(added.length > 1 ? 'Added ' + added.length + ' videos.' : '');
+}
+function addPlaylist(list){
+  videoStatus('Reading the YouTube playlist…');
+  ytPlaylist(list).then(ids => {
+    const added = [];
+    let dup = 0;
+    ids.forEach(id => {
+      if (videos.length >= MAX_VIDEOS) return;
+      const p = {kind:'yt', ref:id};
+      if (videos.some(x => sameVideo(x, p))){ dup++; return; }
+      const v = newVideo(p, 'https://www.youtube.com/watch?v=' + id);
+      videos.push(v); added.push(v);
+    });
+    if (added.length){ renderVideos(added); added.forEach(queueProbe); saveVideos(); paintVideoTotals(); }
+    videoStatus((added.length ? 'Added ' + wordsText(added.length, 'video') + ' from the playlist.' : 'Nothing new in that playlist.') +
+                (dup ? ' Skipped ' + dup + ' already in the list.' : ''), !added.length);
+  }, err => videoStatus(err.message, true));
+}
+
+/* The list on screen */
+const GRIP_SVG = '<svg viewBox="0 0 12 16" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="3" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="13" r="1.4"/><circle cx="9" cy="13" r="1.4"/></g></svg>';
+const UP_SVG   = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 8.5 7 4.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const DOWN_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5.5 7 9.5l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const FILM_SVG = '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="3.5" width="14" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 6.8v4.4L11.3 9z" fill="currentColor"/></svg>';
+const videoList = $('video-list');
+
+function rowOf(v){ return videoList.querySelector('.vrow[data-id="' + v.id + '"]'); }
+// A link as people read it: no https://www., but the part that says which video it is.
+function shortLink(url){
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(url) ? url : 'https://' + url);
+    return u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? decodeURI(u.pathname) : '') + u.search;
+  } catch(e){ return url; }
+}
+function videoRow(v, fresh){
+  const li = document.createElement('li');
+  li.className = 'vrow' + (fresh ? ' is-new' : '');
+  li.dataset.id = v.id;
+  li.innerHTML =
+    '<button type="button" class="vrow__grip" data-act="grip" aria-label="Move this video: drag, or press the up and down arrow keys" title="Drag to change the order">' + GRIP_SVG + '</button>' +
+    '<label class="vrow__pick"><input type="checkbox" data-act="pick"><span class="box"></span></label>' +
+    '<div class="vrow__thumb">' + FILM_SVG + '<span class="vrow__num"></span></div>' +
+    '<div class="vrow__text"><span class="vrow__title"></span><span class="vrow__sub"></span></div>' +
+    '<span class="vrow__dur"></span>' +
+    '<div class="vrow__btns">' +
+      '<button type="button" class="text-btn" data-act="retry" hidden>Retry</button>' +
+      '<button type="button" class="icon-btn is-step" data-act="up" aria-label="Move up">' + UP_SVG + '</button>' +
+      '<button type="button" class="icon-btn is-step" data-act="down" aria-label="Move down">' + DOWN_SVG + '</button>' +
+      '<button type="button" class="icon-btn is-remove" data-act="remove" aria-label="Remove">×</button>' +
+    '</div>';
+  fillVideoRow(li, v);
+  return li;
+}
+function fillVideoRow(li, v){
+  const i = videos.indexOf(v), err = v.state === 'error', checking = v.state === 'checking';
+  const name = v.title || shortLink(v.url);
+  li.classList.toggle('is-err', err);
+  li.classList.toggle('is-checking', checking);
+  li.classList.toggle('is-off', !v.on || err);
+  const pick = li.querySelector('[data-act=pick]');
+  pick.checked = v.on && !err;
+  pick.disabled = err;
+  pick.setAttribute('aria-label', 'Play “' + name + '”');
+  const th = li.querySelector('.vrow__thumb');
+  let img = th.querySelector('img');
+  if (v.thumb && !(img && img.dataset.src === v.thumb)){
+    if (img) img.remove();
+    img = document.createElement('img');
+    img.alt = ''; img.decoding = 'async'; img.loading = 'lazy';
+    img.dataset.src = v.thumb;
+    img.onerror = () => img.remove();
+    img.src = v.thumb;
+    th.insertBefore(img, th.querySelector('.vrow__num'));
+  } else if (!v.thumb && img) img.remove();
+  th.querySelector('.vrow__num').textContent = i + 1;
+  const title = li.querySelector('.vrow__title');
+  title.textContent = name;
+  title.title = v.url;
+  const sub = li.querySelector('.vrow__sub');
+  sub.textContent = '';
+  if (err) sub.textContent = v.err;
+  else if (checking) sub.textContent = 'Checking the link…';
+  else {
+    if (S.videoResume && videoAt && videoAt.id === v.id && videoAt.t >= 5){
+      const b = document.createElement('b');
+      b.textContent = 'Resumes at ' + clock(videoAt.t * 1000);
+      sub.append(b, ' · ');
+    }
+    sub.append(v.sub || hostOf(v.url));
+  }
+  li.querySelector('.vrow__dur').textContent = err ? '—' : checking ? '…' : v.live ? 'Live' : v.dur ? clock(v.dur * 1000) : '?';
+  li.querySelector('[data-act=retry]').hidden = !err;
+  li.querySelector('[data-act=up]').disabled = i <= 0;
+  li.querySelector('[data-act=down]').disabled = i >= videos.length - 1;
+}
+function renderVideos(fresh){
+  const frag = document.createDocumentFragment();
+  videos.forEach(v => frag.appendChild(videoRow(v, !!fresh && fresh.indexOf(v) >= 0)));
+  videoList.textContent = '';
+  videoList.appendChild(frag);
+  paintVideoTotals();
+}
+function paintVideoRow(v){ const li = rowOf(v); if (li) fillVideoRow(li, v); }
+function paintVideoRows(){ videos.forEach(paintVideoRow); }
+
+function paintVideoTotals(){
+  const list = playable(), live = list.filter(v => v.live).length;
+  const secs = list.reduce((a, v) => a + (v.live ? 0 : v.dur), 0);
+  const checking = videos.filter(v => v.state === 'checking').length;
+  const broken = videos.filter(v => v.state === 'error').length;
+  $('video-count').textContent = videos.length ? wordsText(videos.length, 'video') : '';
+  $('video-total').hidden = !videos.length;
+  const parts = [];
+  parts.push(!list.length ? 'None will play'
+    : list.length === videos.length ? (list.length === 1 ? '1 video will play' : 'All ' + list.length + ' will play')
+    : list.length + ' of ' + videos.length + ' will play');
+  if (checking) parts.push('checking ' + checking);
+  if (broken) parts.push(broken + ' can’t be played');
+  $('video-total-text').textContent = parts.join(' · ');
+  $('video-total-time').textContent = clock(secs * 1000);
+  $('video-total-live').textContent = live ? ' + ' + (live === 1 ? 'a live stream' : live + ' live streams') : '';
+  $('video-clear').disabled = !videos.length;
+  if (!videos.length) disarm($('video-clear'));
+  paintVideoResume();
+  paintSummary();
+}
+function paintVideoResume(){
+  const v = videoAt && videoById(videoAt.id);
+  const show = S.videoResume && !!v && v.state === 'ok' && v.on && (videoAt.t >= 5 || playable().indexOf(v) > 0);
+  $('video-resume-row').hidden = !show;
+  if (show) $('video-resume-text').textContent = 'Next session starts “' + (v.title || shortLink(v.url)) + '” at ' + clock(videoAt.t * 1000) + '.';
+}
+function reflectVideo(){
+  $('video-vol-value').textContent = Math.round(S.videoVol * 100) + '%';
+  $('video-bright-value').textContent = Math.round(S.videoBright * 100) + '%';
+  $('video-cover').setAttribute('aria-pressed', String(S.videoFit === 'cover'));
+  $('video-contain').setAttribute('aria-pressed', String(S.videoFit !== 'cover'));
+  $('video-hint').textContent = 'Paste one link or several. ' + WORKING_LINKS.replace('.m3u8)', '.m3u8), Dropbox and Google Drive share links included') +
+    ' A YouTube playlist link adds every video in it. Drag a video by the dots on its left to change the order, and untick one to skip it. The video pauses when you pause, and it can’t be clicked, so your keys always reach the game.';
+  $('video-warn').textContent = FILE_PAGE ? FILE_PAGE_YT : '';
+  $('video-warn').hidden = !FILE_PAGE;
+  paintVideoResume();
+}
+
+/* Editing the list */
+function moveVideo(v, d, focusSel){
+  const i = videos.indexOf(v), j = i + d;
+  if (i < 0 || j < 0 || j >= videos.length) return;
+  videos.splice(i, 1);
+  videos.splice(j, 0, v);
+  const li = rowOf(v), other = videoList.children[j];
+  if (li && other) videoList.insertBefore(li, d < 0 ? other : other.nextSibling);
+  paintVideoRows();
+  saveVideos();
+  if (li && focusSel){
+    let f = li.querySelector(focusSel);
+    if (!f || f.disabled) f = li.querySelector('[data-act=grip]');
+    f.focus();
+  }
+  paintVideoResume();
+}
+videoList.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  const li = btn && btn.closest('.vrow'), v = li && videoById(li.dataset.id);
+  if (!v) return;
+  const act = btn.dataset.act;
+  if (act === 'up' || act === 'down') moveVideo(v, act === 'up' ? -1 : 1, '[data-act=' + act + ']');
+  else if (act === 'retry'){ queueProbe(v); paintVideoRow(v); paintVideoTotals(); }
+  else if (act === 'remove'){
+    const next = li.nextElementSibling || li.previousElementSibling;
+    videos.splice(videos.indexOf(v), 1);
+    if (videoAt && videoAt.id === v.id) videoAt = null;
+    li.remove();
+    paintVideoRows();
+    saveVideos();
+    paintVideoTotals();
+    videoStatus('Removed ' + quoted([v.title || shortLink(v.url)]) + '.');
+    if (e.detail === 0){ const f = next && next.querySelector('[data-act=remove]'); (f || $('video-input')).focus(); }
+  }
+});
+videoList.addEventListener('change', e => {
+  const inp = e.target;
+  if (inp.dataset.act !== 'pick') return;
+  const v = videoById(inp.closest('.vrow').dataset.id);
+  if (!v) return;
+  v.on = inp.checked;
+  paintVideoRow(v);
+  saveVideos();
+  paintVideoTotals();
+});
+videoList.addEventListener('keydown', e => {
+  const grip = e.target.closest && e.target.closest('.vrow__grip');
+  if (!grip || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault();
+  const v = videoById(grip.closest('.vrow').dataset.id);
+  if (v) moveVideo(v, e.key === 'ArrowUp' ? -1 : 1, '[data-act=grip]');
+});
+// Dragging by the handle, with a mouse, pen or finger. The row moves as you go.
+videoList.addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.vrow__grip');
+  if (!grip || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  e.preventDefault();
+  const li = grip.closest('.vrow'), scroller = $('setup-screen');
+  li.classList.add('is-dragging');
+  const move = ev => {
+    const y = ev.clientY;
+    const rows = videoList.children;
+    for (let k = 0; k < rows.length; k++){
+      const r = rows[k];
+      if (r === li) continue;
+      const b = r.getBoundingClientRect();
+      if (y >= b.top && y <= b.bottom){
+        const before = y < b.top + b.height / 2;
+        const target = before ? r : r.nextSibling;
+        if (target !== li && li.nextSibling !== target) videoList.insertBefore(li, target);
+        break;
+      }
+    }
+    const sb = scroller.getBoundingClientRect();
+    if (y < sb.top + 48) scroller.scrollTop -= 14;
+    else if (y > sb.bottom - 48) scroller.scrollTop += 14;
+  };
+  const end = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    li.classList.remove('is-dragging');
+    const order = Array.prototype.map.call(videoList.children, r => r.dataset.id);
+    if (order.some((id, k) => !videos[k] || videos[k].id !== id)){
+      videos = order.map(videoById).filter(Boolean);
+      saveVideos();
+    }
+    paintVideoRows();
+    paintVideoResume();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+});
+
+function addTypedVideos(){
+  const inp = $('video-input'), raw = inp.value;
+  inp.focus();
+  if (!raw.trim()) return;
+  inp.value = '';
+  addVideoLinks(raw);
+}
+$('video-add').addEventListener('click', addTypedVideos);
+$('video-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addTypedVideos(); } });
+$('video-clear').addEventListener('click', function(){
+  if (!videos.length || !confirmFirst(this, 'Remove all ' + wordsText(videos.length, 'video') + '?')) return;
+  videos = []; videoAt = null;
+  probeQueue.length = 0;
+  saveVideos();
+  renderVideos();
+  videoStatus('Removed every video.');
+});
+$('video-cover').addEventListener('click', () => { S.videoFit = 'cover'; reflectVideo(); bgLook(); saveNow(); });
+$('video-contain').addEventListener('click', () => { S.videoFit = 'contain'; reflectVideo(); bgLook(); saveNow(); });
+$('video-restart').addEventListener('click', () => { videoAt = null; saveVideos(); paintVideoRows(); paintVideoResume(); });
+
+/* Playing behind the grid. One player at a time; when a video ends the next one starts,
+   and a video that can't play is marked in the list and skipped. */
+const backdrop = $('backdrop'), backdropBox = $('backdrop-video');
+const bg = {order:[], i:0, player:null, token:0, tick:0};
+
+function bgLook(){
+  backdrop.classList.toggle('is-cover', S.videoFit === 'cover');
+  $('backdrop-shade').style.opacity = String(Math.round((1 - S.videoBright) * 100) / 100);
+  if (bg.player) bg.player.volume(S.videoVol);
+  fitBackdrop();
+}
+// Embedded players letterbox inside their frame, so to fill the screen the frame itself
+// is made 16:9 and just big enough to cover it.
+function fitBackdrop(){
+  const el = backdropBox.firstElementChild;
+  if (!el) return;
+  if (el.tagName === 'VIDEO' || S.videoFit !== 'cover'){ el.style.width = el.style.height = ''; return; }
+  const W = backdropBox.clientWidth, H = backdropBox.clientHeight;
+  if (!W || !H) return;
+  let w = W, h = W * 9 / 16;
+  if (h < H){ h = H; w = H * 16 / 9; }
+  el.style.width = Math.ceil(w) + 'px';
+  el.style.height = Math.ceil(h) + 'px';
+}
+if (window.ResizeObserver) new ResizeObserver(fitBackdrop).observe(backdrop);
+else window.addEventListener('resize', fitBackdrop);
+
+function quiet(frame){ if (frame){ frame.setAttribute('tabindex', '-1'); frame.setAttribute('aria-hidden', 'true'); } }
+
+function ytPlayer(v, t, ev){
+  const el = document.createElement('div');
+  backdropBox.appendChild(el);
+  let p = null, ready = false, want = false, dead = false, vol = S.videoVol, lastT = t, started = false, nudge = 0;
+  ytApi().then(YT => {
+    if (dead) return;
+    p = new YT.Player(el, {width:'100%', height:'100%', videoId:v.ref, playerVars:ytVars({start:Math.floor(t)}), events:{
+      onReady(){
+        if (dead) return;
+        ready = true;
+        try { quiet(p.getIframe()); } catch(e){}
+        fitBackdrop();
+        setVol();
+        if (want){ try { p.playVideo(); } catch(e){} watchStart(); }
+      },
+      onStateChange(e){
+        if (dead) return;
+        if (e.data === 1) started = true;
+        if (e.data === 0) ev.ended();
+      },
+      onError(e){ if (!dead) ev.failed(ytErrorText(e.data)); }
+    }});
+  }, err => { if (!dead) ev.failed(err.message); });
+  function setVol(){
+    if (!ready) return;
+    try { p.setVolume(Math.round(vol * 100)); if (vol > 0) p.unMute(); else p.mute(); } catch(e){}
+  }
+  // Some browsers won't let a video start with sound until it's clicked, which this one
+  // can't be: if it hasn't started after a few seconds, start it silently instead.
+  function watchStart(){
+    clearTimeout(nudge);
+    nudge = setTimeout(() => {
+      if (dead || started || !want || !ready) return;
+      try { p.mute(); p.playVideo(); } catch(e){}
+    }, 4000);
+  }
+  return {
+    play(){ want = true; if (ready) try { p.playVideo(); } catch(e){} if (!started) watchStart(); },
+    pause(){ want = false; if (ready) try { lastT = p.getCurrentTime() || lastT; p.pauseVideo(); } catch(e){} },
+    volume(x){ vol = x; setVol(); },
+    time(){ if (ready) try { lastT = p.getCurrentTime() || lastT; } catch(e){} return lastT; },
+    destroy(){ dead = true; clearTimeout(nudge); try { if (p) p.destroy(); } catch(e){} el.remove(); }
+  };
+}
+function vimeoPlayer(v, t, ev){
+  const el = document.createElement('div');
+  backdropBox.appendChild(el);
+  let p = null, ready = false, want = false, dead = false, vol = S.videoVol, lastT = t;
+  vimeoApi().then(V => {
+    if (dead) return;
+    try { p = new V.Player(el, vimeoOpts(v)); } catch(e){ return ev.failed(vimeoErrorText(e)); }
+    p.on('ended', () => { if (!dead) ev.ended(); });
+    p.on('timeupdate', d => { if (d && d.seconds) lastT = d.seconds; });
+    p.ready().then(() => {
+      if (dead) return;
+      ready = true;
+      quiet(el.querySelector('iframe'));
+      fitBackdrop();
+      setVol();
+      return (t > 1 ? p.setCurrentTime(t).catch(() => {}) : Promise.resolve()).then(() => { if (want && !dead) go(); });
+    }, e => { if (!dead) ev.failed(vimeoErrorText(e)); });
+  }, err => { if (!dead) ev.failed(err.message); });
+  function setVol(){ if (ready) p.setVolume(vol).catch(() => {}); }
+  function go(){
+    p.play().catch(e => {
+      if (dead || !want || !e || e.name !== 'NotAllowedError') return;
+      p.setVolume(0).then(() => p.play()).catch(() => {});      // the browser wants a click before sound: play silently
+    });
+  }
+  return {
+    play(){ want = true; if (ready) go(); },
+    pause(){ want = false; if (ready) p.pause().catch(() => {}); },
+    volume(x){ vol = x; setVol(); },
+    time(){ return lastT; },
+    destroy(){ dead = true; try { if (p) p.destroy().catch(() => {}); } catch(e){} el.remove(); }
+  };
+}
+function filePlayer(v, t, ev){
+  const el = document.createElement('video');
+  el.playsInline = true; el.preload = 'auto'; el.controls = false; el.disablePictureInPicture = true;
+  el.setAttribute('tabindex', '-1');
+  el.volume = S.videoVol; el.muted = S.videoVol === 0;
+  backdropBox.appendChild(el);
+  let hls = null, want = false, dead = false, attached = false, seeked = t < 1;
+  el.addEventListener('loadedmetadata', () => {
+    if (seeked || !isFinite(el.duration)) return;
+    seeked = true;
+    try { el.currentTime = Math.min(t, Math.max(0, el.duration - 1)); } catch(e){}
+  });
+  el.addEventListener('ended', () => { if (!dead) ev.ended(); });
+  el.addEventListener('error', () => { if (!dead) ev.failed(fileErrorText(el.error)); });
+  attachSource(el, v).then(h => {
+    if (dead){ if (h) h.destroy(); return; }
+    hls = h; attached = true;
+    if (h && window.Hls) h.on(window.Hls.Events.ERROR, (e, d) => { if (d && d.fatal && !dead) ev.failed(hlsErrorText(d)); });
+    if (want) go();
+  }, err => { if (!dead) ev.failed(err.message); });
+  function go(){
+    const pr = el.play();
+    if (pr && pr.catch) pr.catch(err => {
+      if (dead || !want || !err || err.name !== 'NotAllowedError' || el.muted) return;
+      el.muted = true;                                           // the browser wants a click before sound: play silently
+      el.play().catch(() => {});
+    });
+  }
+  return {
+    play(){ want = true; if (attached) go(); },
+    pause(){ want = false; el.pause(); },
+    volume(x){ el.volume = x; el.muted = x === 0; },
+    time(){ return el.currentTime || t; },
+    destroy(){
+      dead = true;
+      try { el.pause(); } catch(e){}
+      if (hls){ try { hls.destroy(); } catch(e){} }
+      el.removeAttribute('src');
+      try { el.load(); } catch(e){}
+      el.remove();
+    }
+  };
+}
+function makePlayer(v, t, ev){
+  if (v.kind === 'yt') return ytPlayer(v, t, ev);
+  if (v.kind === 'vimeo') return vimeoPlayer(v, t, ev);
+  return filePlayer(v, t, ev);
+}
+
+function bgStart(){
+  bg.order = [];
+  if (!S.videoOn) return;
+  const list = playable();
+  if (!list.length) return;
+  bg.order = list.map(v => v.id);
+  bg.tick = 0;
+  let i = 0, t = -1;                                 // -1: from the video's own start
+  if (S.videoResume && videoAt){
+    const k = bg.order.indexOf(videoAt.id);
+    if (k >= 0){ i = k; t = videoAt.t; }
+  }
+  screens.game.classList.add('has-video');
+  bgLook();
+  bgLoad(i, t);
+}
+function bgLoad(i, t){
+  bgDrop();
+  const v = videoById(bg.order[i]);
+  bg.i = i;
+  if (!v) return bgNext();
+  const token = bg.token, at = t >= 0 ? t : (v.start || 0);
+  bg.player = makePlayer(v, at, {
+    ended(){ if (token === bg.token) bgNext(); },
+    failed(msg){
+      if (token !== bg.token) return;
+      v.state = 'error'; v.err = msg;
+      saveVideos(); paintVideoRow(v); paintVideoTotals();
+      bgNext();
+    }
+  });
+  videoAt = {id:v.id, t:at};
+  fitBackdrop();
+  if (running && !paused) bg.player.play();
+}
+// The next video that can play, round to the start again if the list repeats.
+function bgNext(){
+  const n = bg.order.length;
+  for (let step = 1; step <= n; step++){
+    let i = bg.i + step;
+    if (i >= n){ if (!S.videoLoop) break; i -= n; }
+    const v = videoById(bg.order[i]);
+    if (v && v.state !== 'error'){ bgLoad(i, -1); return; }
+  }
+  videoAt = null;                                    // the list is over: next time starts from the top
+  saveVideos();
+  bgEnd();
+}
+function bgDrop(){
+  bg.token++;
+  if (bg.player){ bg.player.destroy(); bg.player = null; }
+  backdropBox.textContent = '';
+}
+function bgEnd(){
+  bgDrop();
+  bg.order = [];
+  screens.game.classList.remove('has-video');
+}
+function bgRemember(){
+  if (!bg.player) return;
+  const v = videoById(bg.order[bg.i]);
+  if (!v) return;
+  const t = Number(bg.player.time()) || 0;
+  videoAt = {id:v.id, t:v.dur ? Math.min(t, Math.max(0, v.dur - 2)) : t};
+  saveVideos();
+}
+function bgPause(){ if (bg.player){ bg.player.pause(); bgRemember(); } }
+function bgResume(){ if (bg.player) bg.player.play(); }
+function bgStop(){
+  if (bg.player) bgRemember();
+  bgEnd();
+  paintVideoRows();
+  paintVideoResume();
+}
 
 /* ------------------------------------------------------------------ *
  * Settings <-> interface
@@ -2328,6 +3988,11 @@ function applySettings(){
   $('dichotic').checked = S.dichotic;
   $('ear-help').checked = S.earHelp;
   $('ear-color').value = S.earColor;
+  $('video-on').checked = S.videoOn;
+  $('video-vol').value = S.videoVol;
+  $('video-bright').value = S.videoBright;
+  $('video-loop').checked = S.videoLoop;
+  $('video-resume').checked = S.videoResume;
   renderRightVoice();
   reflectSettings();
 }
@@ -2380,6 +4045,8 @@ function reflectSettings(){
   $('floor-field').hidden = !S.variable;
   $('buzz-vol-value').textContent = Math.round(S.buzzVol * 100) + '%';
   reflectDichotic();
+  paintSync();
+  reflectVideo();
 
   $('cap-pos').textContent = keyName(S.keys.pos);
   $('cap-col').textContent = keyName(S.keys.col);
@@ -2394,13 +4061,23 @@ function reflectSettings(){
   $('total-trained').textContent = duration(T.allMs);
 }
 
+// Dichotic listening works with any word list: it plays the built-in voices (a device voice
+// can't be sent to one ear), so words they haven't recorded get synced first.
 function reflectDichotic(){
-  $('dichotic').disabled = !bankCovers;
-  $('dichotic-switch').classList.toggle('is-off', !bankCovers);
-  $('dichotic-hint').textContent = bankCovers
-    ? 'A different word in each ear. A beep just before each trial marks the ear to follow, and the n-back runs on that ear’s words. It switches every few trials; on a switch both ears hear the same word. Needs headphones.'
-    : 'Needs the built-in voices, which only know the default words, so it’s off while your word list has others.';
-  const on = dichoticSetup();
+  const has = BANK.voices.length > 0, on = dichoticSetup();
+  $('dichotic').disabled = !has;
+  $('dichotic-switch').classList.toggle('is-off', !has);
+  let text = 'A different word in each ear. A beep just before each trial marks the ear to follow, and the n-back runs on that ear’s words. It switches every few trials; on a switch both ears hear the same word. Needs headphones.';
+  let warn = false;
+  if (!has) text = 'Needs the built-in voices, which didn’t load.';
+  else if (on && syncedLoaded && !voicePlan().ready){
+    text = 'Your list has words these voices haven’t recorded yet. Sync them above and dichotic listening can start: it uses the built-in voices, since a device voice can’t be sent to one ear.';
+    warn = true;
+  } else if (!on && syncedLoaded && hasOwnWords())
+    text += ' Works with your own words too, once they’re synced with the built-in voices.';
+  const el = $('dichotic-hint');
+  el.textContent = text;
+  el.classList.toggle('is-warn', warn);
   $('dichotic-options').hidden = !on;
   $('ear-color-field').hidden = !(on && S.earHelp);
 }
@@ -2422,15 +4099,19 @@ function paintSummary(){
   else if (wordsShort(st)) blocked = wordsNeeded(st) > 1
     ? 'Can’t start until the word list has at least 2 words for the voice. See Words above.'
     : 'Can’t start until the word list has a word to show. See Words above.';
-  else if (cantSpeak(st)) blocked = BANK.voices.length && S.advanced
-    ? 'Can’t start: the built-in voices only know the default words, and this browser has no other voice. See Words above.'
+  else if (dichoticBlocked(st)) blocked = syncJob.on
+    ? 'Recording your words for dichotic listening. Start once it’s done.'
+    : 'Can’t start dichotic listening until the built-in voices know every word. Sync them under Voice above.';
+  else if (cantSpeak(st)) blocked = voicePlan().bank
+    ? 'Can’t start: the built-in voice hasn’t recorded all your words, and this browser has no voice of its own. Sync them under Voice above.'
     : 'Can’t start: this browser has no voice to read the words. Pick stimuli without Voice.';
   else if (imagesBlocked()) blocked = S.advanced
     ? 'Can’t start until the image square has at least 2 pictures. See Stimuli above.'
     : 'Can’t start until the images are found. See Stimuli above.';
   el.textContent = blocked ||
     ['', 'One stream', 'Two streams', 'Three streams', 'Four streams'][count] + ', ' +
-    (S.sessionMode === 'timed' ? S.minutes + ' minutes' : 'no time limit');
+    (S.sessionMode === 'timed' ? S.minutes + ' minutes' : 'no time limit') +
+    (S.videoOn && playable().length ? ', with background video' : '');
   el.classList.toggle('is-warn', !!blocked);
 }
 
@@ -2475,13 +4156,20 @@ function readUI(){
   S.buzzOn    = $('buzz-on').checked;
   S.buzzVol   = clampNum($('buzz-vol').value, 0, 1, 0.6);
   S.earHelp   = $('ear-help').checked;
+  S.videoOn     = $('video-on').checked;
+  S.videoVol    = clampNum($('video-vol').value, 0, 1, 0.5);
+  S.videoBright = clampNum($('video-bright').value, 0.15, 1, 0.55);
+  S.videoLoop   = $('video-loop').checked;
+  S.videoResume = $('video-resume').checked;
   $('rate-value').textContent = rateLabel(S.voiceRate);
   reflectSettings();
+  if (bg.player) bgLook();
   save();
 }
 
 ['grid-size','n-level','mode','pace','minutes','feedback','adaptive','voice-rate','spin-speed',
- 'match-rate','lure-rate','variable','floor','buzz-on','buzz-vol','ear-help'].forEach(id => {
+ 'match-rate','lure-rate','variable','floor','buzz-on','buzz-vol','ear-help',
+ 'video-on','video-vol','video-bright','video-loop','video-resume'].forEach(id => {
   $(id).addEventListener('change', readUI);
   $(id).addEventListener('input', readUI);
 });
@@ -2493,26 +4181,24 @@ $('mode-timed').addEventListener('click', () => { S.sessionMode = 'timed'; refle
 $('advanced').addEventListener('change', function(){
   S.advanced = this.checked;
   if (S.advanced && !S.streams) S.streams = Object.assign({}, streamsFor(S.mode));   // start from the dropdown's choice
-  updateCoverage();                          // your word list only applies in Advanced settings
-  renderVoiceSelect();
-  reflectSettings();
   saveNow();
+  refreshVoices();                           // your word list only applies in Advanced settings
 });
 
-// Every setting back to its default, your word list included. Training time and
-// picture folders aren't settings, so they stay.
+// Every setting back to its default, your word list included. Training time, picture
+// folders, recorded words and the video list aren't settings, so they stay.
 $('reset-all').addEventListener('click', function(){
   if (!confirmFirst(this, 'Click again to reset every setting')) return;
   stopListening();
   S = clone(DEFAULTS);
   wordsStatus('');
-  updateCoverage();
   renderVoiceSelect();
   applySettings();
   renderPictures();
   renderWordChips();
+  paintVideoRows();
   saveNow();
-  if (bankCovers) decodeVoice(S.bankVoice).catch(() => {});
+  if (BANK.voices.length) decodeVoice(S.bankVoice).catch(() => {});
   const btn = this;
   btn.textContent = 'Settings reset';
   setTimeout(() => { if (!btn.classList.contains('is-armed')) btn.textContent = btn.dataset.label; }, 1800);
@@ -2527,9 +4213,9 @@ document.querySelectorAll('#streams input').forEach(inp => {
 });
 $('dichotic').addEventListener('change', function(){
   S.dichotic = this.checked;
-  renderVoiceSelect();                       // device voices can't do dichotic listening
-  reflectSettings();
   saveNow();
+  refreshVoices();                           // device voices can't do dichotic listening; both ears' voices need your words
+  if (S.dichotic) decodeVoice(rightVoiceId()).catch(() => {});
 });
 $('ear-color').addEventListener('input', function(){ S.earColor = this.value; save(); });
 
@@ -2610,6 +4296,7 @@ setInterval(() => {
     sessionMs += now - lastTick;
     lastTick = now;
     if (timedSession && sessionMs >= limitMs) timeUp = true;
+    if (bg.player && ++bg.tick % 20 === 0) bgRemember();     // every 5 s: where the video is, in case the page closes
   }
   paintClock();
 }, 250);
@@ -3057,10 +4744,15 @@ function startClicked(){
   readUI();
   const st = currentStreams();
   if (!streamCount(st)) return;                   // the summary line already says why
-  if (wordsShort(st) || cantSpeak(st)){ show('setup'); reveal(wordsRegion); return; }
+  if (wordsShort(st)){ show('setup'); reveal(wordsRegion); return; }
+  if (dichoticBlocked(st) || cantSpeak(st)){
+    show('setup');
+    reveal($('sync-box').hidden ? $('voice-region') : $('sync-box'));
+    return;
+  }
   unlockAudio();                                  // inside the click, so mobile allows it
-  const dichotic = S.advanced && S.dichotic && st.aud && bankCovers;
-  const wantBank = st.aud && bankCovers && (dichotic || S.voiceKind === 'bank');
+  const plan = voicePlan();
+  const wantBank = st.aud && plan.bank && plan.ready;   // else a device voice reads the words
   if (st.aud && !wantBank && synth){ try { synth.resume(); } catch(e){} sysSpeak(wordList()[0], true); }
 
   const btn = $('start-btn'), again = $('again-btn');
@@ -3068,12 +4760,15 @@ function startClicked(){
   btn.textContent = again.textContent = (!facesDone || (st.img && !imagesDone && needsImagesFolder()) || (S.advanced && foldersState === 'loading'))
     ? 'Loading pictures…' : 'Getting ready…';
 
-  const rightId = dichotic ? rightVoiceId() : null;
+  // The voices' clips: every word now for a list of usual length, else each block's as it starts.
+  const words = new Set();
+  if (wantBank && wordList().length <= SYNC_KEEP) wordList().forEach(w => words.add(w.toLowerCase()));
+  const rightId = wantBank && plan.R && plan.R !== plan.L ? plan.R : null;
   const pictureJob = Promise.all([facesReady, S.advanced ? foldersReady : null, needsImagesFolder() ? loadImages(true) : null])
     .then(() => preparePools(st));
   Promise.all([
-    wantBank ? decodeVoice(S.bankVoice).catch(() => null) : null,
-    rightId && rightId !== S.bankVoice ? decodeVoice(rightId).catch(() => null) : null,
+    wantBank ? voiceClips(plan.L, words).catch(() => null) : null,
+    rightId ? voiceClips(rightId, words).catch(() => null) : null,
     S.advanced && S.buzzOn ? renderBuzz(S.buzzSound) : null,
     pictureJob
   ]).then(res => {
@@ -3089,6 +4784,7 @@ function startClicked(){
     }
     liveClips = res[0];                            // null means device voice (or fallback)
     liveClipsR = res[1] || res[0];
+    liveVoices = liveClips ? {L:plan.L, R:rightId || plan.L} : null;
     buzzBuf = res[2] || null;
     begin();
   });
@@ -3152,6 +4848,7 @@ function begin(){
   buildBoard();
   buildAnswers();
   show('game');
+  bgStart();                                      // the background video, if there is one
   fitStage();                                     // measure the real space before anything shows
   requestWakeLock();
   startBlock();
@@ -3175,12 +4872,38 @@ function startBlock(){
   clearBoard();
   windowOpen = false;
   showOverlay(levelText(), variableOn ? 'k changes every trial, shown above the grid' : 'starting in a moment');
-  schedule(performance.now() + 1600, () => {
-    if (!running || paused) return;
-    hideOverlay();
-    due = performance.now();
-    runTrial();
+  blockReady = blockClips();
+  goWhenReady(performance.now() + 1600);
+}
+
+// Runs the trial in hand at `at`, once this block's clips are loaded (usually they already
+// are). A pause or the end of the session in the meantime cancels it.
+let blockReady = Promise.resolve(), blockToken = 0;
+function goWhenReady(at){
+  const token = ++blockToken;
+  blockReady.then(() => {
+    if (token !== blockToken || !running || paused) return;
+    schedule(Math.max(at, performance.now()), () => {
+      if (!running || paused) return;
+      hideOverlay();
+      bgResume();
+      due = performance.now();
+      runTrial();
+    });
   });
+}
+// With a long word list, each block loads just the recordings its trials need.
+function blockClips(){
+  if (!liveVoices || sessionWords.length <= SYNC_KEEP) return Promise.resolve();
+  const L = new Set(), R = new Set(), same = liveVoices.R === liveVoices.L;
+  trials.forEach(t => {
+    if (dichoticOn){ L.add(t.wordL.toLowerCase()); (same ? L : R).add(t.wordR.toLowerCase()); }
+    else L.add(t.spoken.toLowerCase());
+  });
+  return Promise.all([voiceClips(liveVoices.L, L), same ? null : voiceClips(liveVoices.R, R)]).then(r => {
+    liveClips = r[0];
+    liveClipsR = r[1] || r[0];
+  }).catch(() => {});
 }
 
 // Every trial is timed from a fixed beat (due), so small timer delays never pile up.
@@ -3293,9 +5016,11 @@ function togglePause(){
     const now = performance.now();
     sessionMs += now - lastTick; lastTick = now;
     paused = true;
+    blockToken++;
     clearTimeout(timerId);
     stopSpin();
     stopVoice();
+    bgPause();
     windowOpen = false;
     clearBoard();
     $('pause-btn').textContent = 'Resume';
@@ -3307,12 +5032,7 @@ function togglePause(){
     $('pause-btn').textContent = 'Pause';
     responses.pos[idx] = responses.col[idx] = responses.aud[idx] = responses.img[idx] = false;
     showOverlay('Resuming', 'The interrupted trial will be shown again');
-    schedule(performance.now() + 1200, () => {
-      if (!running || paused) return;
-      hideOverlay();
-      due = performance.now();
-      runTrial();
-    });
+    goWhenReady(performance.now() + 1200);         // the video carries on with the trials
   }
   if (document.activeElement) document.activeElement.blur();
 }
@@ -3321,9 +5041,11 @@ function endSession(reason){
   if (!running) return;
   if (!paused){ const now = performance.now(); sessionMs += now - lastTick; }
   running = false; paused = false; windowOpen = false;
+  blockToken++;
   clearTimeout(timerId);
   stopSpin();
   stopVoice();
+  bgStop();
   hideOverlay();
   clearBoard();
   releaseWakeLock();
@@ -3409,17 +5131,22 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 // Only flush what's unsaved, so a forgotten second tab can't overwrite newer settings as it closes.
-window.addEventListener('pagehide', () => { if (running) commitTime(); if (running || savePending) saveNow(); });
+window.addEventListener('pagehide', () => {
+  if (running){ commitTime(); bgRemember(); }
+  if (running || savePending) saveNow();
+});
 
 /* ------------------------------------------------------------------ */
 load();
-updateCoverage();
+loadVideos();
 buildPresets();
 fillBuzzSelect();
 renderVoiceSelect();
 applySettings();
 renderPictures();
 renderWordChips();
+renderVideos();
+videos.filter(v => v.state === 'checking').forEach(queueProbe);   // links the last visit didn't finish checking
 
 if (synth){
   try { synth.addEventListener('voiceschanged', readSysVoices); } catch(e){ synth.onvoiceschanged = readSysVoices; }
@@ -3427,7 +5154,7 @@ if (synth){
   setTimeout(readSysVoices, 400);
 }
 setTimeout(() => { sysSettled = true; if (!sysVoices.length) renderVoiceSelect(); }, 2500);
-if (bankCovers) decodeVoice(S.bankVoice).catch(() => {});
+if (BANK.voices.length) decodeVoice(S.bankVoice).catch(() => {});
 
 })();
 </script>
