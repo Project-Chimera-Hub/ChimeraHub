@@ -1,0 +1,267 @@
+<div class="diag">
+
+    <h2 class="mb-1">Generator diagnostics</h2>
+    <p class="text-muted mb-3">
+        Generates questions of every type through the live game service and checks
+        invariants that hold regardless of mode.
+    </p>
+
+    <div class="card p-3 mb-3">
+        <h5 class="mb-2">Types to check</h5>
+        <p class="text-muted small mb-2">
+            Unticked by default: several stock generators retry without a bound and can
+            wedge the tab. Tick them only if you want to hunt that down.
+        </p>
+        <div class="type-grid">
+            <label *ngFor="let t of allTypes" class="type" [class.risky]="!isBounded(t)">
+                <input type="checkbox" class="form-check-input"
+                       [checked]="isSelected(t)"
+                       (change)="toggle(t, $any($event.target).checked)">
+                <span>{{ t }}<small *ngIf="!isBounded(t)" class="d-block text-muted">unbounded retry</small></span>
+            </label>
+        </div>
+        <div class="preset-row mt-2">
+            <button class="btn btn-sm" (click)="selectBounded()">Safe set</button>
+            <button class="btn btn-sm" (click)="selectAll()">All types</button>
+        </div>
+
+        <label class="type mt-3">
+            <input type="checkbox" class="form-check-input"
+                   [checked]="useLiveSettings"
+                   (change)="useLiveSettings = $any($event.target).checked">
+            <span>Use live settings
+                <small class="d-block text-muted">
+                    Runs against tier + overrides + progression instead of a fixed
+                    settings object, so those layers are covered too.
+                </small>
+            </span>
+        </label>
+    </div>
+
+    <div class="card p-3 mb-3" *ngIf="lastAttempted">
+        <span class="no">Previous run stopped while testing: <strong>{{ lastAttempted }}</strong></span>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <div class="run-row">
+            <button class="btn btn-primary" [disabled]="running" (click)="run()">
+                {{ running ? "Running…" : "Run checks" }}
+            </button>
+            <span class="text-muted" *ngIf="ran && !running">
+                {{ results.length }} types ·
+                <span [class.ok]="totalFailures === 0" [class.no]="totalFailures > 0">
+                    {{ totalFailures === 0 ? "all clear" : totalFailures + " issue(s)" }}
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3" *ngIf="ran">
+        <h5 class="mb-3">Results</h5>
+
+        <div class="row-head">
+            <span>Type</span><span>Made</span><span>True</span><span>neg</span><span>meta</span><span>ms</span>
+        </div>
+
+        <div class="res" *ngFor="let r of results" [attr.data-status]="statusOf(r)">
+            <div class="res__main">
+                <span class="dot" [attr.data-status]="statusOf(r)"></span>
+                <span class="nm">{{ r.type }}</span>
+                <span class="num">{{ r.generated }}/{{ r.attempted }}</span>
+                <span class="num">{{ r.truthRate }}%</span>
+                <span class="num">{{ r.negations }}</span>
+                <span class="num">{{ r.metaRelations }}</span>
+                <span class="num">{{ r.ms }}</span>
+            </div>
+            <ul class="issues" *ngIf="r.failures.length">
+                <li *ngFor="let f of r.failures">{{ f }}</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <h5 class="mb-2">Progression simulation</h5>
+        <p class="text-muted small mb-2">
+            Runs a synthetic player through the real progression service to show the
+            sawtooth: time falling, a rung claimed, the clock reset, and eventually a
+            premise rise. The ladder is restored afterwards.
+        </p>
+
+        <div class="run-row mb-2">
+            <select class="form-select form-select-sm" style="max-width: 14rem;"
+                    [value]="simType" (change)="simType = $any($event.target).value">
+                <option *ngFor="let t of allTypes" [value]="t">{{ t }}</option>
+            </select>
+            <input type="number" class="form-control form-control-sm" style="max-width: 6rem;"
+                   min="10" max="500" [value]="simTrials"
+                   (change)="simTrials = +$any($event.target).value">
+            <span class="text-muted small">trials</span>
+            <input type="number" class="form-control form-control-sm" style="max-width: 6rem;"
+                   min="0.3" max="1" step="0.05" [value]="simAccuracy"
+                   (change)="simAccuracy = +$any($event.target).value">
+            <span class="text-muted small">accuracy</span>
+            <button class="btn btn-sm btn-primary" [disabled]="simRunning"
+                    (click)="simulateProgression()">
+                {{ simRunning ? "Running…" : "Simulate" }}
+            </button>
+        </div>
+
+        <div *ngIf="simTrail.length">
+            <div class="row-head" style="grid-template-columns: 4rem 3rem 4rem 1fr;">
+                <span>trial</span><span>prem</span><span>secs</span><span>rungs / event</span>
+            </div>
+            <div class="res" *ngFor="let s of simTrail">
+                <div class="res__main" style="grid-template-columns: 4rem 3rem 4rem 1fr;">
+                    <span class="num">{{ s.i }}</span>
+                    <span class="num">{{ s.p }}</span>
+                    <span class="num">{{ s.t }}</span>
+                    <span class="nm">
+                        {{ s.rungs }}
+                        <strong class="ok" *ngIf="s.event">· {{ s.event }}</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="issues mt-2" *ngIf="simEvents.length && !simTrail.length">
+            <div *ngFor="let e of simEvents">{{ e }}</div>
+        </div>
+    </div>
+
+    <div class="card p-3">
+        <h5 class="mb-2">Rung costs, measured</h5>
+        <p class="text-muted small">
+            What the difficulty table says a modifier is worth, next to what
+            answered items say it is worth. A rung answered better than predicted
+            is one the model is overcharging for. Nothing is applied
+            automatically &mdash; a fit from a handful of trials is worse than the
+            guess it would replace.
+        </p>
+        <button class="btn btn-sm btn-outline-secondary mb-2" (click)="loadRungFits()">
+            Measure from {{ trialCount || "logged" }} answers
+        </button>
+
+        <div class="res__main" style="grid-template-columns: 1fr 4rem 4rem 4rem 5rem;" *ngIf="rungFits.length">
+            <span class="nm"><strong>rung</strong></span>
+            <span class="num"><strong>table</strong></span>
+            <span class="num"><strong>fitted</strong></span>
+            <span class="num"><strong>n</strong></span>
+            <span class="num"><strong>residual</strong></span>
+        </div>
+        <div class="res__main" style="grid-template-columns: 1fr 4rem 4rem 4rem 5rem;"
+             *ngFor="let f of rungFits">
+            <span class="nm">{{ f.rung }}</span>
+            <span class="num">{{ f.current.toFixed(2) }}</span>
+            <span class="num">{{ f.fitted.toFixed(2) }}</span>
+            <span class="num">{{ f.trials }}</span>
+            <span class="num">{{ f.residual > 0 ? "+" : "" }}{{ f.residual.toFixed(3) }}</span>
+        </div>
+        <div class="text-muted small" *ngIf="!rungFits.length">
+            No rung has enough answers behind it yet.
+        </div>
+
+        <hr class="my-2">
+        <div class="small">
+            <strong>Conclusion depth</strong> &mdash; how much of an item its
+            answer needed.
+            <p class="text-muted mb-1">
+                Share is depth over premise count, averaged per item. A hundred
+                means the conclusion took the whole premise set. The column that
+                matters is <em>worst</em>: a floor is a promise about the
+                minimum, so a good average with a bad minimum means the floor is
+                not holding. Modes that do not measure depth yet are absent
+                rather than shown as zero.
+            </p>
+
+            <div class="res__main" style="grid-template-columns: 1fr 4rem 4rem 4rem 4rem;"
+                 *ngIf="depths.length">
+                <span class="nm"><strong>mode</strong></span>
+                <span class="num"><strong>share</strong></span>
+                <span class="num"><strong>worst</strong></span>
+                <span class="num"><strong>depth</strong></span>
+                <span class="num"><strong>n</strong></span>
+            </div>
+            <div class="res__main" style="grid-template-columns: 1fr 4rem 4rem 4rem 4rem;"
+                 *ngFor="let d of depths">
+                <span class="nm">{{ d.type }}</span>
+                <span class="num">{{ pct(d.share) }}%</span>
+                <span class="num">{{ pct(d.worst) }}%</span>
+                <span class="num">{{ d.meanDepth.toFixed(1) }}/{{ d.meanPremises.toFixed(1) }}</span>
+                <span class="num">{{ d.trials }}</span>
+            </div>
+            <div class="text-muted" *ngIf="!depths.length">
+                No answered item has recorded a depth yet.
+            </div>
+
+            <div class="mt-2">
+                <strong>What an unneeded premise is worth</strong> &mdash; in levels.
+                <div *ngIf="depthFit; else noDepthFit">
+                    {{ depthFit.levelsPerPremise.toFixed(2) }} levels per premise
+                    the answer did not need, from {{ depthFit.trials }} answers
+                    (shortfall sd {{ depthFit.sd.toFixed(2) }} premises).
+                    <div [class.text-muted]="!depthApplied">
+                        <strong>{{ depthApplied ? "Being applied" : "Not applied" }}</strong>
+                        &mdash;
+                        <span *ngIf="depthApplied">
+                            charging {{ depthApplied.toFixed(2) }} levels per unneeded
+                            premise, so a shallow item is scored as the easier item
+                            it was.
+                        </span>
+                        <span *ngIf="!depthApplied">
+                            a fit saying that premises nobody needs make an item
+                            <em>harder</em> is a statement about the sample rather
+                            than about depth, so it is discarded rather than acted on.
+                        </span>
+                    </div>
+                </div>
+                <ng-template #noDepthFit>
+                    <div class="text-muted">
+                        Not enough spread to say. Once the floors are in, most
+                        items sit at or near full depth, so the shortfall barely
+                        varies and every coefficient fits equally well &mdash;
+                        turning the deeper conclusions off in Customise produces
+                        the variation this needs.
+                    </div>
+                </ng-template>
+            </div>
+        </div>
+
+        <hr class="my-2">
+        <div class="small">
+            <strong>Width</strong> &mdash; what a bit of extra spread is worth, in levels.
+            <div *ngIf="widthFit; else noWidthFit">
+                {{ widthFit.levelsPerBit.toFixed(2) }} levels per bit,
+                from {{ widthFit.trials }} answers (spread sd
+                {{ widthFit.sd.toFixed(2) }} bits).
+                <div [class.text-muted]="!widthApplied">
+                    <strong>{{ widthApplied ? "Being applied" : "Not applied" }}</strong>
+                    &mdash;
+                    <span *ngIf="widthApplied">
+                        charging {{ widthApplied.toFixed(2) }} levels per bit, so an
+                        item that comes out wide is scored as the harder item it was.
+                    </span>
+                    <span *ngIf="!widthApplied">
+                        a fit that runs backwards is a statement about the sample
+                        rather than about width, so it is discarded rather than acted on.
+                    </span>
+                </div>
+            </div>
+            <ng-template #noWidthFit>
+                <div class="text-muted">
+                    Not enough variation to say. With the spread dial at its default
+                    every item is drawn at the calibrated middle, so there is nothing
+                    for a coefficient to explain &mdash; which is why width is still
+                    the one part of the difficulty model with no number behind it.
+                </div>
+            </ng-template>
+        </div>
+    </div>
+
+    <div class="card p-3" *ngIf="sample">
+        <h5 class="mb-2">Sample item — {{ sample.type }}</h5>
+        <div class="premise" *ngFor="let p of sample.premises" [innerHTML]="p"></div>
+        <div class="concl" [innerHTML]="sample.conclusion"></div>
+        <div class="text-muted mt-1">answer: {{ sample.isValid ? "TRUE" : "FALSE" }}</div>
+    </div>
+
+</div>

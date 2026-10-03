@@ -1,0 +1,398 @@
+/**
+ * Directed reachability — the branching-hierarchy mode.
+ *
+ * Every other mode in the app is about *where* things sit: an order, a
+ * position, a displacement. This one is about *whether you can get there*.
+ * Premises state direct links; the question is whether one thing reaches
+ * another along any number of steps, which is a different thing to hold in
+ * your head — you are tracking connectivity, not coordinates, and connectivity
+ * does not compose by addition.
+ *
+ * Asked both ways round, because that is where the difficulty lives:
+ *
+ *   "does X reach Y"      — is there a path X → … → Y
+ *   "does X come from Y"  — is there a path Y → … → X
+ *
+ * Those are the same relation read in opposite directions, and conflating them
+ * is the characteristic mistake. A pair that is reachable *backwards* is the
+ * single most valuable false item this mode has, so it is generated on purpose
+ * rather than left to chance.
+ *
+ * Pure — no Angular, no settings, no storage. Reachability is a transitive
+ * closure over integers, so every item is exactly verifiable.
+ */
+
+import { subj } from "./phrasing";
+
+/* ------------------------------------------------------------------ *
+ * Structure                                                           *
+ * ------------------------------------------------------------------ */
+
+export interface HierarchyLayout {
+    nodes: string[];
+    /** Direct links, `from -> to`. */
+    edges: Array<[string, string]>;
+    /** Shortest step count between every ordered pair; Infinity if no path. */
+    steps: Record<string, Record<string, number>>;
+    /** Whether back edges were allowed, so reachability can be mutual. */
+    cyclic: boolean;
+}
+
+const pick = <T>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)];
+
+function shuffled<T>(xs: T[]): T[] {
+    const out = [...xs];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+}
+
+export interface HierarchyOptions {
+    /** Allow edges that point backwards, making reachability possibly mutual. */
+    cycles?: boolean;
+    /** Links to state. Defaults to one more than a spanning tree. */
+    edgeCount?: number;
+}
+
+/**
+ * Build a connected directed graph over `nodes`.
+ *
+ * A random topological order fixes the direction of every edge, which makes the
+ * result acyclic by construction rather than by checking afterwards. Each node
+ * after the first is attached to a random earlier one, so the graph is
+ * connected and branches; the remaining edges are extra forward links, which is
+ * what creates the multiple routes worth reasoning about.
+ *
+ * With `cycles` on, a few of those extras point backwards instead. That is a
+ * genuine step up: in a hierarchy "reaches" is a partial order and you can
+ * reason by level, whereas once a cycle exists two nodes can reach each other
+ * and levels stop meaning anything.
+ */
+export function buildHierarchy(
+    nodes: string[],
+    options: HierarchyOptions = {},
+): HierarchyLayout {
+    const order = shuffled(nodes);
+    const rank = new Map(order.map((n, i) => [n, i]));
+    const wanted = options.edgeCount ?? nodes.length;
+    const seen = new Set<string>();
+    const edges: Array<[string, string]> = [];
+
+    const add = (from: string, to: string) => {
+        const key = from + "\u0000" + to;
+        if (from === to || seen.has(key)) return false;
+        seen.add(key);
+        edges.push([from, to]);
+        return true;
+    };
+
+    // Spanning structure: every node hangs off an earlier one.
+    const parent = new Map<string, string>();
+    for (let i = 1; i < order.length; i++) {
+        const p = order[Math.floor(Math.random() * i)];
+        parent.set(order[i], p);
+        add(p, order[i]);
+    }
+
+    /*
+     * Loops are closed against an *ancestor*, not against any earlier node.
+     *
+     * A link that merely points backwards in the topological order usually
+     * creates nothing — a cycle needs the target to already reach the source,
+     * and a random earlier node normally does not. Walking up the spanning tree
+     * guarantees it does, so asking for cycles actually produces them.
+     */
+    let closed = 0;
+    const maxLoops = options.cycles ? Math.max(1, Math.round(nodes.length / 4)) : 0;
+    for (let guard = 0; closed < maxLoops && edges.length < wanted && guard < nodes.length * 6; guard++) {
+        const deep = order.filter(n => parent.has(n) && parent.has(parent.get(n)!));
+        if (!deep.length) break;
+        let node = pick(deep);
+        let ancestor = parent.get(node)!;
+        while (parent.has(ancestor) && Math.random() < 0.5) ancestor = parent.get(ancestor)!;
+        if (add(node, ancestor)) closed++;
+    }
+
+    // Remaining links point forward, which is what creates alternative routes.
+    for (let guard = 0; edges.length < wanted && guard < wanted * 40; guard++) {
+        const a = pick(order);
+        const b = pick(order);
+        if (a === b || rank.get(a)! >= rank.get(b)!) continue;
+        add(a, b);
+    }
+
+    const steps = shortestSteps(nodes, edges);
+    return {
+        nodes,
+        edges: orderEdges(edges),
+        steps,
+        // Measured, not assumed: a back link only makes a cycle if it closes one.
+        cyclic: nodes.some(n => Number.isFinite(steps[n][n])),
+    };
+}
+
+/**
+ * State links roughly in the order they can be followed.
+ *
+ * Without this the premises arrive in construction order, which jumps between
+ * unrelated parts of the graph. Depth-first from the nodes nothing points at.
+ * Callers scramble afterwards if they want to; this only establishes that a
+ * followable order exists.
+ */
+function orderEdges(edges: Array<[string, string]>): Array<[string, string]> {
+    const out: Array<[string, string]> = [];
+    const taken = new Set<number>();
+    const from = new Map<string, number[]>();
+    edges.forEach(([a], i) => {
+        if (!from.has(a)) from.set(a, []);
+        from.get(a)!.push(i);
+    });
+
+    const targets = new Set(edges.map(e => e[1]));
+    const roots = [...new Set(edges.map(e => e[0]))].filter(n => !targets.has(n));
+
+    const walk = (node: string) => {
+        for (const i of from.get(node) ?? []) {
+            if (taken.has(i)) continue;
+            taken.add(i);
+            out.push(edges[i]);
+            walk(edges[i][1]);
+        }
+    };
+
+    for (const r of roots) walk(r);
+    // Anything a cycle kept the walk from reaching still has to be stated.
+    edges.forEach((e, i) => { if (!taken.has(i)) out.push(e); });
+    return out;
+}
+
+/** Breadth-first from every node: exact shortest path counts. */
+export function shortestSteps(
+    nodes: string[],
+    edges: Array<[string, string]>,
+): Record<string, Record<string, number>> {
+    const adj = new Map<string, string[]>();
+    for (const [a, b] of edges) {
+        if (!adj.has(a)) adj.set(a, []);
+        adj.get(a)!.push(b);
+    }
+
+    const steps: Record<string, Record<string, number>> = {};
+    for (const start of nodes) {
+        const dist: Record<string, number> = {};
+        for (const n of nodes) dist[n] = Infinity;
+
+        /*
+         * `seen` deliberately does not start with `start` in it.
+         *
+         * A node reaches itself exactly when it sits on a cycle, and seeding
+         * the start would make BFS skip the edge that comes back to it — so
+         * every self-distance stayed Infinity and cyclic graphs were
+         * indistinguishable from acyclic ones.
+         */
+        const seen = new Set<string>();
+        let layer = [start];
+        let d = 0;
+        while (layer.length) {
+            d++;
+            const next: string[] = [];
+            for (const node of layer) {
+                for (const to of adj.get(node) ?? []) {
+                    if (seen.has(to)) continue;
+                    seen.add(to);
+                    dist[to] = d;
+                    next.push(to);
+                }
+            }
+            layer = next;
+        }
+        steps[start] = dist;
+    }
+    return steps;
+}
+
+export function reaches(layout: HierarchyLayout, from: string, to: string): boolean {
+    return Number.isFinite(layout.steps[from]?.[to] ?? Infinity);
+}
+
+/* ------------------------------------------------------------------ *
+ * Choosing what to ask                                                *
+ * ------------------------------------------------------------------ */
+
+/** "to" asks whether a reaches b; "from" asks whether b reaches a. */
+export type HierarchyDirection = "to" | "from";
+
+export interface HierarchyQuery {
+    a: string;
+    b: string;
+    direction: HierarchyDirection;
+    /** True when the claim holds. */
+    isValid: boolean;
+    /** Steps along the path being claimed, or Infinity. */
+    span: number;
+    /** How the false ones were made false, for diagnostics. */
+    trap?: "reversed" | "siblings" | "unrelated";
+}
+
+/**
+ * Pick a pair to ask about.
+ *
+ * True claims must span at least `minSpan` links, or the answer is a premise
+ * read back rather than a path composed.
+ *
+ * False claims are chosen to be *near misses*, in preference order: a pair that
+ * is reachable the other way round, then two nodes sharing an ancestor but with
+ * no path between them. A random unrelated pair is the fallback, and the worst
+ * kind of item — it can be rejected without following anything.
+ */
+export function pickHierarchyQuery(
+    layout: HierarchyLayout,
+    wantValid: boolean,
+    minSpan: number,
+): HierarchyQuery | null {
+    const { nodes, steps } = layout;
+    const span = (x: string, y: string) => steps[x]?.[y] ?? Infinity;
+
+    const valid: HierarchyQuery[] = [];
+    const reversed: HierarchyQuery[] = [];
+    const siblings: HierarchyQuery[] = [];
+    const unrelated: HierarchyQuery[] = [];
+
+    for (const a of nodes) {
+        for (const b of nodes) {
+            if (a === b) continue;
+            for (const direction of ["to", "from"] as HierarchyDirection[]) {
+                // The claim is always about a path from `src` to `dst`.
+                const [src, dst] = direction === "to" ? [a, b] : [b, a];
+                const d = span(src, dst);
+                const back = span(dst, src);
+
+                if (Number.isFinite(d)) {
+                    if (d >= minSpan) valid.push({ a, b, direction, isValid: true, span: d });
+                    continue;
+                }
+                // No path this way. What makes it a good false item?
+                const q: HierarchyQuery = { a, b, direction, isValid: false, span: Infinity };
+                if (Number.isFinite(back)) reversed.push({ ...q, trap: "reversed" });
+                else if (nodes.some(c => Number.isFinite(span(c, src)) && Number.isFinite(span(c, dst))))
+                    siblings.push({ ...q, trap: "siblings" });
+                else unrelated.push({ ...q, trap: "unrelated" });
+            }
+        }
+    }
+
+    if (wantValid) return valid.length ? pick(valid) : null;
+    if (reversed.length && Math.random() < 0.6) return pick(reversed);
+    if (siblings.length) return pick(siblings);
+    if (reversed.length) return pick(reversed);
+    return unrelated.length ? pick(unrelated) : null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Phrasing                                                            *
+ * ------------------------------------------------------------------ */
+
+const rel = (s: string) => `<span class="relation">${s}</span>`;
+
+/**
+ * A stated link.
+ *
+ * "feeds" rather than "reaches", and the conclusion uses the other word — the
+ * two have to be visibly different or a conclusion reads as a restatement of a
+ * premise, which is exactly the distinction the mode is testing.
+ */
+export function renderHierarchyPremise([from, to]: [string, string]): string {
+    return `${subj(from)} ${rel("feeds")} ${subj(to)}`;
+}
+
+export function renderHierarchyConclusion(q: HierarchyQuery): string {
+    return q.direction === "to"
+        ? `${subj(q.a)} ${rel("reaches")} ${subj(q.b)}`
+        : `${subj(q.a)} ${rel("comes from")} ${subj(q.b)}`;
+}
+
+/** Distinct claims, for the multi-conclusion and choice modes. */
+export function buildHierarchyQuerySet(
+    layout: HierarchyLayout,
+    count: number,
+    wantValid: boolean[],
+    minSpan: number,
+): HierarchyQuery[] {
+    const used = new Set<string>();
+    const out: HierarchyQuery[] = [];
+
+    for (let guard = 0; out.length < count && guard < count * 60; guard++) {
+        const q = pickHierarchyQuery(layout, wantValid[out.length], minSpan);
+        if (!q) break;
+        const key = `${q.a}|${q.b}|${q.direction}`;
+        if (used.has(key)) continue;
+        used.add(key);
+        out.push(q);
+    }
+
+    return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Explaining an answer                                                *
+ * ------------------------------------------------------------------ */
+
+/** A shortest route along the links, or null when there is none. */
+function routeBetween(layout: HierarchyLayout, from: string, to: string): string[] | null {
+    if (from === to) return [from];
+    const prev: Record<string, string> = {};
+    const seen = new Set([from]);
+    const queue = [from];
+
+    while (queue.length) {
+        const cur = queue.shift()!;
+        for (const [u, v] of layout.edges) {
+            if (u !== cur || seen.has(v)) continue;
+            seen.add(v);
+            prev[v] = cur;
+            if (v === to) {
+                const out = [to];
+                let step = to;
+                while (step !== from) { step = prev[step]; out.unshift(step); }
+                return out;
+            }
+            queue.push(v);
+        }
+    }
+    return null;
+}
+
+/**
+ * Why a reachability claim holds, or why it cannot.
+ *
+ * Unlike the scale modes there is no arithmetic to show — the route *is* the
+ * answer, and a claim is false precisely when no route exists. Both cases are
+ * worth stating, and the false one is worth stating carefully: "there is no
+ * route" is the whole content of the answer, and a reader who guessed wrong
+ * usually followed a link backwards, so the reverse route is named when it
+ * exists rather than left for them to wonder about.
+ */
+export function explainHierarchy(layout: HierarchyLayout, q: HierarchyQuery): string[] {
+    // "comes from" claims that b reaches a, so the route runs the other way.
+    const [from, to] = q.direction === "to" ? [q.a, q.b] : [q.b, q.a];
+    const route = routeBetween(layout, from, to);
+
+    if (route && route.length > 1) {
+        const lines = route.slice(0, -1).map((node, i) =>
+            `${subj(node)} ${rel("feeds")} ${subj(route[i + 1])}`);
+        lines.push(`so ${subj(from)} ${rel("reaches")} ${subj(to)}`
+            + ` — ${route.length - 1} step${route.length - 1 === 1 ? "" : "s"}`);
+        return lines;
+    }
+
+    const back = routeBetween(layout, to, from);
+    const lines = [`No route leads from ${subj(from)} to ${subj(to)}.`];
+    if (back && back.length > 1) {
+        lines.push(`It runs the other way: `
+            + back.slice(0, -1).map((n, i) => `${subj(n)} ${rel("feeds")} ${subj(back[i + 1])}`).join(", ")
+            + ".");
+    }
+    return lines;
+}

@@ -1,0 +1,96 @@
+@media (max-width: 768px) {
+    :host ::ng-deep input[type="range"] {
+        max-width: 80%;
+    }
+}
+/* The dimension-colour sample: a premise, boxed so it reads as an example
+ * rather than as instructions. */
+.dimsample {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.2);
+    border-radius: var(--th-radius, 12px);
+    background: rgba(var(--th-accent-rgb, 34, 211, 238), 0.04);
+    line-height: 1.5;
+}
+
+/* ---- premise wording, moved here from Customise ---- */
+
+.phr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.phr__name { min-inline-size: 0; }
+
+.phr__tri {
+    display: inline-flex;
+    flex-shrink: 0;
+    border-radius: calc(var(--th-radius, 14px) * 0.7);
+    overflow: hidden;
+    border: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.28);
+}
+
+.phr__tri .btn {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding-inline: 11px;
+    font-size: 12px;
+}
+
+.phr__tri .btn + .btn {
+    border-inline-start: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.2) !important;
+}
+
+.phr__tri .btn.is-on {
+    background: color-mix(in srgb, var(--th-accent) 22%, transparent) !important;
+    color: var(--th-accent) !important;
+}
+
+@media (max-width: 560px) {
+    .phr { flex-direction: column; align-items: flex-start; }
+}
+
+/* Carried over with the stimulus controls, which used to live on Customise. */
+.flag {
+    display: flex;
+    align-items: start;
+    gap: 10px;
+    padding: 8px 0;
+    margin: 0;
+    cursor: pointer;
+    border-top: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.12);
+}
+
+.flag:first-of-type { border-top: 0; }
+
+
+/*
+ * Section groups.
+ *
+ * Thirteen collapsibles in one flat list is a list you scan rather than a page
+ * you navigate: nothing says which of them are about the same thing, so finding
+ * a setting means opening things until it turns up. Four headings, and the
+ * subtitle says what belongs under each so the grouping is checkable rather
+ * than decorative.
+ */
+.settings__group {
+    margin: 28px 0 10px;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+.settings__group:first-of-type { margin-top: 4px; }
+
+.settings__group small {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    letter-spacing: 0;
+    text-transform: none;
+    opacity: 0.8;
+}

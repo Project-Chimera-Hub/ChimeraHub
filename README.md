@@ -1,6 +1,6 @@
 # Chimera Hub
 
-Four trainers and three more exercises, one record, one day's total — and a
+Six trainers and three more exercises, one record, one day's total — and a
 quota the desktop enforces.
 
 **Live:** <https://project-chimera-hub.github.io/ChimeraHub/> ·
@@ -23,12 +23,14 @@ test/       the hub's tests
 
 | Trainer | What it trains |
 |---|---|
+| Syllogimous | relational and syllogistic reasoning (Angular) |
+| Relational N-back - Loosh | n-back over relations, with a ladder |
 | CCT | spoken arithmetic against the clock |
 | Chimera | add the digits you hear, judge the number you see — with n-back, eWMT, CCT and dichotic modes stacked on top |
 | eWMT | the Affective N-Back: position, colour and voice, n steps back |
 | Relational N-back | four streams of relations, n back |
 
-And three **additional exercises**, which run here like the four but are not
+And three **additional exercises**, which run here like the six but are not
 counted toward the day:
 
 | Exercise | What it trains |
@@ -37,14 +39,17 @@ counted toward the day:
 | Earshot | tracking moving sounds by ear — 3D multiple object tracking for the ears |
 | N-back Constant Change | Quad Box's 3D quad n-back, with modalities and variant that keep changing (Vite) |
 
-All seven come from [projectchimera-dot](https://github.com/projectchimera-dot).
+Syllogimous and Relational N-back - Loosh come from
+[Gagafutzi](https://github.com/Gagafutzi); the other seven from
+[projectchimera-dot](https://github.com/projectchimera-dot).
 The **Training archive** sits beside them: not a trainer, the record.
 
 ## A shell, not a rewrite
 
-Each app was merged here by **moving** it, not rewriting it. A Svelte app built
-with Vite and a set of plain HTML pages are each still exactly what they were
-and each still runs on its own, without knowing this repository exists.
+Each app was merged here by **moving** it, not rewriting it. An Angular app, a
+Svelte app built with Vite and a set of plain HTML pages are each still exactly
+what they were and each still runs on its own, without knowing this repository
+exists — Syllogimous still produces its Android APK from `apps/syllogimous`.
 Working trainers are worth more than consistent ones.
 
 So the shared part is small on purpose: `tools/build-site.mjs` decides where
@@ -102,7 +107,7 @@ local build and the APK make no outbound request at all.
 ## Sharing data
 
 The hub used to carry a **Share your data** card for Syllogimous's answers; it
-left with Syllogimous. The kit behind it stays, standalone and reusable —
+was taken out when Syllogimous briefly left the hub. The kit behind it stays, standalone and reusable —
 [`shared/share-kit/`](shared/share-kit/README.md) explains what it is for and
 how to add it to another tool — and `node tools/check-shared.mjs <folder>`
 still validates and merges uploads into `chimerahub-dataset/`, which is
@@ -208,7 +213,7 @@ like two applications is the thing a shared look exists to prevent.
 
 ## Retired trainers, and what removing them kept
 
-Syllogimous, Isomorph, the ladder Relational N-back, Precision N-back, 3D
+Isomorph, Precision N-back, 3D
 Rotation, Synaesthesia colours, Running Order, the Attentional Shield eWMT,
 DorsalFlow and Controlled Hallucination all used to be here. They are gone
 from the hub; their history is in this repository's log.
@@ -221,15 +226,15 @@ months of their training and still reads. A record that stops being readable
 when an app is retired is not a record.
 
 The meter reads them too, for the streak — a day trained is a day trained —
-but counts only the four trainers on the hub toward today and the quota:
+but counts only the six trainers on the hub toward today and the quota:
 `TRAINERS` in `shell/js/shell.js` is the filter.
 
 Two names carried over. **eWMT** is the Affective N-Back now, under the source
 name the Attentional Shield had, because it is the same slot and a day of
-either is a day of eWMT. **Relational N-back** is the four-stream trainer now,
-under a new source name (`relational`), because the ladder trainer that had the
-name measured difficulty in a different unit and the archive never lets a
-number travel without its unit.
+either is a day of eWMT. **Relational N-back** is the four-stream trainer,
+under its own source name (`relational`), because the ladder trainer — back on
+the hub as **Relational N-back - Loosh**, source `rnb` — measures difficulty in
+a different unit and the archive never lets a number travel without its unit.
 
 ## The archive is not a trainer
 

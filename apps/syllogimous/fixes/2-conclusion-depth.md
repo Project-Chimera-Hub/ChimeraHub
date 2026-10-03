@@ -1,0 +1,1025 @@
+# 2 — Conclusion depth
+
+> So my general problem is that conclusion depth is often unrelated to the
+> premise depth of logic. Ideally a puzzle should have multiple conclusions
+> spread in between (so they are of different complexity to estimate where the
+> user got it wrong) and one final one you have to construct or choose from
+> multiple options.
+
+Five of the fourteen screenshots are this, and the author's closing paragraph
+names it. It is the single largest item in the plan and the only one that needs
+a new shared mechanism rather than a per-mode repair.
+
+---
+
+## 2.1 What is actually wrong
+
+**A conclusion should take the whole relation to reach, or near enough.** That
+is the requirement, and everything below is a way of enforcing it. Two things
+follow from it that are worth separating, because they are enforced by different
+means:
+
+- **Depth** — reaching the conclusion must use the whole premise set, not a
+  fragment of it. [2.2](#22-the-mechanism-measure-depth-then-require-it).
+- **Width** — the conclusion must be about every dimension the item is built on,
+  not one of them. [2.5](#25-an-n-dimensional-map-deserves-an-n-dimensional-conclusion).
+
+An item can fail either independently. The 7-D item below is full depth and
+one-seventh width; the nested item is full width and depth 1.
+
+The app already measures item difficulty carefully — the ability model, the
+width estimate in bits, the rung ladders. None of it measures **how much of the
+premise set the conclusion needs**. A ten-relation nested item and a
+one-relation restatement of half a premise are, to every difficulty model in the
+codebase, the same item.
+
+The four instances:
+
+**Nested** ([shot 03](shots/03-nested-shallow-conclusion.png)) — **FIXED**.
+Five premises, each carrying an outer relation and a bracketed inner one, so ten
+relations in play. The conclusion is *"Inside the brackets: Lens is after
+Doorstep"* and premise four's bracket reads *"where Lens is before Doorstep"*.
+The conclusion is one premise, negated. Depth 1 out of a possible 5.
+
+`pickPair` drew any two objects, so the pair a bracket stated outright was as
+likely as any other. It now draws from the pairs at least `MIN_DEPTH` relations
+apart in the space being asked about — a floor, not a fixed distance, so where
+the answer sits in the chain still varies while a restatement is impossible.
+
+**The conclusion now states both spaces, about one pair.** Asking about one of
+them made the other half of every premise decoration, and *which* half was
+decoration was decided by a coin — so a reader who saw "Inside the brackets"
+could drop the outer arrangement entirely, in a mode whose whole point is
+holding two of them apart while they interfere. It is the same argument
+[2.5](#25-an-n-dimensional-map-deserves-an-n-dimensional-conclusion) makes about
+axes, and it wanted making twice.
+
+Three things it turned on:
+
+- **The floor holds in both.** A pair four relations deep outside and adjacent
+  inside is half a deep item, which reads as a deep item until you notice which
+  half you worked for. `pickShared` requires the distance in each.
+- **A false claim is wrong in exactly one half, drawn.** Wrong in both is
+  spotted from whichever the reader checks first, which turns a
+  two-arrangement item back into a one-arrangement item by the back door — and
+  which half carries the lie has to vary, or "the bracket is always the true
+  one" becomes the strategy.
+- **Depth is the two chains summed, capped at the premise count.** The reader
+  composes one chain in each arrangement and a premise carries one relation of
+  each, so the premises that must be used lie between the longer chain and the
+  sum. The cap keeps the figure expressible in the units the shortfall term
+  charges in.
+
+`MIN_DEPTH` is **2**, not the chain's full length, and that is a deliberate
+first step rather than a compromise. Nested's difficulty is carried by the
+interference between its two spaces as much as by the span within either, so
+pinning the conclusion to the ends of one chain would make the answer's
+position predictable while adding little. Raising the floor is one number, and
+the mode is the natural place to raise it first, because it is the one whose
+premises carry twice as many relations as they appear to.
+
+**Shape Rotation** ([shot 05](shots/05-shape-rotation-shallow.png)). Premise
+three is *"Cord is 2 corners clockwise from Hostess"*; the conclusion is *"after
+the turns, Hostess is 2 corners clockwise from Cord"*. On a four-corner square,
+two clockwise is its own inverse, so the conclusion is premise three read
+backwards, and the two positional premises contribute nothing.
+
+**Deictic** ([shot 10](shots/10-deictic-shallow.png)) — **FIXED**, in two
+parts. *"Here is there and there is here"* plus *"When I am there, I hold
+Cloud"* gives *"When I am here, I hold Cloud"*. Two premises out of five.
+
+The ordering half is [2.4](#24-transformations-that-arrive-before-the-thing-they-transform).
+The depth half could not be fixed by a floor, and that is the interesting part:
+the grid statements are **independent facts**, so a conclusion about a position
+can only ever need the statement about *that* position, however many positions
+are stated and however many reversals are applied. Depth here is bounded by
+reversals + 1 whatever the premise count, and no choice of pair moves it.
+
+This is the case [2.2](#22-the-mechanism-measure-depth-then-require-it)
+anticipated — *"if a mode turns out to reject most of what it builds, the layout
+generator is what needs changing, not the floor"*. So the grid is stated **one
+short**, and the missing position is the one asked about. Every position holds a
+different one of the listed things, so each statement rules one out and what is
+left over is what the unstated position holds. Every premise becomes
+load-bearing: drop any one and the answer is two things at once.
+
+Three things it turned on.
+
+**The convention has to be stated.** Without the setup line naming the things
+and saying that each position holds a different one, an unstated position holds
+anything at all and the conclusion is not derivable but merely likely. The line
+marks them up as *subjects* rather than merely highlighting them, because the
+guard from [1.1](1-correctness.md#11-a-conclusion-naming-an-object-no-premise-states--fixed)
+reads the setup exactly as it reads a premise — and caught this, correctly, on
+the first run.
+
+**The frame is asked for one more premise than the item wants**, since one is
+about to be withheld. Otherwise a deep item is a premise shorter than the count
+the ability model was told it would get. It also moves the two-to-three axis
+boundary down by one, which is the right way round: a frame that has to give a
+statement up needs the room to give it up in.
+
+**The position the utterance names is still stated.** That is not an oversight:
+it is the answer for anyone who read past the reversal, which makes it the trap
+this mode always should have had.
+
+**Composed space at 7-D** ([shot 12](shots/12-ndspace-7d-1d-conclusion.png)).
+Three premises stating seven axes each — twenty-one relations — and a conclusion
+that names one axis: *"Chalk is west of Museum"*. Six-sevenths of every premise
+is decoration.
+
+The existing guard cannot help. `isPremiseLikeConclusion`
+([`question.utils.ts:44`](../src/app/syllogimous/utils/question.utils.ts))
+rejects a conclusion whose subject *pair* matches a premise's subject pair. It
+is exact-match on a pair of names — it does not see the nested case (the pair is
+in a bracket, not a premise subject), the rotation case (the relation is
+self-inverse, not restated), or the composed-space case (the pair is genuinely
+two premises apart on one axis and zero apart on six).
+
+---
+
+## 2.2 The mechanism: measure depth, then require it
+
+One function, shared, and the modes read it.
+
+### `derivationDepth(question): number`
+
+The size of the smallest premise subset that still forces the conclusion.
+
+The algorithm already exists in the codebase and is already documented as
+approximate. [`syllogism.ts:348`](../src/app/syllogimous/generators/syllogism.ts)
+finds the load-bearing premises by greedy removal — drop a premise, re-check
+entailment, keep it dropped if the conclusion still follows. As the roadmap
+records, greedy removal is not guaranteed to find the *smallest* such set and
+does not claim to; what it guarantees is that every premise left is load-bearing.
+That guarantee is exactly what is needed here, because the failure mode being
+prevented is a floor, not a ceiling: if greedy removal says three premises are
+load-bearing, at least three are, and an item that survives a `depth >= 3` gate
+is genuinely at least that deep.
+
+What it needs to generalise is a per-mode `entails(subset, conclusion)`. Every
+mode that has a derivation already has one in some form, since a derivation is
+a proof that the conclusion follows; the work is exposing it behind one
+signature rather than writing new solvers.
+
+Modes where the entailment check is already sitting there:
+
+| mode | check |
+|---|---|
+| Syllogism, Set Hierarchy | `sylEntails`, [`syllogism.utils.ts`](../src/app/syllogimous/utils/syllogism.utils.ts) |
+| the scale family, Nested | `compare(layout, a, b)` over the subset's edges, [`linear.utils.ts`](../src/app/syllogimous/utils/linear.utils.ts) |
+| composed spaces | axis-wise `compare` over the subset, [`ndspace.utils.ts`](../src/app/syllogimous/utils/ndspace.utils.ts) |
+| Deictic, Transformation, Anchor | replay the subset's operations, as the derivations already do |
+
+For a chain-or-graph mode there is a cheaper equivalent that needs no solver:
+**graph distance between the conclusion's two objects over the premise graph**.
+`graphDistance` already exists in
+[`linear.utils.ts`](../src/app/syllogimous/utils/linear.utils.ts) and
+`LinearConclusion` already carries a `span` field computed from it. A conclusion
+about a pair `k` edges apart needs at least `k` premises. Use `span` where it is
+available and greedy removal only where it is not — it is the same number for
+these modes and it is free.
+
+### `minDepth`, a generator constraint — **BUILT for both pair pickers**
+
+Both `pickDistantPair`s take the diameter now, with `slack` saying how far below
+it a caller may reach and zero the default.
+
+**The inversion below was built, measured and reverted.** The reasoning was that
+a branching layout is free to come out as a star — every pair two steps apart,
+however many premises went in — and that the picker would then correctly report
+the deepest available conclusion as a shallow one, which no choice of pair could
+repair. So the pair should be chosen first and the layout built around it.
+
+The premise does not hold. `pickBase` weights the ends of what exists so far, so
+a new object usually *extends* the arrangement rather than hanging off its
+middle, and the mean span over six to twelve premises is already about eight.
+Laying a spine first — half the links end to end before anything branches —
+moved that to 8.1 and cost ten points of branching, which is the rung's own
+purpose.
+
+What remains of it is a test: the property the inversion would have guaranteed,
+asserted of the layout builder as it stands. If it ever stops holding, the
+inversion becomes worth building.
+
+A caution worth recording, because it nearly shipped: the first measurement said
+the spine took the mean span from 3.3 to 4.5, which looked decisive. It was
+measuring a version with a duplicated attach loop — every object added twice —
+so both numbers were of a corrupted layout. The real comparison is 7.9 to 8.1.
+
+
+Every generator that builds a conclusion gains a floor and rejects candidates
+below it, the way `isPremiseLikeConclusion` is used today: draw, check, redraw.
+
+**The floor is the whole premise set, or one short of it.** Not half — half was
+the first draft of this section and it is not what was asked for. The
+requirement is that reaching the conclusion takes the *whole* relation, or
+near enough:
+
+```
+minDepth = premises - slack        // slack is 0 or 1, and 0 is the default
+```
+
+An item with five premises should need five of them. `slack` exists for the
+layouts that genuinely cannot offer a full-depth pair — see the rejection note
+below — and for the deliberate case where one premise is *meant* to be
+discardable, so that noticing it is discardable is the exercise. It is a
+setting with a default of zero, not a tolerance the generator drifts into.
+
+That is a much stronger constraint than a floor at half, and it has a
+consequence worth stating plainly: **the generator can no longer pick a pair
+and hope.** For most layouts only a handful of pairs are at full depth — on a
+chain, exactly the two ends — so the conclusion pair has to be chosen *first*,
+from the pairs at maximum distance, and the layout built or rejected around it.
+That inversion is the actual work of this section; the floor is just how it is
+checked.
+
+Three things to get right:
+
+- **Count relations, not premises, where a premise carries several.** Nested's
+  five premises hold ten relations and the composed spaces' three premises hold
+  twenty-one. A depth measured in premises would pass the nested item at depth
+  2 while the conclusion still came from a single bracket. Measure in the units
+  the mode's solver works in.
+- **Rejection has to be bounded.** Some layouts admit no full-depth conclusion
+  at all — a star-shaped branching layout has span 2 between every pair,
+  whatever its premise count. Cap the retries and, on exhaustion, rebuild the
+  *layout* rather than shipping a shallow conclusion or throwing. If a mode
+  turns out to reject most of what it builds, the layout generator is what
+  needs changing, not the floor.
+- **A restated premise is the floor's worst case, not a separate rule.**
+  `isPremiseLikeConclusion` exists because depth 1 was the failure people
+  noticed; it can go once depth is measured, since depth ≥ premises − 1 rules
+  out a restatement at any premise count above two, and rules out the cases the
+  pair-matching guard never saw — the nested item's bracket, and a
+  self-inverse relation restated backwards.
+
+### Record it — **BUILT**
+
+`Question` gains `depth: number`, alongside `widthDelta` — which the roadmap
+notes was added as *recorded rather than charged*, for the same reason. Log it
+first, charge for it once there are answered items to fit a coefficient
+against.
+
+Recorded by Nested, the scale family, the composed spaces, Shape Rotation,
+Deictic, both syllogism generators, Set Hierarchy and the Hierarchy mode; it
+rides to the trial log beside `widthDelta` and is read back on the diagnostics
+page as **share** — depth over premise count, per mode.
+
+The last four cost nothing, because each already knew the answer:
+
+| where | what it already had |
+|---|---|
+| Set Hierarchy | the load-bearing set its derivation is built from |
+| Syllogism (Canyon) | `chainDepth` — the chain is the answer, the rest are distractors |
+| Syllogism (Fredo) | **two, always.** The first two premises are the syllogism and everything after is a distractor built from an invalid rule |
+| Hierarchy | `HierarchyQuery.span`, the links along the claimed path |
+
+**Fredo has since been removed**, on the author's call: a six-premise item
+whose answer needs two of them is not a variant of the depth complaint, it is
+the complaint, and Canyon draws the same shape when its chain is short while
+controlling how short. `createSyllogismAll`, which flipped a coin between the
+two, went with it, along with the stored generator setting, the rule and form
+tables it was the only reader of, and `sylPremisesFromRule`.
+
+**It was covering something up.** `explainPolysyllogism` walks the intermediate
+conclusions, and a two-step chain has none — so Canyon's whole derivation for
+the shortest and commonest shape was the single line *"so &lt;the answer&gt;"*,
+which restates the conclusion and shows no work. It went unnoticed because
+Fredo owned the short items and named the middle term and the move. The
+existing floor from [3](3-explanations.md) — a derivation made entirely of
+restated premises has done no work — was asserted only of Fredo; pointed at
+Canyon it failed immediately. A one-link chain is now explained as the
+syllogism it is, sharing its wording with the Set Hierarchy derivation.
+
+**Canyon's chain now draws from the top two bands.** `chainDepth` was drawn
+anywhere from two to the premise count and the remainder padded with
+distractors, so a six-premise item could be a two-premise argument with four
+lines of noise — the defect this section is named for, sitting in a variable
+that already had the right name and needing only a narrower draw.
+
+Top *two* bands rather than the top one, deliberately. A syllogism with no
+discardable premise stops asking whether a premise is relevant, and noticing
+that one is not is a real part of the skill — which is exactly the deliberate
+case [2.2](#22-the-mechanism-measure-depth-then-require-it) says `slack` exists
+for, rather than a tolerance drifted into.
+
+**Two of them record the whole premise set for a claim that is false.** A pair
+the premises leave undecided has no support at all, and a hierarchy claim that
+is false because nothing joins the two has an infinite span — and nought is the
+value that already means *not measured*. Establishing that nothing settles a
+pair means having failed to find a derivation, which takes the whole set. That
+is the reader's cost rather than the prover's, and it is the honest one for a
+report about how much of an item its answer needed.
+
+Four decisions, each of which would have made the number mean something else:
+
+- **Zero means *not measured*, not *shallow*.** A mode that does not record
+  depth is absent from the report rather than averaged in at nought, which
+  would report every unmeasured mode as maximally broken and bury the ones that
+  are.
+- **The share is averaged per item, not taken between the two means.** Two
+  items — one of two premises answered from both, one of ten answered from two
+  — are 100% and 20%, so 60%: a mode that serves a shallow item half the time.
+  Between the means it is 4/6, which describes an item nobody was served.
+- **The column that matters is `worst`.** A floor is a promise about the
+  minimum, so a good average with a bad minimum means the floor is not holding,
+  and an average alone would hide exactly the failure this section exists to
+  catch.
+- **Where an item asks several claims, the shallowest is recorded.** The figure
+  is a floor on what the answer costs; reporting the maximum would describe an
+  item by its hardest part and call that its depth.
+
+This is what settles *"conclusion depth is unrelated to premise depth"* by
+measurement rather than by screenshot — and, more usefully from here, says
+whether a floor that was raised actually moved anything.
+
+---
+
+## 2.2d Several claims, asked one at a time — **BUILT**
+
+The first version of 2.2c put every claim on the card at once and scored them as
+an AND — *"Conclusions — all must follow"*. The author's objection, and it is
+right twice over:
+
+- **One bit for two or three questions.** A reader who settles the first claim
+  and guesses the rest scores exactly as one who settled all of them.
+- **An AND is not a coin.** A set of claims that must *all* hold is false far
+  more often than true, so "false" becomes the percentage answer and the
+  reasoning is optional.
+
+They are now asked **one at a time on the same premises**. Answering one does
+not advance to the next item: the conclusion is replaced, the countdown is
+handed a few seconds — five by default, settable — and the next claim is asked
+against an arrangement already in the reader's head. Only the last one ends the
+item.
+
+Four things it turned on:
+
+- **Each claim gets its own coin.** The old set was all-true or
+  exactly-one-false, because an AND answered from several false claims is
+  settled by whichever you check first. One at a time, that reasoning inverts:
+  each claim is its own question, so each wants its own even chance.
+- **The clock is extended, not restarted.** A three-claim item would otherwise
+  be three items long for the price of one. `GameTimerService.extend` adds to
+  what is left, and says nothing when there is no clock running.
+- **A timeout ends the item.** Handing back time for a claim nobody answered
+  would make the deadline cheaper the more claims an item carries.
+- **The ability model gets each claim; the verdict and score get the set.**
+  Two of three is not getting the item — but "answered one of two" and
+  "answered neither" are different evidence about a player, and identical to an
+  AND. This is what
+  [2.6](#26-a-halfway-conclusion-and-a-final-one--built-both-families)'s
+  per-claim credit was built for, reaching a second form.
+
+**Every true-or-false mode is on it**, and the coverage test names the set
+rather than counting it — a number to beat lets a mode fall out silently while
+the total still looks healthy. Distinction, the scale family, the composed
+spaces, Hierarchy, Nested, Deictic, both Arrangements, both Directions,
+Syllogism, Transformation, both Anchors and Knaves.
+
+Each drawer is a dozen lines, because each mode already knows the answer to any
+pair: the buckets, the two chains, the order, the grid and its reversals, the
+coordinate map, `sylEntails`, the replayed positions, the settled people. The
+shared half — how many, each on its own coin, all distinct, all or nothing —
+is `buildSeries`.
+
+**The absentees are absent for a reason.** The choice, map and construct modes
+are not true-or-false items, so a boolean series has nothing to attach to.
+Binary is already two questions compounded into one claim. And Analogy must
+*clear* a series rather than carry one, which is the fault this class had: it
+takes a finished item from another mode and re-purposes the object, so the
+inner mode's claims rode along, about a question the item no longer asks.
+
+**A series need not be true-or-false.** Shape Rotation's absolute form asks
+*"which corner is Buckles on after the turns?"* and is answered by picking, and
+it is the form that gains most from being asked again: the turns are worked out
+once, and every further object is that same result read somewhere else on the
+same shape. So the second question costs the reader almost nothing except the
+thing the mode is for.
+
+A claim therefore carries either a wording and a verdict, or a set of options
+and which of them is right. Advancing swaps whichever it has, and the premises
+above do not move.
+
+Under the deep model an object whose corner is **stated outright** is not
+offered as a further claim. Its answer is that corner plus the turns — one
+premise and the arithmetic, with every relative placement in the item unused —
+which is precisely the shallow item the floor removed from the first claim, and
+letting it back in as the second would return it by the side door.
+
+One trap, worth recording because it cost a run to find: the shared drawer
+mapped a drawn claim down to `{ text, isValid }`, which silently dropped the
+options. A picking series with nothing to pick, and every claim after the first
+unanswerable.
+
+**Two modes are built the other way round, and keep their map instead.** Most
+series hold every premise and ask something else about them. Axis Maps and
+Infer Relation have the costly reading in a *map* — a change read off worked
+examples, a space read off its premises — and the cheap half is what it gets
+applied to. So a claim there carries its own premise list: the examples or the
+space stay exactly as they are, and the chain, or the claims made with the
+withheld operator, are replaced.
+
+Swapping the other half would be the wrong direction. Different examples mean a
+different change, which is not another question about this item but a different
+item printed underneath — and that is the distinction the test asserts: the
+shared head has to be a real prefix, non-empty and not the whole thing.
+
+Infer Relation also uses a **different symbol per question**. Its setup says the
+operator means one relation "every time", which is true within a question and
+would be a lie across a series of them — a reader carrying ⊕ over from the last
+claim would be answering the wrong question with the right method.
+
+**Widest Group is deliberately left out**, on the author's call. Two groups is
+what the mode is, and asking which is widest a second time about the same two
+groups is the same question with the answer already given. The form only pays
+where a second question exists to ask.
+
+---
+
+## 2.2c Several claims, for everybody — **BUILT**
+
+`multi-conclusion` was rung eight on the linear ladder and rung fourteen on the
+composed spaces', which meant the form that makes a *whole* arrangement
+load-bearing was the one nobody saw until they had ground for it. It is on by
+default now and the ladder slot is a tombstone; the family flag in Customise is
+the control, and what it does is turn it off.
+
+Three things it turned on, and two of them were faults the change exposed
+rather than caused.
+
+**The claims had to become wide, or this would have undone
+[2.5](#25-an-n-dimensional-map-deserves-an-n-dimensional-conclusion).**
+`buildNdConclusionSet` builds one axis per claim, so switching the form on by
+default would have answered a seven-axis item with three one-axis claims — the
+reported defect again, wearing three hats instead of one. They are built from
+`buildNdWideConclusion` now, and fewer of them as the axes multiply: two above
+four axes, since three seven-axis claims is a wall of clauses and the second
+claim is where the argument is already won.
+
+**It has to be a form the conclusion *can* take, not one it must.** A wide claim
+declines on a pair the premises leave unsettled, which is exactly what the
+under-specification and testimony rungs make on purpose — so on those items
+every attempt came back empty and the branch failed the whole item. Those modes
+stopped generating outright. It falls through to the specialised paths now.
+
+**And it had to be moved after `facing` and `indeterminate`.** Those change
+*what is asked*; running before them meant an item that had earned either never
+got it. Several claims changes *how many* are asked, which composes with the
+plain form and nothing else, so it sits with the plain form.
+
+**It also had to explain itself.** The form was silent in all three families,
+which mattered little while it was a late rung and a great deal now it is what
+everybody gets — seven modes explained nothing on the first run. Each claim now
+gets its own walk and the false one says so, under the same
+mutated-layout guard the single-claim paths use: after a transformation the
+premises no longer describe where things ended up, so walking them derives the
+*starting* relation and states it with confidence.
+
+---
+
+## 2.7 A menu of four is a search — **BUILT**
+
+Every choice item offers **two** options now, differing by one thing.
+
+The author's argument, and it is right: a longer menu turns judging into
+searching. Four claims about four *different* pairs let three be dismissed for
+not being about the pair that matters. Four corners of a square let most be
+dismissed for being nowhere near. Four numbers around the answer let a reader
+who counted roughly drop the far ones without counting exactly. In every case
+the item can be shortened by **looking** rather than by reasoning, and what is
+left is not the task the mode was built for.
+
+What "off by one" means, per mode:
+
+| mode | the two options |
+|---|---|
+| the scale family | one pair, the relation either way round |
+| composed spaces | one pair, one axis of the wide claim turned round |
+| Hierarchy | one pair, the route either way |
+| Shape Rotation | the corner, and the one next to it |
+| Infer the Relation | the answer, and the axis that fits all but one claim |
+| Axis Maps | the chain under this map, and under the map with one part wrong |
+| Widest Group | the order, and the order with two neighbours swapped |
+| Graph Matching | the distance, and one more or less; the odd group, and the one nearest it |
+| Stimulus Function | the extreme, and the one beside it |
+| Transformation Matching | the map, and the map that agrees everywhere but one point |
+
+Two of them could not simply cut the field, and the distinction is worth
+keeping. **Graph Matching's odd-one-out needs three or more groups** — an odd
+one among two is neither — so every group is still *shown* and two are
+*offered*. **Oddest Relation** states every relation and offers the furthest and
+the runner-up, for the same reason.
+
+**The guess floor gets worse and the items get harder**, which is the trade this
+whole document keeps making: a floor you have to earn beats a longer menu you
+can shorten by looking. Nothing needed telling twice — `guessRateFor` already
+reads the option count, so the ability model scores two-option items as the
+weaker evidence they are.
+
+The invariant is asserted over every mode, every claim of a series, and every
+rung a player can reach, because what it prevents is a *new* mode shipping a
+menu rather than an old one growing one.
+
+---
+
+## 2.2b The switch — **BUILT**
+
+All of the above is behind **Conclusions** in Customise, on by default. Off,
+the generators do what they did before this section existed.
+
+Three things it governs, and they are the three that changed for every item:
+how far apart the asked-about pair sits (`pickDistantPair` in both
+`linear.utils` and `ndspace.utils`), how wide the claim is
+(`buildNdWideConclusion`), and which form Shape Rotation asks in. Nested's
+floor is the fourth.
+
+**Off is the old rule, not a softened new one.** That distinction is the whole
+value of the switch — it exists so the two models can be compared, and a
+comparison against a tidied-up version of the old one answers nothing. So the
+ported probabilities are back in the code rather than approximated by a wide
+`slack`: `v3Bands()` drops a band with probability 0.4 up to three, which is
+where the 40/17/7 figures in `pickDistantPair`'s comment come from; the
+composed spaces draw from every pair 30% of the time; Shape Rotation goes back
+to invariance three items in five, asking about a random object. `slack` and
+the legacy draw are deliberately not the same mechanism, because they are not
+the same shape: slack widens by bands *from* the diameter, and what v3 did was
+ignore the diameter entirely.
+
+**It does not remove rungs.** The checkpoint, choose-one, multi-conclusion and
+construction are ladder steps a player holds, and taking one away because a
+depth switch was turned off would remove something earned to fix something
+nobody complained about. The switch changes how their pairs are drawn and
+nothing else.
+
+**It sits outside Customise's master switch and outside profiles.** Everything
+else in `settings-override.service.ts` is an override layered on top of what
+the tier decided and is meaningless with Customise off; this is a choice
+between two versions of the generators, so holding an opinion about it must not
+require switching a dozen unrelated overrides on. For the same reason a profile
+saved last month does not carry one around and silently apply it. It is also
+not suppressed during placement: `suppress` exists so a placement measures the
+mode rather than the mode plus whatever is switched on, and the conclusion
+model is not something switched on — it is what the mode *is*, so measuring
+under the other one would measure a mode the player never plays.
+
+**Absent reads as on**, in the stored state and in the generator's reader
+alike. One rule in both places, and it is the right way round: the players who
+have state saved from before the switch existed were already being served the
+deep model.
+
+---
+
+## 2.3 The rotation no-op — **PARTLY BUILT**
+
+The conclusion is still relative, and the invariance question stays — a turn
+genuinely cannot change how two objects sit relative to each other, and knowing
+that is worth testing. What changed is the pair it is asked about: the furthest
+apart in the premise graph, never one a premise relates directly, and never at a
+separation of exactly half the corners, which on an even-sided shape is its own
+reverse — so "2 clockwise" and "2 anticlockwise" of a square named the same
+claim and the reversal in the wording changed nothing.
+
+The reported item failed on both counts at once, which is why it read as
+derivable from a single premise: it was.
+
+**The absolute form now carries the weight.** It already existed — "which corner
+is X on after the turns?" — but at two items in five, and it asked about a
+*random* object. Half the time that was one named outright, whose answer is its
+stated corner plus the turns: one premise and the arithmetic, with every
+relative placement in the item unused. It now asks about the object furthest
+from the frame, so the whole chain is load-bearing, and it is three items in
+four.
+
+Invariance stays at the remaining quarter. It is worth teaching — a turn cannot
+change how two objects sit relative to each other — but a relative claim is
+invariant under rotation, so the turns are there to be dismissed rather than
+computed, and that is not most of a mode about turning things.
+
+Shape Rotation needs one thing beyond the depth gate, because the depth gate
+alone would not save it. Its conclusion asks for a **relative** position — *"X
+is 2 corners clockwise from Y"* — and rotating the whole square leaves every
+relative position unchanged. The rotation premise is therefore not a shallow
+contribution to the answer; it is *no* contribution, in every item where the
+conclusion is relative.
+
+Two candidate answers, and the first is better:
+
+1. **Make the conclusion absolute.** *"After the turns, which corner is Cord
+   on?"* Now the rotation is load-bearing and the positional premises are too,
+   because an absolute answer needs a starting position and the turns.
+2. Keep relative conclusions and drop rotation from those items. This throws
+   away the mode's whole point.
+
+Take (1). It also turns the mode into a `choice` item over four corner names,
+which removes the coin-flip floor — the reason `answerMode: "choice"` exists,
+per [`question.models.ts`](../src/app/syllogimous/models/question.models.ts).
+
+The general rule this is an instance of, worth applying across the transforming
+modes: **a transformation premise must change the truth of the conclusion.**
+The composed spaces already enforce something like it — `ndspace.ts:440` reads
+*"Mutations have to matter. A conclusion whose truth survives the edits…"* — so
+this is extending an existing rule to the modes that never got it, not inventing
+one.
+
+---
+
+## 2.4 Transformations that arrive before the thing they transform — **DONE**
+
+The intent was already in the code, and undone one line later. Deictic built its
+premises as grid-then-reversals with a comment saying why, then handed the whole
+list to `scrambleByFactor`, which shuffles everything — so the reversal could
+land first, which is what the screenshot caught. It now uses `scrambleLeading`,
+which scrambles the grid among itself and leaves the tail alone, the same helper
+the transformation premises already needed.
+
+**The general version is settled as unnecessary, and the assertion is built
+instead.** The idea was a flag on the premise — `operation: true` — with the
+orderer respecting it, so the next mode with operations would not have to
+rediscover the rule. It is not worth building, and the reason is worth
+recording rather than leaving as an open item somebody re-proposes:
+
+- **Every mode that has operations already gets it right.** Five callers use
+  `scrambleLeading`, and each computes its boundary from a list it has just
+  built. A tag would replace a correct one-line call with a tagged list at each
+  of them: more code, same behaviour, and a migration's worth of risk for it.
+- **The tag is only cheaper where the two kinds are *interleaved* at the point
+  of construction**, so the caller cannot simply concatenate. No mode is built
+  that way, and the one that eventually is can add the helper then, with a real
+  caller to shape it.
+- **What was actually missing was the assertion.** The property was written
+  down in the generator, silently broken by a scramble one line later, and then
+  written down again — and nothing would have caught it recurring. A property
+  with that history needs a test, not a third comment.
+
+So: *a deictic reversal never arrives before the positions it reverses*, in
+`tests/depth.test.ts`. Everything from the first reversal on must be a
+reversal, checked on the rendered premises across every premise count.
+
+Deictic states its reversal first:
+
+> Here is there and there is here
+> When you are there, you hold Ceramic
+> …
+
+Read in that order, the reversal is a substitution rule applied while reading,
+and each subsequent premise can be rewritten on sight and forgotten. Read
+*last*, it is an operation on a structure that must already be held whole. Same
+information, different exercise, and the second is the one the mode is for. The
+author says as much: *"I dislike that the transformation is not at the
+end/applies post transformation."*
+
+There is already a place for this. `premise-order.utils.ts` exists and the
+scramble control in
+[`mode-modifiers.component.ts`](../src/app/syllogimous/components/mode-modifiers/mode-modifiers.component.ts)
+already reorders premises. What is missing is the constraint that **operation
+premises sort after descriptive ones**, which is a property of the premise, not
+of the shuffle. Add a flag at the point of construction and have the orderer
+respect it; do not try to recognise operations by their text.
+
+In [`deictic.ts`](../src/app/syllogimous/generators/deictic.ts) specifically,
+`shuffle(gridPremises)` and `shuffle(reversalPremises)` at lines 57–58 shuffle
+the two groups separately and then concatenate them — so the ordering is already
+group-aware and the fix is which group goes first.
+
+---
+
+## 2.5 An N-dimensional map deserves an N-dimensional conclusion — **BUILT**
+
+`buildNdWideConclusion` names every axis, worded through the same `axisClause`
+the premises use, with a false claim wrong on exactly one axis. A 7-D item now
+reads *"Amber is west, south, above, later, wider, lower, opposite kind relative
+to Neck"* where it read *"Chalk is west of Museum"*.
+
+**The circular case is now built.** `displacementClause` is the missing shape:
+the same three cases and the same short-way-round rule as `displacementText`,
+said as a phrase rather than as a claim, so it can sit in the comma-joined list
+a wide conclusion is. `oppositeClause` was added beside `opposite` on each of
+the three cyclic scales rather than derived from it by cutting words off, since
+"is diametrically opposite to" and "diametrically opposite" are both wanted and
+neither is a substring transformation of the other worth relying on.
+
+This mattered more than the count of affected items suggests: the fallback was
+silent, so the modes that make a ring the interesting dimension were exactly the
+ones that never got a wide conclusion, and an item with a loop in it looked like
+one the width work had simply missed.
+
+The arithmetic is tested against a layout written down by hand rather than
+generated, because the mistake available here — reading the coordinate
+difference instead of the ring displacement, so four round a loop of six is
+stated as four rather than as two the other way — produces a confident,
+well-formed sentence either way, and a generated layout would only check the
+code against itself.
+
+One case still falls back: a pair the premises leave **unsettled on some axis**,
+which the under-specification rungs produce on purpose. A claim about an axis
+nobody stated is unanswerable rather than hard, so that one is correct as it
+stands.
+
+The explanation still covers one axis: the one a false claim lies about, which
+is right, or the pair's chosen axis on a true claim, which is thin. That is
+[4.2](4-legibility.md#42-the-composed-space-explanation-diagram)'s job — a
+seven-axis answer wants the coordinate table, not seven walks.
+
+The original diagnosis follows.
+
+Twenty-one stated relations, a conclusion naming one
+([shot 12](shots/12-ndspace-7d-1d-conclusion.png)). The cause is direct:
+`axisClaim` in
+[`ndspace.utils.ts:889`](../src/app/syllogimous/utils/ndspace.utils.ts) is
+documented as *"A claim about one axis, true or false by construction"*, and it
+is what a boolean-mode composed-space item gets regardless of how many axes the
+item has.
+
+The machinery for the wide version already exists: `ConstructClaim` /
+`ConstructSlot` in
+[`question.models.ts`](../src/app/syllogimous/models/question.models.ts) hold one
+slot per dimension and are exactly this. Their own comment makes the argument —
+*"a six-axis item has a one-in-729 guess floor against true/false's one in
+two"*. The problem is purely that construction sits at the far end of the ND
+ladder (`construct-conclusion`, `construct-distance`), so a player at 7-D who
+has not climbed that far gets a 1-D claim about a 7-D layout.
+
+**Fix. The conclusion states every axis the item is built on.** A 2-D map gets
+a 2-D conclusion, a 3-D map a 3-D one, a 7-D map all seven. Not a proportion of
+them — the whole relation, the same way [2.2](#22-the-mechanism-measure-depth-then-require-it)
+asks for the whole premise set. Axis count is a property of the item, and the
+ladder position decides only *how the answer is given*, never how much of the
+item the answer is about:
+
+| answer mode | what changes with the ladder |
+|---|---|
+| boolean | one claim naming all N axes, true or false |
+| choice | several full-width relations, one of which holds |
+| construct | all N axes, stated by the player, as today |
+
+Only the first is missing, and it is a small addition to `axisClaim`: build the
+claim across every axis rather than one, and make a false variant by flipping
+exactly one of them. Flipping exactly one is deliberate — a claim wrong on five
+axes out of seven is spotted from whichever axis you check first, which turns a
+seven-dimensional item back into a one-dimensional one by the back door.
+
+This also removes the reason `axisClaim` picks an axis at all, and with it the
+question of *which* axis it picks — a question that had no good answer, since
+any choice makes six-sevenths of every premise decoration.
+
+**Verification.** For every composed-space item, the set of axes named in the
+conclusion equals the set the premises are built on — equality, not a floor,
+because a floor is what let this drift to one in the first place. The existing
+derivation check — *a replayed trace ends where the answer says it does* —
+extends to the new claim form for free, since it reads the rendered conclusion.
+
+---
+
+## 2.5b The transformation family was still answering about one axis — **FIXED**
+
+Reported on a three-dimensional Transformation item: *"both conclusions were the
+exact same, they took the same 1 dimension of 3 and they took the same
+objects"*. Two faults, and the first is the one
+[2.5](#25-an-n-dimensional-map-deserves-an-n-dimensional-conclusion) was
+supposed to have settled.
+
+**The width fix never reached this family.** It words its claims through its
+own helper, `describeConclusion`, which names a single axis — so Transformation,
+Anchor Space and Anchor Space v2 all asked about a third or a half of what they
+stated, and which third was arbitrary. `describeWideConclusion` is the twin of
+`buildNdWideConclusion`: every axis the pair differs on, and a false claim wrong
+on **exactly one** of them, since wrong on two of three is spotted from
+whichever the reader checks first.
+
+**And the pair has to be chosen for it.** A pair drawn at random coincides on
+some axis often enough to matter — a fifth of them on the two-axis frames — and
+a claim can only name the axes a pair actually differs on, so a random draw put
+one-dimensional claims back by the other door. `widestPair` draws among the
+pairs differing on the most axes. Measured over 200 items: Transformation went
+from one dimension per conclusion to **2.90 of 3**, Anchor Space to **2.00 of
+2**.
+
+The derivation had to follow. A walk down one axis explains a third of a wide
+claim, and for a false one it may explain the third that was *right* — a
+derivation proving something the item never said, which is the one shape this
+project has agreed is dangerous. Each named axis is walked, in the order the
+claim states them, and the closing line says what is actually true.
+
+The trace test could no longer work by finding *a* direction word in each and
+comparing: it now reads the claim and the trace one axis at a time and requires
+a true item to agree everywhere and a false one to differ in exactly one place.
+
+**The repeated claim was general, and is fixed in the shared helper.**
+`buildSeries` kept its drawn claims distinct from each other and knew nothing
+about the conclusion they were being added to, so the second claim could be the
+first one over again. `extendWithSeries` now drops any claim that repeats one
+already asked, matched on everything the card *shows* — a picking item can reuse
+one prompt across every claim, and what tells those apart is the premises above
+and the options below rather than the sentence between them.
+
+---
+
+## 2.5c A series claim could restate a premise — **FIXED**
+
+Reported on Distinction: premises *"Lantern is opposite of Ladybug"* and a claim
+*"Ladybug is same as Lantern"* — the same pair, so the answer is one premise
+read backwards, in a mode whose whole content is carrying a side along a chain.
+
+Every mode's own conclusion has been held to `isPremiseLikeConclusion` for a
+long time. The **series drawers were not**: they picked a pair and asked about
+it. Fixed in Distinction, both Arrangements and all three Directions, with the
+same guard each mode's conclusion already uses.
+
+One of them needed moving as well as guarding: Arrangement drew its series
+*before* `question.premises` was assigned, so the guard was comparing against an
+empty list and doing nothing at all.
+
+**The measure that found this over-reports, and the exclusions are the
+interesting part.** A shared subject pair is not always a restatement:
+
+| mode | why a shared pair is not a restatement |
+|---|---|
+| Deictic | one subject per line, so any two lines naming the same thing look like a matching pair to a check built for two-ended relations |
+| Transformation, Anchor v2 | the premise states the *initial* offset and the claim asks about the *final* relation, and the transforms are required to have changed it |
+| Hierarchy | a reversed pair is offered *deliberately* — a premise says A leads to B, the claim says B leads to A, and catching it means reading the direction |
+
+Left alone, and the test says so, so that "fixing" them later takes an argument
+rather than a glance.
+
+---
+
+## 2.6 A halfway conclusion and a final one — **BUILT**, both families
+
+The `checkpoint` rung, last on the linear ladder. Two claims, answered together
+as a two-slot construction — which needed no new answer flow, the construct
+screen already taking several claims with their own slots, and which brings the
+per-slot result screen from [3.1](3-explanations.md#31-construct-answers-scored-per-dimension)
+with it. The two are reported separately, so a reader who lost the thread late
+is distinguished from one who never had it.
+
+Three things it turned on.
+
+**"Halfway" is halfway through the reading**, so the claim is built from
+`prefixLayout` — the arrangement the first *k* premises determine on their own,
+recomputed from their own edges rather than sliced out of the finished one. A
+pair the prefix does not connect has no relation yet, and taking its finished
+coordinates would invent one.
+
+**Premise order became load-bearing**, where it had been a presentation choice.
+`scrambleBlocks` shuffles within each half and never across: the claim follows
+from the *set* before the boundary, not from an order within it, but a premise
+that crossed the line would be one the reader did not have when the claim became
+answerable.
+
+**Meta and checkpoints do not combine**, and that is structural rather than
+fussy. A meta premise *replaces* premises with a claim about a different pair,
+so once it has run there is no prefix that determines what the checkpoint asks.
+Skipped rather than worked around: a checkpoint the reader cannot answer at the
+checkpoint is not one.
+
+**The composed spaces have it too, now.** They have their own everything —
+layout, prefix, claim builder — so none of it came for free: `ndPrefixLayout` is
+the twin of `prefixLayout`, and `checkpoint` is appended to `ND_LADDER` rather
+than inserted, because a profile stores how many rungs it has earned and reads
+them by position.
+
+It differs from the scale family's version in effect rather than in shape. A
+composed-space claim is already one slot per axis, so the halfway claim
+distinguishes *losing the thread on one dimension* from *losing it altogether*
+without the second claim being reached at all — which is the diagnostic value
+this section is for, arriving one conclusion earlier.
+
+**Four things rule a checkpoint out**, and the caller decides because the
+conclusion builder never sees them. Edits and transformations **rewrite** the
+arrangement, so a relation stated before one of them need not hold after it —
+the prefix describes a state the reader is later told to abandon. Reports and
+testimony **replace** the premises with claims that may be false, so nothing is
+determined until the liars have been found, which is the whole item rather than
+half of it. Skipped, as meta is skipped in the scale family: a checkpoint the
+reader cannot answer at the checkpoint is not one.
+
+The rung is also gated at five premises in `RUNG_MIN_PREMISES`, which it was
+not before — below that there is no halfway, so the ladder was handing out
+something that silently did nothing.
+
+**The second slot now reaches the estimate — BUILT.** Each claim of a graded
+item is its own piece of evidence: its own level, taken from the premise count
+it actually follows from, and its own guess rate, taken from its own slots.
+Behind **Score each claim separately** in Fluid progression, on by default.
+
+It needed no coefficient. `levelOf` already reads a premise count, and a
+checkpoint claim states the count it follows from — `ConstructClaim.fromPremises`,
+which the slot label was already saying to the reader and now says to the model
+as well.
+
+**The coefficient is built too**, as the better answer to the same question.
+`levelsPerUnneededPremise` is the depth twin of `widthPerBit`, fitted by
+`fitDepthCoefficient` from answered items and applied only once the answers
+support it. What it prices is the **shortfall** — `premises - depth`, the
+premises the conclusion did not need — because `weight * premises` already
+charges as though the answer used all of them, so the shortfall is the only
+part left to price.
+
+Four things it turned on:
+
+- **Zero means unmeasured, not "needed nothing".** Read the other way an
+  unmeasured mode is the largest shortfall in the sample and dominates the fit.
+  `unneededPremises` collapses absent, zero and full-depth to the same nought.
+- **The search runs downward as well as up.** A premise the answer does not
+  compose is expected to make an item *easier*, so a range that could only
+  return zero or more would confirm that by construction rather than measure it.
+- **The clamp is the mirror of width's, not a copy of it.** Width discards
+  negative fits because wide items being easier is a statement about the
+  sample; depth discards *positive* ones, because premises nobody needs making
+  an item harder fails the same test.
+- **It will decline to answer for a while, and that is correct.** Once the
+  floors are in, most items sit at or near full depth, so the shortfall barely
+  varies and every coefficient fits equally well. Turning the deep conclusions
+  off in Customise produces exactly the variation the fit needs, which makes
+  the switch a way to measure the thing it turns off.
+
+Four decisions:
+
+- **Forgetting and the trial count apply per update**, so a graded item ages the
+  posterior like two answers and counts like two. It *is* two pieces of
+  evidence.
+- **Timeouts stay binary.** The clock is part of the difficulty, so a claim that
+  was right when the clock stopped was not answered at the difficulty asked —
+  and crediting it would make the deadline cheaper the more claims an item has.
+- **The claims are compared with `compareConstruction`**, the same function the
+  result screen reports from, so the model and the screen cannot disagree about
+  which claim was right.
+- **The obvious test measures the wrong thing.** Right-about-the-checkpoint
+  against right-about-the-conclusion comes out *backwards*, because being wrong
+  about the easy claim is strong evidence against and drags the estimate down
+  further than being right about the hard one lifts it. That is the model
+  working. The property is isolated instead: both claims right either way, and
+  the one following from three premises must credit less than the one following
+  from six.
+
+### The original diagnosis
+
+The author's proposal, and it is a good one:
+
+> Ideally a puzzle should have multiple conclusions spread in between (so they
+> are of different complexity to estimate where the user got it wrong) and one
+> final one you have to construct or choose from multiple options.
+
+**Two conclusions, not a spread of them.** One at the halfway point and one at
+the end:
+
+| | what it is derivable from | form |
+|---|---|---|
+| halfway | the first half of the premises, **as displayed** | boolean or choice |
+| final | the whole set, per [2.2](#22-the-mechanism-measure-depth-then-require-it) | construct, or choose from several |
+
+**"Halfway" means halfway through the reading, not half the depth.** The
+distinction matters and it is the whole point of the checkpoint: a conclusion
+that needs any five of ten premises is not answerable halfway down the page,
+because which five is not known until the tenth has been read. The halfway
+conclusion has to be entailed by premises 1…k *in displayed order*, so a player
+who has read that far can answer it and then carry on.
+
+Two consequences:
+
+- **Premise order becomes load-bearing**, where today it is a presentation
+  choice — `scrambleByFactor` shuffles it, and the Customise scramble control
+  sets how much. An item with a checkpoint has to hold its first `k` premises
+  fixed as a set; they can still be shuffled *among themselves*. This is the
+  same constraint [2.4](#24-transformations-that-arrive-before-the-thing-they-transform)
+  puts on operation premises, so both belong to `premise-order.utils.ts` rather
+  than being solved twice.
+- **The halfway pair is chosen from the prefix layout.** Build the first `k`
+  premises, pick a full-depth pair *within* what they determine, then extend the
+  layout to the remaining premises and pick the final pair across the whole.
+  Choosing the final conclusion first and hoping a prefix happens to entail
+  something is the same "pick and hope" that
+  [2.2](#22-the-mechanism-measure-depth-then-require-it) rejects.
+
+**The halfway conclusion appears only above four premises.** Below that there is
+no halfway to speak of — on a three-premise item the midpoint is depth 1 or 2,
+which is the shallow conclusion this whole section exists to prevent, and
+serving one deliberately would teach exactly the habit the depth floor is
+removing. Four is the boundary: five premises and up get both, four and under
+get the final one alone.
+
+Its value is diagnostic, and that is the whole argument for it. A player who
+answers the halfway one correctly and the final one wrongly lost the thread in
+the second half; one who fails both never had it. Today both look identical to
+[`ability.utils.ts`](../src/app/syllogimous/utils/ability.utils.ts), because it
+sees one bit per item — and the difference between "cannot hold six relations at
+once" and "cannot read a relation" is the most useful thing an item could report.
+
+The halfway conclusion is also the answer to a problem the full-depth floor
+creates. Requiring the whole premise set means a wrong answer says only *"you
+did not get to the end"*, with no indication of where the chain broke. A
+checkpoint restores that, and it does it without weakening the final conclusion.
+
+`multi-conclusion` already exists as a rung and is not this: it means *several
+claims all of which must hold* — an AND, scored as one. This is two questions
+with two answers, so it needs a rung of its own rather than a redefinition of
+one that several ladders already depend on.
+
+**This should be built last of the six sections**, not because it is least
+valuable but because it is the one thing here that changes what the ability
+model receives. Graded conclusions produce partial scores, and
+[`ability.utils.ts`](../src/app/syllogimous/utils/ability.utils.ts) is written
+against binary outcomes. That is a real piece of work and it should not be
+started while the depth measurement it depends on is still being calibrated.

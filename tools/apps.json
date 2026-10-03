@@ -10,6 +10,8 @@
     "`owner` is the GitHub account each one lives under."
   ],
   "apps": [
+    { "prefix": "apps/syllogimous",  "owner": "Gagafutzi",          "repo": "LooshSyllogimous",       "branch": "main" },
+    { "prefix": "apps/rnb",          "owner": "Gagafutzi",          "repo": "relationalNback---intuitive-progression", "branch": "main" },
     { "prefix": "apps/cct",          "owner": "projectchimera-dot", "repo": "CCT",                    "branch": "main" },
     { "prefix": "apps/chimera",      "owner": "projectchimera-dot", "repo": "Chimera",                "branch": "main" },
     { "prefix": "apps/ewmt",         "owner": "projectchimera-dot", "repo": "eWMT",                   "branch": "main" },

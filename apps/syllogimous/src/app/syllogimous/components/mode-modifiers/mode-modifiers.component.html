@@ -1,0 +1,203 @@
+    <app-collapsible heading="Scale modes" [class.is-idle]="!enabled">
+        <p class="text-muted small mb-3">
+            The five scale modes. Normally earned rung by rung — <em>Ladder</em>
+            leaves that alone.
+        </p>
+
+        <div class="lin">
+            <span class="lin__name">
+                Premise scramble
+                <small class="d-block text-muted">
+                    0 keeps chain order, 100 shuffles. Transformation steps always
+                    stay in sequence.
+                </small>
+            </span>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm"
+                       min="0" max="100" step="5"
+                       [disabled]="!enabled" [value]="scramble"
+                       (change)="setScramble($any($event.target).value)">
+                <small class="text-muted">0&ndash;100</small>
+            </span>
+        </div>
+
+        <div class="lin">
+            <span class="lin__name">
+                How far apart things sit
+                <small class="d-block text-muted">
+        50 is the calibrated middle. Not yet priced into difficulty, so a large
+        change makes items harder than your level says. Composed spaces only.
+    </small>
+            </span>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm"
+                       min="0" max="100" step="10"
+                       [disabled]="!enabled" [value]="spread"
+                       (change)="setSpread($any($event.target).value)">
+                <select class="form-select form-select-sm mt-1"
+                        [disabled]="!enabled" [value]="spreadAxis"
+                        (change)="setSpreadAxis($any($event.target).value)">
+                    <option value="">All dimensions</option>
+                    <option *ngFor="let a of spreadAxes" [value]="a.id"
+                            [selected]="a.id === spreadAxis">{{ a.label }}</option>
+                </select>
+            </span>
+        </div>
+
+        <div class="lin" *ngFor="let row of linearRows">
+            <span class="lin__name">
+                {{ row.label }}
+                <small class="d-block text-muted">{{ row.hint }}</small>
+            </span>
+            <span class="lin__tri" role="group" [attr.aria-label]="row.label">
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="linearOf(row.key) === null"
+                        (click)="setLinear(row.key, null)">Ladder</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="linearOf(row.key) === false"
+                        (click)="setLinear(row.key, false)">Off</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="linearOf(row.key) === true"
+                        (click)="setLinear(row.key, true)">On</button>
+            </span>
+        </div>
+
+        <div class="lin">
+            <span class="lin__name">
+                Relation edits
+                <small class="d-block text-muted">
+                    Premises that rewrite an earlier one: reverse it, swap two, copy
+                    one onto another. Composed spaces only.
+                </small>
+            </span>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm"
+                       min="0" max="4" placeholder="&mdash;"
+                       [disabled]="!enabled" [value]="editCount"
+                       (change)="setEditCount($any($event.target).value)">
+                <small class="text-muted">0&ndash;4</small>
+            </span>
+        </div>
+
+        <div class="lin">
+            <span class="lin__name">
+                Transformations
+                <small class="d-block text-muted">
+                    Premises that move things after the layout is set. Taken from the
+                    premise budget, not added to it.
+                </small>
+            </span>
+            <span class="mode__premises">
+                <input type="number" class="form-control form-control-sm"
+                       min="0" max="4" placeholder="—"
+                       [disabled]="!enabled" [value]="linearTransforms"
+                       (change)="setLinearTransforms($any($event.target).value)">
+                <small class="text-muted">0–4</small>
+            </span>
+        </div>
+    </app-collapsible>
+    <app-collapsible heading="Composed spaces" [class.is-idle]="!enabled">
+        <p class="text-muted small mb-3">
+            One generator, different axis lists. Each premise states every axis at
+            once: <em>east, same latitude, above, later</em>.
+        </p>
+
+        <div class="lin">
+            <span class="lin__name">
+                Looping axes
+                <small class="d-block text-muted">
+                    A looped axis wraps, so “east of” stops meaning anything and
+                    “two steps round” starts. Only some axes can loop.
+                </small>
+            </span>
+            <span class="lin__tri" role="group" aria-label="Looping axes">
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="circularAxes === null"
+                        (click)="setCircularAxes(null)">Ladder</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="circularAxes === 0"
+                        (click)="setCircularAxes(0)">0</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="circularAxes === 1"
+                        (click)="setCircularAxes(1)">1</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="circularAxes === 2"
+                        (click)="setCircularAxes(2)">2</button>
+            </span>
+        </div>
+
+        <div class="axes" *ngFor="let dims of spaceDims">
+            <div class="axes__head">
+                <strong>{{ dims }}D axes</strong>
+                <small class="text-muted" *ngIf="isPreset(dims)">default</small>
+                <button type="button" class="btn btn-sm" *ngIf="!isPreset(dims)"
+                        [disabled]="!enabled" (click)="resetAxes(dims)">Reset</button>
+            </div>
+
+            <div class="axes__chips">
+                <button type="button" class="btn btn-sm axis"
+                        *ngFor="let a of axisChoices"
+                        [disabled]="!enabled"
+                        [class.is-on]="axesOf(dims).includes(a.id)"
+                        (click)="toggleAxis(dims, a.id)">
+                    {{ a.label }}<span class="axis__words">{{ a.words }}</span><span class="axis__loop" *ngIf="a.canLoop" title="can be looped">↻</span>
+                </button>
+            </div>
+
+            <!-- Order, as the premise reads it. Separate from the chips, which
+                 answer a different question: which dimensions exist at all. -->
+            <div class="order">
+                <span class="order__step" *ngFor="let a of orderedAxes(dims); let i = index">
+                    <button type="button" class="order__nudge" [disabled]="!enabled || i === 0"
+                            (click)="moveAxis(dims, i, -1)" [attr.aria-label]="'Move ' + a.label + ' earlier'">◀</button>
+                    <span class="order__name" [ngClass]="a.color">{{ a.label }}</span>
+                    <button type="button" class="order__nudge"
+                            [disabled]="!enabled || i === orderedAxes(dims).length - 1"
+                            (click)="moveAxis(dims, i, 1)" [attr.aria-label]="'Move ' + a.label + ' later'">▶</button>
+                </span>
+            </div>
+
+            <div class="order__presets">
+                <button type="button" class="btn btn-sm" *ngFor="let o of orderings"
+                        [disabled]="!enabled" [title]="o.hint"
+                        (click)="applyOrdering(dims, o.id)">{{ o.label }}</button>
+            </div>
+
+            <small class="axes__note" *ngIf="axisWarning(dims)">{{ axisWarning(dims) }}</small>
+            <small class="text-muted d-block" *ngIf="!axisWarning(dims)">
+                {{ loopableCount(dims) }} of these can be looped.
+            </small>
+        </div>
+    </app-collapsible>
+<!--
+  Per-mode modifiers.
+
+  Everything above is the scale family, where a modifier means the same thing
+  in all five modes. These belong to one mode each, and until now could only be
+  earned — the item they produce existed and no amount of configuring reached
+  it.
+-->
+<app-collapsible heading="Per-mode modifiers" [class.is-idle]="!enabled">
+    <p class="text-muted small mb-3">
+        Earned on each mode's own ladder. <em>Ladder</em> leaves that alone.
+    </p>
+
+    <div class="axes" *ngFor="let row of rungRows">
+        <div class="axes__head"><strong>{{ row.type }}</strong></div>
+
+        <div class="lin" *ngFor="let rung of row.rungs">
+            <span class="lin__name">{{ rungLabel(rung) }}</span>
+            <span class="lin__tri" role="group" [attr.aria-label]="rungLabel(rung)">
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="rungOf(row.type, rung) === null"
+                        (click)="setRung(row.type, rung, null)">Ladder</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="rungOf(row.type, rung) === false"
+                        (click)="setRung(row.type, rung, false)">Off</button>
+                <button type="button" class="btn btn-sm" [disabled]="!enabled"
+                        [class.is-on]="rungOf(row.type, rung) === true"
+                        (click)="setRung(row.type, rung, true)">On</button>
+            </span>
+        </div>
+    </div>
+</app-collapsible>

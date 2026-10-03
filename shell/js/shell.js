@@ -25,6 +25,10 @@
      common colour-blindness. The id is the archive's source name, which is
      how the meter finds a trainer's minutes. */
   var TRAINERS = [
+    { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#d29922",
+      what: "Relational and syllogistic reasoning" },
+    { id: "rnb", name: "Relational N-back - Loosh", path: "rnb/", colour: "#f778ba",
+      what: "N-back over relations, with a ladder" },
     { id: "cct", name: "CCT", path: "cct/", colour: "#a371f7",
       what: "Spoken arithmetic against the clock" },
     { id: "chimera", name: "Chimera", path: "chimera/", colour: "#58a6ff",

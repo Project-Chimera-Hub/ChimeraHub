@@ -1,0 +1,672 @@
+/*
+ * The countdown bar.
+ *
+ * The fill carries a `width` transition whose duration is set per item from
+ * the time actually left, so the sweep is continuous and lands on empty at the
+ * deadline. Nothing here animates by default: with no transition set the width
+ * is applied instantly, which is what freezing it on an answer needs.
+ */
+/* Explicit, so no later `display` on .timerbar can un-hide it. */
+.timerbar[hidden] { display: none !important; }
+
+.timerbar {
+    position: relative;
+    height: 1.25rem;
+    overflow: hidden;
+    border-radius: 0.35rem;
+    background: color-mix(in srgb, var(--th-text-dim, #7d8ca6) 22%, transparent);
+}
+
+/*
+ * The fill is full width and *scaled*, never resized.
+ *
+ * It animated `width` before, which is not a compositor property: every frame
+ * of the sweep forced a layout and a paint on the main thread, where it
+ * collided with the change detection the one-second tick sets off — so the bar
+ * stuttered once a second, which is exactly the thing the sweep replaced a
+ * stepping bar to avoid.
+ *
+ * `transform` is composited. The sweep runs off the main thread entirely and
+ * stays smooth through whatever else the game screen is doing.
+ */
+.timerbar__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 100%;
+    background: var(--th-ok, #4ade80);
+    transform-origin: left center;
+    will-change: transform;
+}
+
+/* Focus mode puts the 40px focus toggle, fixed 12px from the window edge,
+   exactly on the seconds. The number moves inboard to clear it. */
+:host-context(.focus-mode) .timerbar__label{right:3.75rem}
+
+.timerbar__label {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--th-text, #e7eaf1);
+    /* Legible over the fill and over the track behind it alike. */
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.65);
+}
+
+/*
+ * A sweep is motion, and somebody asking for less of it should get a bar that
+ * still reports the time without animating across the screen. Stepping once a
+ * second is exactly the old behaviour, which is the right fallback here.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .timerbar__fill { transition: none !important; }
+}
+
+/*
+ * `width: auto` is set inline by the template, and in the centred card body
+ * that resolves to shrink-to-fit — i.e. max-content. A wrapping flex row of
+ * relation buttons has a max-content width equal to the whole row unwrapped,
+ * which sized this to six thousand pixels and pushed the premises off the
+ * card. Capping at the container is what "auto" was always meant to mean here.
+ */
+.battlefield {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin-block: 1rem;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
+/*
+ * Under the timer bar, above the premises. Quiet: it is there to be found when
+ * you look for it, not to be read on the way to the question.
+ */
+.mode-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.timerbar-wrap {
+    padding: 8px;
+    position: absolute;
+    width: 100%;
+    left: 0;
+    top: 0;
+}
+
+.premises,
+.conclusions {
+    display: grid;
+    gap: 0.75rem;
+}
+
+/*
+ * The per-item setup line. Deliberately quiet and unheaded: it is a condition
+ * of the question, not something to read first. Mode rules used to sit here at
+ * 1.4rem with an "Instructions" heading and competed with the premises for
+ * attention every single question.
+ */
+.setup {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--th-text-dim, #7d8ca6);
+}
+
+/* ---- choice answering ---- */
+
+.choices {
+    display: grid;
+    gap: 8px;
+}
+
+/*
+ * Full-width rows rather than a 2x2 grid: the candidates are sentences of
+ * uneven length, and a grid makes the short one look like the odd one out.
+ */
+.choice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: start;
+    /* Tight: four of these share the footer with the card body above them. */
+    padding: 6px 12px;
+    inline-size: 100%;
+    font-size: 0.92rem;
+    line-height: 1.25;
+}
+
+/* The arrow cursor in zen mode: the only thing saying where a keypress lands,
+   so it has to read at a glance without shouting. */
+.choice--focus {
+    border-color: var(--th-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--th-accent) 45%, transparent);
+}
+
+/* One muted line of keys, in the mode that took the buttons away. */
+.zen-keys {
+    text-align: center;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--th-text-dim, #7d8ca6);
+    opacity: 0.75;
+}
+
+.choice__key {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 999px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--th-accent, #22d3ee);
+    background: color-mix(in srgb, var(--th-accent, #22d3ee) 16%, transparent);
+}
+
+.choice-list {
+    display: grid;
+    gap: 6px;
+    margin-block-start: 4px;
+}
+
+.choice-list > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ---- conclusion building ---- */
+
+/* Says why the form is absent, rather than leaving a gap. */
+.build__wait {
+    padding: 14px 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--th-text-dim, #7d8ca6);
+    border-top: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.12);
+}
+
+
+.build {
+    display: grid;
+    gap: 6px;
+}
+
+.build__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Compactness hides what is missing, so the count says it outright. */
+.build__left {
+    font-size: 0.75rem;
+    color: var(--th-bad, #fb7185);
+    font-variant-numeric: tabular-nums;
+}
+
+.build__left.is-done { color: var(--th-ok, #4ade80); }
+
+.build__claim {
+    display: grid;
+    gap: 5px;
+    padding: 7px 0;
+    border-top: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.12);
+}
+
+.build__claim:first-of-type { border-top: 0; }
+
+.build__pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+}
+
+.build__arrow { color: var(--th-text-dim, #7d8ca6); }
+
+/*
+ * Two columns where there is room. Six axes as six full-width rows is a lot of
+ * vertical scrolling for what is really a short form.
+ */
+.build__grid {
+    display: grid;
+    /*
+     * Wide enough that the longest relation fits before it doubles up. At a
+     * narrower minimum two columns appeared on the standard card and truncated
+     * "is 2 steps anticlockwise from" to "is 2 steps" — which hides the very
+     * thing the player just chose.
+     */
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: 4px 12px;
+}
+
+/* label · direction · distance */
+.build__slot {
+    display: grid;
+    grid-template-columns: minmax(3.5rem, max-content) minmax(0, 1fr) 4.2rem;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.build__mag {
+    inline-size: 100%;
+    text-align: center;
+    font-size: 0.78rem;
+    padding-inline: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Not merely disabled — irrelevant. "Same" has no distance. */
+.build__mag.is-idle {
+    opacity: 0.25;
+    visibility: hidden;
+}
+
+/* `:not(.dim)` so a slot that carries a dimension colour keeps it: this rule is
+ * component-scoped and would otherwise outrank the global axis palette. */
+.build__label:not(.dim) {
+    color: var(--th-text-dim, #7d8ca6);
+}
+
+.build__label {
+    font-size: 0.75rem;
+    text-align: end;
+    line-height: 1.2;
+}
+
+/*
+ * The theme paints every input with `background: ... !important`, which wipes
+ * the select's own dropdown arrow. Drawing it on the wrapper is the one place
+ * that cannot be overridden by that rule.
+ */
+.build__pick {
+    position: relative;
+    display: block;
+    min-inline-size: 0;
+}
+
+.build__pick::after {
+    content: "\25BE";
+    position: absolute;
+    inset-inline-end: 8px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    pointer-events: none;
+    opacity: 0.55;
+    font-size: 0.7em;
+}
+
+.build__pick select {
+    inline-size: 100%;
+    padding-inline: 8px 22px;
+    font-size: 0.78rem;
+    text-transform: none;
+    /* An unset slot reads as unfinished rather than as a valid choice. */
+    opacity: 0.6;
+}
+
+.build__pick.is-set select {
+    opacity: 1;
+    color: var(--th-accent) !important;
+    border-color: rgba(var(--th-accent-rgb, 34, 211, 238), 0.55) !important;
+}
+
+@media (max-width: 560px) {
+    .build__grid { grid-template-columns: 1fr; }
+    .build__slot { grid-template-columns: 1fr 4.2rem; gap: 4px; }
+    .build__label { grid-column: 1 / -1; text-align: start; }
+}
+
+/* ---- answer buttons ---- */
+
+/*
+ * The button is a transparent hit target; `.answer__face` is what you see.
+ *
+ * Splitting the two is what lets a theme give the answers an arbitrary
+ * silhouette without shrinking the target. `clip-path` participates in hit
+ * testing, so clipping the button itself would make its corners dead — the
+ * wrong trade on the control that gets hit fastest.
+ *
+ * Every value derives from --th-ok / --th-bad, the same pair the calibration
+ * screen's plain buttons use, so there is one palette rather than two. The
+ * defaults reproduce the outlined chip these were before.
+ */
+.answer {
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0.15rem !important;
+}
+
+.answer__face {
+    display: grid;
+    place-items: center;
+    min-height: 4.2rem;
+    padding: 0.6rem 1rem;
+    border-radius: calc(var(--th-radius, 14px) * 1.15);
+    border: calc(var(--th-border-width, 1px) * 2) solid transparent;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    clip-path: var(--th-answer-shape, none);
+    transition: transform 120ms ease, filter 120ms ease, background 150ms ease;
+}
+
+.answer__face--yes {
+    background: color-mix(in srgb, var(--th-ok, #4ade80) var(--th-answer-fill, 12%), transparent);
+    border-color: color-mix(in srgb, var(--th-ok, #4ade80) 50%, transparent);
+    color: var(--th-ok-ink, var(--th-ok, #4ade80));
+}
+
+.answer__face--no {
+    background: color-mix(in srgb, var(--th-bad, #fb7185) var(--th-answer-fill, 12%), transparent);
+    border-color: color-mix(in srgb, var(--th-bad, #fb7185) 50%, transparent);
+    color: var(--th-bad-ink, var(--th-bad, #fb7185));
+}
+
+/*
+ * A clipped face has no border left to outline it, so definition comes from a
+ * drop-shadow — that follows the silhouette, where box-shadow would draw the
+ * rectangle the clip just removed.
+ */
+.answer:hover .answer__face {
+    transform: translateY(-1px) scale(1.03);
+    filter: drop-shadow(0 0 var(--th-glow, 10px) var(--th-accent, #22d3ee));
+}
+
+.answer:active .answer__face {
+    transform: scale(0.97);
+}
+
+/* ---- error review ---- */
+
+/*
+ * Sits over the card rather than beside it: the point is that it is read, and
+ * anything reachable by ignoring it will be ignored.
+ */
+.review {
+    position: fixed;
+    inset: 0;
+    /*
+     * Above the focus-mode playcard, which is fixed at 1035 and covered this
+     * whole overlay, and above the verdict flash at 1040 — but below the
+     * Bootstrap modal layer at 1050, which should still win.
+     */
+    z-index: 1045;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 1rem;
+    padding: clamp(1rem, 5vw, 4rem);
+    background: color-mix(in srgb, var(--th-bg, #05070c) 88%, transparent);
+    backdrop-filter: blur(6px);
+}
+
+.review__title {
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--th-text-dim, #7d8ca6);
+}
+
+/* Which conclusion the steps below are about, on an item that asked several. */
+.review__note {
+    font-size: 0.85rem;
+    color: var(--th-text-dim, #7d8ca6);
+    margin-block-start: 0.2rem;
+}
+
+.review__steps {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding-inline-start: 1.4rem;
+    max-inline-size: min(38rem, 100%);
+    line-height: 1.45;
+}
+
+.review__steps li::marker { color: var(--th-text-dim, #7d8ca6); }
+
+.review__go { margin-top: 0.5rem; }
+
+/* Two webs, side by side while there is room. Comparing them is the task, so
+ * stacking them on a wide screen would make it a memory task instead. */
+/*
+ * Two webs, given the width the card actually has.
+ *
+ * They were capped small enough that half the panel sat empty, which cost the
+ * one thing this mode needs — arrowheads big enough to read a direction from.
+ */
+.webs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.5rem, 2vw, 1.5rem);
+    justify-content: center;
+    width: 100%;
+}
+
+.webs__one {
+    display: grid;
+    justify-items: center;
+    gap: 0.15rem;
+    flex: 1 1 18rem;
+    max-width: 26rem;
+}
+
+/*
+ * Arrangements shown together.
+ *
+ * Wraps rather than scrolls: the whole value of drawing these is that they can
+ * be compared, and a comparison that needs scrolling between the two halves is
+ * a memory test again.
+ */
+.grids {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(0.75rem, 3vw, 2rem);
+}
+
+.grids__one {
+    display: grid;
+    justify-items: center;
+    gap: 0.25rem;
+}
+
+/* Options that are pictures need room the text ones do not. */
+.choices--grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 0.75rem;
+}
+
+.choice--grid {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    padding: 0.6rem;
+    height: auto;
+}
+
+/*
+ * One slide at a time, rendered directly.
+ *
+ * The height is held steady across slides so advancing does not make the card
+ * jump — a premise is one line and a pair of webs is several hundred pixels,
+ * and a control that moves under the pointer between clicks is its own bug.
+ */
+.slides {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 11rem;
+    padding-block: 1rem 3.5rem;
+}
+
+.slides__one {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    text-align: center;
+}
+
+/* The key that does the same thing, named on the control that does it. */
+.review__key {
+    margin-inline-start: 0.6rem;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 0.3rem;
+    opacity: 0.7;
+    font-size: 0.72em;
+}
+
+/* The per-dimension rows in the review panel, set apart from the steps above
+   them: one is how the answer follows, the other is what you actually said. */
+.review__dims {
+    margin: .5rem 0 .75rem;
+    padding-top: .5rem;
+    border-top: 1px solid rgba(128, 128, 128, .25);
+}
+
+/* Out of the way of the item, and quiet: it is an offer, not a demand. The
+   arcade's whole argument is that nothing interrupts the thing you are
+   reading. */
+.day-done {
+    display: block;
+    margin: 0 auto .5rem;
+    padding: .25rem .75rem;
+    border: 1px solid rgba(128, 128, 128, .35);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    opacity: .7;
+    font-size: .8rem;
+}
+
+.day-done:hover { opacity: 1; }
+
+/* ------------------------------------------------------------------ *
+ * The key to the marks                                                *
+ * ------------------------------------------------------------------ */
+
+/*
+ * Minimal mode trades words for marks, and a mark you cannot read is worse than
+ * the word it replaced. This is the way back, kept out of the way: a "?" in the
+ * corner that costs nothing to ignore and one hover to consult.
+ *
+ * Opened on focus as well as hover, so it is reachable in zen mode, where the
+ * mouse may never be touched.
+ */
+/* In normal flow above the card, right-aligned: no positioned ancestor to
+   depend on, and nothing overlapping the question. */
+.symkey-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: .35rem;
+}
+
+/*
+ * Stacked above the card, which is a later sibling and otherwise paints over
+ * it. The panel hangs *down* out of this row and into the card's area, so
+ * without this it opens behind the premises — which is what happened.
+ */
+.symkey {
+    position: relative;
+    z-index: 30;
+}
+
+.symkey__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.4);
+    font-size: 0.8rem;
+    opacity: 0.5;
+    cursor: help;
+}
+
+.symkey:hover .symkey__mark,
+.symkey:focus .symkey__mark { opacity: 1; }
+
+.symkey__panel {
+    display: none;
+    position: absolute;
+    z-index: 31;
+    top: 1.9rem;
+    right: 0;
+    min-width: 9rem;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(var(--th-accent-rgb, 34, 211, 238), 0.35);
+    background: var(--th-card-bg, #14181d);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.symkey:hover .symkey__panel,
+.symkey:focus .symkey__panel,
+.symkey:focus-within .symkey__panel { display: block; }
+
+.symkey__row {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.symkey__sym { text-align: center; opacity: 0.95; }
+.symkey__word { opacity: 0.75; }
+
+/* ------------------------------------------------------------------ *
+ * The key to a drawn label                                            *
+ * ------------------------------------------------------------------ */
+
+/* Opaque and over everything: a key beside the premises is a free lookup, and
+   covering the card makes consulting it cost what you had already read. */
+.labelkey {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-content: center;
+    gap: 1.5rem;
+    background: #000;
+    cursor: pointer;
+}
+
+.labelkey__grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.4rem 1.25rem;
+    align-items: baseline;
+    font-size: 1.1rem;
+}
+
+.labelkey__sym { justify-self: end; font-weight: 700; color: var(--th-text, #e7eaf1); }
+.labelkey__word, .labelkey__foot, .labelkey-hint { color: var(--th-text-dim, #7d8ca6); }
+.labelkey__foot, .labelkey-hint { font-size: 0.78rem; opacity: 0.65; }
+
+/* Says the key exists without saying what is in it. */
+.labelkey-hint { text-align: right; margin-bottom: .35rem; }
+
+
+/*
+ * The inverted pole, under the `red` scheme. A colour and nothing else: the
+ * pairing is what red carries, and changing the letters as well would be the
+ * anagram scheme wearing a second cue.
+ */
+.label-inverted { color: var(--th-bad, #f87171); font-weight: 700; }

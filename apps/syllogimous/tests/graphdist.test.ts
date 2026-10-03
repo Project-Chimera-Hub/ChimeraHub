@@ -1,0 +1,649 @@
+/**
+ * Graph edit distance, and the trap that makes it worth computing.
+ *
+ * **Applying k changes does not mean the distance is k.** Changes can partially
+ * cancel, and a bijection other than the one used to build the pair may line
+ * the graphs up more cheaply. A generator that trusted its own edit count would
+ * confidently mark correct answers wrong — so the first test here does not
+ * check that the search is fast or elegant, it checks that the search is
+ * *necessary*, by finding real cases where the edit count overstates the
+ * distance.
+ */
+
+import { assert, equal, seeded, test } from "./harness";
+import {
+    GraphEdge, MAX_DISTANCE_NODES, MAX_FORM_NODES, MIN_FORM_NODES, editDistance,
+    isomorphicByDistance, nodesOf, oddGraphOut,
+    orderConsistent,
+    degreeSignature,
+} from "../src/app/syllogimous/utils/graphdist.utils";
+
+const g = (...edges: Array<[string, "↔" | "→" | "←", string]>): GraphEdge[] => edges;
+
+test("a graph is nought from itself, relabelled or not", () => {
+    const a = g(["A", "→", "B"], ["B", "→", "C"], ["C", "↔", "D"]);
+    equal(editDistance(a, a), 0, "a graph differs from itself");
+
+    // Same shape, different names, edges stated in another order and the
+    // one-way ones written back to front.
+    const relabelled = g(["Z", "←", "Y"], ["W", "↔", "Z"], ["X", "→", "Y"]);
+    equal(editDistance(a, relabelled), 0, "a relabelling was counted as a difference");
+});
+
+test("one changed relation costs one, whichever way it changed", () => {
+    const base = g(["A", "→", "B"], ["B", "→", "C"], ["C", "→", "D"]);
+
+    // Reversed, not removed and re-added: a pair holds one state, so flipping
+    // it is a single change rather than two.
+    equal(editDistance(base, g(["A", "←", "B"], ["B", "→", "C"], ["C", "→", "D"])), 1,
+        "reversing one edge");
+    equal(editDistance(base, g(["A", "↔", "B"], ["B", "→", "C"], ["C", "→", "D"])), 1,
+        "making one edge two-way");
+    equal(editDistance(base, g(["A", "→", "B"], ["B", "→", "C"], ["C", "→", "D"], ["A", "→", "D"])), 1,
+        "adding an edge");
+});
+
+test("the edit count overstates the distance often enough to matter", () => {
+    /*
+     * The whole reason the generator must search. Random edits are applied to a
+     * copy, and the true distance is compared against how many were made — if
+     * the two always agreed, assuming the count would be safe and this module
+     * would be pointless.
+     */
+    const names = ["A", "B", "C", "D", "E"];
+    let overstated = 0, tried = 0;
+
+    seeded(6151, () => {
+        for (let run = 0; run < 300; run++) {
+            const base: GraphEdge[] = [];
+            for (let i = 0; i < names.length - 1; i++) {
+                base.push([names[i], pick(["→", "←", "↔"]), names[i + 1]]);
+            }
+            // One extra chord, so the shape has some symmetry to exploit.
+            base.push([names[0], pick(["→", "←", "↔"]), names[names.length - 1]]);
+
+            const edits = 2;
+            const copy: GraphEdge[] = base.map(e => [...e] as GraphEdge);
+            for (let k = 0; k < edits; k++) {
+                const at = Math.floor(Math.random() * copy.length);
+                copy[at] = [copy[at][0], pick(["→", "←", "↔"]), copy[at][2]];
+            }
+
+            const truth = editDistance(base, copy);
+            assert(truth !== null, "the search declined a graph inside the cap");
+            tried++;
+            if (truth! < edits) overstated++;
+        }
+    });
+
+    assert(tried === 300, "the sample did not run");
+    assert(overstated > 20,
+        `only ${overstated} of 300 pairs had a distance below the edit count`
+        + " — if that were zero, the search would be unnecessary");
+});
+
+function pick<T>(xs: T[]): T {
+    return xs[Math.floor(Math.random() * xs.length)];
+}
+
+test("the distance is symmetric and obeys the triangle inequality", () => {
+    // Not decoration: a metric that failed either would be measuring something
+    // other than what the question claims.
+    seeded(773, () => {
+        const names = ["A", "B", "C", "D"];
+        const draw = (): GraphEdge[] => {
+            const out: GraphEdge[] = [];
+            for (let i = 0; i < names.length; i++) {
+                for (let j = i + 1; j < names.length; j++) {
+                    if (Math.random() < 0.6) out.push([names[i], pick(["→", "←", "↔"]), names[j]]);
+                }
+            }
+            return out.length ? out : [[names[0], "→", names[1]]];
+        };
+
+        for (let run = 0; run < 60; run++) {
+            const [a, b, c] = [draw(), draw(), draw()];
+            if (nodesOf(a).length !== 4 || nodesOf(b).length !== 4 || nodesOf(c).length !== 4) continue;
+
+            const ab = editDistance(a, b), ba = editDistance(b, a);
+            equal(ab, ba, "the distance depends on which graph is named first");
+
+            const bc = editDistance(b, c), ac = editDistance(a, c);
+            assert(ac! <= ab! + bc!,
+                `triangle inequality broken: ${ac} > ${ab} + ${bc}`);
+        }
+    });
+});
+
+test("too big to search is null, never nought", () => {
+    // A silent zero would read as a claim of isomorphism, which is the one
+    // wrong answer a cap must not produce.
+    const many = [...Array(MAX_DISTANCE_NODES + 2).keys()].map(i => `N${i}`);
+    const big: GraphEdge[] = many.slice(1).map((n, i) => [many[i], "→", n]);
+
+    equal(editDistance(big, big), null, "an oversized pair was measured anyway");
+    assert(!isomorphicByDistance(big, big), "an unmeasurable pair was called isomorphic");
+});
+
+test("the odd one out is only named when there is exactly one", () => {
+    const a = g(["A", "→", "B"], ["B", "→", "C"]);
+    const b = g(["X", "→", "Y"], ["Y", "→", "Z"]);
+    const different = g(["P", "↔", "Q"], ["Q", "→", "R"]);
+
+    equal(oddGraphOut([a, b, different]), 2, "the one that differs");
+    equal(oddGraphOut([a, different, b]), 1, "position is not assumed");
+    equal(oddGraphOut([a, b, b]), null, "all alike has no odd one out");
+
+    const alsoDifferent = g(["P", "↔", "Q"], ["Q", "↔", "R"]);
+    equal(oddGraphOut([a, b, different, alsoDifferent]), null,
+        "two that differ is not a question with one answer");
+});
+
+/* ---------------- the two item forms built on it ---------------- */
+
+import { GeneratorContext } from "../src/app/syllogimous/generators/context";
+import { ProgressionService } from "../src/app/syllogimous/services/progression.service";
+import { SettingsOverrideService } from "../src/app/syllogimous/services/settings-override.service";
+import { Settings } from "../src/app/syllogimous/models/settings.models";
+import { EnumQuestionType } from "../src/app/syllogimous/constants/question.constants";
+import { Logger } from "../src/app/syllogimous/utils/logger";
+import { createDistinction } from "../src/app/syllogimous/generators/distinction";
+import { createGraphMatching } from "../src/app/syllogimous/generators/graph-matching";
+import { LINEAR_SCALES } from "../src/app/syllogimous/utils/linear.utils";
+
+function context(rung: string): GeneratorContext {
+    const settings = new Settings();
+    for (const type of Object.values(EnumQuestionType)) settings.question[type].enabled = true;
+    const ctx: GeneratorContext = {
+        settings,
+        logger: new Logger("error", false),
+        settingsOverrideService: {
+            linearOverride: () => null, axesFor: () => null, circularAxes: () => 0,
+            spread: () => null,
+            depthFor: () => 0, scramble: 100,
+        } as unknown as SettingsOverrideService,
+        progressionService: {
+            hasRung: () => false, depthBonusFor: () => 0,
+            dialFor: () => 0,
+            mergeTarget: () => null,
+        } as unknown as ProgressionService,
+        forceConstruction: "off",
+        hasRung: (_t: EnumQuestionType, r: string) => r === rung,
+        dialFor: () => 0,
+        mergeTarget: () => null,
+        random: (n?: number) => createDistinction(ctx, n ?? 2),
+    };
+    return ctx;
+}
+
+/** Premises back into graphs, split on the group headings. */
+function readGroups(premises: string[]): GraphEdge[][] {
+    const groups: GraphEdge[][] = [];
+    const strip = (s: string) => s.replace(/<[^>]+>/g, "");
+
+    for (const raw of premises) {
+        const line = strip(raw).trim();
+        if (line.endsWith(":")) { groups.push([]); continue; }
+        if (!groups.length) continue;
+
+        let m: RegExpExecArray | null;
+        if ((m = /^(.+) goes to (.+)$/.exec(line))) groups[groups.length - 1].push([m[1], "→", m[2]]);
+        else if ((m = /^(.+) comes from (.+)$/.exec(line))) groups[groups.length - 1].push([m[1], "←", m[2]]);
+        else if ((m = /^(.+) is connected to (.+)$/.exec(line))) groups[groups.length - 1].push([m[1], "↔", m[2]]);
+    }
+    return groups;
+}
+
+test("the group named as odd really is the only one that differs", () => {
+    const ctx = context("which-differs");
+    let checked = 0;
+
+    for (let run = 0; run < 40 && checked < 20; run++) {
+        const q = seeded(run * 1237 + 3, () => createGraphMatching(ctx, 5));
+        if (q.answerMode !== "choice" || !String(q.choicePrompt).includes("not the same shape")) continue;
+
+        const groups = readGroups(q.premises);
+        assert(groups.length >= 3, `only ${groups.length} groups were stated`);
+
+        /*
+         * Every group is stated; two are offered. So the marked group has to be
+         * read off the option, not taken as an index into the groups — those
+         * were the same number only while every group was on the menu.
+         */
+        equal(q.choices.length, 2, "the odd one out was offered among every group");
+        const named = Number(/Group (\d+)/.exec(q.choices[q.correctChoice])![1]) - 1;
+
+        // Recomputed from the premises, not from what the generator intended.
+        equal(oddGraphOut(groups), named,
+            "the marked group is not the one the premises single out");
+
+        // And the option beside it is a real group, not a filler label.
+        const rival = Number(/Group (\d+)/.exec(q.choices[1 - q.correctChoice])![1]) - 1;
+        assert(rival >= 0 && rival < groups.length && rival !== named,
+            "the other option is not one of the stated groups");
+        checked++;
+    }
+
+    assert(checked >= 20, `only ${checked} odd-one-out items appeared`);
+});
+
+test("the stated distance is the true minimum, not the number of edits made", () => {
+    /*
+     * The trap, checked on real items. The generator perturbs one to three
+     * links and then searches; if it reported its own edit count instead, this
+     * would fail on the pairs where changes partially cancel — which the test
+     * above shows are common.
+     */
+    const ctx = context("distance");
+    let checked = 0;
+
+    for (let run = 0; run < 40 && checked < 20; run++) {
+        const q = seeded(run * 6949 + 11, () => createGraphMatching(ctx, 5));
+        if (q.answerMode !== "choice" || !String(q.choicePrompt).includes("Fewest links")) continue;
+
+        const groups = readGroups(q.premises);
+        assert(groups.length === 2, `expected two graphs, got ${groups.length}`);
+
+        const truth = editDistance(groups[0], groups[1]);
+        assert(truth !== null, "the stated graphs are too big to measure");
+        equal(q.choices[q.correctChoice].replace(/<[^>]+>/g, ""), String(truth),
+            "the marked option is not the true minimum");
+
+        // And no other option is also right.
+        q.choices.forEach((c, i) => {
+            if (i === q.correctChoice) return;
+            assert(c.replace(/<[^>]+>/g, "") !== String(truth), "the answer is offered twice");
+        });
+        checked++;
+    }
+
+    assert(checked >= 20, `only ${checked} distance items appeared`);
+});
+
+/**
+ * The same comparison, stated in two different vocabularies.
+ *
+ * With both graphs drawn as arrows the two premise sets are written in the same
+ * words, so they can be lined up by eye — match the text, match the structure.
+ * One spatial vocabulary and one temporal closes that route: nothing can be
+ * compared until both have been abstracted out of what they say into what shape
+ * they are.
+ *
+ * Checked by reading both halves back into graphs through the scale
+ * vocabularies and re-deciding isomorphism, which is the same search the arrow
+ * forms use — so if the wording ever stopped mapping onto the structure
+ * faithfully, this would disagree with the item.
+ */
+test("relational phrasing preserves the structure it is stating", () => {
+    const ctx = context("as-relations");
+    let checked = 0, matching = 0;
+
+    for (let run = 0; run < 60 && checked < 25; run++) {
+        const q = seeded(run * 4547 + 17, () => createGraphMatching(ctx, 5));
+        if (!String(q.conclusion).includes("same structure")) continue;
+
+        const groups = readRelationGroups(q.premises);
+        assert(groups.length === 2, `expected two sets, got ${groups.length}`);
+        assert(groups[0].length >= 4 && groups[1].length >= 4, "a set was nearly empty");
+
+        const same = isomorphicByDistance(groups[0], groups[1]);
+        assert(same === q.isValid,
+            `the structures ${same ? "match" : "differ"} but the item says ${q.isValid}`);
+
+        if (q.isValid) matching++;
+        checked++;
+    }
+
+    assert(checked >= 25, `only ${checked} relational items appeared`);
+    assert(matching > 5 && matching < checked - 5,
+        `${matching} of ${checked} matched — the answer should not be guessable`);
+});
+
+test("the two vocabularies never share a phrase", () => {
+    /*
+     * The whole point of the form. Quantity and Height say exactly the same
+     * things, so a reader could only tell which set a statement belonged to by
+     * where it sat on the page — which is the text-matching shortcut this form
+     * exists to close, reopened.
+     */
+    const ctx = context("as-relations");
+
+    for (let run = 0; run < 40; run++) {
+        const q = seeded(run * 971 + 29, () => createGraphMatching(ctx, 5));
+        if (!String(q.conclusion).includes("same structure")) continue;
+
+        const [first, second] = q.premises
+            .map(p => p.replace(/<[^>]+>/g, "").trim())
+            .filter(p => p.endsWith(":"))
+            .map(p => p.slice(0, -1));
+
+        const scaleOf = (name: string) => Object.values(LINEAR_SCALES).find(s => s.name === name)!;
+        const a = scaleOf(first), b = scaleOf(second);
+        assert(!!a && !!b, `unknown scale heading: ${first} / ${second}`);
+
+        const words = (s: typeof a) => new Set([s.above, s.below, s.same]);
+        for (const w of words(b)) {
+            assert(!words(a).has(w), `both sets can say "${w}"`);
+        }
+    }
+});
+
+/** Both halves back into graphs, read through whichever scale each uses. */
+function readRelationGroups(premises: string[]): GraphEdge[][] {
+    const groups: GraphEdge[][] = [];
+
+    for (const raw of premises) {
+        const line = raw.replace(/<[^>]+>/g, "").trim();
+        if (line.endsWith(":")) { groups.push([]); continue; }
+        if (!groups.length) continue;
+
+        // Longest phrase first: "is at the same time as" contains no other
+        // phrase, but short ones can sit inside longer ones in principle.
+        const phrases = Object.values(LINEAR_SCALES).flatMap(s => [
+            { text: s.above, rel: "→" as const },
+            { text: s.below, rel: "←" as const },
+            { text: s.same, rel: "↔" as const },
+        ]).sort((x, y) => y.text.length - x.text.length);
+
+        const hit = phrases.find(p => line.includes(` ${p.text} `));
+        assert(!!hit, `no known relation in: ${line}`);
+
+        const [a, b] = line.split(` ${hit!.text} `);
+        groups[groups.length - 1].push([a.trim(), hit!.rel, b.trim()]);
+    }
+
+    return groups;
+}
+
+/* ------------------------------------------------------------------ *
+ * Statements that can be true at once                                 *
+ * ------------------------------------------------------------------ */
+
+/**
+ * A comparison is not an arrow.
+ *
+ * Most of this mode's forms word a link as "goes to" or "comes from", where a
+ * cycle is an ordinary graph. One words the same links as *comparisons*, and
+ * there a cycle is a contradiction: nothing is larger than the thing it is
+ * inside.
+ *
+ * The reported item, as edges. Fondue is smaller than Lamb by the chain and
+ * larger by the last statement — and the other set was impossible in the same
+ * shape, so the two were isomorphic as digraphs and the item said "the two
+ * describe the same structure" and marked it right.
+ */
+test("a set that contradicts itself is not an arrangement", () => {
+    assert(!orderConsistent(g(
+        ["Cushion", "→", "Fondue"],
+        ["Garland", "→", "Cushion"],
+        ["Garland", "↔", "Lamb"],
+        ["Fondue", "→", "Lamb"],
+    )), "the reported item was accepted as readable");
+
+    // Sameness merges things into a group, and nothing outranks its own group.
+    assert(!orderConsistent(g(["A", "→", "B"], ["A", "↔", "B"])),
+        "something was allowed to be both equal to and larger than a thing");
+    assert(!orderConsistent(g(["A", "→", "B"], ["B", "→", "C"], ["C", "→", "A"])),
+        "a loop of comparisons was accepted");
+
+    // And the ordinary shapes stay allowed.
+    assert(orderConsistent(g(["A", "→", "B"], ["B", "→", "C"])), "a plain chain was rejected");
+    assert(orderConsistent(g(["A", "→", "B"], ["B", "↔", "C"])), "equality was rejected");
+    assert(orderConsistent(g(["A", "→", "C"], ["B", "→", "C"])), "a fork was rejected");
+    assert(orderConsistent([]), "an empty set was rejected");
+});
+
+/**
+ * And the items themselves, read only from what is on the card.
+ *
+ * The relation words are decoded from the scale the group heading names, which
+ * is how the reader decodes them — so this checks the sentences that were
+ * actually shown rather than the structure they were built from.
+ */
+test("an item worded as comparisons states nothing impossible", () => {
+    const ctx = context("as-relations");
+    const strip = (t: string) => t.replace(/<[^>]+>/g, "");
+    let checked = 0;
+
+    seeded(31415, () => {
+        for (let rep = 0; rep < 120; rep++) {
+            let q;
+            try { q = createGraphMatching(ctx, 5); } catch { continue; }
+
+            const byName = new Map(Object.values(LINEAR_SCALES).map(sc => [sc.name, sc]));
+            let scale: typeof LINEAR_SCALES[string] | undefined;
+            let group: GraphEdge[] = [];
+            const groups: GraphEdge[][] = [];
+
+            for (const line of q.premises.map(strip)) {
+                const heading = byName.get(line.replace(/:$/, "").trim());
+                if (heading) {
+                    if (group.length) groups.push(group);
+                    group = [];
+                    scale = heading;
+                    continue;
+                }
+                if (!scale) continue;
+
+                for (const [phrase, rel] of [
+                    [scale.above, "→"], [scale.below, "←"], [scale.same, "↔"],
+                ] as const) {
+                    const at = line.indexOf(` ${phrase} `);
+                    if (at < 0) continue;
+                    group.push([
+                        line.slice(0, at).trim(), rel, line.slice(at + phrase.length + 2).trim(),
+                    ]);
+                    break;
+                }
+            }
+            if (group.length) groups.push(group);
+            if (groups.length !== 2) continue;   // some other form of the mode
+
+            checked++;
+            for (const [i, edges] of groups.entries()) {
+                assert(edges.length >= 3, `group ${i + 1} read back as ${edges.length} statements`);
+                assert(orderConsistent(edges),
+                    `group ${i + 1} cannot be true:\n  `
+                    + q.premises.map(strip).join("\n  "));
+            }
+        }
+    });
+
+    assert(checked > 30, `only ${checked} comparison-worded items in the sample`);
+});
+
+/* ------------------------------------------------------------------ *
+ * Counting must not answer it                                         *
+ * ------------------------------------------------------------------ */
+
+/**
+ * No drawing gives itself away by how many links it has.
+ *
+ * This mode asks whether two edge lists are the same *shape*. A shape question
+ * that can be settled by **counting** is not one: if the odd group has four
+ * arrows where the others have five, or one node with three where every twin
+ * has two, it is found without comparing anything to anything. Counting is the
+ * shortcut every reader finds first and the one the mode exists to close off.
+ *
+ * The perturbations used to hand it over. Swapping a one-way link for a two-way
+ * one changes the count; reconnecting an edge to a different object changes a
+ * node's. Both are gone: a difference is now made by trading two relations or
+ * by rewiring two links end for end, and every node keeps exactly the links it
+ * had.
+ *
+ * Read off `graphPremises` and `graphConclusion`, which are the edge lists the
+ * item was built from. Parsing the sentences was tried and is a trap — a meta
+ * premise states a *relation between relations* rather than a link, so a parser
+ * silently drops it and reports its own gap as a counting shortcut.
+ */
+test("the two graphs never differ in how many links they have", () => {
+    const ctx = context("");
+    let checked = 0, differing = 0;
+
+    for (let run = 0; run < 200; run++) {
+        const q = seeded(run * 4051 + 7, () => createGraphMatching(ctx, 5));
+        if (!q.graphPremises?.length || !q.graphConclusion?.length) continue;
+        checked++;
+        if (q.isValid) continue;
+        differing++;
+
+        equal(degreeSignature(q.graphPremises as GraphEdge[]),
+            degreeSignature(q.graphConclusion as GraphEdge[]),
+            "the two graphs can be told apart by counting links");
+    }
+
+    assert(checked > 80, `only ${checked} items carried their graphs`);
+    assert(differing > 20, `only ${differing} of them were different shapes`);
+});
+
+/** And the odd one out is not the group with a different number of arrows. */
+test("the odd group has the same counts as the ones it differs from", () => {
+    const ctx = context("which-differs");
+    let checked = 0;
+
+    for (let run = 0; run < 60 && checked < 20; run++) {
+        const q = seeded(run * 1237 + 3, () => createGraphMatching(ctx, 5));
+        if (q.answerMode !== "choice"
+            || !String(q.choicePrompt).includes("not the same shape")) continue;
+
+        const groups = readGroups(q.premises);
+        if (groups.length < 3) continue;
+        checked++;
+
+        const signatures = groups.map(degreeSignature);
+        equal(new Set(signatures).size, 1,
+            `the groups have ${new Set(signatures).size} different link counts,`
+            + " so the odd one is found by counting");
+    }
+
+    assert(checked >= 15, `only ${checked} odd-one-out items appeared`);
+});
+
+
+/* ---------------- the size of the thing served ---------------- */
+
+import { chooseConfig, pricedPremises, RUNG_MIN_PREMISES } from "../src/app/syllogimous/utils/ability.utils";
+import { ladderFor, dialsFor } from "../src/app/syllogimous/utils/progression.utils";
+import { lengthCapFor } from "../src/app/syllogimous/services/progression.service";
+import { QUESTION_TYPE_SETTING_PARAMS } from "../src/app/syllogimous/constants/settings.constants";
+
+/** Objects named across the whole item, however its premises are grouped. */
+function objectsIn(q: { premises: string[] }): number {
+    const names = new Set<string>();
+    for (const line of q.premises) {
+        for (const m of line.matchAll(/<span class="subject">([^<]+)<\/span>/g)) names.add(m[1]);
+    }
+    return names.size;
+}
+
+/**
+ * Growing with the ask, which the forms did not do.
+ *
+ * Every one of the three clamped to six objects however large the number it was
+ * handed, and to four however small — so a player climbing Graph Matching was
+ * served the same item at two premises and at seven. It looked like progress
+ * because the ladder went on choosing larger numbers and every screen that
+ * reports a mode's configuration went on printing them.
+ *
+ * Measured on the rendered item rather than on `builtPremises`: the field is
+ * what the generator *claims* it drew, and a field agreeing with itself is the
+ * one thing this cannot be allowed to check. The objects are counted per group,
+ * because a which-differs item names fresh ones for every group it states.
+ */
+test("a graph form is drawn at the size it was asked for", () => {
+    for (const rung of ["which-differs", "as-relations", "distance"]) {
+        const ctx = context(rung);
+
+        for (let ask = MIN_FORM_NODES; ask <= MAX_FORM_NODES; ask++) {
+            let seen = 0;
+
+            for (let run = 0; run < 60 && seen < 6; run++) {
+                const q = seeded(run * 3389 + ask * 97, () => createGraphMatching(ctx, ask));
+                // Only the rung forms state groups; a draw that fell through to
+                // the base form is a different item and is checked below.
+                const groups = rung === "as-relations"
+                    ? readRelationGroups(q.premises) : readGroups(q.premises);
+                if (groups.length < 2) continue;
+                seen++;
+
+                for (const g of groups) {
+                    equal(nodesOf(g).length, ask,
+                        `${rung} asked for ${ask} objects and drew ${nodesOf(g).length}`);
+                }
+            }
+
+            assert(seen >= 6, `only ${seen} ${rung} items appeared at ${ask}`);
+        }
+    }
+});
+
+/**
+ * The number chosen, the number built, and the number shown, all one number.
+ *
+ * The bug this closes was three of them: the ladder chose two premises, the
+ * generator quietly drew four because no form works with fewer, and the mode
+ * row printed the ladder's two. None of the three was wrong on its own terms,
+ * which is why nothing caught it — so this walks the real selection across the
+ * whole usable range and builds the item it chose, which is the only place the
+ * disagreement is visible.
+ */
+test("every configuration the ladder chooses is the size the item comes out", () => {
+    const type = EnumQuestionType.GraphMatching;
+    const params = QUESTION_TYPE_SETTING_PARAMS[type];
+    const ladder = ladderFor(type);
+    const opts = {
+        minPremises: params.minNumOfPremises,
+        maxPremises: lengthCapFor(type, params),
+        target: 0,
+        structureBefore: 5,
+        ladder,
+        untimed: false,
+        dials: dialsFor(type),
+        recent: {},
+        secondsPerPremise: 4,
+    };
+
+    const sizes = new Set<number>();
+
+    for (let target = 3; target <= 18; target++) {
+        const choice = chooseConfig(type, { ...opts, target });
+        const claimed = ladder.slice(0, choice.rungs);
+        const ctx = context("");
+        // The rungs this configuration bought, exactly as the generator is
+        // handed them.
+        (ctx as { hasRung: (t: EnumQuestionType, r: string) => boolean }).hasRung =
+            (_t, r) => claimed.includes(r);
+
+        sizes.add(choice.premises);
+
+        for (let run = 0; run < 12; run++) {
+            const q = seeded(run * 5641 + target * 131,
+                () => createGraphMatching(ctx, choice.premises));
+            equal(pricedPremises(q), choice.premises,
+                `at target ${target} the ladder chose ${choice.premises} premises`
+                + ` with ${choice.rungs} rungs, and the item came out`
+                + ` ${pricedPremises(q)}`);
+            assert(objectsIn(q) > 0, "the item named nothing");
+        }
+    }
+
+    // And the range is a range: a run of identical numbers would pass every
+    // assertion above while being exactly the complaint.
+    assert(sizes.size >= 3,
+        `the ladder only ever chose ${[...sizes].join(", ")} premises`);
+});
+
+/**
+ * The floor declared where the selection can read it.
+ *
+ * The generator has always refused to draw a form from fewer than four objects,
+ * and it refused silently — so `chooseConfig` kept offering two and pricing it.
+ * `RUNG_MIN_PREMISES` is the mechanism that already existed for exactly this,
+ * and the three rungs were simply missing from it.
+ */
+test("no graph rung is offered below the objects its form needs", () => {
+    for (const rung of ["which-differs", "as-relations", "distance"]) {
+        equal(RUNG_MIN_PREMISES[rung], MIN_FORM_NODES,
+            `${rung} does not declare the premises its form needs`);
+    }
+});
