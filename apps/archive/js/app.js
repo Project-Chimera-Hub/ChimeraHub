@@ -48,7 +48,7 @@ var SOURCE_NAMES = {
   rrt: "Running Order",
   synth: "Synaesthesia colours",
   chimera: "Chimera",
-  relational: "Relational N-back",
+  relational: "Relation Streams",
 };
 
 function sourceName(id) {

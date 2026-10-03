@@ -237,7 +237,7 @@ h2::after {
 
 .grid {
   display: grid;
-  /* 19rem, not 16: at 16 a desktop fits four across and "Relational N-back"
+  /* 19rem, not 16: at 16 a desktop fits four across and a two-word name
      wraps to two lines with the colour dot stranded beside the fold. */
   grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
   gap: 1px;

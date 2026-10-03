@@ -26,7 +26,7 @@ test/       the hub's tests
 | CCT | spoken arithmetic against the clock |
 | Chimera | add the digits you hear, judge the number you see — with n-back, eWMT, CCT and dichotic modes stacked on top |
 | eWMT | the Affective N-Back: position, colour and voice, n steps back |
-| Relational N-back | four streams of relations, n back |
+| Relation Streams | four streams of relations, n back |
 
 And three **additional exercises**, which run here like the four but are not
 counted toward the day:
@@ -105,7 +105,7 @@ The hub's **Share your data** card makes a file of every session this browser
 holds and leaves the upload to the player: the hub itself still sends nothing.
 It reads:
 
-- **CCT, Chimera and Relational N-back** through the archive's adapters, the
+- **CCT, Chimera and Relation Streams** through the archive's adapters, the
   same readings the meter counts from (`Today.readings()`), along with any
   retired trainer still in the browser. Syllogimous and Isomorph go in answer
   by answer, as they always did.
@@ -243,10 +243,11 @@ but counts only the four trainers on the hub toward today and the quota:
 
 Two names carried over. **eWMT** is the Affective N-Back now, under the source
 name the Attentional Shield had, because it is the same slot and a day of
-either is a day of eWMT. **Relational N-back** is the four-stream trainer now,
-under a new source name (`relational`), because the ladder trainer that had the
-name measured difficulty in a different unit and the archive never lets a
-number travel without its unit.
+either is a day of eWMT. **Relation Streams**, the four-stream trainer that
+arrived as "Relational N-back", has its own source name (`relational`) and,
+since then, its own name too: the ladder trainer that had that name measured
+difficulty in a different unit, and the archive never lets a number travel
+without its unit, nor two trainers share a name.
 
 ## The archive is not a trainer
 

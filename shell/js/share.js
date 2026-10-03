@@ -189,7 +189,7 @@ var Share = (function () {
   }
 
   var NAMES = {
-    cct: "CCT", chimera: "Chimera", relational: "Relational N-back",
+    cct: "CCT", chimera: "Chimera", relational: "Relation Streams",
     earshot: "Earshot", quadbox: "Quad Box",
     syllogimous: "Syllogimous", isomorph: "Isomorph", rnb: "RNB", rrt: "Running Order",
     synth: "Synth", precision: "Precision N-back", rotation: "3D Rotation", ewmt: "eWMT",

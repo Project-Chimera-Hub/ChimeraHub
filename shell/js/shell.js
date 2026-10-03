@@ -31,7 +31,7 @@
       what: "Add the digits you hear, judge the number you see" },
     { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
       what: "Affective n-back: position, colour and voice" },
-    { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
+    { id: "relational", name: "Relation Streams", path: "relational/", colour: "#56d364",
       what: "Four streams of relations, n back" },
   ];
 

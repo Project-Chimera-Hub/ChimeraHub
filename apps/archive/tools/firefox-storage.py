@@ -380,7 +380,7 @@ def affective_from(store):
 
 
 def relational_from(store):
-    """The four-stream Relational N-back's last fifty sessions."""
+    """Relation Streams' last fifty sessions."""
     return single_key(store, "rel4_nback_history_v2",
                       lambda d: isinstance(d, list) and len(d) > 0)
 
