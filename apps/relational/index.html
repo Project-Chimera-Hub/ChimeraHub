@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0c" />
+  <title>Relational N-Back</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand" data-nav="setup" aria-label="Training setup">
+      <span class="brand-mark">R4</span>
+      <span><strong>RELATIONAL</strong><small>N-BACK</small></span>
+    </button>
+    <nav class="topnav" aria-label="Main navigation">
+      <a class="discord-link" href="https://discord.gg/chmr" target="_blank" rel="noreferrer">DISCORD</a>
+      <button class="nav-btn active" data-nav="setup">TRAIN</button>
+      <button class="nav-btn" data-nav="wiki">WIKI</button>
+      <button class="nav-btn" data-nav="history">HISTORY</button>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section id="setup-view" class="view active" data-view="setup">
+      <div class="hero-panel">
+        <p class="eyebrow">FOUR STREAMS · CHANGING RULES</p>
+        <h1>Relational N-Back</h1>
+        <p class="hero-copy">Track position, digits, shape value, and abstract relation at once. Relation meanings stay the same even when the icon shapes vary.</p>
+        <div class="rule-box"><strong>Core rule</strong><span>Remembered N-back = prompt(Current)</span></div>
+      </div>
+
+      <p id="audio-warning" class="inline-warning" hidden></p>
+
+      <form id="setup-form" class="setup-grid">
+        <article class="panel mode-panel">
+          <div class="panel-heading"><span>SPACE</span><small>Choose the grid</small></div>
+          <div class="segmented" id="mode-picker">
+            <label><input type="radio" name="mode" value="2d" checked><span>2D<br><small>3 × 3</small></span></label>
+            <label><input type="radio" name="mode" value="3d-static"><span>3D Static<br><small>3 × 3 × 3</small></span></label>
+            <label><input type="radio" name="mode" value="3d-rotating"><span>3D Rotating<br><small>3 × 3 × 3</small></span></label>
+          </div>
+        </article>
+
+        <article class="panel settings-panel">
+          <div class="panel-heading"><span>SESSION</span><small>Difficulty and timing</small></div>
+          <div class="fields-grid">
+            <label class="field"><span>N level</span><input id="n-level" type="number" min="1" max="9" value="2"></label>
+            <label class="field"><span>Scored trials</span><input id="trial-count" type="number" min="5" max="500" value="30"></label>
+            <label class="field"><span>Trial interval <small>ms</small></span><input id="trial-interval" type="number" min="800" max="10000" step="100" value="2500"></label>
+            <label class="field"><span>Stimulus visible <small>ms</small></span><input id="visible-duration" type="number" min="200" max="8000" step="100" value="900"></label>
+            <label class="field"><span>Target rate <small>%</small></span><input id="target-rate" type="number" min="15" max="65" step="5" value="35"></label>
+            <label class="field"><span>Max ± offset</span><input id="max-offset" type="number" min="1" max="9" value="4"></label>
+            <label class="field field-check field-wide"><span>Variable N per trial</span><input id="variable-n" type="checkbox"></label>
+            <label class="field variable-floor-row" id="variable-floor-row" hidden><span>Variable floor</span><input id="variable-floor" type="number" min="1" max="9" value="1"></label>
+          </div>
+          <label class="check-row"><input id="feedback-enabled" type="checkbox" checked><span>Per-trial feedback</span></label>
+          <p class="helper-copy">Digit audio uses pre-recorded clips from <code>assets/audio/1-8</code> when those files are present.</p>
+        </article>
+
+        <article class="panel stream-panel">
+          <div class="panel-heading"><span>STREAMS</span><small>Disabled streams are not shown at all</small></div>
+          <div class="toggle-grid">
+            <label class="stream-toggle"><input id="stream-position" type="checkbox" checked><b>A</b><span>Position</span></label>
+            <label class="stream-toggle"><input id="stream-sound" type="checkbox" checked><b>S</b><span>Sound</span></label>
+            <label class="stream-toggle"><input id="stream-shape" type="checkbox" checked><b>D</b><span>Shape</span></label>
+            <label class="stream-toggle"><input id="stream-relation" type="checkbox" checked><b>F</b><span>Relation</span></label>
+          </div>
+          <p class="helper-copy">Turning a stream off removes its stimulus from the screen or speakers. Position off also removes the grid itself.</p>
+          <div class="shape-panel">
+            <div class="panel-heading compact"><span>RELATION SHAPES</span><small>Need at least two</small></div>
+            <div class="toggle-grid shapes-grid">
+              <label class="shape-toggle"><input id="shape-circle" type="checkbox" checked><span>Circle <small>1</small></span></label>
+              <label class="shape-toggle"><input id="shape-triangle" type="checkbox" checked><span>Triangle <small>3</small></span></label>
+              <label class="shape-toggle"><input id="shape-square" type="checkbox" checked><span>Square <small>4</small></span></label>
+              <label class="shape-toggle"><input id="shape-pentagon" type="checkbox" checked><span>Pentagon <small>5</small></span></label>
+              <label class="shape-toggle"><input id="shape-hexagon" type="checkbox" checked><span>Hexagon <small>6</small></span></label>
+            </div>
+          </div>
+        </article>
+
+        <button class="start-btn" type="submit"><span>START SESSION</span><small>Keyboard: A · S · D · F · Space pauses · H for relation help</small></button>
+      </form>
+    </section>
+
+    <section id="game-view" class="view" data-view="game">
+      <div class="game-topline">
+        <button id="quit-session" class="quiet-btn">QUIT</button>
+        <div class="session-meta"><span id="trial-label">WARM-UP</span><b id="n-label">2-BACK</b><span id="mode-label">2D</span></div>
+        <div class="topline-actions">
+          <button id="relation-help" class="quiet-btn" type="button" title="Relation cheat sheet (H)">RELATIONS</button>
+          <button id="pause-session" class="quiet-btn" type="button">PAUSE</button>
+        </div>
+      </div>
+      <div class="progress-track"><div id="progress-fill"></div></div>
+
+      <div class="game-hud">
+        <strong id="trial-n-display">N = 2</strong>
+        <span id="hud-rule">Compare the stimulus 2 back against the current one</span>
+      </div>
+
+      <div class="game-stage">
+        <div id="grid-2d" class="grid-2d" aria-label="3 by 3 stimulus grid"></div>
+        <canvas id="cube-3d" width="720" height="560" aria-label="3 by 3 by 3 stimulus cube"></canvas>
+        <div id="solo-stage" class="solo-stage" aria-label="stimulus"></div>
+        <div id="pause-overlay" class="pause-overlay" hidden>PAUSED<small>Space or PAUSE to resume</small></div>
+      </div>
+
+      <div class="response-deck" id="response-deck">
+        <div class="response-card" data-card="position">
+          <span class="response-channel">POSITION · A</span>
+          <strong id="prompt-position">NORTH</strong>
+          <button class="response-btn" data-stream="position" type="button">MATCH</button>
+          <small class="verdict" id="verdict-position"></small>
+        </div>
+        <div class="response-card" data-card="sound">
+          <span class="response-channel">SOUND · S</span>
+          <strong id="prompt-sound">-3</strong>
+          <button class="response-btn" data-stream="sound" type="button">MATCH</button>
+          <small class="verdict" id="verdict-sound"></small>
+        </div>
+        <div class="response-card" data-card="shape">
+          <span class="response-channel">SHAPE · D</span>
+          <strong id="prompt-shape">FEWER</strong>
+          <button class="response-btn" data-stream="shape" type="button">MATCH</button>
+          <small class="verdict" id="verdict-shape"></small>
+        </div>
+        <div class="response-card" data-card="relation">
+          <span class="response-channel">RELATION · F</span>
+          <strong id="prompt-relation">INVERSE</strong>
+          <button class="response-btn" data-stream="relation" type="button">MATCH</button>
+          <small class="verdict" id="verdict-relation"></small>
+        </div>
+      </div>
+      <p id="game-status" class="visually-hidden" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="results-view" class="view" data-view="results">
+      <div class="results-wrap">
+        <p class="eyebrow">SESSION COMPLETE</p>
+        <h2 id="combined-score">0%</h2>
+        <p class="muted">Combined accuracy across enabled streams</p>
+        <div id="result-streams" class="result-streams"></div>
+        <div class="result-actions"><button id="again-btn" class="primary-btn">RUN AGAIN</button><button class="secondary-btn" data-nav="setup">SETTINGS</button></div>
+      </div>
+    </section>
+
+    <section id="wiki-view" class="view" data-view="wiki">
+      <div class="page-heading"><p class="eyebrow">REFERENCE</p><h2>Symbol &amp; Rule Wiki</h2><p>Decode the rule, not the exact drawing. The two shapes in an icon always differ, but the relation meaning stays the same.</p></div>
+      <div id="wiki-content"></div>
+    </section>
+
+    <section id="history-view" class="view" data-view="history">
+      <div class="page-heading"><p class="eyebrow">LOCAL DATA</p><h2>Session History</h2><p>Stored only in this browser.</p></div>
+      <div id="history-content"></div>
+      <button id="clear-history" class="secondary-btn">CLEAR HISTORY</button>
+    </section>
+  </main>
+
+  <div id="relation-sheet" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Relation cheat sheet">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">RELATION CHEAT SHEET</p>
+          <h3>Fewer sides = first term</h3>
+        </div>
+        <button id="close-relation-sheet" class="quiet-btn" type="button">CLOSE</button>
+      </div>
+      <div id="relation-sheet-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

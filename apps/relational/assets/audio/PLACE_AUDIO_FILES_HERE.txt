@@ -1,0 +1,7 @@
+Put pre-recorded digit clips here.
+
+Supported names:
+0.mp3 / 0.wav / 0.ogg / 0.m4a
+1.mp3 / 1.wav / 1.ogg / 1.m4a
+...
+9.mp3 / 9.wav / 9.ogg / 9.m4a
