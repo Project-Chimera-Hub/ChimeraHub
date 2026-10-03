@@ -1,0 +1,111 @@
+/* AudioFlow's own styles. The bundled stylesheet is Tailwind compiled against
+   DorsalFlow's source, so it holds only the classes that source used; the
+   audio mode was added afterwards, and a class it needs that was never
+   compiled in would silently do nothing. These are written out instead. */
+
+.af-stage {
+  position: relative; height: 100vh; width: 100vw; overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #13233a 0%, #0f172a 55%, #020617 100%);
+  color: #f1f5f9;
+}
+.af-hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  padding: 1rem;
+}
+.af-hud__title { font-weight: 800; font-size: .9rem; color: #6ee7b7; }
+.af-hud__sub { font-size: .72rem; color: #94a3b8; margin-top: .15rem; }
+.af-hud__sub strong { color: #f1f5f9; font-family: ui-monospace, monospace; }
+.af-hud__right { display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; }
+
+.af-centre {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.25rem; pointer-events: none;
+}
+.af-ring {
+  width: 9rem; height: 9rem; border-radius: 9999px;
+  border: 2px solid #334155; display: flex; align-items: center; justify-content: center;
+  color: #64748b; transition: border-color .15s, box-shadow .15s, color .15s;
+}
+/* Lights while the sweep plays and gives nothing else away: it is the same
+   for left and right. */
+.af-ring--on { border-color: #10b981; color: #6ee7b7; box-shadow: 0 0 2.5rem rgba(16, 185, 129, .35); }
+.af-ring__icon { width: 3rem; height: 3rem; }
+.af-prompt { min-height: 1.5rem; font-size: .95rem; font-weight: 600; color: #cbd5e1; }
+
+.af-answers {
+  position: absolute; bottom: 1.5rem; left: 0; right: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 0 1rem;
+}
+.af-answers__row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; width: 100%; max-width: 28rem; }
+.af-feedback { height: 1.75rem; display: flex; align-items: center; }
+.af-ok, .af-bad {
+  font-size: .75rem; font-weight: 700; padding: .25rem .75rem; border-radius: 9999px; border: 1px solid;
+}
+.af-ok { color: #34d399; background: rgba(2, 44, 34, .8); border-color: rgba(4, 120, 87, .5); }
+.af-bad { color: #fb7185; background: rgba(76, 5, 25, .8); border-color: rgba(190, 18, 60, .5); }
+
+.af-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  border-radius: .75rem; font-weight: 700; font-size: .8rem; cursor: pointer;
+  border: 1px solid transparent; transition: background .15s, transform .1s, border-color .15s;
+}
+.af-btn:active:not(:disabled) { transform: scale(.96); }
+.af-btn--ghost { padding: .35rem .8rem; background: rgba(15, 23, 42, .8); border-color: #334155; color: #cbd5e1; }
+.af-btn--ghost:hover { color: #fff; border-color: #475569; }
+.af-btn--go { margin-top: 1.25rem; width: 100%; padding: .8rem; background: #059669; color: #fff; }
+.af-btn--go:hover { background: #10b981; }
+.af-answer { padding: .8rem 1rem; background: rgba(15, 23, 42, .9); border-color: #334155; color: #fff; }
+.af-answer:hover:not(:disabled) { background: #059669; }
+.af-answer:disabled { opacity: .5; cursor: not-allowed; color: #64748b; }
+.af-answer--hit, .af-answer--hit:disabled { background: #10b981; border-color: #34d399; color: #fff; opacity: 1; }
+
+.af-overlay {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(0, 0, 0, .7); backdrop-filter: blur(6px); overflow-y: auto;
+}
+.af-overlay--soft { pointer-events: none; background: rgba(0, 0, 0, .55); }
+.af-card {
+  width: 100%; max-width: 30rem; border-radius: 1.25rem; padding: 1.5rem; text-align: center;
+  background: #0f172a; border: 1px solid #1e293b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .6);
+}
+.af-card--small { max-width: 22rem; border-color: rgba(16, 185, 129, .6); }
+.af-badge {
+  margin: 0 auto; width: 3.5rem; height: 3.5rem; border-radius: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  background: #022c22; color: #34d399; border: 1px solid rgba(6, 95, 70, .6);
+}
+.af-h2 { margin-top: 1rem; font-size: 1.25rem; font-weight: 800; }
+.af-h3 { margin-top: .25rem; font-size: 1.1rem; font-weight: 800; }
+.af-kicker { font-size: .7rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: #34d399; }
+.af-mono { margin-top: .25rem; font-size: .75rem; color: #cbd5e1; font-family: ui-monospace, monospace; }
+.af-chip {
+  display: inline-block; margin-top: .75rem; padding: .25rem .75rem; border-radius: 9999px;
+  font-size: .65rem; font-weight: 700; color: #6ee7b7; background: rgba(2, 44, 34, .8);
+  border: 1px solid rgba(6, 95, 70, .6);
+}
+.af-dim { margin-top: .35rem; font-size: .75rem; color: #94a3b8; }
+.af-box {
+  margin-top: 1rem; padding: 1rem; border-radius: .75rem; background: #1e293b;
+  text-align: left; font-size: .78rem; line-height: 1.55; color: #cbd5e1;
+}
+.af-box p + p { margin-top: .6rem; }
+.af-box strong { color: #fff; }
+.af-verdict {
+  margin-top: 1rem; display: inline-block; padding: .5rem 1rem; border-radius: .75rem; font-weight: 700;
+  font-size: .85rem; color: #fcd34d; background: rgba(69, 26, 3, .6); border: 1px solid #92400e;
+}
+.af-verdict--pass { color: #6ee7b7; background: rgba(2, 44, 34, .6); border-color: #065f46; }
+.af-table { margin-top: 1rem; display: grid; gap: .35rem; text-align: left; font-size: .78rem; }
+.af-table__row {
+  display: flex; justify-content: space-between; padding: .45rem .75rem;
+  border-radius: .5rem; background: #1e293b; color: #cbd5e1;
+}
+.af-table__row strong { font-family: ui-monospace, monospace; color: #fff; }
+
+/* The dashboard card's launch button: the compiled sheet has bg-emerald-600
+   but no hover for it. */
+.af-launch:hover { background: #10b981; }
+/* Three program cards side by side once there is room; the compiled sheet
+   stops at md:grid-cols-2. */
+@media (min-width: 1024px) { .af-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

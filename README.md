@@ -279,9 +279,21 @@ its own, below the nine: it has no adapter yet, so the meter cannot see it and
 its minutes do not count toward the day or the quota. Writing it an adapter is
 what moves it up into `TRAINERS` in `shell/js/shell.js`.
 
-- `dorsalflow/` — a Vite app's built output, as it was published: the page,
-  one script and one stylesheet in `assets/`. There is no source for it here,
-  only the build, so it is kept as it is rather than edited.
+- `dorsalflow/` — a Vite app's built output: the page, one script and one
+  stylesheet in `assets/`. There is no source for it here, only the build, so
+  the script is kept pretty-printed (`assets/dorsalflow.js`) and edited in
+  place. Its one addition is **AudioFlow**, a third program beside Motion
+  Discrimination and 2-Step Memory: the same task by ear. A band of noise
+  sweeps left or right across the head, carried by interaural time and level
+  differences, inside stereo static, and the answer is which way it went. It
+  runs on DorsalFlow's own machinery — the staircase, the 20-level table, the
+  session record (`mode: "audio-flow"`), the history and the level matrix —
+  with the staircase driving the sweep's level against the static. A level's
+  noise percentage is the static's loudness and its drift speed is how far the
+  sound travels, with the start point jittered from Level 5 so the endpoints
+  stop giving the direction away. Its styles are in `assets/audioflow.css`,
+  because the compiled Tailwind sheet holds only the classes the original
+  source used. Headphones are needed.
 
 GOATED n-Back, Adaptive Posner, Speed Memory × Schulte and Relational
 Integration used to sit beside it and are retired. None had an adapter, so no

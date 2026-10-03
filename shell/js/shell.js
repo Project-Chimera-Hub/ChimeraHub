@@ -70,7 +70,7 @@
    * is what moves it up into the list above. */
   var MORE = [
     { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
-      what: "Motion contrast and visual timing in noise" },
+      what: "Motion in noise, by eye or — AudioFlow — by ear" },
   ];
 
   var byId = {};

@@ -142,7 +142,7 @@ log("[build] precision (vite)");
 
 /* The trainer under apps/more: offered by the hub in its own box, and not
    counted toward the quota, because no adapter reads its storage yet. It is a
-   built page and is copied as it is. */
+   built page with no build step of its own, and is copied as it is. */
 for (const name of ["dorsalflow"]) {
   log(`[copy] more/${name}`);
   copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
