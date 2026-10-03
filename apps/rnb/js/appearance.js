@@ -19,17 +19,17 @@ const APPEAR_KEY = 'rnb.appearance.v1';
    the lit cell, the gizmo badges, the glows — and a light ground would need every one
    of those re-derived rather than re-tinted, so it is a separate job, not a row here. */
 const THEMES = {
-  /* The hub's own palette, and the default. A trainer opened from mindbuild is
+  /* The hub's own palette, and the default. A trainer opened from Chimera Hub is
      framed by that page, and two different dark schemes either side of an iframe
      border read as two applications rather than one.
 
-     Its accent is pale enough that the ink derived for a filled button comes out
-     dark rather than white — luma .70 against the .6 threshold below — which is
+     Its accent is light enough that the ink derived for a filled button comes out
+     dark rather than white — luma .68 against the .6 threshold below — which is
      the same inversion the hub's buttons use. */
-  mindbuild:{ bg:'#080d0b', glow:'#101a15', panel:'#0f1713', panel2:'#0a110e',
-              text:'#c9e0d3', muted:'rgba(201,224,211,.58)', input:'#0b1310',
-              border:'rgba(143,189,164,.42)', borderIn:'rgba(143,189,164,.16)',
-              accent:'#8fbda4' },
+  chimera:  { bg:'#0a0906', glow:'#1a160c', panel:'#18140b', panel2:'#100d07',
+              text:'#eadfc2', muted:'rgba(234,223,194,.58)', input:'#110e08',
+              border:'rgba(212,175,55,.42)', borderIn:'rgba(212,175,55,.16)',
+              accent:'#d4af37' },
   midnight: { bg:'#0b0d10', glow:'#121728', panel:'#141820', panel2:'#0f1218',
               text:'#e6ebff', muted:'rgba(230,235,255,.55)', input:'#0e121a',
               border:'rgba(180,200,255,.45)', borderIn:'rgba(180,200,255,.18)',
@@ -96,7 +96,7 @@ const AXIS_PALETTES = {
    who has already picked a theme keeps it. Changing the default re-dresses the
    app for a first visit, not for a returning tester. */
 const appearance = {
-  theme: 'mindbuild', accent: '#8fbda4', dim: 68,
+  theme: 'chimera', accent: '#d4af37', dim: 68,
   palette: 'default', flat: false, bgFit: 'cover', bg: null,
 };
 
@@ -104,6 +104,11 @@ function loadAppearance() {
   try {
     const raw = localStorage.getItem(APPEAR_KEY);
     if (raw) Object.assign(appearance, JSON.parse(raw));
+    /* The hub's theme was called mindbuild before the rename, and was sage. */
+    if (appearance.theme === 'mindbuild') {
+      appearance.theme = 'chimera';
+      if (appearance.accent === '#8fbda4') appearance.accent = '#d4af37';
+    }
   } catch (e) { /* corrupt or unavailable — defaults are fine */ }
 }
 
@@ -159,7 +164,7 @@ const luma = c => { const [r, g, b] = rgbOf(c).map(v => v / 255);
 function applyAppearance() {
   /* Falls back to the default rather than to midnight: a stored id that no
      longer exists should land on whatever the app dresses itself in today. */
-  const t = THEMES[appearance.theme] || THEMES.mindbuild;
+  const t = THEMES[appearance.theme] || THEMES.chimera;
   const r = document.documentElement.style;
   r.setProperty('--bg', t.bg);
   r.setProperty('--bg-glow', t.glow);
@@ -220,7 +225,7 @@ function applyAppearance() {
 }
 
 /* Title case for a theme id. They are all single lowercase words. */
-const themeName = id => id[0].toUpperCase() + id.slice(1);
+const themeName = id => id === 'chimera' ? 'Chimera Hub' : id[0].toUpperCase() + id.slice(1);
 
 function renderAppearanceUI() {
   /* A grid of previews rather than a dropdown: with a dozen entries, names alone tell

@@ -207,7 +207,7 @@ ISOMORPH_PREFIX = "ISO/"
 def isomorph_from(store):
     """Isomorph, which is the same codebase writing the same key names.
 
-    The two share an origin wherever mindbuild is deployed, so Isomorph's page
+    The two share an origin wherever Chimera Hub is deployed, so Isomorph's page
     keeps every key it writes behind a prefix (see apps/isomorph/index.html).
     That prefix is also the only thing that tells the two apart on disk — the
     keys under it are `SYL_HISTORY_IDX` and the rest, exactly — so it is left

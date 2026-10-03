@@ -32,8 +32,8 @@
    button is still the brightest thing in the dock. */
 .controls button.primary {
   color: var(--accent-ink, #fff);
-  background: var(--accent, #8fbda4);
-  border-color: var(--accent, #8fbda4);
+  background: var(--accent, #d4af37);
+  border-color: var(--accent, #d4af37);
 }
 .controls button.primary:hover { filter: brightness(1.1); }
 .controls button:active { transform: translateY(1px); }

@@ -1,94 +1,99 @@
-# mindbuild
+# Chimera Hub
 
-Eight trainers, one record, one day's total — and a quota the desktop enforces.
+Ten trainers, one record, one day's total — and a quota the desktop enforces.
+
+**Live:** <https://project-chimear-hub.github.io/ChimeraHub/> ·
+**Community:** [Discord](https://discord.com/invite/chmr)
 
 ```
-apps/       the seven grafted in with git subtree, histories intact, and
-            rrt, which was written here
-apps/more/  DorsalFlow, offered by the hub in its own box, not yet counted
+apps/       the trainers, each grafted in with git subtree and its history
+            intact, plus the archive that keeps the record
+apps/more/  DorsalFlow and Controlled Hallucination, in their own box, not
+            yet counted toward the day
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
-tools/      the build
+shared/     code that belongs to the hub and the gate but to no one app
+tools/      the build, the APK, and the upstream sync
 sketches/   probes rather than trainers: one page, one question, a number
+test/       the hub's tests
 ```
 
-## Why it is a shell and not a rewrite
+## The trainers
 
-Eight repositories were merged here by **moving** them. An Angular app, a Vite
-app, and six pages of plain HTML, each still exactly what it was and each still
-buildable on its own — Syllogimous still produces its Android APK from
-`apps/syllogimous` without knowing this repository exists.
+| Trainer | What it trains |
+|---|---|
+| Syllogimous | relational and syllogistic reasoning (Angular) |
+| Relational N-back | n-back over relations, with a ladder |
+| Precision N-back | n-back with a tighter response window (Vite) |
+| 3D Rotation | mental rotation of molecules |
+| CCT | spoken arithmetic against the clock |
+| eWMT | attentional shield n-back |
+| Running Order | relational updating — a running order of symbols |
+| Synaesthesia colours | grapheme–colour association |
+| DorsalFlow | motion in noise, by eye or — AudioFlow — by ear (not yet counted) |
+| Controlled Hallucination | inducing and steering visual hallucinations (not yet counted) |
 
-The alternative was one framework and one rewrite, and it was never close.
-Seven working trainers are worth more than seven consistent ones, and the merge
-that rewrites them is the merge that never finishes.
+The **Training archive** sits beside them: not a trainer, the record.
+
+## A shell, not a rewrite
+
+Each app was merged here by **moving** it, not rewriting it. An Angular app, a
+Vite app and a set of plain HTML pages are each still exactly what they were and
+each still builds on its own — Syllogimous still produces its Android APK from
+`apps/syllogimous` without knowing this repository exists. Working trainers
+are worth more than consistent ones.
 
 So the shared part is small on purpose: `tools/build-site.mjs` decides where
 each app lands, and nothing else touches an app's source.
 
-## What actually makes it one application
+## What makes it one application: the meter
 
-Not the menu. The meter.
-
-The archive already had adapters that turn any of these storage formats into
-minutes-per-day — that is the only code in this project that understands all of
-them, and it already has to be right for the archive to be worth anything. The
-shell hands it the same snapshots and reads the same numbers back:
+The archive has adapters that turn every trainer's storage format into
+minutes per day. The hub hands it the same snapshots and reads the same numbers
+back:
 
 ```
 a trainer's localStorage  →  apps/archive/js/adapters.js  →  minutes for today
 ```
 
-That is the reason to put them on one origin. They shared an origin on GitHub
-Pages already, which is why moving them here changed nobody's saved history:
-localStorage is per origin, not per path.
-
-The shell never writes to a trainer's keys, never injects script into a frame,
-and never asks a trainer to report anything. A trainer that has never heard of
-this page works here exactly as well as one that has — which is the whole
-reason eight repositories could be merged in an afternoon.
+That is why everything is served from one origin. The hub never writes to a
+trainer's keys, never injects script into a frame, and never asks a trainer to
+report anything — a trainer that has never heard of this page works here
+exactly as well as one that has.
 
 ## Reading an app's history
 
-Every commit from all eight repositories is here — 1100 of them — but
+`git subtree add` grafts each app's original history on as a parent, and those
+commits carry their *original* paths, so
 
 ```bash
-git log -- apps/rnb          # shows about seven
-```
-
-is not how to see them. `git subtree add` grafts the original history on as a
-parent, and those commits carry their *original* paths: RNB's work is recorded
-against `js/deck.js`, not `apps/rnb/js/deck.js`. The path filter finds only the
-graft and what came after.
-
-```bash
+git log -- apps/rnb                       # shows only the graft and after
 git log --follow -- apps/rnb/js/deck.js   # crosses the rename
-git log <a commit from before the graft>  # the old history, from its own tip
 ```
 
 Nothing is lost; it is indexed under the name it had at the time.
 
-## Build
+## Build and deploy
 
 ```bash
-node tools/build-site.mjs        # → dist/, based at /mindbuild/
+node tools/build-site.mjs        # → dist/, based at /ChimeraHub/
 BASE=/ node tools/build-site.mjs # → dist/, at a domain root
 ```
 
-One run, two sites. `dist/` is the hub; `dist/open/` is the same hub with the
-gate taken out. See below.
+One run, two sites: `dist/` is the hub, `dist/open/` is the same hub with the
+gate taken out (see below).
 
-`.github/workflows/pages.yml` is the only workflow that runs. Each app kept its
-own when it was grafted in; GitHub reads workflows from the root only, so those
-are inert history rather than eight competing deploys.
+Every push to `main` builds and publishes the site through
+`.github/workflows/pages.yml` (**Deploy site**), which can also be started by
+hand from the Actions tab. It needs **Settings → Pages → Source: GitHub
+Actions**. Each app kept its own old workflows when it was grafted in; GitHub
+reads workflows from the root only, so those are inert history.
 
 **Visit counts.** Set a repository variable `GOATCOUNTER` to a
 [GoatCounter](https://www.goatcounter.com) site code and the deployed hub
-counts page views, one per hub visit and one per trainer opened (`/#/rrt`,
-`/#/syllogimous`, …). No cookies and no personal data. The snippet is added by
-the build, not written into `shell/index.html`, so the source, a local build
-without the variable, and the APK make no outbound request at all. The
-trainers themselves are never touched.
+counts page views, one per hub visit and one per trainer opened. No cookies and
+no personal data. The snippet is added by the build only, so the source, a
+local build and the APK make no outbound request at all.
 
 ## Sharing data
 
@@ -98,12 +103,12 @@ request. Nothing is sent by the page itself. The code is a standalone,
 reusable kit — [`shared/share-kit/`](shared/share-kit/README.md), which also
 explains what the system is for and how to add it to another tool — and
 `node tools/check-shared.mjs <folder>` validates and merges the uploads into
-`mindbuild-dataset/`, which is ignored by git.
+`chimerahub-dataset/`, which is ignored by git.
 
 ## Android
 
 ```bash
-tools/build-apk.sh              # → apk/mindbuild-debug.apk
+tools/build-apk.sh              # → apk/chimerahub-debug.apk
 ```
 
 A new version is that command again. There is no app source to update: the APK
@@ -148,7 +153,7 @@ through the same adapters — because a rule enforced by the thing it is a rule
 about is not a rule.
 
 It never touches PAM or the greeter, so it is escapable, deliberately:
-**Ctrl-Alt-F3 → `systemctl --user stop mindbuild-gate`** always works. See
+**Ctrl-Alt-F3 → `systemctl --user stop chimerahub-gate`** always works. See
 [gate/README.md](gate/README.md) before installing it.
 
 ## The hub without the gate, at `open/`
@@ -175,11 +180,11 @@ happened is true either way.
 It is one generated file. `tools/build-site.mjs` takes `shell/index.html`, cuts
 between the `gate:begin`/`gate:end` markers, sets `data-gate="off"`, and points
 every asset at the parent directory — the same stylesheet, the same scripts,
-the same adapters, the same eight trainers, not copies of any of them. Nothing
+the same adapters, the same trainers, not copies of any of them. Nothing
 here can drift from the site above it, because there is nothing here to drift:
 one attribute, and `shell/js/shell.js` reads it.
 
-Same origin, so the same saved history. `mindbuild/` and `mindbuild/open/` are
+Same origin, so the same saved history. `ChimeraHub/` and `ChimeraHub/open/` are
 one localStorage between them — train in either and the other has counted it.
 
 The two are identical in every other respect, the look included.
@@ -187,7 +192,7 @@ The two are identical in every other respect, the look included.
 ## The look, and the background
 
 Monospace throughout, wide-tracked caps for anything that announces itself,
-desaturated sage on near-black, and not one rounded corner. It replaced Loosh —
+old gold on black, and not one rounded corner. It replaced Loosh —
 Syllogimous's theme, ported by hand: crimson, 16px radii, a sigil behind it all.
 
 Still no build step and still no webfont. The display face is whatever monospace
@@ -215,7 +220,7 @@ The default is drawn rather than photographed — three stands of firs, seeded a
 rejection-sampled onto a sloped ground, with fog between them, as an inline SVG.
 No request to anybody, nothing to license, nothing to go 404 in a year.
 
-One thing is deliberately not sage: the eight colour dots on the trainer
+One thing is deliberately not gold: the eight colour dots on the trainer
 cards. They are the same eight hues as the segments in the day's bar, and that
 pairing is the only thing tying a card to its share of the day. They are data,
 not decoration.
@@ -275,7 +280,7 @@ quota that will be.
 ## More trainers, not counted
 
 `apps/more/` holds trainers the hub opens like any other but keeps in a box of
-their own, below the nine: none has an adapter yet, so the meter cannot see
+their own, below the rest: none has an adapter yet, so the meter cannot see
 them and their minutes do not count toward the day or the quota. Writing one an
 adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
 

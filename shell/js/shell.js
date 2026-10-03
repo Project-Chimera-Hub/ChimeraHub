@@ -351,7 +351,7 @@
     $("standalone").href = BASE + t.path;
     $("stage").hidden = false;
     $("hub").hidden = true;
-    document.title = t.name + " — mindbuild";
+    document.title = t.name + " — Chimera Hub";
     /* Hand the frame back to the browser. Unconditional rather than only on the
        re-open path: a trainer opened fresh has a visible document already, and
        stating it twice costs nothing next to the one case where it is missed. */
@@ -370,7 +370,7 @@
     wallSave();
     $("stage").hidden = true;
     $("hub").hidden = false;
-    document.title = "mindbuild";
+    document.title = "Chimera Hub";
     /* Recount here rather than on a timer: returning to the hub is both the
        moment the number is worth having and a moment when nothing is being
        timed, so this is the one place the sweep is free. */

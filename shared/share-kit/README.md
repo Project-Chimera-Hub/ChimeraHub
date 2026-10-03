@@ -120,7 +120,7 @@ ShareKit.download(file);               // the browser's save dialog
 
 Put that behind a consent checkbox and a button, and link to your upload
 location. [`example.html`](example.html) is a complete, working page.
-mindbuild's own version is the "Share your data" card on its hub
+Chimera Hub's own version is the "Share your data" card on its hub
 (`shell/index.html`, `shell/js/share.js`).
 
 ### 4. Check and merge what people upload
@@ -128,17 +128,17 @@ mindbuild's own version is the "Share your data" card on its hub
 Download everything from your upload location into one folder, then:
 
 ```bash
-node tools/check-shared.mjs ~/Downloads/uploads --out mindbuild-dataset
+node tools/check-shared.mjs ~/Downloads/uploads --out chimerahub-dataset
 ```
 
 It writes `dataset.json`, `dataset.csv` (one row per answer, with a
 `participant` column) and `report.txt` (what was accepted and what was turned
-away, with the reason). The checker is in the mindbuild repository; it is
+away, with the reason). The checker is in the Chimera Hub repository; it is
 thirty lines around `ShareKit.validate` and `ShareKit.merge`, and those two
 functions are all you need to write your own.
 
-**Keep the output out of public repositories.** `mindbuild-dataset/` is in
-mindbuild's `.gitignore` for that reason.
+**Keep the output out of public repositories.** `chimerahub-dataset/` is in
+Chimera Hub's `.gitignore` for that reason.
 
 ---
 

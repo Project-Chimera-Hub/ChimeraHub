@@ -146,7 +146,7 @@ export class SideNavComponent {
             ]
         },
         // Top-level external link: no children, so it renders as a single row.
-        { label: "Discord", icon: "◇", href: "https://discord.gg/brain" },
+        { label: "Discord", icon: "◇", href: "https://discord.com/invite/chmr" },
     ];
 
     toggle() {

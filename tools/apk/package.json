@@ -1,5 +1,5 @@
 {
-  "name": "mindbuild-apk",
+  "name": "chimerahub-apk",
   "private": true,
   "version": "0.0.0",
   "description": "The Android wrapper. Nothing is authored here: the app is tools/build-site.mjs's output in a WebView, and this directory only holds what Capacitor needs to wrap it.",

@@ -10,7 +10,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/mindbuild"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/chimerahub"
 units_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
 if [ "$(id -u)" = 0 ]; then
@@ -49,7 +49,7 @@ if [ ! -f "$config_dir/gate.json" ]; then
   cat > "$config_dir/gate.json" <<'JSON'
 {
   "required_minutes": 20,
-  "hub_url": "https://gagafutzi.github.io/mindbuild/",
+  "hub_url": "https://project-chimear-hub.github.io/ChimeraHub/",
   "armed": true,
   "mode": "nag",
   "active_from": "09:00",
@@ -68,8 +68,8 @@ else
   echo "kept   $config_dir/gate.json (already there)"
 fi
 
-sed "s|%h|$HOME|g" "$here/mindbuild-gate.service" > "$units_dir/mindbuild-gate.service"
-echo "wrote  $units_dir/mindbuild-gate.service"
+sed "s|%h|$HOME|g" "$here/chimerahub-gate.service" > "$units_dir/chimerahub-gate.service"
+echo "wrote  $units_dir/chimerahub-gate.service"
 systemctl --user daemon-reload
 
 cat <<MSG
@@ -80,9 +80,9 @@ Installed, not running. Check the count first — this touches nothing:
 
 When the number looks right, arm it:
 
-    systemctl --user enable --now mindbuild-gate
+    systemctl --user enable --now chimerahub-gate
 
 And to stop it, from a terminal or from Ctrl-Alt-F3 if the window is up:
 
-    systemctl --user stop mindbuild-gate
+    systemctl --user stop chimerahub-gate
 MSG

@@ -28,7 +28,7 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 manifest="tools/apps.json"
-owner="${MINDBUILD_OWNER:-Gagafutzi}"
+owner="${CHIMERAHUB_OWNER:-Gagafutzi}"
 
 command -v git >/dev/null || { echo "no git" >&2; exit 1; }
 

@@ -9,17 +9,17 @@
    */
   --shell:600px;
 
-  /* The hub's palette. A trainer opened from mindbuild is framed by that page,
+  /* The hub's palette. A trainer opened from Chimera Hub is framed by that page,
      and two different dark schemes either side of an iframe border read as two
      applications rather than one.
 
-     --cyan is this app's primary accent, so it carries the sage; the named
+     --cyan is this app's primary accent, so it carries the gold; the named
      signal colours below it stay exactly as they were, because magenta, green,
      amber and red mean things here rather than decorate. The name is now wrong
      and the alternative was renaming it in nine stylesheets and eight scripts. */
-  --bg:#080d0b; --bg-panel:#0f1713; --bg-elevated:#131d18; --border:#243329;
-  --border-hover:#33473b; --text:#c9e0d3; --text-muted:#7e9a8a; --text-dim:#5b7264;
-  --cyan:#8fbda4; --cyan-dim:rgba(143,189,164,0.12); --cyan-glow:rgba(143,189,164,0.25);
+  --bg:#0a0906; --bg-panel:#18140b; --bg-elevated:#1f1a0e; --border:#3a3018;
+  --border-hover:#54451f; --text:#eadfc2; --text-muted:#a48f60; --text-dim:#7a6a45;
+  --cyan:#d4af37; --cyan-dim:rgba(212,175,55,0.12); --cyan-glow:rgba(212,175,55,0.25);
   --magenta:#ff006e; --magenta-dim:rgba(255,0,110,0.12);
   --green:#00ff88; --green-dim:rgba(0,255,136,0.12);
   --amber:#ffaa00; --amber-dim:rgba(255,170,0,0.12);

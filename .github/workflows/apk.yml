@@ -51,8 +51,8 @@ jobs:
       # Always, not just on a tag: the point of the button is to get the file.
       - uses: actions/upload-artifact@v4
         with:
-          name: mindbuild-apk
-          path: apk/mindbuild-debug.apk
+          name: chimerahub-apk
+          path: apk/chimerahub-debug.apk
           if-no-files-found: error
 
       # On a tag, it also becomes something with a permanent address. A manual
@@ -66,5 +66,5 @@ jobs:
         with:
           tag_name: ${{ inputs.release || github.ref_name }}
           target_commitish: ${{ github.sha }}
-          files: apk/mindbuild-debug.apk
+          files: apk/chimerahub-debug.apk
           generate_release_notes: true

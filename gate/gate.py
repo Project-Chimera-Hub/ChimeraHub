@@ -58,7 +58,7 @@ you are already logged into.
 
 So it is bypassable, on purpose, and by more than one route:
 
-  * Ctrl-Alt-F3, then `systemctl --user stop mindbuild-gate`. Virtual terminal
+  * Ctrl-Alt-F3, then `systemctl --user stop chimerahub-gate`. Virtual terminal
     switching is handled below X and no grab can take it. This always works.
   * `--mode nag` — the default — does not grab input at all. Alt-Tab past it.
   * `max_hold_minutes` releases the gate regardless of the count, so a bug in
@@ -107,9 +107,13 @@ def load_gtk():
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-CONFIG = os.path.expanduser("~/.config/mindbuild/gate.json")
+CONFIG = os.path.expanduser("~/.config/chimerahub/gate.json")
+# Where it lived before the rename. Read from there until it is moved, so an
+# existing quota is not silently reset to the default.
+if not os.path.exists(CONFIG) and os.path.exists(os.path.expanduser("~/.config/mindbuild/gate.json")):
+    CONFIG = os.path.expanduser("~/.config/mindbuild/gate.json")
 
-TARGET_LABELS = {"mindbuild": "mindbuild", "anki": "Anki"}
+TARGET_LABELS = {"hub": "Chimera Hub", "anki": "Anki"}
 
 # How long a raised window has to actually take focus before the panel returns.
 RAISE_SECONDS = 3.0
@@ -125,7 +129,7 @@ DEFAULTS = {
     # Minutes of training the day needs. Keep it to something you would have
     # done anyway; a quota you resent is a quota you disable.
     "required_minutes": 20,
-    "hub_url": "https://gagafutzi.github.io/mindbuild/",
+    "hub_url": "https://project-chimear-hub.github.io/ChimeraHub/",
     "armed": True,
     # "nag"  — fullscreen and always on top, but Alt-Tab still works.
     # "grab" — takes keyboard and pointer. Only Ctrl-Alt-F3 gets past it.
@@ -159,13 +163,13 @@ DEFAULTS = {
     # What a training window is. Both must hold: the title contains one of the
     # patterns, and the window belongs to `training_window_class`.
     #
-    # Only "mindbuild", because the hub puts it in every title it sets — framed
+    # Only "chimera hub", because the hub puts it in every title it sets — framed
     # trainer and archive included. The trainers' own titles used to be here
     # too, and "CCT" or "Synth" are substrings of half the internet: a YouTube
     # tab called "Synthwave mix" was a training window. The class check is the
-    # other half of the same fix — a page titled "mindbuild" in some other
+    # other half of the same fix — a page titled "Chimera Hub" in some other
     # browser trains into storage the counter never reads.
-    "training_window_patterns": ["mindbuild"],
+    "training_window_patterns": ["chimera hub"],
     "training_window_class": "firefox",
     # A second quota, counted from Anki's own review log. Off unless
     # required_minutes is above zero. Every Anki window counts as being in
@@ -249,7 +253,7 @@ def anki_minutes_on(day):
     return total
 
 
-NOTIFY_STATE = os.path.expanduser("~/.config/mindbuild/banners-before-lock")
+NOTIFY_STATE = os.path.expanduser("~/.config/chimerahub/banners-before-lock")
 
 
 def quiet_notifications(on):
@@ -554,7 +558,7 @@ def start_application(args):
 
     Through the user manager, so it lands in a unit of its own: it does not
     inherit anything this service is restricted by, and it is not in this
-    service's cgroup — where `systemctl --user restart mindbuild-gate` would
+    service's cgroup — where `systemctl --user restart chimerahub-gate` would
     kill it along with the gate, taking a Firefox window or an Anki session
     with it.
     """
@@ -604,7 +608,7 @@ def activate_hub_window(cfg):
     several windows, and an empty one titled only "Mozilla Firefox" is the
     worst of them to bring forward.
     """
-    wid = find_target_window(cfg, "mindbuild")
+    wid = find_target_window(cfg, "hub")
     return bool(wid) and activate_window(wid)
 
 
@@ -719,7 +723,7 @@ class Counter:
         if roll:
             self.roll_day()
         self.scan_anki()
-        tmp = tempfile.mkdtemp(prefix="mindbuild-gate-")
+        tmp = tempfile.mkdtemp(prefix="chimerahub-gate-")
         try:
             subprocess.run(
                 [sys.executable,
@@ -781,7 +785,7 @@ class Gate:
         # measured against this, not against the panel — measured against the
         # panel it restarted every time you went back to training and so never
         # once fired.
-        self.launched_target = "mindbuild"
+        self.launched_target = "hub"
         self.launch_error = None
         # When the chosen window was last raised; see `training_live`.
         self.raised_at = 0.0
@@ -821,7 +825,7 @@ class Gate:
         quiet_notifications(True)
         self.shown_at = time.time()
 
-        # Deliberately not "mindbuild". The panel's own title is matched against
+        # Deliberately not "Chimera Hub". The panel's own title is matched against
         # `training_window_patterns` like any other window, and a gate named
         # after the thing it is gating would read its own window as a trainer,
         # hide, immediately see no trainer, and show again — forever.
@@ -841,7 +845,7 @@ class Gate:
         box.pack_start(self.label, False, False, 0)
 
         # One button per quota. A quota already met loses its button: once
-        # Anki is done, the way out of the panel is mindbuild and nothing else.
+        # Anki is done, the way out of the panel is the hub and nothing else.
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         row.set_halign(Gtk.Align.CENTER)
         self.buttons = {}
@@ -855,7 +859,7 @@ class Gate:
         hint = Gtk.Label()
         hint.set_markup(
             '<small>This panel steps aside while you are in the one you pick.\n'
-            'Ctrl-Alt-F3 \u2192 systemctl --user stop mindbuild-gate</small>')
+            'Ctrl-Alt-F3 \u2192 systemctl --user stop chimerahub-gate</small>')
         hint.set_justify(Gtk.Justification.CENTER)
         box.pack_start(hint, False, False, 0)
 
@@ -923,7 +927,7 @@ class Gate:
 
     # -- the hand-off ----------------------------------------------------- #
 
-    def launch(self, target="mindbuild"):
+    def launch(self, target="hub"):
         """Bring the chosen application forward, starting it only if it is not open.
 
         The panel stays up until there is a window to hand over to. It used to
@@ -1050,7 +1054,7 @@ class Gate:
 
     def targets(self):
         """[(name, required, have)] for every quota that is switched on."""
-        out = [("mindbuild", float(self.cfg["required_minutes"]), self.counter.minutes)]
+        out = [("hub", float(self.cfg["required_minutes"]), self.counter.minutes)]
         anki_required = float(anki_cfg(self.cfg).get("required_minutes") or 0)
         if anki_required > 0:
             out.append(("anki", anki_required, self.counter.anki_minutes))
@@ -1100,8 +1104,8 @@ class Gate:
             self.focus_seen_at = now
         pending = self.unmet()
         # Only the applications whose quota is still owed. Anki done and
-        # mindbuild not means an Anki window is now "something else".
-        classifiers = {"mindbuild": classify_focus, "anki": classify_anki}
+        # the hub not means an Anki window is now "something else".
+        classifiers = {"hub": classify_focus, "anki": classify_anki}
         for name in pending:
             if classifiers[name](self.cfg, info) is True:
                 self.launched_at = 0.0
@@ -1161,10 +1165,10 @@ class Gate:
         # see.
         stall = float(self.cfg.get("stall_seconds") or 0)
         beat = self.counter.last_beat
-        if "mindbuild" in pending and beat and now - beat < stall:
+        if "hub" in pending and beat and now - beat < stall:
             return True
         fuse = stall if beat else float(self.cfg.get("stall_seconds_no_beat") or 0)
-        progress = max(self.counter.last_progress if "mindbuild" in pending else 0.0,
+        progress = max(self.counter.last_progress if "hub" in pending else 0.0,
                        self.counter.anki_last_progress if "anki" in pending else 0.0)
         return bool(progress and now - progress < fuse)
 

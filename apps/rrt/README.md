@@ -324,7 +324,7 @@ repository's own.
 ## Storage
 
 Everything under `rrt_prog`, `rrt_sett` and `rrt_theme`. This page shares an
-origin with every other trainer in mindbuild, so **"Wipe data" removes those
+origin with every other trainer in Chimera Hub, so **"Wipe data" removes those
 three keys and nothing else** — `localStorage.clear()` here would take the whole
 record with it.
 

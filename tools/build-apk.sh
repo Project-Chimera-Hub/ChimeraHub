@@ -2,7 +2,7 @@
 #
 # One site, one APK.
 #
-#   tools/build-apk.sh          → apk/mindbuild-debug.apk
+#   tools/build-apk.sh          → apk/chimerahub-debug.apk
 #
 # A new version is this command again. There is no app source to update: the
 # APK is tools/build-site.mjs's output in a WebView, so rebuilding the site is
@@ -63,9 +63,9 @@ cd android
 ./gradlew --no-daemon assembleDebug
 
 mkdir -p "$out"
-cp app/build/outputs/apk/debug/app-debug.apk "$out/mindbuild-debug.apk"
+cp app/build/outputs/apk/debug/app-debug.apk "$out/chimerahub-debug.apk"
 echo
-echo "→ $out/mindbuild-debug.apk"
+echo "→ $out/chimerahub-debug.apk"
 echo
 echo "It is signed with the debug key, which is enough to install it on your"
 echo "own phone and not enough for the Play Store. Enable installing from"

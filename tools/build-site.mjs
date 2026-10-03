@@ -9,7 +9,7 @@
  * and the archive's whole thesis (it must still run in five years, from a USB
  * stick, with no toolchain) goes with it.
  *
- *   node tools/build-site.mjs          → dist/, based at /mindbuild/
+ *   node tools/build-site.mjs          → dist/, based at /ChimeraHub/
  *   BASE=/ node tools/build-site.mjs   → dist/, based at the domain root
  */
 
@@ -22,9 +22,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
 
 /* Trailing slash guaranteed: every base href below is built by concatenation,
-   and `/mindbuildsyllogimous/` is the kind of bug that only shows up on the
+   and `/ChimeraHubsyllogimous/` is the kind of bug that only shows up on the
    deployed site. */
-const BASE = (process.env.BASE || "/mindbuild/").replace(/\/*$/, "/");
+const BASE = (process.env.BASE || "/ChimeraHub/").replace(/\/*$/, "/");
 
 /* A visit counter for the published website, and only for that.
  *
@@ -40,7 +40,7 @@ const BASE = (process.env.BASE || "/mindbuild/").replace(/\/*$/, "/");
  * Unset means off, so a build with no account behaves exactly as before. */
 const GOATCOUNTER = process.env.APK ? "" : (process.env.GOATCOUNTER || "").trim();
 if (GOATCOUNTER && !/^[a-z0-9-]+$/.test(GOATCOUNTER)) {
-  throw new Error(`GOATCOUNTER should be a site code like "mindbuild", not ${JSON.stringify(GOATCOUNTER)}`);
+  throw new Error(`GOATCOUNTER should be a site code like "chimerahub", not ${JSON.stringify(GOATCOUNTER)}`);
 }
 
 /* The hub routes by hash (#/syllogimous), which GoatCounter ignores by default,

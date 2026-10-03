@@ -29,13 +29,13 @@ G.active_window_title = lambda: None
 # applications started, and above all no notification setting changed — the
 # gate may be mid-lock on the machine running these tests.
 ACTIVATED, STARTED = [], []
-WINDOWS = {"mindbuild": "0xHUB", "anki": "0xANKI"}
+WINDOWS = {"hub": "0xHUB", "anki": "0xANKI"}
 _real_quiet = G.quiet_notifications
 G.quiet_notifications = lambda on: None
 IDLE = {"value": False}
 G.session_idle = lambda cfg: IDLE["value"]
 G.find_target_window = lambda cfg, target: WINDOWS.get(target)
-G.activate_window = lambda wid: ACTIVATED.append({"0xHUB": "mindbuild", "0xANKI": "anki"}.get(wid, wid)) or True
+G.activate_window = lambda wid: ACTIVATED.append({"0xHUB": "hub", "0xANKI": "anki"}.get(wid, wid)) or True
 G.start_application = lambda args: STARTED.append(list(args)) or True
 
 cases = []
@@ -238,7 +238,7 @@ def focus(value):
 @test
 def a_trainer_in_front_of_you_stands_the_panel_down():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — Chimera Hub — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed, "the panel stayed up while a trainer had focus"
 
@@ -248,7 +248,7 @@ def switching_to_anything_else_brings_it_straight_back():
     """The whole point. No grace, no fuse — the other application is the thing
     being blocked, and it is in front of you now."""
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — mindbuild"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — Chimera Hub"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed
     with focus('_NET_WM_NAME(UTF8_STRING) = "Inbox (12) — Mozilla Thunderbird"'):
@@ -271,7 +271,7 @@ def focus_overrules_a_live_heartbeat():
 def focus_overrules_a_lagging_disk():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
     g.counter.last_progress = time.time() - 3600      # trained an hour ago
-    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Chimera Hub — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed, "a stale disk figure overruled the trainer on screen"
 
@@ -289,8 +289,8 @@ def an_unreadable_display_never_blocks_on_its_own():
 
 @test
 def the_patterns_are_matched_case_insensitively_anywhere_in_the_title():
-    c = cfg(training_window_patterns=["mindbuild"])
-    with focus('_NET_WM_NAME(UTF8_STRING) = "CCT — MINDBUILD"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    c = cfg(training_window_patterns=["chimera hub"])
+    with focus('_NET_WM_NAME(UTF8_STRING) = "CCT — CHIMERA HUB"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         assert G.focused_on_training(c) is True
     with focus('_NET_WM_NAME(UTF8_STRING) = "something else"'):
         assert G.focused_on_training(c) is False
@@ -308,7 +308,7 @@ def grace_ends_the_moment_a_trainer_has_focus():
     with focus('_NET_WM_NAME(UTF8_STRING) = "Something else"'):
         g.evaluate()
     assert not g.closed, "grace did not cover the browser still opening"
-    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — Chimera Hub"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert g.launched_at == 0.0, "grace survived a trainer taking focus"
     with focus('_NET_WM_NAME(UTF8_STRING) = "Steam"'):
@@ -340,7 +340,7 @@ def during_grace_the_chosen_application_is_pulled_back_in_front():
     del ACTIVATED[:]
     with focus('_NET_WM_NAME(UTF8_STRING) = "Discord | Friends — Mozilla Firefox"' + FIREFOX):
         g.evaluate()
-    assert ACTIVATED == ["mindbuild"], "grace did not pull the hub back in front"
+    assert ACTIVATED == ["hub"], "grace did not pull the hub back in front"
     assert not g.closed
 
 
@@ -365,9 +365,9 @@ def a_browser_still_loading_is_excused_during_grace():
 
 
 @test
-def a_mindbuild_title_in_another_browser_is_not_training():
+def a_hub_title_in_another_browser_is_not_training():
     """Its storage is not the one the counter reads."""
-    with focus('_NET_WM_NAME(UTF8_STRING) = "mindbuild — Google Chrome"\nWM_CLASS(STRING) = "google-chrome", "Google-chrome"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Chimera Hub — Google Chrome"\nWM_CLASS(STRING) = "google-chrome", "Google-chrome"'):
         assert G.focused_on_training(cfg()) is False
 
 
@@ -414,7 +414,7 @@ def the_hold_cap_counts_the_whole_lock_not_each_panel():
                   active_from="00:00", active_to="23:59")
     g.evaluate()
     g.lock_seconds = 5 * 60
-    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"' + FIREFOX):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — Chimera Hub"' + FIREFOX):
         g.evaluate()
     assert not g.closed and g.lock_seconds >= 5 * 60, "training reset the lock clock"
 
@@ -445,7 +445,7 @@ def an_ordinary_tick_does_not_wipe_the_counts():
 # ---- two quotas ------------------------------------------------------------ #
 
 ANKI = '_NET_WM_NAME(UTF8_STRING) = "Benutzer 1 - Anki"\nWM_CLASS(STRING) = "anki", "Anki"'
-HUB = '_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild"' + FIREFOX
+HUB = '_NET_WM_NAME(UTF8_STRING) = "RNB — Chimera Hub"' + FIREFOX
 
 
 def gate_with_anki(mind, anki, **over):
@@ -459,7 +459,7 @@ def gate_with_anki(mind, anki, **over):
 def the_lock_holds_until_both_quotas_are_met():
     g = gate_with_anki(25, 5)
     g.evaluate()
-    assert g.closed, "mindbuild alone unlocked a machine that still owes Anki"
+    assert g.closed, "the hub alone unlocked a machine that still owes Anki"
     g.counter.anki_minutes = 20.0
     g.evaluate()
     assert not g.closed, "both quotas met and still locked"
@@ -478,14 +478,14 @@ def anki_is_just_another_application_once_its_quota_is_met():
     g = gate_with_anki(5, 25)
     with focus(ANKI):
         g.evaluate()
-    assert g.closed, "Anki excused a day that still owes mindbuild"
+    assert g.closed, "Anki excused a day that still owes the hub"
     with focus(HUB):
         g.evaluate()
     assert not g.closed
 
 
 @test
-def mindbuild_is_just_another_application_once_its_quota_is_met():
+def the_hub_is_just_another_application_once_its_quota_is_met():
     g = gate_with_anki(25, 5)
     with focus(HUB):
         g.evaluate()
@@ -495,7 +495,7 @@ def mindbuild_is_just_another_application_once_its_quota_is_met():
 @test
 def with_anki_off_there_is_one_quota_and_one_button():
     g = gate_with(5, required_minutes=20)
-    assert [n for n, _, _ in g.targets()] == ["mindbuild"]
+    assert [n for n, _, _ in g.targets()] == ["hub"]
 
 
 @test
@@ -539,9 +539,9 @@ def pressing_a_button_reuses_an_open_window():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
     g.show()
     del STARTED[:], ACTIVATED[:]
-    g.launch("mindbuild")
+    g.launch("hub")
     assert STARTED == [], "a new window was opened although one was already there"
-    assert ACTIVATED == ["mindbuild"] and not g.closed
+    assert ACTIVATED == ["hub"] and not g.closed
 
 
 @test
@@ -645,7 +645,7 @@ def a_short_unreadable_blip_while_training_is_tolerated():
 
 @test
 def a_private_hub_window_is_not_training():
-    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — mindbuild — Mozilla Firefox Private Browsing"' + FIREFOX):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "RNB — Chimera Hub — Mozilla Firefox Private Browsing"' + FIREFOX):
         assert G.focused_on_training(cfg()) is False, \
             "a private window, whose training is never saved, counted"
 

@@ -5,7 +5,7 @@
  *   node tools/check-shared.mjs <folder or files...> [--out <folder>]
  *
  * Point it at the folder you downloaded from the MEGA file request. It
- * writes, into --out (default ./mindbuild-dataset, which git ignores):
+ * writes, into --out (default ./chimerahub-dataset, which git ignores):
  *
  *   dataset.json   every accepted answer, one row per answer and participant
  *   dataset.csv    the same, for a spreadsheet or R/pandas
@@ -38,7 +38,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 
 function parseArgs(argv) {
   const inputs = [];
-  let out = "mindbuild-dataset";
+  let out = "chimerahub-dataset";
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--out") out = argv[++i];
     else if (argv[i] === "-h" || argv[i] === "--help") return null;

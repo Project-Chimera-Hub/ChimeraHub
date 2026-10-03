@@ -1276,7 +1276,7 @@ function playBeep(){
 
 /* ── Storage ──
    Every key this page owns, and the only ones "Wipe all data" may remove.
-   This page shares its origin with every other trainer in mindbuild, so
+   This page shares its origin with every other trainer in Chimera Hub, so
    nothing here may touch a key it does not own — hence no localStorage.clear(). */
 const KEYS = { prog:'mp_prog', sett:'mp_sett_v2', theme:'mp_theme', profiles:'cct_profiles' };
 const loadProgress = ()=>{ try{return JSON.parse(localStorage.getItem(KEYS.prog))||{};}catch{return {};} };

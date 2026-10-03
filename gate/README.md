@@ -58,7 +58,7 @@ the one in this directory.
 Before anything else, because this is the part that matters:
 
 ```
-Ctrl-Alt-F3          →  log in  →  systemctl --user stop mindbuild-gate
+Ctrl-Alt-F3          →  log in  →  systemctl --user stop chimerahub-gate
 ```
 
 Virtual terminal switching is handled below X and no grab can take it. That
@@ -119,7 +119,7 @@ day, every profile summed. Only reviews count; time in the browser or editing
 cards is being in Anki without being minutes.
 
 A quota already met stops being a way out. Once Anki is done its button goes
-and an Anki window is just another application; the same for mindbuild.
+and an Anki window is just another application; the same for the hub.
 
 The review log is read with its write-ahead log. While Anki is open, everything
 since its last checkpoint lives in `collection.anki2-wal`, and a reader that
@@ -142,7 +142,7 @@ does the same thing and wants the same exception.
 
 ## Settings
 
-`~/.config/mindbuild/gate.json`:
+`~/.config/chimerahub/gate.json`:
 
 | key | default | |
 |---|---|---|
@@ -192,7 +192,7 @@ read your email in.
 If the display cannot be read — `activeWindow` comes back `null` — the gate
 falls back to the two below rather than blocking a machine it cannot see.
 
-The hub puts `mindbuild` in every title it sets, framed trainer included, which
+The hub puts `Chimera Hub` in every title it sets, framed trainer included, which
 is why training through the hub is the path that works best.
 
 The remaining two are that fallback.
@@ -222,7 +222,7 @@ Scan-only works. It is just coarser — a finished session takes a minute or two
 to register, so the panel can appear briefly after you stop.
 
 One consequence worth knowing: the heartbeat comes from the **hub**. Train
-through `mindbuild/#/rnb` and the panel knows. Open `mindbuild/rnb/` directly in
+through `ChimeraHub/#/rnb` and the panel knows. Open `ChimeraHub/rnb/` directly in
 its own tab and it does not — only the lagging scan sees that, and the panel may
 come back mid-session.
 
@@ -231,7 +231,7 @@ come back mid-session.
 `grab` takes your keyboard and pointer, and releases them the moment you press
 Train — a gate still holding the keyboard hands the browser a window you cannot
 type into. Before trusting it with a working day, run the default and watch
-`journalctl --user -u mindbuild-gate -f`: you want to see the count track your
+`journalctl --user -u chimerahub-gate -f`: you want to see the count track your
 real sessions and the panel come and go when it should, while the cost of being
 wrong is an Alt-Tab.
 

@@ -5,7 +5,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *
  * Capacitor serves `www/` from a local origin inside the WebView, so the site
  * is built at BASE=/ for this — unlike the Pages build, which lives under
- * /mindbuild/ and has that written into it.
+ * /ChimeraHub/ and has that written into it.
  *
  * `www/` is not checked in. tools/build-apk.sh builds the site and copies it
  * here, which is the whole reason a new version is one command: there is no
@@ -16,8 +16,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * problem nobody needs.
  */
 const config: CapacitorConfig = {
+    // Kept from before the rename: a new id installs as a new app, with none
+    // of the old one's saved history.
     appId: 'com.gagafutzi.mindbuild',
-    appName: 'mindbuild',
+    appName: 'Chimera Hub',
     webDir: 'www',
     android: {
         /*

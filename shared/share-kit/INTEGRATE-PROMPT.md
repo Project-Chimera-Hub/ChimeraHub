@@ -11,11 +11,11 @@ FILL IN — upload link: <your MEGA or Dropbox file-request URL>
 FILL IN — app name (lowercase, digits, hyphens; e.g. "my-nback"): <name>
 
 share-kit is one dependency-free, MIT-licensed JavaScript file:
-  https://raw.githubusercontent.com/Gagafutzi/mindbuild/main/shared/share-kit/share-kit.js
+  https://raw.githubusercontent.com/Project-Chimear-Hub/ChimeraHub/main/shared/share-kit/share-kit.js
 Its README documents the file format and API:
-  https://github.com/Gagafutzi/mindbuild/blob/main/shared/share-kit/README.md
+  https://github.com/Project-Chimear-Hub/ChimeraHub/blob/main/shared/share-kit/README.md
 A complete working example page:
-  https://raw.githubusercontent.com/Gagafutzi/mindbuild/main/shared/share-kit/example.html
+  https://raw.githubusercontent.com/Project-Chimear-Hub/ChimeraHub/main/shared/share-kit/example.html
 
 Do this:
 

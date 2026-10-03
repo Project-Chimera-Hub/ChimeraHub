@@ -31,7 +31,7 @@ const LIST = path.join(DIR, "list.json");
 const CREDITS = path.join(DIR, "credits.json");
 const API = "https://commons.wikimedia.org/w/api.php";
 /* Wikimedia asks every client to say who it is. */
-const UA = "mindbuild-picture-fetch/1.0 (https://github.com/Gagafutzi/mindbuild)";
+const UA = "chimerahub-picture-fetch/1.0 (https://github.com/Project-Chimear-Hub/ChimeraHub)";
 const SIZE = 256;
 const force = process.argv.includes("--force");
 
