@@ -251,7 +251,8 @@ function anecdoteMarkdown(a, nameOf, extra) {
     + " · **per calendar day:** " + anecFmt(a.totalMinutes / a.spanDays) + " min");
   if (a.unknownDays) {
     L.push("- **Missing record:** " + a.unknownDays + " day" + (a.unknownDays === 1 ? "" : "s")
-      + " in the span have no export behind them, so any training then is not counted");
+      + " in the span " + (a.unknownDays === 1 ? "has no export behind it" : "have no export behind them")
+      + ", so any training then is not counted");
   }
 
   if (a.perSource.length) {
@@ -392,7 +393,8 @@ function anecdoteSvg(a, opt) {
 
   if (a.unknownDays) {
     anecWrap(a.unknownDays + " day" + (a.unknownDays === 1 ? "" : "s")
-      + " in this span have no export behind them; training on those days, if any, is not counted.",
+      + " in this span " + (a.unknownDays === 1 ? "has no export behind it; training on that day"
+        : "have no export behind them; training on those days") + ", if any, is not counted.",
       charsFor(inner, 12)).forEach(function (l) { text(P, y + 12, l, 12, C.muted); y += 17; });
     y += 6;
   }
