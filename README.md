@@ -2,7 +2,7 @@
 
 Ten trainers, one record, one day's total — and a quota the desktop enforces.
 
-**Live:** <https://project-chimear-hub.github.io/ChimeraHub/> ·
+**Live:** <https://project-chimera-hub.github.io/ChimeraHub/> ·
 **Community:** [Discord](https://discord.com/invite/chmr)
 
 ```

@@ -49,7 +49,7 @@ if [ ! -f "$config_dir/gate.json" ]; then
   cat > "$config_dir/gate.json" <<'JSON'
 {
   "required_minutes": 20,
-  "hub_url": "https://project-chimear-hub.github.io/ChimeraHub/",
+  "hub_url": "https://project-chimera-hub.github.io/ChimeraHub/",
   "armed": true,
   "mode": "nag",
   "active_from": "09:00",

@@ -129,7 +129,7 @@ DEFAULTS = {
     # Minutes of training the day needs. Keep it to something you would have
     # done anyway; a quota you resent is a quota you disable.
     "required_minutes": 20,
-    "hub_url": "https://project-chimear-hub.github.io/ChimeraHub/",
+    "hub_url": "https://project-chimera-hub.github.io/ChimeraHub/",
     "armed": True,
     # "nag"  — fullscreen and always on top, but Alt-Tab still works.
     # "grab" — takes keyboard and pointer. Only Ctrl-Alt-F3 gets past it.
