@@ -24,10 +24,8 @@ const config: CapacitorConfig = {
     android: {
         /*
          * Nothing in the app talks to a network. The one thing that ever did
-         * was the gate's heartbeat to 127.0.0.1, and the APK is built from the
-         * gate-free hub — on a phone there is no daemon to answer it and no
-         * screen for it to hold. So a cleartext exception would only widen
-         * what this is allowed to do.
+         * was the gate's heartbeat to 127.0.0.1, and that is gone from the hub.
+         * So a cleartext exception would only widen what this is allowed to do.
          */
         allowMixedContent: false,
     },

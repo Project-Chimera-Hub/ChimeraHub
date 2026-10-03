@@ -20,11 +20,6 @@
 
   var BASE = document.body.dataset.base || "/";
 
-  /* Off in the gate-free build. Everything it turns off is something this page
-     does to the machine it is displayed on rather than for the person reading
-     it: a POST to 127.0.0.1, and a quota no installed program is enforcing. */
-  var GATE_ON = document.body.dataset.gate !== "off";
-
   /* Colour is per source and used twice: the segment in the day's bar and the
      dot on the card. Chosen to stay apart on a dark ground and to survive the
      common colour-blindness — the trainers include a grapheme-colour synaesthesia
@@ -115,12 +110,6 @@
     renderGoal();
   }
 
-  /* Set by the first heartbeat a gate answers. The gate's config is the quota
-     on that machine — it is the thing actually holding the screen — so the hub
-     shows what it reports and says where the number came from rather than
-     offering a field whose value the next heartbeat would overwrite. */
-  var gateOwnsGoal = false;
-
   var CAPS_KEY = "mindbuild.quota.caps";
 
   /** Per-source ceilings as a share of the counted day. See shared/quota.js. */
@@ -193,7 +182,7 @@
 
     /* Segments are drawn against the quota, not against the day's total, so the
        bar fills up rather than just redistributing. Past the quota it is full
-       and the proportions stop mattering. With no gate the same number is still
+       and the proportions stop mattering. With no goal set the default is still
        the floor the bar is drawn against — unnamed, and only so that four
        minutes does not fill it. */
     var scale = Math.max(total, quota());
@@ -210,19 +199,16 @@
       bar.appendChild(seg);
     });
 
-    /* A line only where there is a number somebody stands behind: the gate's,
-       on a build that talks to one, or a goal the person set themselves. With
-       neither, "12 min to go" would be a demand invented by the page making it,
-       so the gate-free hub stayed silent — and that left the app with no way to
-       aim at anything. Now it has one, and the line comes back with it. What
-       happened is true either way, so the figure, the bar and the caps below
-       stay regardless. */
+    /* A line only where there is a number somebody stands behind: a goal the
+       person set themselves. Without one, "12 min to go" would be a demand
+       invented by the page making it. What happened is true either way, so the
+       figure, the bar and the caps below stay regardless. */
     var el = $("quota");
     el.className = "quota";
     el.innerHTML = "";
-    if (GATE_ON || goal()) {
+    if (goal()) {
       var need = quota() - total;
-      var word = gateOwnsGoal || (GATE_ON && !goal()) ? "Quota" : "Goal";
+      var word = "Goal";
       el.className = "quota" + (need <= 0 ? " met" : "");
       el.innerHTML = need <= 0
         ? "<b>" + word + " met.</b> " + fmt(quota()) + " min was the ask."
@@ -253,9 +239,8 @@
   }
 
   /* The field, its buttons and the sentence under them. Rendered rather than
-     written once, because three things move it: the person, the gate, and a
-     storage event from the hub's other copy — the open build and the gated one
-     are the same origin and share the key. */
+     written once, because two things move it: the person, and a storage event
+     from another tab of the hub — same origin, same key. */
   function renderGoal() {
     var input = $("goal");
     if (!input) return;
@@ -263,19 +248,12 @@
 
     if (document.activeElement !== input) input.value = n || "";
     input.placeholder = String(DEFAULT_QUOTA);
-    input.disabled = gateOwnsGoal;
-    $("goal-set").disabled = gateOwnsGoal;
-    $("goal-clear").disabled = gateOwnsGoal || !n;
+    $("goal-clear").disabled = !n;
 
-    $("goal-note").textContent = gateOwnsGoal
-      ? "The gate on this machine is asking for " + fmt(quota()) + " min a day. "
-        + "That is set in gate.json, and it is what the hub shows."
-      : n
-        ? "Aiming at " + fmt(n) + " min a day. Kept in this browser, on this device."
-        : GATE_ON
-          ? "No goal set, so the hub asks for the usual " + DEFAULT_QUOTA + " min."
-          : "No goal set. The day is counted either way — a goal only gives it "
-            + "something to be measured against.";
+    $("goal-note").textContent = n
+      ? "Aiming at " + fmt(n) + " min a day. Kept in this browser, on this device."
+      : "No goal set. The day is counted either way — a goal only gives it "
+        + "something to be measured against.";
   }
 
   /* Read out of the field and applied. Anything that is not a number above zero
@@ -507,81 +485,6 @@
   }
 
   /* ---------------------------------------------------------------- *
-   * The gate                                                         *
-   * ---------------------------------------------------------------- */
-
-  /* The daemon runs on this machine and the page may be served from anywhere,
-     so this is a cross-origin request to localhost that will simply fail when
-     no gate is installed — which is the common case and not an error worth
-     showing as one. */
-  var GATE = "http://127.0.0.1:8787";
-
-  /* No gate on most machines, so the common case is a request that fails. Two
-     things follow: it must not recount to build a body nobody reads, and it
-     must stop asking so often — an unreachable localhost POST every thirty
-     seconds is a console full of network errors and a wakeup for nothing. */
-  var beatMisses = 0;
-  var beatTimer = null;
-
-  function scheduleHeartbeat() {
-    clearTimeout(beatTimer);
-    /* 30s while a gate is answering; backing off to five minutes once it is
-       clear there is not one. Any success resets it. */
-    var delay = beatMisses >= 3 ? 300000 : 30000;
-    beatTimer = setTimeout(function () { heartbeat(); scheduleHeartbeat(); }, delay);
-  }
-
-  /* The gate's config is the quota. The page kept a default of its own, so
-     setting 120 minutes in gate.json locked the machine for 120 while the hub
-     went on saying 20 — two answers to the one question this page exists to
-     answer. Whatever the gate reports wins, and is remembered, so the hub still
-     shows it on a visit when the gate cannot be reached. */
-  function adoptGateSettings(state) {
-    if (!state) return;
-    var changed = false;
-    try {
-      var req = Number(state.required);
-      if (isFinite(req) && req > 0 && String(req) !== localStorage.getItem(QUOTA_KEY)) {
-        localStorage.setItem(QUOTA_KEY, String(req));
-        changed = true;
-      }
-      if (state.caps && typeof state.caps === "object") {
-        var c = JSON.stringify(state.caps);
-        if (c !== localStorage.getItem(CAPS_KEY)) {
-          localStorage.setItem(CAPS_KEY, c);
-          changed = true;
-        }
-      }
-    } catch (e) { /* storage off: the page just keeps its defaults */ }
-    if (changed) {
-      invalidate();
-      if (!$("hub").hidden) renderToday();
-      renderGoal();
-    }
-  }
-
-  function heartbeat() {
-    var applied = currentCount();
-
-    fetch(GATE + "/heartbeat", {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ day: Today.utcDay(), minutes: applied.total, bySource: applied.counted }),
-    }).then(function (r) { return r.json(); }).then(function (state) {
-      beatMisses = 0;
-      if (!gateOwnsGoal) { gateOwnsGoal = true; renderGoal(); }
-      adoptGateSettings(state);
-      $("gate-state").textContent = state.armed
-        ? "Armed. " + fmt(state.required) + " min required; the lock lifts when the day's total reaches it."
-        : "Installed, not armed.";
-    }).catch(function () {
-      beatMisses++;
-      $("gate-state").textContent =
-        "Not running on this machine. The quota above is advice only until the gate is installed.";
-    });
-  }
-
-  /* ---------------------------------------------------------------- *
    * The background                                                   *
    * ---------------------------------------------------------------- */
 
@@ -750,8 +653,8 @@
     }
     invalidate();
     if (!$("hub").hidden) renderToday();
-    /* The open hub and the gated one are the same origin and share the key, so
-       a goal set in one is news in the other. */
+    /* Every tab of the hub shares the key, so a goal set in one is news in
+       the others. */
     if (!e || !e.key || e.key === QUOTA_KEY) renderGoal();
   });
 
@@ -783,12 +686,4 @@
   $("bg-clear").addEventListener("click", bgClear);
   bgLoad();
 
-  /* The only thing on this page that speaks to the machine it is displayed on.
-     A website POSTing to 127.0.0.1 is what a port scan looks like, and the
-     extensions that say so are right to — so the gate-free build does not
-     make the request and get refused, it does not make it. */
-  if (GATE_ON) {
-    scheduleHeartbeat();
-    heartbeat();
-  }
 })();

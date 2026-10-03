@@ -170,60 +170,35 @@ copyDir(path.join(ROOT, "shell"), DIST);
 const idx = path.join(DIST, "index.html");
 fs.writeFileSync(idx, withAnalytics(fs.readFileSync(idx, "utf8").replace("%BASE%", BASE)));
 
-/* The same hub with nothing in it that talks to this machine.
+/* The hub again at open/, which older links point to. The gate it used to be
+ * the gate-free copy of is gone from the site, so it is now the same page: the
+ * shell's own index.html, loading the stylesheet, scripts and adapters from the
+ * parent directory rather than copies of them.
  *
- * The gate's heartbeat is a POST from the page to 127.0.0.1, and to a privacy
- * extension that is indistinguishable from a port scan — Port Authority and
- * uBlock's LAN list both stop it and say so in a notification. They are right
- * to: a website reaching into the local network is exactly the shape of the
- * thing they exist to stop. On a machine with no gate installed the request
- * was never going to be answered anyway, so all it could ever produce there
- * was that warning.
- *
- * So this is one generated file, and nothing else. It is the shell's own
- * index.html with the gate card cut out and `data-gate="off"`, loading the same
- * stylesheet, the same scripts and the same adapters from the parent directory
- * — not copies of them. The two pages look identical and behave identically in
- * everything but the gate, because there is nothing here that could drift:
- * one attribute, and the code reads it.
- *
- * `data-base` points at the parent too, so the trainers it frames are the same
- * copies the gated hub frames. Same origin, so the same saved history —
- * localStorage is per origin, not per path — and no second Angular build.
- */
-/* `prefix` is what every relative asset gets in front of it: "../" for the copy
- * served a directory down at open/, "" for one served at the root. The shell
- * asks for `css/`, `js/`, `shared/` and its icon, and any <link> or <script>
- * with a relative target is rewritten — naming the stylesheet and the script
- * explicitly is what left the favicon pointing a directory too deep. */
-function gateFreeIndex(prefix) {
+ * `prefix` is what every relative asset gets in front of it: "../" for the copy
+ * served a directory down. The shell asks for `css/`, `js/`, `shared/` and its
+ * icon, and any <link> or <script> with a relative target is rewritten. */
+function shellIndex(prefix) {
   let html = fs.readFileSync(path.join(ROOT, "shell", "index.html"), "utf8");
-
-  const before = html;
-  html = html.replace(/[ \t]*<!-- gate:begin -->[\s\S]*?<!-- gate:end -->\n?/, "");
-  if (html === before) throw new Error("shell/index.html: gate:begin/gate:end markers are gone");
-
   if (prefix) {
     html = html.replace(/(<(?:script|link)\b[^>]*?\s(?:src|href)=")(?!\.\.\/|https?:|\/|data:|#)/g,
                         "$1" + prefix);
   }
-  return html.replace('data-gate="on"', 'data-gate="off"').replace("%BASE%", BASE);
+  return html.replace("%BASE%", BASE);
 }
 
-log("[copy] shell (gate-free, at open/)");
+log("[copy] shell (again, at open/)");
 {
   const open = path.join(DIST, "open");
   fs.mkdirSync(open, { recursive: true });
-  fs.writeFileSync(path.join(open, "index.html"), withAnalytics(gateFreeIndex("../")));
+  fs.writeFileSync(path.join(open, "index.html"), withAnalytics(shellIndex("../")));
 }
 
-/* The Android build wraps this directory in a WebView, where the gate is not
- * merely absent but meaningless: there is no daemon to answer 127.0.0.1 and no
- * screen for it to hold. So the app's front page is the gate-free one, served
- * from the root rather than from open/. See tools/build-apk.sh. */
+/* The Android build wraps this directory in a WebView and ships without the
+ * analytics counter. See tools/build-apk.sh. */
 if (process.env.APK) {
-  log("[apk]  gate-free hub at the root");
-  fs.writeFileSync(path.join(DIST, "index.html"), gateFreeIndex(""));
+  log("[apk]  hub at the root, no counter");
+  fs.writeFileSync(path.join(DIST, "index.html"), shellIndex(""));
 }
 
 fs.writeFileSync(path.join(DIST, ".nojekyll"), "");

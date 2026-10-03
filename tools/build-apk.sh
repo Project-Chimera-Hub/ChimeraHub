@@ -15,9 +15,8 @@
 # archive makes about running in five years from a USB stick, and it is worth
 # more on a phone than anywhere else.
 #
-# It is also not gated. The build sets APK=1, which puts the gate-free hub at
-# the root: on a phone there is no daemon to answer 127.0.0.1 and no screen for
-# one to hold, so the heartbeat and the Gate card would be furniture.
+# The build sets APK=1, which writes the hub at the root without the analytics
+# counter.
 #
 # WHAT YOU NEED
 # -------------

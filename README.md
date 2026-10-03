@@ -80,8 +80,8 @@ node tools/build-site.mjs        # → dist/, based at /ChimeraHub/
 BASE=/ node tools/build-site.mjs # → dist/, at a domain root
 ```
 
-One run, two sites: `dist/` is the hub, `dist/open/` is the same hub with the
-gate taken out (see below).
+`dist/` is the hub; `dist/open/` is the same page again, kept so older links
+still work.
 
 Every push to `main` builds and publishes the site through
 `.github/workflows/pages.yml` (**Deploy site**), which can also be started by
@@ -121,9 +121,8 @@ the same reason `dist/` is.
 It is not a browser pointed at the Pages site. The whole site is copied inside
 and it runs with the network off, which is the same promise the archive makes
 about a USB stick in five years and is worth more on a phone than anywhere
-else. It is also not gated: the build sets `APK=1`, which puts the **gate-free**
-hub at the root, because on a phone there is no daemon to answer `127.0.0.1`
-and no screen for one to hold.
+else. The build sets `APK=1`, which writes the hub at the root without the
+analytics counter.
 
 Building needs a JDK and an Android SDK. If you have neither, do not install
 them — push a `v*` tag, or press **Run workflow** on *Build APK* in the Actions
@@ -156,38 +155,11 @@ It never touches PAM or the greeter, so it is escapable, deliberately:
 **Ctrl-Alt-F3 → `systemctl --user stop chimerahub-gate`** always works. See
 [gate/README.md](gate/README.md) before installing it.
 
-## The hub without the gate, at `open/`
-
-The hub posts a heartbeat to `127.0.0.1:8787` so the gate knows a session is
-live. On a machine with no gate installed nothing answers it, and to a privacy
-extension a website reaching into the local network is a port scan — Port
-Authority and uBlock's LAN list both stop it and say so. They are right to. The
-request was never going to be answered on that machine anyway, so all it could
-produce there was the warning.
-
-So the build writes a second site beside the first:
-
-```
-dist/        the hub, gate wiring and all
-dist/open/   the same hub, and nothing that talks to this machine
-```
-
-No heartbeat, no gate card, and no quota line — nothing set that number and
-nothing is enforcing it, so a "12 min to go" would be a demand invented by the
-page making it. The figure, the bar, the streak and the caps stay, because what
-happened is true either way.
-
-It is one generated file. `tools/build-site.mjs` takes `shell/index.html`, cuts
-between the `gate:begin`/`gate:end` markers, sets `data-gate="off"`, and points
-every asset at the parent directory — the same stylesheet, the same scripts,
-the same adapters, the same trainers, not copies of any of them. Nothing
-here can drift from the site above it, because there is nothing here to drift:
-one attribute, and `shell/js/shell.js` reads it.
-
-Same origin, so the same saved history. `ChimeraHub/` and `ChimeraHub/open/` are
-one localStorage between them — train in either and the other has counted it.
-
-The two are identical in every other respect, the look included.
+The website no longer talks to it. The hub used to post a heartbeat to
+`127.0.0.1:8787` and show a Gate card; both are gone, so opening the site never
+asks for local-network access and never trips a privacy extension. The gate
+still works, counting off disk alone — the scan-only fallback described in its
+README, which is coarser by a minute or two.
 
 ## The look, and the background
 
@@ -214,7 +186,7 @@ history of a thousand items over the edge. Nothing decorative gets to compete
 with a record.
 
 It never leaves the machine. There is nowhere for it to go: these are static
-pages, and the gate-free one does not make a request to anything.
+pages, and the hub does not make a request to anything.
 
 The default is drawn rather than photographed — three stands of firs, seeded and
 rejection-sampled onto a sloped ground, with fog between them, as an inline SVG.
