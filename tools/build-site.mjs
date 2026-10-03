@@ -143,7 +143,7 @@ log("[build] precision (vite)");
 /* The trainers under apps/more: offered by the hub in their own box, and not
    counted toward the quota, because no adapter reads their storage yet. Both
    are pages with no build step of their own, and are copied as they are. */
-for (const name of ["dorsalflow", "prophantasia"]) {
+for (const name of ["dorsalflow", "hallucination"]) {
   log(`[copy] more/${name}`);
   copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
 }

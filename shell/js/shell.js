@@ -71,8 +71,8 @@
   var MORE = [
     { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
       what: "Motion in noise, by eye or — AudioFlow — by ear" },
-    { id: "prophantasia", name: "Prophantasia", path: "more/prophantasia/", colour: "#d9a0ff",
-      what: "Controlled seeing, from afterimages up to images from words" },
+    { id: "hallucination", name: "Controlled Hallucination", path: "more/hallucination/", colour: "#d9a0ff",
+      what: "Inducing visual hallucinations, and steering them top-down" },
   ];
 
   var byId = {};

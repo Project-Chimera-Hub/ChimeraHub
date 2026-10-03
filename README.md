@@ -295,20 +295,24 @@ adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
   because the compiled Tailwind sheet holds only the classes the original
   source used. Headphones are needed.
 
-- `prophantasia/` — controlled seeing, as a single page. Rebuilt from the
-  Prophantasia Trainer, which flashed a coloured symbol and then a blank field
-  on a loop; its symbols, colour rules, Access and Projection presets and hold
-  fields are kept, as two stages of six. The path starts with what the eye
-  makes unasked — keeping an afterimage, then steering one — and goes on to
-  flashed images held in the mind or projected onto the field, two held at
-  once, and last images built from a description alone. A blank screen cannot
-  check what is held on it, so each hold is self-rated and the level follows
-  the ratings: up slowly (three points, a 4 earning one and a 5 two), down at
-  once. As the level rises the ambiguity comes down in three tiers, Loose,
-  Defined and Exact: the symbol pool widens from simple shapes to intricate
-  ones a few at a time, and the rating labels, steering instructions and
-  descriptions all ask for more precision. Sessions are kept under
-  `prophantasia.` in localStorage and download as JSON.
+- `hallucination/` — Controlled Hallucination, a single page. It grew out of
+  the Prophantasia Trainer (a coloured flash, then a blank field, on a loop),
+  but prophantasia is one skill on the way rather than the goal: the page is
+  about inducing visual hallucinations and steering them top-down. It opens
+  with a primer — seeing as the brain's best guess, top-down prediction held
+  in check by the bottom-up signal — and orders seven exercises by how much
+  the screen still supplies: Afterimage (keep it, steer it), Fading (Troxler),
+  Two readings (a Necker cube and a turning ball of dots), Noise (a seed
+  faded out of static, or a word only), Flash (the original's Access and
+  Projection, and Compose), Ganzfeld (an even field with pink noise and a
+  journal) and Generate (an image from words alone). Each carries notes on
+  what it induces, why, what you control and what to notice. Trial exercises
+  are self-rated and keep a quiet difficulty whose ambiguity tiers (Loose,
+  Defined, Exact) tighten slowly; Two readings measures control objectively,
+  as dominance durations held on purpose against those watched passively.
+  Flicker induction is left out on purpose: 8–12 Hz is the classic
+  photosensitive seizure trigger. Kept under `hallucination.` in localStorage,
+  carrying over anything saved under its old name.
 
 GOATED n-Back, Adaptive Posner, Speed Memory × Schulte and Relational
 Integration used to sit beside it and are retired. None had an adapter, so no
