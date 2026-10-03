@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prophantasia</title>
+<style>
+/* The hub's look — monospace, sage on near-black, no rounded corners — for
+   everything but the trial itself, where the colours are the stimulus. */
+:root {
+  --bg: #080d0b; --panel: rgba(15, 23, 19, .9); --ink: #c9e0d3; --ink-strong: #e6f4ec;
+  --dim: #7e9a8a; --accent: #8fbda4; --line: rgba(143, 189, 164, .28); --bad: #c98a8a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.55 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+button {
+  font: inherit; color: var(--ink-strong); background: transparent;
+  border: 1px solid var(--line); padding: .55rem 1rem; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+button[aria-pressed="true"] { border-color: var(--accent); color: var(--bg); background: var(--accent); }
+h1, h2 { font-size: .85rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-strong); margin: 0 0 .75rem; }
+.dim { color: var(--dim); }
+.small { font-size: .8rem; }
+
+#menu { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); padding: 1.1rem 1.2rem; margin-top: 1.1rem; }
+.row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.row + .row { margin-top: .6rem; }
+.label { min-width: 9.5rem; color: var(--dim); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .6rem; }
+.stat b { display: block; font-size: 1.3rem; color: var(--ink-strong); }
+#modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .5rem; }
+#modes button { text-align: left; padding: .6rem .8rem; }
+#modes button small { display: block; color: var(--dim); font-size: .72rem; }
+#modes button[aria-pressed="true"] small { color: var(--bg); }
+.warn { border-color: rgba(201, 138, 138, .5); }
+.warn b { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+td, th { text-align: left; padding: .3rem .4rem; border-bottom: 1px solid var(--line); }
+th { color: var(--dim); font-weight: normal; }
+
+/* ---- the trial ---- */
+#stage { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; cursor: none; }
+#stage.on { display: flex; }
+#symbol { font-size: min(62vmin, 480px); line-height: 1; user-select: none; }
+#stage.two #symbol { font-size: min(36vmin, 300px); }
+#second { position: absolute; font-size: min(36vmin, 300px); line-height: 1; user-select: none; }
+#cue {
+  position: absolute; max-width: 34rem; padding: 0 1rem; text-align: center;
+  font-size: clamp(1.1rem, 3.2vmin, 1.7rem); letter-spacing: .04em;
+}
+#fix { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: .6; z-index: 1; }
+/* The original's rainbow was a GIF that did not come with the page; this is
+   the same idea drawn here: a field that keeps moving under the held image. */
+#stage.rainbow {
+  background: linear-gradient(120deg, #ff3b3b, #ffb13b, #f5ff3b, #3bff6e, #3bd8ff, #5b3bff, #ff3bd8, #ff3b3b);
+  background-size: 400% 400%; animation: drift 9s linear infinite;
+}
+@keyframes drift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+#hud {
+  position: fixed; top: .6rem; left: .8rem; right: .8rem; display: none; justify-content: space-between;
+  font-size: .75rem; color: var(--dim); mix-blend-mode: difference; pointer-events: none; z-index: 2;
+}
+#hud.on { display: flex; }
+#exit { position: fixed; top: .5rem; right: .6rem; z-index: 3; display: none; font-size: .75rem; padding: .3rem .6rem; background: var(--bg); }
+#exit.on { display: block; }
+
+#rate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: var(--bg); z-index: 1; padding: 1rem; }
+#rate.on { display: flex; }
+#rate .box { max-width: 40rem; width: 100%; text-align: center; }
+#rate .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; margin-top: 1rem; }
+#rate .scale button { padding: .9rem .3rem; }
+#rate .scale b { display: block; font-size: 1.4rem; }
+#rate .scale span { font-size: .72rem; color: var(--dim); }
+#rate .scale button:hover span { color: var(--ink); }
+@media (max-width: 520px) { #rate .scale span { display: none; } }
+</style>
+</head>
+<body>
+
+<main id="menu">
+  <h1>Prophantasia</h1>
+  <p class="dim">
+    Seeing on purpose, built up in stages. It starts with the one thing the
+    eye already makes on its own, the afterimage: first keeping it, then
+    steering it. Only then flashed images, held in the mind or projected onto
+    a blank field, and last, images made from a description alone. Rate each
+    hold; the level follows the ratings, and as it rises the images get more
+    detailed and what counts as holding one gets stricter.
+  </p>
+
+  <div class="panel">
+    <h2>Stage</h2>
+    <div id="modes"></div>
+    <p class="dim small" id="mode-note"></p>
+  </div>
+
+  <div class="panel">
+    <h2>Session</h2>
+    <div class="row" id="field-row"><span class="label">Hold field</span><span class="row" id="fields"></span></div>
+    <div class="row"><span class="label">Trials</span><span class="row" id="lengths"></span></div>
+    <div class="row"><span class="label">Level</span>
+      <button type="button" id="lv-down" aria-label="Easier">−</button>
+      <b id="lv"></b>
+      <button type="button" id="lv-up" aria-label="Harder">+</button>
+      <span class="dim small" id="lv-note"></span>
+    </div>
+    <p class="dim small" id="amb-note"></p>
+    <div class="row" style="margin-top:1rem">
+      <button type="button" class="primary" id="start">Start</button>
+      <span class="dim small">Keys during a session: 1–5 to rate, Esc to stop.</span>
+    </div>
+  </div>
+
+  <div class="panel warn small">
+    <b>Flashing colour.</b> The flash stages open each trial with a full-screen
+    flash of saturated colour. If you have photosensitive epilepsy, or flashing
+    light has ever made you unwell, do not use them.
+  </div>
+
+  <div class="panel" id="last" hidden>
+    <h2>Last session</h2>
+    <div class="stats" id="last-stats"></div>
+  </div>
+
+  <div class="panel">
+    <h2>History</h2>
+    <div id="history" class="small"></div>
+    <div class="row" style="margin-top:.8rem">
+      <button type="button" id="export">Download sessions</button>
+      <button type="button" id="clear">Clear history</button>
+    </div>
+  </div>
+</main>
+
+<div id="stage"><span id="fix" hidden></span><span id="symbol"></span><span id="second"></span><div id="cue"></div></div>
+<div id="hud"><span id="hud-l"></span><span id="hud-r"></span></div>
+<button type="button" id="exit">Stop</button>
+
+<div id="rate">
+  <div class="box">
+    <h2 id="rate-q">How clearly did you hold it?</h2>
+    <p class="dim small" id="rate-what"></p>
+    <div class="scale" id="scale"></div>
+  </div>
+</div>
+<script>
+"use strict";
+
+/* ============================================================
+   PROPHANTASIA
+   ============================================================
+
+   Rebuilt from the Prophantasia Trainer, a page that flashed a coloured
+   symbol and then showed a blank field for a fixed time, over and over. Its
+   pieces are all still here — the symbols, the colour rules (a symbol's hue at
+   least 90° from the last one's and from its background's), the Access and
+   Projection presets, the three hold fields — but as two stages of six.
+
+   ── The path ──
+
+   Controlled seeing is built from the bottom up, starting with what the
+   visual system already produces unasked:
+
+     1. Afterimage  — stare at a symbol and keep the afterimage it leaves.
+     2. Steer       — make one, then move, resize, spin or recolour it.
+     3. Access      — the original's brief flash on a dark field: catch it.
+     4. Projection  — the original's longer look on a light field: keep it.
+     5. Compose     — two flashes, held together, each in its own place.
+     6. Generate    — no picture at all: build the image from a description.
+
+   Each stage asks for less help from the screen than the one before. They
+   are not locked, but each one says which stage to bring up to Level 10 first.
+
+   ── Ambiguity comes down slowly ──
+
+   Early on a vague image counts: a patch of colour where the symbol was is a
+   hold. As the level rises that stops being enough, in three tiers —
+
+     Loose    (1–10)   simple shapes; colour or a blob counts
+     Defined  (11–20)  detailed symbols join; the outline has to be there
+     Exact    (21–30)  the most intricate symbols; shape, colour, size and
+                       place have to match, and stay
+
+   — and everything that depends on it moves together: which symbols can
+   appear (the pool widens a few at a time rather than all at once), the
+   labels on the rating scale, the steering instructions and the generated
+   descriptions. The same 4 means more at Level 25 than at Level 5.
+
+   ── Why the difficulty runs on ratings ──
+
+   A blank screen cannot see what is held on it, so nothing here can mark a
+   hold right or wrong. The rating is the only measure there is and it is used
+   as one: clear holds (4s and 5s) step the level up, slowly; a faint or lost
+   one (1 or 2) steps it down at once; a 3 holds it.
+   It is only as honest as the ratings are, which the rating screen says.
+
+   ── Timing ──
+
+   One level moves the timings in the direction that makes the work harder:
+   less to build from (a shorter flash, a shorter stare) and longer to keep it
+   (a longer hold). Both move geometrically between the stage's end points.
+   Flashes are timed in animation frames and the time one was really on screen
+   is recorded. The rating screen between trials keeps full-field flashes
+   below one a second, where the original could reach nearly four.
+*/
+
+/* Symbols in three tiers of detail, each with a name for the descriptions. */
+const SIMPLE = [["●", "circle"], ["■", "square"], ["▲", "triangle"], ["★", "star"], ["✚", "cross"], ["◆", "diamond"]];
+const MEDIUM = [["♥︎", "heart"], ["☀︎", "sun"], ["♠︎", "spade"], ["♣︎", "club"], ["☂︎", "umbrella"], ["⚑", "flag"],
+                ["☘︎", "shamrock"], ["✦", "four-pointed star"], ["☻", "smiling face"], ["☗", "shogi piece"]];
+const COMPLEX = [["♞", "knight"], ["♚", "king"], ["♛", "queen"], ["♜", "rook"], ["♝", "bishop"], ["☯︎", "yin-yang"],
+                 ["☸︎", "eight-spoked wheel"], ["⚙︎", "gear"], ["⚗︎", "alembic"], ["⚒︎", "crossed hammers"], ["⚉", "face with dots"]];
+
+const LEVELS = 30;
+const TIERS = [
+  { name: "Loose", note: "Simple shapes. A patch of colour or a rough blob where the symbol was counts as holding it." },
+  { name: "Defined", note: "Detailed symbols join in. Colour alone no longer counts: the outline has to be there." },
+  { name: "Exact", note: "The most intricate symbols. Shape, colour, size and place all have to match, and stay." },
+];
+const tierOf = (level) => (level <= 10 ? 0 : level <= 20 ? 1 : 2);
+
+const GREY = { "808080": "Grey", FFFFFF: "White" };
+const FIELDS = { FFFFFF: "White", "000000": "Black", rainbow: "Rainbow" };
+
+const STAGES = {
+  afterimage: {
+    name: "Afterimage", kind: "after", look: [20000, 4000], hold: [5000, 15000],
+    field: "808080", fields: GREY, lengths: [6, 10, 15], trials: 10,
+    note: "Keep your eyes on the dot while the symbol is up. When it goes, an afterimage in the opposite colour appears on the grey: keep it there for as long as you can, and keep seeing it after it starts to fade.",
+  },
+  steer: {
+    name: "Steer", kind: "steer", look: [15000, 4000], hold: [6000, 15000],
+    field: "808080", fields: GREY, lengths: [6, 10, 15], trials: 10, after: "afterimage",
+    note: "An instruction first, then the stare. When the afterimage appears, make it do what the instruction said: move it, resize it, spin it, recolour it.",
+  },
+  access: {
+    name: "Access", kind: "flash", look: [120, 16], hold: [750, 4000],
+    field: "000000", fields: FIELDS, lengths: [20, 40, 60], trials: 40, after: "steer",
+    note: "Brief flash, dark field. Catch the image the instant it is gone and keep it in the mind's eye.",
+  },
+  projection: {
+    name: "Projection", kind: "flash", look: [400, 100], hold: [2750, 9000],
+    field: "FFFFFF", fields: FIELDS, lengths: [20, 40, 60], trials: 40, after: "access",
+    note: "Longer look, light field. Keep seeing the symbol out there, on the blank, where it was.",
+  },
+  compose: {
+    name: "Compose", kind: "compose", look: [500, 120], hold: [2500, 8000],
+    field: "000000", fields: FIELDS, lengths: [20, 40], trials: 20, after: "projection",
+    note: "Two flashes, one on each side. Keep both, each in its own place, at the same time.",
+  },
+  generate: {
+    name: "Generate", kind: "generate", look: [4500, 3000], hold: [3000, 12000],
+    field: "000000", fields: FIELDS, lengths: [10, 20, 30], trials: 20, after: "compose",
+    note: "No picture: a description, then the blank field. See what it describes, there, on the field. The descriptions get more precise as the level rises.",
+  },
+};
+const ORDER = Object.keys(STAGES);
+const UNLOCK_AT = 10;
+
+/* Rating labels per tier: what each number means gets stricter as the
+   ambiguity comes down. Steer asks a different question and has its own. */
+const SCALE = [
+  ["Nothing", "A flicker", "A patch of colour", "A steady blob", "A steady shape"],
+  ["Lost", "Colour only", "A rough outline", "A clear outline", "Clear and steady"],
+  ["Lost", "Shape blurred", "Shape, wrong colour, size or place", "Exact, but unsteady", "Exact and steady"],
+];
+const STEER_SCALE = [
+  ["No", "Barely", "Partly", "Mostly", "Fully"],
+  ["No", "Barely", "Partly", "Mostly", "Fully, and it stayed"],
+  ["No", "Roughly", "Right change, imprecise", "Precise, unsteady", "Precise and steady"],
+];
+/* Up slowly, down at once: a 4 earns one point and a 5 two, three points
+   buy a level, and a 1 or 2 drops one and clears the points. At best that is
+   two trials a level, so a tier of ten takes a couple of sessions to cross,
+   and the image is asked to sharpen gradually rather than all at once. */
+const POINTS = { 4: 1, 5: 2 }, POINTS_PER_LEVEL = 3;
+
+const FIX_MS = 600;
+const GAP_MS = 250;      // between Compose's two flashes
+const STEER_CUE_MS = 3000;
+const PREFIX = "prophantasia.";
+
+/* ---------------------------------------------------------------- *
+ * Storage — namespaced, and never fatal                            *
+ * ---------------------------------------------------------------- */
+
+function load(key, fallback) {
+  try {
+    const v = localStorage.getItem(PREFIX + key);
+    return v == null ? fallback : JSON.parse(v);
+  } catch (e) { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); } catch (e) {}
+}
+
+const settings = load("settings", {});
+settings.stage = STAGES[settings.stage] ? settings.stage : "afterimage";
+settings.level = Object.assign(Object.fromEntries(ORDER.map((k) => [k, 1])), settings.level);
+settings.trials = Object.assign(Object.fromEntries(ORDER.map((k) => [k, STAGES[k].trials])), settings.trials);
+settings.field = Object.assign({}, settings.field);
+
+/* ---------------------------------------------------------------- *
+ * Levels, symbols, words                                           *
+ * ---------------------------------------------------------------- */
+
+function geo(range, level) {
+  const t = (level - 1) / (LEVELS - 1);
+  return Math.round(range[0] * Math.pow(range[1] / range[0], t));
+}
+const timing = (stage, level) => ({ look: geo(STAGES[stage].look, level), hold: geo(STAGES[stage].hold, level) });
+const clampLevel = (l) => Math.max(1, Math.min(LEVELS, l));
+
+/* The pool widens a few symbols at a time: the detailed ones join from
+   Level 6, the intricate ones from 16, and past 20 the simple shapes leave. */
+function pool(level) {
+  const take = (list, from) => list.slice(0, Math.max(0, Math.min(list.length, Math.ceil(((level - from) / 10) * list.length))));
+  const medium = take(MEDIUM, 6), complex = take(COMPLEX, 16);
+  return (level > 20 ? [] : SIMPLE).concat(medium, complex);
+}
+
+function hueName(h) {
+  const names = [[15, "red"], [40, "orange"], [65, "yellow"], [150, "green"], [190, "cyan"],
+                 [250, "blue"], [285, "violet"], [330, "magenta"], [360, "red"]];
+  return names.find(([max]) => h < max)[1];
+}
+
+const hueGap = (a, b) => { const d = Math.abs(a - b); return Math.min(d, 360 - d); };
+let lastHue = null, lastSymbol = "";
+
+function pickStimulus(level) {
+  const p = pool(level);
+  let s;
+  do s = p[Math.floor(Math.random() * p.length)]; while (s[0] === lastSymbol && p.length > 1);
+  let hue;
+  do hue = Math.floor(Math.random() * 360); while (lastHue !== null && hueGap(hue, lastHue) < 90);
+  let bg;
+  do bg = Math.floor(Math.random() * 360); while (hueGap(hue, bg) < 90);
+  lastSymbol = s[0]; lastHue = hue;
+  return { symbol: s[0], name: s[1], hue, bg };
+}
+
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+function steerInstruction(tier, stim) {
+  return pick([
+    ["Let it drift, and follow it.", "Make it brighter.", "Make it pulse.", "Make it bigger."],
+    ["Move it to the left.", "Move it up.", "Make it twice as big.", "Shrink it to half.", "Turn it a quarter turn."],
+    ["Move it to the left edge, and hold it there at the same size.",
+     "Grow it to exactly twice its size, centred on the dot.",
+     `Turn it back to its real colour, ${hueName(stim.hue)}, without moving it.`,
+     "Spin it one full turn, slowly, and stop where it started.",
+     "Move it up a hand's width, then bring it back to the dot."],
+  ][tier]);
+}
+
+function description(tier, stim) {
+  const colour = hueName(stim.hue);
+  if (tier === 0) return pick([`A ${colour} glow.`, `Something ${colour}, in the middle.`, `A ${colour} ${stim.name}.`]);
+  if (tier === 1) return `A ${colour} ${stim.name}, in the centre, large.`;
+  const where = pick(["in the upper left", "in the upper right", "in the lower left", "in the lower right", "dead centre"]);
+  const how = pick(["turning slowly clockwise", "pulsing larger and smaller", "drifting slowly to the right", "perfectly still"]);
+  return `A ${colour} ${stim.name}, ${where}, ${how}, its edges sharp.`;
+}
+
+/* ---------------------------------------------------------------- *
+ * The menu                                                         *
+ * ---------------------------------------------------------------- */
+
+const $ = (id) => document.getElementById(id);
+const stageOf = () => STAGES[settings.stage];
+const field = (key = settings.stage) => settings.field[key] || STAGES[key].field;
+
+function choiceRow(el, entries, current, onPick) {
+  el.textContent = "";
+  for (const [value, label] of entries) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", String(value === current));
+    b.onclick = () => onPick(value);
+    el.appendChild(b);
+  }
+}
+
+function persist() { save("settings", settings); renderMenu(); }
+
+function renderMenu() {
+  const modes = $("modes");
+  modes.textContent = "";
+  ORDER.forEach((k, i) => {
+    const st = STAGES[k], lv = settings.level[k];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(k === settings.stage));
+    b.innerHTML = `${i + 1}. ${st.name}<small>Level ${lv} · ${TIERS[tierOf(lv)].name}</small>`;
+    b.onclick = () => { settings.stage = k; persist(); };
+    modes.appendChild(b);
+  });
+  const st = stageOf();
+  let note = st.note;
+  if (st.after && settings.level[st.after] < UNLOCK_AT)
+    note += ` Best started once ${STAGES[st.after].name} has reached Level ${UNLOCK_AT}.`;
+  $("mode-note").textContent = note;
+
+  choiceRow($("fields"), Object.entries(st.fields), field(),
+    (v) => { settings.field[settings.stage] = v; persist(); });
+  choiceRow($("lengths"), st.lengths.map((n) => [n, String(n)]), settings.trials[settings.stage],
+    (v) => { settings.trials[settings.stage] = v; persist(); });
+
+  const lv = settings.level[settings.stage], t = timing(settings.stage, lv);
+  $("lv").textContent = `${lv} / ${LEVELS}`;
+  $("lv-note").textContent = `${lookName(st)} ${fmt(t.look)} · hold ${fmt(t.hold)}`;
+  const tier = TIERS[tierOf(lv)];
+  $("amb-note").textContent = `${tier.name}: ${tier.note}`;
+  renderHistory();
+}
+
+function lookName(st) {
+  return { after: "stare", steer: "stare", flash: "flash", compose: "each flash", generate: "read" }[st.kind];
+}
+const fmt = (ms) => (ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`);
+
+function nudgeLevel(d) {
+  settings.level[settings.stage] = clampLevel(settings.level[settings.stage] + d);
+  persist();
+}
+$("lv-down").onclick = () => nudgeLevel(-1);
+$("lv-up").onclick = () => nudgeLevel(1);
+
+function statTiles(el, s) {
+  const tiles = [
+    ["Trials rated", s.trials.length],
+    ["Mean rating", s.meanRating.toFixed(2) + " / 5"],
+    ["Level", `${s.startLevel} → ${s.endLevel}`],
+    ["Peak level", `${s.peakLevel} (${TIERS[tierOf(s.peakLevel)].name})`],
+    ["Shortest look, clear hold", s.shortestClearLookMs ? fmt(s.shortestClearLookMs) : "—"],
+    ["Longest clear hold", s.longestClearHoldMs ? fmt(s.longestClearHoldMs) : "—"],
+  ];
+  el.textContent = "";
+  for (const [k, v] of tiles) {
+    const d = document.createElement("div");
+    d.className = "stat";
+    d.innerHTML = `<span class="dim small"></span><b></b>`;
+    d.firstChild.textContent = k;
+    d.lastChild.textContent = v;
+    el.appendChild(d);
+  }
+}
+
+function renderHistory() {
+  const sessions = load("sessions", []);
+  const el = $("history");
+  if (!sessions.length) { el.innerHTML = '<p class="dim">No sessions yet.</p>'; return; }
+  const rows = sessions.slice(-15).reverse().map((s) => {
+    const d = new Date(s.date);
+    return `<tr><td>${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>`
+      + `<td>${STAGES[s.stage] ? STAGES[s.stage].name : s.stage}</td><td>${s.trials.length}</td>`
+      + `<td>${s.meanRating.toFixed(2)}</td><td>${s.startLevel} → ${s.endLevel}</td></tr>`;
+  }).join("");
+  el.innerHTML = `<table><tr><th>When</th><th>Stage</th><th>Trials</th><th>Rating</th><th>Level</th></tr>${rows}</table>`
+    + (sessions.length > 15 ? `<p class="dim">Latest 15 of ${sessions.length}; the download has all.</p>` : "");
+}
+
+$("export").onclick = () => {
+  const blob = new Blob([JSON.stringify({ app: "prophantasia", version: 1, sessions: load("sessions", []) }, null, 1)],
+    { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `prophantasia-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$("clear").onclick = () => {
+  if (confirm("Delete every saved Prophantasia session in this browser? Download them first if you want to keep them.")) {
+    save("sessions", []); renderHistory();
+  }
+};
+
+/* ---------------------------------------------------------------- *
+ * The session                                                      *
+ * ---------------------------------------------------------------- */
+
+const stage = $("stage"), sym = $("symbol"), sym2 = $("second"), fix = $("fix"), cue = $("cue");
+let run = null;
+let timer = 0, raf = 0;
+
+function show(el, on) { el.classList.toggle("on", on); }
+
+function paint(bg) {
+  const f = bg || run.field;
+  stage.classList.toggle("rainbow", f === "rainbow");
+  stage.style.background = f === "rainbow" ? "" : "#" + f;
+  /* The dot and any text have to be visible on whatever they sit on. */
+  stage.style.color = f === "FFFFFF" || f === "808080" ? "#000" : "#fff";
+}
+
+function blank() {
+  sym.textContent = ""; sym2.textContent = ""; cue.textContent = "";
+  sym.style.transform = ""; sym2.style.transform = "";
+}
+
+function startSession() {
+  const level = settings.level[settings.stage];
+  run = {
+    stage: settings.stage, kind: stageOf().kind, field: field(), level, startLevel: level, peakLevel: level,
+    total: settings.trials[settings.stage], points: 0, trials: [], startedAt: Date.now(), current: null, phase: "idle",
+  };
+  $("menu").hidden = true;
+  show(stage, true); show($("hud"), true); show($("exit"), true);
+  nextTrial();
+}
+
+function hud() {
+  const st = STAGES[run.stage], t = timing(run.stage, run.level);
+  $("hud-l").textContent = `${st.name} · Level ${run.level} · ${TIERS[tierOf(run.level)].name} · ${lookName(st)} ${fmt(t.look)} · hold ${fmt(t.hold)}`;
+  $("hud-r").textContent = `${run.trials.length + 1} / ${run.total}`;
+}
+
+const later = (fn, ms) => { timer = setTimeout(fn, ms); };
+
+function nextTrial() {
+  clearTimeout(timer); cancelAnimationFrame(raf);
+  if (run.trials.length >= run.total) return finish();
+  const t = timing(run.stage, run.level), tier = tierOf(run.level);
+  const stim = pickStimulus(run.level);
+  run.current = { level: run.level, tier: TIERS[tier].name, lookMs: t.look, holdMs: t.hold,
+                  symbol: stim.symbol, hue: stim.hue, bgHue: stim.bg };
+  hud();
+  show($("rate"), false);
+  stage.classList.remove("two");
+  blank(); paint();
+  fix.hidden = false;
+  run.phase = "fixation";
+  ({ after: afterimage, steer: steerTrial, flash: flashTrial, compose: composeTrial, generate: generateTrial })[run.kind](stim, t, tier);
+}
+
+/* Stare, then the afterimage. The symbol sits on black, as saturated as it
+   goes, and the hold field is grey or white, where the opposite colour
+   shows best. The dot stays through the hold in Afterimage, so the eyes stay
+   put and the afterimage with them; Steer takes it away, since the point
+   there is to move the image. */
+function afterimage(stim, t, tier, keepDot = true) {
+  later(() => {
+    run.phase = "look";
+    paint("000000");
+    stage.style.color = "#fff";
+    sym.style.color = `hsl(${stim.hue}, 100%, 50%)`;
+    sym.textContent = stim.symbol;
+    run.current.lookStart = performance.now();
+    later(() => {
+      run.current.shownMs = Math.round(performance.now() - run.current.lookStart);
+      delete run.current.lookStart;
+      blank(); paint();
+      fix.hidden = !keepDot;
+      run.phase = "hold";
+      later(askRating, t.hold);
+    }, t.look);
+  }, FIX_MS);
+}
+
+function steerTrial(stim, t, tier) {
+  const instruction = steerInstruction(tier, stim);
+  run.current.instruction = instruction;
+  fix.hidden = true;
+  run.phase = "cue";
+  cue.textContent = instruction;
+  later(() => { cue.textContent = ""; fix.hidden = false; afterimage(stim, t, tier, false); }, STEER_CUE_MS);
+}
+
+/* On for whole frames, off on the first frame at or past the target; the
+   stamps of the frame that painted it and the one that cleared it give the
+   time it was really up. */
+function flashFrames(stim, ms, setup, done) {
+  raf = requestAnimationFrame((on) => {
+    stage.classList.remove("rainbow");
+    stage.style.background = `hsl(${stim.bg}, 100%, 50%)`;
+    setup();
+    const tick = (now) => {
+      if (now - on < ms - 4) { raf = requestAnimationFrame(tick); return; }
+      blank(); paint();
+      done(Math.round(now - on));
+    };
+    raf = requestAnimationFrame(tick);
+  });
+}
+
+function flashTrial(stim, t) {
+  later(() => {
+    fix.hidden = true;
+    run.phase = "look";
+    flashFrames(stim, t.look, () => {
+      sym.style.color = `hsl(${stim.hue}, 100%, 50%)`;
+      sym.textContent = stim.symbol;
+    }, (shown) => {
+      run.current.shownMs = shown;
+      run.phase = "hold";
+      later(askRating, t.hold);
+    });
+  }, FIX_MS);
+}
+
+function composeTrial(stim, t) {
+  const other = pickStimulus(run.level);
+  run.current.symbol2 = other.symbol; run.current.hue2 = other.hue;
+  stage.classList.add("two");
+  const at = (el, s, x) => { el.style.color = `hsl(${s.hue}, 100%, 50%)`; el.style.transform = `translateX(${x})`; el.textContent = s.symbol; };
+  later(() => {
+    fix.hidden = true;
+    run.phase = "look";
+    flashFrames(stim, t.look, () => at(sym, stim, "-22vw"), (a) => {
+      later(() => {
+        flashFrames(stim, t.look, () => at(sym2, other, "22vw"), (b) => {
+          run.current.shownMs = Math.round((a + b) / 2);
+          run.phase = "hold";
+          later(askRating, t.hold);
+        });
+      }, GAP_MS);
+    });
+  }, FIX_MS);
+}
+
+function generateTrial(stim, t, tier) {
+  const text = description(tier, stim);
+  run.current.description = text;
+  fix.hidden = true;
+  run.phase = "look";
+  cue.textContent = text;
+  run.current.shownMs = t.look;
+  later(() => {
+    cue.textContent = "";
+    run.phase = "hold";
+    later(askRating, t.hold);
+  }, t.look);
+}
+
+function askRating() {
+  run.phase = "rating";
+  const c = run.current, tier = tierOf(c.level), kind = run.kind;
+  const steer = kind === "steer";
+  $("rate-q").textContent = steer ? "Did it do what you asked?"
+    : kind === "after" ? "How did the afterimage hold?"
+    : kind === "compose" ? "How well did you hold both?"
+    : "How clearly did you see it?";
+  const what = steer ? `“${c.instruction}”`
+    : kind === "generate" ? `“${c.description}”`
+    : kind === "compose" ? `It was ${c.symbol} and ${c.symbol2}.`
+    : `It was ${c.symbol}.`;
+  $("rate-what").textContent = `${what} ${TIERS[tier].name}: ${TIERS[tier].note} `
+    + "The level follows these ratings, so they are only as useful as they are honest.";
+  const labels = (steer ? STEER_SCALE : SCALE)[tier];
+  $("scale").innerHTML = labels.map((label, i) =>
+    `<button type="button" data-r="${i + 1}"><b>${i + 1}</b><span>${label}</span></button>`).join("");
+  show($("rate"), true);
+}
+
+function rate(r) {
+  if (!run || run.phase !== "rating") return;
+  const c = run.current;
+  c.rating = r;
+  run.trials.push(c);
+  if (r <= 2) { run.level = clampLevel(run.level - 1); run.points = 0; }
+  else if (POINTS[r]) {
+    run.points += POINTS[r];
+    if (run.points >= POINTS_PER_LEVEL) { run.level = clampLevel(run.level + 1); run.points = 0; }
+  }
+  run.peakLevel = Math.max(run.peakLevel, run.level);
+  nextTrial();
+}
+
+function summarise(r) {
+  const tr = r.trials, clear = tr.filter((t) => t.rating >= 4);
+  return {
+    id: `prophantasia-${r.startedAt}`,
+    date: new Date(r.startedAt).toISOString(),
+    durationMs: Date.now() - r.startedAt,
+    stage: r.stage, field: r.field,
+    startLevel: r.startLevel, endLevel: r.level, peakLevel: r.peakLevel,
+    meanRating: tr.reduce((s, t) => s + t.rating, 0) / tr.length,
+    shortestClearLookMs: clear.length ? Math.min(...clear.map((t) => t.shownMs)) : null,
+    longestClearHoldMs: clear.length ? Math.max(...clear.map((t) => t.holdMs)) : null,
+    trials: tr,
+  };
+}
+
+function finish() {
+  clearTimeout(timer); cancelAnimationFrame(raf);
+  const r = run;
+  run = null;
+  blank();
+  show(stage, false); show($("hud"), false); show($("exit"), false); show($("rate"), false);
+  $("menu").hidden = false;
+  /* Stopped before the first rating, there is nothing to keep; stopped part
+     way, what was rated is kept. Either way the level carries. */
+  if (r && r.trials.length) {
+    const s = summarise(r);
+    const all = load("sessions", []);
+    all.push(s);
+    save("sessions", all);
+    settings.level[r.stage] = r.level;
+    save("settings", settings);
+    $("last").hidden = false;
+    statTiles($("last-stats"), s);
+  }
+  renderMenu();
+}
+
+/* ---------------------------------------------------------------- *
+ * Input                                                            *
+ * ---------------------------------------------------------------- */
+
+$("scale").onclick = (e) => {
+  const b = e.target.closest("button[data-r]");
+  if (b) rate(Number(b.dataset.r));
+};
+$("start").onclick = startSession;
+$("exit").onclick = finish;
+
+document.addEventListener("keydown", (e) => {
+  if (!run) return;
+  if (e.key === "Escape") { e.preventDefault(); finish(); return; }
+  if (/^[1-5]$/.test(e.key)) { e.preventDefault(); rate(Number(e.key)); }
+});
+
+/* The hub hides a trainer it has covered by firing visibilitychange, as a
+   backgrounded tab does. A trial cut off before it was rated is dropped and
+   started again on return: its stare, flash or hold was interrupted, so a
+   rating of it would be a rating of something else. One already waiting for
+   a rating keeps waiting. */
+document.addEventListener("visibilitychange", () => {
+  if (!run || run.phase === "rating") return;
+  if (document.hidden) {
+    clearTimeout(timer); cancelAnimationFrame(raf);
+    run.phase = "paused";
+    blank();
+  } else if (run.phase === "paused") {
+    nextTrial();
+  }
+});
+
+renderMenu();
+</script>
+</body>
+</html>

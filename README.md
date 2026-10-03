@@ -274,10 +274,10 @@ quota that will be.
 
 ## More trainers, not counted
 
-`apps/more/` holds a trainer the hub opens like any other but keeps in a box of
-its own, below the nine: it has no adapter yet, so the meter cannot see it and
-its minutes do not count toward the day or the quota. Writing it an adapter is
-what moves it up into `TRAINERS` in `shell/js/shell.js`.
+`apps/more/` holds trainers the hub opens like any other but keeps in a box of
+their own, below the nine: none has an adapter yet, so the meter cannot see
+them and their minutes do not count toward the day or the quota. Writing one an
+adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
 
 - `dorsalflow/` — a Vite app's built output: the page, one script and one
   stylesheet in `assets/`. There is no source for it here, only the build, so
@@ -294,6 +294,21 @@ what moves it up into `TRAINERS` in `shell/js/shell.js`.
   stop giving the direction away. Its styles are in `assets/audioflow.css`,
   because the compiled Tailwind sheet holds only the classes the original
   source used. Headphones are needed.
+
+- `prophantasia/` — controlled seeing, as a single page. Rebuilt from the
+  Prophantasia Trainer, which flashed a coloured symbol and then a blank field
+  on a loop; its symbols, colour rules, Access and Projection presets and hold
+  fields are kept, as two stages of six. The path starts with what the eye
+  makes unasked — keeping an afterimage, then steering one — and goes on to
+  flashed images held in the mind or projected onto the field, two held at
+  once, and last images built from a description alone. A blank screen cannot
+  check what is held on it, so each hold is self-rated and the level follows
+  the ratings: up slowly (three points, a 4 earning one and a 5 two), down at
+  once. As the level rises the ambiguity comes down in three tiers, Loose,
+  Defined and Exact: the symbol pool widens from simple shapes to intricate
+  ones a few at a time, and the rating labels, steering instructions and
+  descriptions all ask for more precision. Sessions are kept under
+  `prophantasia.` in localStorage and download as JSON.
 
 GOATED n-Back, Adaptive Posner, Speed Memory × Schulte and Relational
 Integration used to sit beside it and are retired. None had an adapter, so no

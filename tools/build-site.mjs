@@ -140,10 +140,10 @@ log("[build] precision (vite)");
     "--outDir", path.join(DIST, "precision"), "--emptyOutDir"], dir);
 }
 
-/* The trainer under apps/more: offered by the hub in its own box, and not
-   counted toward the quota, because no adapter reads its storage yet. It is a
-   built page with no build step of its own, and is copied as it is. */
-for (const name of ["dorsalflow"]) {
+/* The trainers under apps/more: offered by the hub in their own box, and not
+   counted toward the quota, because no adapter reads their storage yet. Both
+   are pages with no build step of their own, and are copied as they are. */
+for (const name of ["dorsalflow", "prophantasia"]) {
   log(`[copy] more/${name}`);
   copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
 }

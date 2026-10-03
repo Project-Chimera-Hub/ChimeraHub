@@ -64,13 +64,15 @@
                   colour: "var(--dim)", what: "The record. Not training." };
 
   /* Openable and on the menu, but kept out of TRAINERS for the archive's
-   * reason: TRAINERS is what the meter sums, and DorsalFlow has no adapter
-   * yet, so the day cannot see it. It sits in its own box on the hub and
-   * its own directory in the repository, apps/more/. Giving it an adapter
-   * is what moves it up into the list above. */
+   * reason: TRAINERS is what the meter sums, and none of these has an
+   * adapter yet, so the day cannot see them. They sit in their own box on the
+   * hub and their own directory in the repository, apps/more/. Giving one an
+   * adapter is what moves it up into the list above. */
   var MORE = [
     { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
       what: "Motion in noise, by eye or — AudioFlow — by ear" },
+    { id: "prophantasia", name: "Prophantasia", path: "more/prophantasia/", colour: "#d9a0ff",
+      what: "Controlled seeing, from afterimages up to images from words" },
   ];
 
   var byId = {};
