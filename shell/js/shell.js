@@ -13,7 +13,7 @@
    frame, and never asks a trainer to report anything. It reads the same keys
    the archive reads, through the same adapters, from outside. A trainer that
    knows nothing about this page works here exactly as well as one that does —
-   which is the only reason eight repositories could be merged in an afternoon.
+   which is the only reason a hub of separate repositories works at all.
 */
 
 (function () {
@@ -27,26 +27,17 @@
 
   /* Colour is per source and used twice: the segment in the day's bar and the
      dot on the card. Chosen to stay apart on a dark ground and to survive the
-     common colour-blindness — the trainers include a grapheme-colour synaesthesia
-     trainer, and a dashboard that miscodes colour in front of that would be a
-     poor joke. */
+     common colour-blindness. The id is the archive's source name, which is
+     how the meter finds a trainer's minutes. */
   var TRAINERS = [
-    { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#6cb6ff",
-      what: "Relational and syllogistic reasoning" },
-    { id: "rnb", name: "Relational N-back", path: "rnb/", colour: "#3fb950",
-      what: "N-back over relations, with a ladder" },
-    { id: "precision", name: "Precision N-back", path: "precision/", colour: "#d29922",
-      what: "N-back with a tighter response window" },
-    { id: "rotation", name: "3D Rotation", path: "rotation/", colour: "#db6d9d",
-      what: "Mental rotation of molecules" },
     { id: "cct", name: "CCT", path: "cct/", colour: "#a371f7",
       what: "Spoken arithmetic against the clock" },
+    { id: "chimera", name: "Chimera", path: "chimera/", colour: "#58a6ff",
+      what: "Add the digits you hear, judge the number you see" },
     { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
-      what: "Attentional shield n-back" },
-    { id: "rrt", name: "Running Order", path: "rrt/", colour: "#ffa657",
-      what: "Relational updating — a running order of symbols" },
-    { id: "synth", name: "Synaesthesia colours", path: "synth/", colour: "#56d4dd",
-      what: "Grapheme–colour association" },
+      what: "Affective n-back: position, colour and voice" },
+    { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
+      what: "Four streams of relations, n back" },
   ];
 
   /* Stageable, but never a trainer.
@@ -69,10 +60,12 @@
    * hub and their own directory in the repository, apps/more/. Giving one an
    * adapter is what moves it up into the list above. */
   var MORE = [
-    { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
-      what: "Motion in noise, by eye or — AudioFlow — by ear" },
-    { id: "hallucination", name: "Controlled Hallucination", path: "more/hallucination/", colour: "#d9a0ff",
-      what: "Inducing visual hallucinations, and steering them top-down" },
+    { id: "att", name: "Attention Training", path: "more/att/", colour: "#db6d9d",
+      what: "Selective, switching and divided attention, over a soundscape" },
+    { id: "earshot", name: "Earshot", path: "more/earshot/", colour: "#56d4dd",
+      what: "Track moving sounds by ear — 3D object tracking, for the ears" },
+    { id: "quadbox", name: "N-back Constant Change", path: "more/quadbox/", colour: "#ffa657",
+      what: "Quad n-back whose modalities and variant keep changing" },
   ];
 
   var byId = {};
@@ -320,7 +313,7 @@
    * ---------------------------------------------------------------- */
 
   /*
-   * The frame asks for `rnb/index.html`, not `rnb/`.
+   * The frame asks for `cct/index.html`, not `cct/`.
    *
    * A web server resolves a directory to its index and the two are the same
    * request. The Android build's server does not: Capacitor answers any path

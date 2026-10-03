@@ -8,28 +8,30 @@
    different questions and this file is the line between them — nothing here
    ever changes a record, and the archive never applies any of it.
 
-   Two trainers are capped as a share of the day:
+   One trainer is capped as a share of the day:
 
-     synth   5%   grapheme–colour recall is too easy to be training
      cct    20%   useful, but never meant to be the bulk of it
+
+   (Synaesthesia colours was capped at 5% until it left the hub. A gate.json
+   that still names it is harmless: a cap on a source nothing reports binds
+   nothing.)
 
    A cap is a share of the counted total, not of the raw one, which is the only
    formulation that does what it says. Capping against the raw total would let
-   an hour of synth carry three minutes of credit and then let the next hour
-   carry three more; capping against the counted total means a day made only of
-   synth counts for nothing at all, because there is no uncapped training for
-   its five percent to be five percent *of*.
+   an hour of CCT carry twelve minutes of credit and then let the next hour
+   carry twelve more; capping against the counted total means a day made only of
+   CCT counts for nothing at all, because there is no uncapped training for
+   its twenty percent to be twenty percent *of*.
 
    That is the intended behaviour, stated plainly: you cannot reach the quota on
-   synth and CCT alone, however long you spend. With both at their ceiling they
-   can supply a quarter of the day between them, and the other three quarters
-   have to come from somewhere else.
+   CCT alone, however long you spend. At its ceiling it supplies a fifth of the
+   day, and the other four fifths have to come from somewhere else.
 */
 
 var QuotaPolicy = (function () {
 
   /* Fractions of the counted day. Anything absent is uncapped. */
-  var DEFAULT_CAPS = { synth: 0.05, cct: 0.20 };
+  var DEFAULT_CAPS = { cct: 0.20 };
 
   /**
    * Apply the caps to one day's minutes.

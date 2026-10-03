@@ -158,7 +158,7 @@ does the same thing and wants the same exception.
 | `idle_seconds` | `120` | No input for this long and the hold cap stops running down. |
 | `stall_seconds_no_beat` | `900` | The same, on a machine where the heartbeat never arrives. |
 | `training_window_patterns` | hub + trainer titles | A focused window matching any of these is training. Case-insensitive substrings. |
-| `caps` | `synth 5%`, `cct 20%` | Per-source ceilings as a share of the counted day. `{}` removes them. |
+| `caps` | `cct 20%` | Per-source ceilings as a share of the counted day. `{}` removes them. |
 | `port` | `8787` | Heartbeat listener, bound to `127.0.0.1` only. |
 
 Two of those are load-bearing and worth saying plainly:

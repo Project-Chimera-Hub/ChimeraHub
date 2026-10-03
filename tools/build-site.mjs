@@ -2,12 +2,12 @@
 /*
  * One site out of eight repositories.
  *
- * Every app stays exactly what it was — an Angular app, a Vite app, six pages
- * of plain HTML — and this script only decides where each one lands. Nothing
- * here rewrites an app's source, because the moment a build step starts
- * editing the thing it builds, the app stops working when opened on its own
- * and the archive's whole thesis (it must still run in five years, from a USB
- * stick, with no toolchain) goes with it.
+ * Every app stays exactly what it was — a Svelte app built with Vite, a set of
+ * plain pages, the archive — and this script only decides where each one
+ * lands. Nothing here rewrites an app's source, because the moment a build
+ * step starts editing the thing it builds, the app stops working when opened
+ * on its own and the archive's whole thesis (it must still run in five years,
+ * from a USB stick, with no toolchain) goes with it.
  *
  *   node tools/build-site.mjs          → dist/, based at /ChimeraHub/
  *   BASE=/ node tools/build-site.mjs   → dist/, based at the domain root
@@ -22,8 +22,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
 
 /* Trailing slash guaranteed: every base href below is built by concatenation,
-   and `/ChimeraHubsyllogimous/` is the kind of bug that only shows up on the
-   deployed site. */
+   and `/ChimeraHubcct/` is the kind of bug that only shows up on the deployed
+   site. */
 const BASE = (process.env.BASE || "/ChimeraHub/").replace(/\/*$/, "/");
 
 /* A visit counter for the published website, and only for that.
@@ -43,7 +43,7 @@ if (GOATCOUNTER && !/^[a-z0-9-]+$/.test(GOATCOUNTER)) {
   throw new Error(`GOATCOUNTER should be a site code like "chimerahub", not ${JSON.stringify(GOATCOUNTER)}`);
 }
 
-/* The hub routes by hash (#/syllogimous), which GoatCounter ignores by default,
+/* The hub routes by hash (#/cct), which GoatCounter ignores by default,
  * so the route is added to the path: one count per hub visit and one per
  * trainer opened. */
 function withAnalytics(html) {
@@ -73,14 +73,16 @@ const log = (...a) => console.log(...a);
 
 function rmrf(p) { fs.rmSync(p, { recursive: true, force: true }); }
 
-function copyDir(from, to) {
+/* `leave` is a further, per-app test on a file's name: what that app keeps in
+   its repository but never asks for. */
+function copyDir(from, to, leave) {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
     if (SKIP.has(entry.name)) continue;
     const src = path.join(from, entry.name);
     const dst = path.join(to, entry.name);
-    if (entry.isDirectory()) copyDir(src, dst);
-    else if (entry.isFile()) fs.copyFileSync(src, dst);
+    if (entry.isDirectory()) copyDir(src, dst, leave);
+    else if (entry.isFile() && !(leave && leave(entry.name))) fs.copyFileSync(src, dst);
   }
 }
 
@@ -101,51 +103,36 @@ function ensureDeps(dir) {
 rmrf(DIST);
 fs.mkdirSync(DIST, { recursive: true });
 
-/* The six that are already a website, and the archive. They use relative paths
-   throughout — checked, not assumed — so they run at whatever depth they are
-   put, and they are copied rather than built: only Syllogimous has a toolchain.
-
-   Isomorph used to be copied here too, and is not: every one of its modes is a
-   Syllogimous mode now, so it was a second build of the same codebase offering
-   a subset of the same trainer. What reads its *records* stays — see the
-   archive's `readIsomorph` — because a file somebody exported in 2025 is still
-   their training history. */
-for (const name of ["rnb", "rotation", "cct", "rrt", "synth", "ewmt", "archive"]) {
+/* The four trainers, and the archive. They are already a website and use
+   relative paths throughout — checked, not assumed — so they run at whatever
+   depth they are put, and they are copied rather than built. */
+for (const name of ["cct", "chimera", "ewmt", "relational", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
 }
 
-/* Angular. `--base-href` is the whole of what changes; the Capacitor build in
-   apps/syllogimous is untouched and still builds its own dist for the APK. */
-log("[build] syllogimous (angular)");
-{
-  const dir = path.join(ROOT, "apps", "syllogimous");
-  ensureDeps(dir);
-  run("npx", ["ng", "build", "--configuration=production",
-    "--output-path", path.join(DIST, "syllogimous"),
-    "--base-href", `${BASE}syllogimous/`], dir);
-  /* Pages has no router, so a deep link 404s. Serving index.html as the 404
-     page is how a project site fakes history-mode routing. */
-  fs.copyFileSync(path.join(DIST, "syllogimous", "index.html"),
-                  path.join(DIST, "syllogimous", "404.html"));
-}
+/* The additional exercises under apps/more: offered by the hub in their own
+   box, and not counted toward the quota, because no adapter reads their
+   storage. Two are pages and are copied as they are.
 
-/* Vite. Its base lives in vite.config.ts and is read from the environment so
-   the same config serves the standalone repo and this one. */
-log("[build] precision (vite)");
-{
-  const dir = path.join(ROOT, "apps", "precision");
-  ensureDeps(dir);
-  run("npx", ["vite", "build", "--base", `${BASE}precision/`,
-    "--outDir", path.join(DIST, "precision"), "--emptyOutDir"], dir);
-}
-
-/* The trainers under apps/more: offered by the hub in their own box, and not
-   counted toward the quota, because no adapter reads their storage yet. Both
-   are pages with no build step of their own, and are copied as they are. */
-for (const name of ["dorsalflow", "hallucination"]) {
+   Attention Training keeps a .wav beside every .mp3 it plays — sixty-odd
+   megabytes it never asks for — so they are left in the repository and out of
+   the site, and out of the APK with it. */
+const LEAVE = { att: (name) => name.endsWith(".wav") };
+for (const name of ["att", "earshot"]) {
   log(`[copy] more/${name}`);
-  copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name));
+  copyDir(path.join(ROOT, "apps", "more", name), path.join(DIST, "more", name), LEAVE[name]);
+}
+
+/* N-back Constant Change is a Svelte app, and Vite builds it. A relative base
+   is its own default and the right one here: the same output then runs at the
+   Pages path, under open/, and inside the APK, with nothing to rewrite. */
+log("[build] more/quadbox (vite)");
+{
+  const dir = path.join(ROOT, "apps", "more", "quadbox");
+  ensureDeps(dir);
+  run("npx", ["vite", "build", "--base", "./",
+    "--outDir", path.join(DIST, "more", "quadbox"), "--emptyOutDir"], dir);
 }
 
 /* The record, hoisted where the shell can reach it. The archive remains the

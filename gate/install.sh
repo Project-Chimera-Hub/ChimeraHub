@@ -60,7 +60,7 @@ if [ ! -f "$config_dir/gate.json" ]; then
   "browser": "firefox",
   "grace_seconds": 120,
   "stall_seconds": 180,
-  "caps": { "synth": 0.05, "cct": 0.20 }
+  "caps": { "cct": 0.20 }
 }
 JSON
   echo "wrote $config_dir/gate.json"

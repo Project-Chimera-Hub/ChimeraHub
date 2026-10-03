@@ -8,7 +8,7 @@
  *   node test/run.js
  *
  * What is tested is the meter, because the meter is the whole promise. The
- * shell's claim is that seven trainers can be counted without any of them
+ * shell's claim is that its trainers can be counted without any of them
  * knowing this page exists; if the count is wrong the gate locks a machine over
  * a number nobody can defend.
  */
@@ -47,27 +47,33 @@ const test = (name, fn) => cases.push([name, fn]);
  * Fixtures — each in the shape its own trainer writes                 *
  * ------------------------------------------------------------------ */
 
-function precision(sessions) {
-  store["nback-performance"] = JSON.stringify(sessions.map((s) => ({
+/* Relational N-back: newest first, with an id and a wall-clock duration. */
+function relational(sessions) {
+  store.rel4_nback_history_v2 = JSON.stringify(sessions.map((s, i) => ({
+    id: s.at + "-" + i,
     date: new Date(s.at).toISOString(),
-    duration: s.minutes * 60 * 1000,
-    settings: { nLevel: 2 },
-    totalMatches: 10,
-    hits: 8,
-    falseAlarms: 1,
+    mode: "dual",
+    n: 2,
+    trials: 40,
+    durationSec: s.minutes * 60,
+    combinedAccuracy: 80,
+    streams: {},
   })));
 }
 
-function rotation(sessions) {
-  store["spatial-rotation.progress.v1"] = JSON.stringify({
-    history: sessions.map((s) => ({
-      ts: s.at,
-      seconds: s.minutes * 60,
-      attempts: 20,
-      accuracy: 0.8,
-      mode: "molecule",
-    })),
-  });
+/* Chimera: oldest first, and the time read from trials × average interval —
+   so a minute here is 60 one-second trials under a longer planned length. */
+function chimera(sessions) {
+  store.apasat_history_v1 = JSON.stringify(sessions.map((s) => ({
+    timestamp: s.at,
+    mode: "adaptive",
+    durationSec: 3600,
+    totalTrials: s.minutes * 60,
+    avgSpeedMs: 1000,
+    finalSpeedMs: 1000,
+    fastestSpeedMs: 900,
+    overallAccuracy: 75,
+  })));
 }
 
 /* ------------------------------------------------------------------ *
@@ -82,39 +88,54 @@ test("an empty browser is an empty day, not an error", () => {
 
 test("a trainer's own storage becomes that day's minutes", () => {
   reset();
-  precision([{ at: at(9), minutes: 12 }]);
-  assert.strictEqual(Math.round(Today.minutesOn(DAY).precision), 12);
+  relational([{ at: at(9), minutes: 12 }]);
+  assert.strictEqual(Math.round(Today.minutesOn(DAY).relational), 12);
 });
 
 test("two trainers on one day add up", () => {
   reset();
-  precision([{ at: at(9), minutes: 12 }]);
-  rotation([{ at: at(18), minutes: 8 }]);
+  relational([{ at: at(9), minutes: 12 }]);
+  chimera([{ at: at(18), minutes: 8 }]);
   assert.strictEqual(Math.round(Today.totalMinutes(DAY)), 20);
 });
 
 test("another day's sessions do not count toward this one", () => {
   reset();
-  precision([{ at: at(9), minutes: 12 }, { at: at(9) - 86400000, minutes: 40 }]);
+  relational([{ at: at(9), minutes: 12 }, { at: at(9) - 86400000, minutes: 40 }]);
   assert.strictEqual(Math.round(Today.totalMinutes(DAY)), 12,
     "yesterday's training was counted toward today's quota");
 });
 
 test("a source with nothing today is absent rather than zero", () => {
   reset();
-  precision([{ at: at(9), minutes: 12 }]);
-  rotation([{ at: at(9) - 86400000, minutes: 40 }]);
+  relational([{ at: at(9), minutes: 12 }]);
+  chimera([{ at: at(9) - 86400000, minutes: 40 }]);
   const by = Today.minutesOn(DAY);
-  assert.ok(!("rotation" in by), "a source with no time today appeared in the day");
+  assert.ok(!("chimera" in by), "a source with no time today appeared in the day");
 });
 
 test("garbage under a trainer's key does not take the day down with it", () => {
   reset();
-  store["nback-performance"] = "{ this is not json";
-  store["spatial-rotation.progress.v1"] = JSON.stringify({ history: "not an array" });
+  store.rel4_nback_history_v2 = "{ this is not json";
+  store.apasat_history_v1 = JSON.stringify({ history: "not an array" });
+  store.affective_nback_v3 = JSON.stringify({ totals: "nonsense" });
   assert.doesNotThrow(() => Today.minutesOn(DAY));
   assert.strictEqual(Today.totalMinutes(DAY), 0);
 });
+
+test("eWMT's one day of milliseconds reaches the meter", () => {
+  reset();
+  /* The app names the day locally and unpadded; the fixture day is one where
+     that and the UTC day agree. */
+  store.affective_nback_v3 = JSON.stringify({ v: 3, settings: {},
+    totals: { allMs: 7200000, dayKey: "2026-9-10", dayMs: 600000 } });
+  assert.strictEqual(Math.round(Today.minutesOn(DAY).ewmt), 10);
+});
+
+/* Retired trainers. The hub no longer offers them and the meter does not count
+   them toward the day — `TRAINERS` in shell.js is the filter — but their
+   records are still read, because a streak is history and history does not
+   stop being true when an app leaves. */
 
 test("a chunked Syllogimous history reaches the meter", () => {
   reset();
@@ -158,59 +179,12 @@ test("both builds in one browser are two trainers, not one", () => {
 });
 
 /* ------------------------------------------------------------------ *
- * The file a player shares                                            *
- * ------------------------------------------------------------------ */
-
-const Share = require("../shell/js/share.js");
-
-test("the shared file keeps the numbers and none of the words", () => {
-  /* The whole promise on the hub card: per answer, how hard, how shown,
-     whether right — and nothing a player wrote, read or configured. */
-  reset();
-  const q = (t, type, extra) => ({
-    answeredAt: t, createdAt: t - 20000, answered: true, type,
-    userAnswer: true, isValid: true, answerMode: "boolean",
-    premises: ["<span class=\"subject\">Wallet</span> is left of Scale", "Scale is left of Puppy"],
-    conclusion: "Wallet is left of Puppy",
-    timerTypeOnAnswer: "2", gameModeOnAnswer: "1",
-    difficulty: { level: 6.2, premises: 2, rungs: ["negation"], seconds: 40, carousel: true },
-    ...extra,
-  });
-  store.SYL_HISTORY_IDX = JSON.stringify([0]);
-  store["SYL_HISTORY_C:0"] = JSON.stringify([q(at(10), "Syllogism"), q(at(9), "Linear Arrangement", { userAnswer: false })]);
-  store.SYL_KEYBINDS = JSON.stringify({ answerTrue: "ArrowUp" });
-  store["ISO/SYL_APP"] = "isomorph";
-  store["ISO/SYL_HISTORY_IDX"] = JSON.stringify([0]);
-  store["ISO/SYL_HISTORY_C:0"] = JSON.stringify([q(at(11), "Frames", { gameModeOnAnswer: undefined })]);
-
-  const file = Share.build(localStorage, Date.parse(DAY));
-  const text = JSON.stringify(file);
-  for (const leak of ["Wallet", "Puppy", "ArrowUp", "subject", String(at(9))]) {
-    assert.ok(!text.includes(leak), `the shared file carries ${JSON.stringify(leak)}`);
-  }
-
-  assert.strictEqual(file.answers, 3);
-  assert.deepStrictEqual(file.apps, { syllogimous: 2, isomorph: 1 });
-  assert.deepStrictEqual(file.rows.map((r) => [r.mode, r.seq]),
-    [["Linear Arrangement", 1], ["Syllogism", 2], ["Frames", 3]], "not in the order answered");
-  const [wrong, right, iso] = file.rows;
-  assert.deepStrictEqual(right, {
-    app: "syllogimous", mode: "Syllogism", level: 6.2, premises: 2, rungs: ["negation"],
-    clock: 40, presentation: "1", timer: "2", answerMode: "boolean", correct: 1,
-    seconds: 20, day: DAY, seq: 2,
-  });
-  assert.strictEqual(wrong.correct, 0);
-  assert.strictEqual(iso.app, "isomorph");
-  assert.strictEqual(iso.presentation, null, "an unrecorded presentation was guessed");
-});
-
-test("the participant id is made once and kept", () => {
-  reset();
-  const a = Share.build(localStorage).participant;
-  assert.match(a, /^[0-9a-f]{16}$/);
-  assert.strictEqual(Share.build(localStorage).participant, a,
-    "a second file got a new id, so one player's files cannot be joined or deleted together");
-});
+ * share-kit, kept for any tool that wants it                          *
+ * ------------------------------------------------------------------ *
+ *
+ * The hub's own "Share your data" card left with Syllogimous, whose answers
+ * were the only thing it shared. The kit is a standalone piece and stays.
+ */
 
 const Kit = require("../shared/share-kit/share-kit.js");
 
@@ -285,7 +259,7 @@ test("a streak counts back from the last day trained", () => {
     d.setUTCDate(d.getUTCDate() - back);
     return d.getTime();
   });
-  precision(days.map((t) => ({ at: t, minutes: 10 })));
+  relational(days.map((t) => ({ at: t, minutes: 10 })));
   assert.strictEqual(Today.streak(), 3);
 });
 
@@ -297,7 +271,7 @@ test("a gap ends the streak", () => {
     d.setUTCDate(d.getUTCDate() - back);
     return d.getTime();
   });
-  precision(days.map((t) => ({ at: t, minutes: 10 })));
+  relational(days.map((t) => ({ at: t, minutes: 10 })));
   assert.strictEqual(Today.streak(), 2, "a missed day did not end the streak");
 });
 
@@ -310,6 +284,11 @@ test("every key the shell watches is one an adapter recognises", () => {
      adapter stops matching, and the meter reports a smaller day rather than an
      error. Here the shape is known good, so a null means the wiring broke. */
   const probes = [
+    ["mp_prog", JSON.stringify({ history: [{ ts: at(9), acc: 80, correct: 8, total: 10, lowestISI: 2000, durationSec: 60, nback: 1 }] })],
+    ["apasat_history_v1", JSON.stringify([{ timestamp: at(9), mode: "adaptive", durationSec: 120, totalTrials: 30, avgSpeedMs: 2000, overallAccuracy: 80 }])],
+    ["affective_nback_v3", JSON.stringify({ v: 3, settings: {}, totals: { allMs: 60000, dayKey: "2026-9-10", dayMs: 60000 } })],
+    ["rel4_nback_history_v2", JSON.stringify([{ id: "a", date: new Date(at(9)).toISOString(), n: 2, durationSec: 60, combinedAccuracy: 80 }])],
+    /* Retired, still read. */
     ["nback-performance", JSON.stringify([{ date: new Date(at(9)).toISOString(), duration: 60000, settings: {}, totalMatches: 5, hits: 4, falseAlarms: 0 }])],
     ["spatial-rotation.progress.v1", JSON.stringify({ history: [{ ts: at(9), seconds: 60, attempts: 20, accuracy: 0.8, mode: "m" }] })],
   ];
@@ -329,55 +308,84 @@ test("every key the shell watches is one an adapter recognises", () => {
   }
 });
 
+test("every card on the hub opens an app that is in the repository", () => {
+  /* Paths are relative to the site, and the build puts each app at the path
+     its directory under apps/ has — so a card whose directory is missing is
+     a card that opens a 404 inside the frame. */
+  const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
+  const paths = [...src.matchAll(/path: "([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(paths.length >= 8, `only ${paths.length} cards found — the pattern no longer matches`);
+  for (const p of paths) {
+    const file = path.join(__dirname, "..", "apps", p, "index.html");
+    assert.ok(require("fs").existsSync(file), `the card for ${p} opens nothing: no ${file}`);
+  }
+});
+
+test("every counted trainer is a source an adapter reports", () => {
+  /* The meter finds a trainer's minutes by its id. A card whose id no adapter
+     uses is a trainer the day can never see, shown as if it could. */
+  const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
+  const block = src.slice(src.indexOf("var TRAINERS = ["), src.indexOf("];", src.indexOf("var TRAINERS = [")));
+  const ids = [...block.matchAll(/id: "([^"]+)"/g)].map((m) => m[1]);
+  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "relational"]);
+  const adapters = readFileSync(path.join(__dirname, "..", "apps", "archive", "js", "adapters.js"), "utf8");
+  for (const id of ids) {
+    assert.ok(adapters.includes(`source: "${id}"`), `no adapter reports source "${id}"`);
+  }
+});
+
 /* ------------------------------------------------------------------ *
  * The quota's caps                                                    *
  * ------------------------------------------------------------------ *
  *
  * A cap is a share of the *counted* day, not the raw one. Every case below
  * turns on that distinction, and getting it backwards is the difference
- * between "synth can never carry a quota" and "synth can carry one slowly".
+ * between "CCT can never carry a quota" and "CCT can carry one slowly".
  */
 
 const Q = require("../shared/quota.js");
 const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.01, `${what}: ${a} ≠ ${b}`);
 
 test("an uncapped day counts every minute of itself", () => {
-  near(Q.apply({ rnb: 12, rotation: 8 }).total, 20, "uncapped total");
+  near(Q.apply({ relational: 12, chimera: 8 }).total, 20, "uncapped total");
 });
 
-test("synth alone can never satisfy a quota, however long it runs", () => {
-  near(Q.apply({ synth: 600 }).total, 0, "ten hours of synth");
-});
-
-test("cct alone can never satisfy a quota either", () => {
+test("cct alone can never satisfy a quota, however long it runs", () => {
   near(Q.apply({ cct: 600 }).total, 0, "ten hours of cct");
 });
 
 test("a capped source under its ceiling is counted whole", () => {
-  const r = Q.apply({ rnb: 20, synth: 1 });
+  const r = Q.apply({ relational: 20, cct: 1 });
   near(r.total, 21, "total");
-  near(r.counted.synth, 1, "synth");
-  assert.deepStrictEqual(r.capped, [], "an uncapped source was reported as capped");
+  near(r.counted.cct, 1, "cct");
+  assert.deepStrictEqual(r.capped, [], "a source under its ceiling was reported as capped");
 });
 
-test("both caps at their ceiling supply a quarter of the day", () => {
-  /* 15 uncapped, both capped sources effectively unlimited: the fixed point is
-     15 / (1 - 0.25) = 20, of which synth may be 5% and cct 20%. */
-  const r = Q.apply({ rnb: 15, synth: 600, cct: 600 });
+test("cct at its ceiling supplies a fifth of the day", () => {
+  /* 16 uncapped and cct effectively unlimited: the fixed point is
+     16 / (1 - 0.20) = 20, of which cct may be 20%. */
+  const r = Q.apply({ relational: 10, ewmt: 6, cct: 600 });
+  near(r.total, 20, "total");
+  near(r.counted.cct, 4, "cct at 20% of 20");
+});
+
+test("two caps at their ceiling supply their sum of the day", () => {
+  /* The policy is general, and a gate.json may name more than one source. */
+  const r = Q.apply({ relational: 15, synth: 600, cct: 600 }, { synth: 0.05, cct: 0.20 });
   near(r.total, 20, "total");
   near(r.counted.synth, 1, "synth at 5% of 20");
   near(r.counted.cct, 4, "cct at 20% of 20");
 });
 
 test("a capped source keeps its raw figure alongside the counted one", () => {
-  const r = Q.apply({ rnb: 15, cct: 600 });
+  const r = Q.apply({ relational: 15, cct: 600 });
   near(r.raw.cct, 600, "raw cct");
   assert.ok(r.counted.cct < r.raw.cct, "counted was not below raw");
   assert.deepStrictEqual(r.capped, ["cct"]);
 });
 
 test("capping never invents time", () => {
-  for (const day of [{ rnb: 3, cct: 99 }, { synth: 7, cct: 7 }, { rotation: 1, synth: 40 }]) {
+  for (const day of [{ relational: 3, cct: 99 }, { ewmt: 7, cct: 7 }, { chimera: 1, cct: 40 }]) {
     const r = Q.apply(day);
     const rawTotal = Object.values(day).reduce((a, b) => a + b, 0);
     assert.ok(r.total <= rawTotal + 1e-9, `counted ${r.total} exceeded raw ${rawTotal}`);
@@ -394,13 +402,13 @@ test("an empty day survives the policy", () => {
 });
 
 test("removing the caps counts everything", () => {
-  near(Q.apply({ synth: 50, cct: 50 }, {}).total, 100, "uncapped by configuration");
+  near(Q.apply({ chimera: 50, cct: 50 }, {}).total, 100, "uncapped by configuration");
 });
 
 test("the archive cannot be rescued by a cap it is not in", () => {
   /* The archive never reaches the policy, but if it ever did it must not add
      minutes: it is not in the caps and would be treated as uncapped training. */
-  const r = Q.apply({ rnb: 10 });
+  const r = Q.apply({ relational: 10 });
   assert.ok(!("archive" in r.counted), "the archive appeared in a counted day");
 });
 
@@ -540,152 +548,36 @@ test("the shell states the frame's visibility on both paths", () => {
  * And the trainers honour it.
  *
  * The shell delivers the browser's own hidden signal and nothing more, so a
- * trainer only pauses if it listens. Two of them already did — rnb stops the
- * block and says so, synth stops its timer — and the rest were re-plumbed to
- * stop the clock and the pace while leaving the trial on screen alone.
+ * trainer only pauses if it listens. Two of the four do, each through the
+ * pause it already has, and each only on the way into hiding: the PAUSE
+ * button is on screen when you come back, and resuming by itself would
+ * restart a session in front of somebody still finding their keys.
  *
- * Checked statically, against the shipped file. Whether the clock actually
- * freezes is a browser question and was verified by driving both trainers in
- * one: the countdown held across two and a half seconds hidden and resumed
- * after, and with both stop paths removed it kept counting. What a
- * dependency-free suite can own is that the wiring is still there at all,
- * which is the way this would regress — a handler deleted in a refactor, and
- * a trainer quietly running behind the menu again.
+ * CCT and Chimera do not listen, and are not made to here — they are the
+ * projectchimera-dot apps as they stand. Leaving one for the hub leaves its
+ * session running behind the menu.
+ *
+ * Checked statically, against the shipped file: what a dependency-free suite
+ * can own is that the wiring is still there at all, which is the way this
+ * would regress — a handler deleted in a refactor, and a trainer quietly
+ * running behind the menu again.
  */
 const PAUSED_TRAINERS = [
-  ["cct", "apps/cct/index.html", "pauseSession", "sessionPaused"],
-  ["rrt", "apps/rrt/index.html", "pauseSession", "paused"],
+  ["ewmt", "apps/ewmt/index.html", /if \(!paused\) togglePause\(\)/],
+  ["relational", "apps/relational/src/app.js", /togglePause\(true\)/],
 ];
 
-for (const [name, file, fn, flag] of PAUSED_TRAINERS) {
+for (const [name, file, pauses] of PAUSED_TRAINERS) {
   test(`${name} pauses when the page it is in goes hidden`, () => {
-    const src = require("fs").readFileSync(path.join(__dirname, "..", file), "utf8");
-
-    assert.ok(/addEventListener\(\s*['"]visibilitychange['"]/.test(src),
-      `${name} does not listen for the signal the shell sends`);
-    assert.ok(src.includes("document.hidden"),
+    const src = readFileSync(path.join(__dirname, "..", file), "utf8");
+    const at = src.search(/addEventListener\(\s*['"]visibilitychange['"]/);
+    assert.ok(at >= 0, `${name} does not listen for the signal the shell sends`);
+    const handler = src.slice(at, at + 400);
+    assert.ok(handler.includes("document.hidden"),
       `${name} listens but never asks whether it is hidden`);
-    assert.ok(new RegExp(`function ${fn}\\s*\\(`).test(src),
-      `${name} has no ${fn}()`);
-
-    /* The clock has to be stopped, not merely flagged. A flag alone leaves the
-       interval firing, which is what the browser does to a background tab
-       anyway — the point of pausing here is that the hub is not a background
-       tab, so nothing throttles it. */
-    const body = src.slice(src.indexOf(`function ${fn}`));
-    assert.ok(/clearInterval/.test(body.slice(0, 900)),
-      `${name}'s pause does not stop its countdown`);
-    assert.ok(body.slice(0, 900).includes(flag),
-      `${name}'s pause does not record that it is paused`);
-
-    /* And it has to come back. A pause with no resume is a trainer that stops
-       for good the first time you look at the menu. */
-    assert.ok(/function resumeSession\s*\(/.test(src),
-      `${name} pauses and never resumes`);
+    assert.ok(pauses.test(handler), `${name} hears it and does not pause`);
   });
 }
-
-/**
- * Rotation gates its clocks instead of clearing them.
- *
- * Both of its timers are intervals set up inside long blocks, and re-arming
- * one from outside would mean a second copy of that setup drifting from the
- * first — so a flag the ticks read is the same freeze with nothing to keep in
- * step. That makes the shape different from cct's and rrt's, which is why it
- * is asserted separately rather than bent into the same table.
- *
- * Static only, and unusually so: this trainer's script is a module that
- * imports `three` from a CDN, so it does not execute at all without network
- * and cannot be driven here the way cct and rrt were.
- */
-test("rotation stops both its clocks when the page goes hidden", () => {
-  const src = require("fs").readFileSync(
-    path.join(__dirname, "..", "apps", "rotation", "index.html"), "utf8");
-
-  assert.ok(/addEventListener\(\s*\n?\s*['"]visibilitychange['"]/.test(src),
-    "rotation does not listen for the signal the shell sends");
-  assert.ok(/trainerPaused\s*=\s*document\.hidden/.test(src),
-    "rotation listens but does not record being hidden");
-
-  /* Both ticks have to read the flag. The trial countdown had no guard of any
-     kind before this — not even the `sessionActive` one the session clock
-     had — so it is the half that would silently go back to ticking. */
-  const gates = src.match(/trainerPaused/g) || [];
-  assert.ok(gates.length >= 4,
-    `only ${gates.length} mentions of the pause flag: one clock is ungated`);
-  assert.ok(/!sessionActive \|\|\s*\n?\s*trainerPaused/.test(src),
-    "rotation's session clock does not read the pause flag");
-});
-
-/**
- * ewmt routes the signal into the pause it already had.
- *
- * Its `togglePause` clears the trial timeouts, cancels the speech queue, stops
- * the audio and puts the PAUSED overlay up — so reaching into the engine to
- * stop a clock beside all that would be the quieter pause that forgets the
- * sound. The thing worth asserting is therefore that it goes through the
- * existing one, and that it only un-pauses what the hiding paused: the same
- * button is on screen, and auto-resuming would restart a session the player
- * had deliberately stopped before looking away.
- */
-test("ewmt pauses through its own pause, and resumes only its own", () => {
-  const src = require("fs").readFileSync(
-    path.join(__dirname, "..", "apps", "ewmt", "js", "08-app.js"), "utf8");
-
-  /* Anchored on the listener rather than on the word: the comment above it
-     names the event too, and a window measured from there is all prose. */
-  const at = src.indexOf("addEventListener('visibilitychange'");
-  assert.ok(at > 0, "ewmt does not listen for the signal the shell sends");
-  const handler = src.slice(at, at + 700);
-
-  assert.ok(/this\.togglePause\(\)/.test(handler),
-    "ewmt stops something other than its own pause, which would skip the audio");
-  assert.ok(/_pausedByHiding\s*=\s*true/.test(handler),
-    "ewmt does not record that the hiding is what paused it");
-  assert.ok(/if \(!this\._pausedByHiding\) return/.test(handler),
-    "ewmt would resume a session the player paused by hand");
-
-  /* And the flag is cleared when a session ends, or coming back would toggle a
-     pause onto the next session's first trial. */
-  const ended = src.slice(src.indexOf("endSession(reason"));
-  assert.ok(/_pausedByHiding\s*=\s*false/.test(ended.slice(0, 400)),
-    "a session ended while hidden leaves the flag armed");
-});
-
-/**
- * precision pauses its transport and does not bill the interruption.
- *
- * Two halves, and the second is the one that reaches the meter. `display: none`
- * stops `requestAnimationFrame`, so this trainer's 3D rotation freezes on its
- * own — but the trials are scheduled on `Tone.Transport`, which runs on the Web
- * Audio clock, and nothing about being hidden stops that. And the session's
- * recorded duration is wall-clock, so time in the hub menu was being written
- * into the very figure the archive's adapters turn into minutes trained today.
- */
-test("precision pauses its transport and discounts the time it was hidden", () => {
-  const src = require("fs").readFileSync(
-    path.join(__dirname, "..", "apps", "precision", "components", "NBackGame.tsx"), "utf8");
-
-  const at = src.indexOf('addEventListener("visibilitychange"');
-  assert.ok(at > 0, "precision does not listen for the signal the shell sends");
-
-  const effect = src.slice(src.indexOf("const onVisibility"), at);
-  assert.ok(/Tone\.Transport\.pause\(\)/.test(effect),
-    "precision does not stop the transport, so trials keep advancing");
-  assert.ok(/Tone\.Transport\.start\(\)/.test(effect),
-    "precision stops the transport and never starts it again");
-  /* `pause`, not `stop`: the transport keeps its position, so the
-     self-scheduling loop resumes inside the ISI it had reached rather than
-     firing the next trial the moment you come back. */
-  assert.ok(!/Tone\.Transport\.stop\(\)/.test(effect),
-    "precision stops the transport instead of pausing it, losing its position");
-
-  /* And the duration that reaches the record has the interruption taken off. */
-  assert.ok(/const duration = Date\.now\(\) - startTimeRef\.current - awayMsRef\.current/.test(src),
-    "precision still records wall-clock duration, so the hub menu counts as training");
-  assert.ok(src.includes("removeEventListener(\"visibilitychange\"", ),
-    "the handler outlives the component");
-});
 
 /* ------------------------------------------------------------------ *
  * The archive wears the hub's theme, and the copy cannot drift         *

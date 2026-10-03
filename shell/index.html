@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chimera Hub</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=11">
+<link rel="stylesheet" href="css/shell.css?v=12">
 </head>
 <body data-base="%BASE%" data-gate="on">
 
@@ -15,7 +15,7 @@
     <h1>Chimera Hub</h1>
     <a class="btn ghost discord" href="https://discord.com/invite/chmr" target="_blank" rel="noopener">Discord ↗</a>
   </div>
-  <p class="dim">Eight trainers, one record, one day's total.</p>
+  <p class="dim">Four trainers, three more exercises, one record, one day's total.</p>
 
   <section class="today" aria-labelledby="today-h">
     <div class="today__head">
@@ -35,17 +35,17 @@
   <h2 id="today-h">Trainers</h2>
   <div class="grid" id="grid"></div>
 
-  <!-- Trainers that run here but are not counted toward the day: no adapter
-       reads their storage yet, so the meter cannot see them. Boxed apart from
+  <!-- Exercises that run here but are not counted toward the day: no adapter
+       reads their storage, so the meter cannot see them. Boxed apart from
        the counted ones rather than mixed in, for the same reason the archive
        is — the rule the gate enforces should be visible in the layout. -->
   <details class="more" id="more" open>
     <summary class="more__head">
-      <span class="more__title">More trainers</span>
+      <span class="more__title">Additional exercises</span>
       <span class="more__count" id="more-count"></span>
     </summary>
     <p class="more__note">
-      These run here like the nine above, but <b>their time is not counted</b>
+      These run here like the four above, but <b>their time is not counted</b>
       toward today or the quota — nothing reads their records yet.
     </p>
     <div class="grid" id="grid-more"></div>
@@ -60,25 +60,6 @@
       not count toward the quota.
     </p>
     <a class="btn" id="archive-link" href="archive/">Open archive</a>
-  </div>
-
-  <!-- Built and saved here, uploaded by the player. The hub sends nothing
-       itself; see js/share.js for what the file holds and what it leaves out. -->
-  <h2>Share your data</h2>
-  <div class="aside-card share">
-    <p>
-      Optional, and it helps tune the trainers — what the carousel costs, how
-      each mode's difficulty grows. The file holds, per Syllogimous answer,
-      <b>the mode, its difficulty, how it was shown, whether it was right and
-      how long it took</b>, the day, and a random participant id.
-      No premises, no settings, no time of day. Quote the id in an issue on the
-      repository to have your files deleted.
-    </p>
-    <label class="share__ok"><input type="checkbox" id="share-ok">
-      I agree to share this file for research on these trainers.</label>
-    <button class="btn" type="button" id="share-make" disabled>Create my data file</button>
-    <a class="btn" href="https://mega.nz/filerequest/F-2QAaKjCMY" target="_blank" rel="noopener">Upload ↗</a>
-    <span class="settings__note" id="share-note"></span>
   </div>
 
   <!-- gate:begin --><!-- Dropped wholesale by the gate-free build; see
@@ -141,13 +122,11 @@
 
 <!-- The archive's own files, copied to dist/shared by the build. The archive
      remains the only place they are edited. -->
-<script src="shared/record.js?v=3"></script>
-<script src="shared/adapters.js?v=3"></script>
-<script src="shared/quota.js?v=3"></script>
-<script src="js/today.js?v=3"></script>
-<script src="shared/share-kit/share-kit.js?v=1"></script>
-<script src="js/share.js?v=2"></script>
+<script src="shared/record.js?v=4"></script>
+<script src="shared/adapters.js?v=4"></script>
+<script src="shared/quota.js?v=4"></script>
+<script src="js/today.js?v=4"></script>
 <script src="js/pause.js?v=1"></script>
-<script src="js/shell.js?v=11"></script>
+<script src="js/shell.js?v=12"></script>
 </body>
 </html>

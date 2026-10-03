@@ -199,11 +199,11 @@ DEFAULTS = {
     # heartbeat has ever been seen the fuse is much longer and the scan is the
     # only thing being watched.
     "stall_seconds_no_beat": 900,
-    # Per-source ceilings, as a share of the counted day. Synth is too easy to
-    # be training and CCT was never meant to be the bulk of it, so neither can
-    # satisfy a quota alone however long you spend — see shared/quota.js for
-    # what that means arithmetically. `{}` removes every cap.
-    "caps": {"synth": 0.05, "cct": 0.20},
+    # Per-source ceilings, as a share of the counted day. CCT was never meant
+    # to be the bulk of it, so it cannot satisfy a quota alone however long you
+    # spend — see shared/quota.js for what that means arithmetically. `{}`
+    # removes every cap.
+    "caps": {"cct": 0.20},
 }
 
 

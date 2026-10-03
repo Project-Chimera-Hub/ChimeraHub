@@ -21,7 +21,7 @@ const path = require("path");
 const { mergeRecords, hashRow, makeRecord } = require("../js/record.js");
 const insight = require("../js/insight.js");
 const N = require("../js/notes.js");
-const { readFile, readSyllogimous, readIsomorph, readRnb, readCct, readRrt, readEwmt, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
+const { readFile, readSyllogimous, readIsomorph, readRnb, readCct, readRrt, readEwmt, readAffective, readChimera, readRelational, readPrecision, readRotation, readSynth, readPrepared, readArchiveExport } = require("../js/adapters.js");
 const { execFileSync } = require("child_process");
 const A = require("../js/archive.js");
 const AB = require("../js/ability.js");
@@ -810,6 +810,109 @@ test("neither new adapter claims a file belonging to another source", () => {
   assert.strictEqual(readEwmt({ SYL_HISTORY: "[]" }), null);
   assert.strictEqual(readCct({ mp_prog: "not json" }), null);
   assert.strictEqual(readEwmt({ attentional_shield_v2: "{}" }), null);
+});
+
+/* ------------------------------------------------------------------ *
+ * The trainers from projectchimera-dot                                *
+ * ------------------------------------------------------------------ *
+ *
+ * Chimera, the Affective N-Back (the eWMT now on the hub) and the
+ * four-stream Relational N-back. All three are storage snapshots, so again
+ * the sniff matters as much as the reading.
+ */
+
+const affDump = (totals, settings) => ({
+  affective_nback_v3: JSON.stringify({ v: 3, settings: settings || { level: 3, mode: "all" }, totals }),
+});
+
+test("Affective eWMT: one day's milliseconds become that day's minutes", () => {
+  const out = readAffective(affDump({ allMs: 3600000, dayKey: "2026-10-3", dayMs: 900000 }));
+  assert.strictEqual(out.source, "ewmt", "the same slot on the hub, the same source");
+  assert.deepStrictEqual(out.records, [], "it keeps no sessions to make records of");
+  assert.deepStrictEqual(out.minutes, { "2026-10-03": 15 },
+    "the app's unpadded day has to be padded or no lookup will ever find it");
+  assert.strictEqual(out.state.lifetimeMinutes, 60);
+  assert.strictEqual(out.state.level, 3);
+});
+
+test("Affective eWMT: a store that has never trained is not a reading", () => {
+  assert.strictEqual(readAffective(affDump({ allMs: 0, dayKey: "", dayMs: 0 })), null);
+  assert.strictEqual(readAffective({ affective_nback_v3: "not json" }), null);
+  assert.strictEqual(readAffective({ affective_nback_v3: "{}" }), null);
+});
+
+test("Affective eWMT: through readFile, beside the Attentional Shield reader", () => {
+  const out = readFile(JSON.stringify(affDump({ allMs: 60000, dayKey: "2026-1-9", dayMs: 60000 })));
+  assert.strictEqual(out.source, "ewmt");
+  assert.strictEqual(out.minutes["2026-01-09"], 1);
+  assert.strictEqual(readAffective(ewmtDump([])), null);
+  assert.strictEqual(readEwmt(affDump({ allMs: 1, dayKey: "2026-1-9", dayMs: 1 })), null);
+});
+
+const chimeraSession = (over) => Object.assign({
+  timestamp: Date.UTC(2026, 9, 3, 10), mode: "adaptive", nBackMode: false, nBackLevel: 2,
+  ewmtMode: false, cctMode: false, dichoticMode: false, durationSec: 300,
+  finalSpeedMs: 2200, fastestSpeedMs: 2000, slowestSpeedMs: 3000, avgSpeedMs: 2500,
+  totalTrials: 100, overallAccuracy: 80, byType: {}, avgRtMs: 900, misses: 3, falseAlarms: 1,
+}, over || {});
+const chimeraDump = list => ({ apasat_history_v1: JSON.stringify(list) });
+
+test("Chimera: a session's time is what was played, held under what was set", () => {
+  const out = readChimera(chimeraDump([chimeraSession()]));
+  assert.strictEqual(out.source, "chimera");
+  const r = out.records[0];
+  assert.strictEqual(r.seconds, 250, "100 trials at 2.5s is 250s, not the 300 that was set");
+  assert.strictEqual(r.correct, 0.8);
+  assert.strictEqual(r.difficulty, 30, "a 2000ms fastest interval is 30 a minute");
+  assert.strictEqual(r.unit, "chimera-peak-items-per-min");
+  assert.ok(Math.abs(out.minutes["2026-10-03"] - 250 / 60) < 1e-9);
+});
+
+test("Chimera: the setting is a ceiling, and an empty session is no session", () => {
+  const out = readChimera(chimeraDump([
+    chimeraSession({ totalTrials: 1000 }),
+    chimeraSession({ timestamp: Date.UTC(2026, 9, 3, 11), totalTrials: 0 }),
+  ]));
+  assert.strictEqual(out.records.length, 1, "a session with no trials in it is not training");
+  assert.strictEqual(out.records[0].seconds, 300, "never more than the length that was set");
+  assert.strictEqual(readChimera(chimeraDump([])), null);
+});
+
+test("Chimera: fixed mode's speed is the fixed one, and modes reach the label", () => {
+  const r = readChimera(chimeraDump([chimeraSession({ mode: "fixed", finalSpeedMs: 3000,
+    nBackMode: true, nBackLevel: 3, dichoticMode: true })])).records[0];
+  assert.strictEqual(r.difficulty, 20);
+  assert.strictEqual(r.label, "fixed n3+dichotic");
+});
+
+const relSession = (over) => Object.assign({
+  id: "1759485600000-abc123", date: "2026-10-03T10:00:00.000Z", mode: "dual", n: 3,
+  variableN: false, variableFloor: 1, trials: 40, durationSec: 180,
+  combinedAccuracy: 87.5, streams: { pos: 90, rel: 85 },
+}, over || {});
+const relDump = list => ({ rel4_nback_history_v2: JSON.stringify(list) });
+
+test("Relational N-back: a session is one record, on n, under its own id", () => {
+  const out = readRelational(relDump([relSession()]));
+  assert.strictEqual(out.source, "relational",
+    "not rnb: the ladder trainer measured load, and units do not travel");
+  const r = out.records[0];
+  assert.strictEqual(r.id, "1759485600000-abc123");
+  assert.strictEqual(r.correct, 0.875);
+  assert.strictEqual(r.difficulty, 3);
+  assert.strictEqual(r.unit, "relational-n");
+  assert.strictEqual(out.minutes["2026-10-03"], 3);
+});
+
+test("none of the three claims another's snapshot", () => {
+  const dumps = [chimeraDump([chimeraSession()]), relDump([relSession()]),
+    affDump({ allMs: 60000, dayKey: "2026-10-3", dayMs: 60000 }), cctDump([])];
+  const readers = [readChimera, readRelational, readAffective];
+  readers.forEach((read, i) => dumps.forEach((d, j) => {
+    if (i !== j) assert.strictEqual(read(d), null, read.name + " claimed dump " + j);
+  }));
+  assert.strictEqual(readFile(JSON.stringify(dumps[0])).source, "chimera");
+  assert.strictEqual(readFile(JSON.stringify(dumps[1])).source, "relational");
 });
 
 /* ------------------------------------------------------------------ *
@@ -1632,6 +1735,15 @@ test("ability: every unit the adapters emit has a ladder", () => {
      minutes and records; it does not yet emit a tier. */
   const src2 = fs.readFileSync(path.join(__dirname, "..", "js", "adapters.js"), "utf8");
   for (const unit of ["isomorph-level", "isomorph-premises"]) {
+    assert.ok(src2.includes('"' + unit + '"'), unit + " is no longer emitted");
+    assert.ok(!AB.LADDERS[unit],
+      unit + " was given a ladder — say where its anchors came from, or take it back out");
+  }
+
+  /* Chimera's and the four-stream Relational N-back's, absent for want of
+     anchors: nobody has yet said where either app starts you and where it runs
+     out. Records and minutes until somebody does. */
+  for (const unit of ["chimera-peak-items-per-min", "relational-n"]) {
     assert.ok(src2.includes('"' + unit + '"'), unit + " is no longer emitted");
     assert.ok(!AB.LADDERS[unit],
       unit + " was given a ladder — say where its anchors came from, or take it back out");

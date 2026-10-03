@@ -353,6 +353,38 @@ def ewmt_from(store):
     return {"attentional_shield_v2": raw}
 
 
+def single_key(store, key, has):
+    """The raw value under `key` when it parses and `has` says it holds
+    anything, else None — the shape of every reader above, written once."""
+    raw = store.get(key)
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    return {key: raw} if has(data) else None
+
+
+def chimera_from(store):
+    """Chimera's session summaries, oldest first, the last five hundred."""
+    return single_key(store, "apasat_history_v1",
+                      lambda d: isinstance(d, list) and len(d) > 0)
+
+
+def affective_from(store):
+    """The Affective N-Back, the eWMT now on the hub. No sessions — only
+    running totals and one day's milliseconds — so a snapshot is all of it."""
+    return single_key(store, "affective_nback_v3",
+                      lambda d: isinstance(d, dict) and (d.get("totals") or {}).get("allMs"))
+
+
+def relational_from(store):
+    """The four-stream Relational N-back's last fifty sessions."""
+    return single_key(store, "rel4_nback_history_v2",
+                      lambda d: isinstance(d, list) and len(d) > 0)
+
+
 def precision_from(store):
     """Its history under one key, and no export to ask for instead."""
     raw = store.get("nback-performance")
@@ -513,6 +545,24 @@ def main():
                     json.dump(ewmt, fh)
                 n = len(json.loads(ewmt["attentional_shield_v2"])["sessions"])
                 print("  ewmt         %-52s %5d sessions" % (label, n))
+                written.append(path)
+
+            for kind, found, count in (
+                ("chimera", chimera_from(store),
+                 lambda v: "%5d sessions" % len(json.loads(v["apasat_history_v1"]))),
+                ("affective", affective_from(store),
+                 lambda v: "%5d min all-time" % round(
+                     json.loads(v["affective_nback_v3"])["totals"]["allMs"] / 60000)),
+                ("relational", relational_from(store),
+                 lambda v: "%5d sessions" % len(json.loads(v["rel4_nback_history_v2"]))),
+            ):
+                if not found:
+                    continue
+                found["__origin"] = label
+                path = os.path.join(args.outdir, "%s-%s.json" % (kind, safe))
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(found, fh)
+                print("  %-12s %-52s %s" % (kind, label, count(found)))
                 written.append(path)
 
             prec = precision_from(store)

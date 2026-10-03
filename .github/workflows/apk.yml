@@ -31,12 +31,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          # The two apps with lockfiles; the site build needs both, and the
+          # The one app with a lockfile, which the site build needs; the
           # wrapper's own lockfile does not exist until npm writes one.
           cache: npm
-          cache-dependency-path: |
-            apps/syllogimous/package-lock.json
-            apps/precision/package-lock.json
+          cache-dependency-path: apps/more/quadbox/package-lock.json
 
       # Capacitor 6's Gradle wants 17 or newer. The runner has several; pin one
       # rather than inherit whichever is default this month.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Keep the eight standalone repositories and this one in step.
+# Keep the standalone repositories and this one in step.
 #
 #   tools/sync.sh push [app ...]     work done here → each app's own repo
 #   tools/sync.sh pull [app ...]     work done there → here
@@ -10,12 +10,12 @@
 #
 # WHY BOTH DIRECTIONS
 # -------------------
-# The eight repositories are not history. Each is still the address its trainer
+# The standalone repositories are not history. Each is still the address its trainer
 # is published from, still the thing somebody else can fork, and still where an
 # issue about that trainer belongs. A merge that quietly killed all eight would
 # have traded those away for a directory layout.
 #
-# So the monorepo is where the work happens and the eight are downstream — but
+# So the monorepo is where the work happens and the rest are downstream — but
 # `pull` exists because sooner or later a fix will land in one of them directly,
 # from a phone or from somebody else's pull request, and the alternative to
 # pulling it is retyping it.
@@ -28,7 +28,9 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 manifest="tools/apps.json"
-owner="${CHIMERAHUB_OWNER:-Gagafutzi}"
+# Each app's account is in the manifest. CHIMERAHUB_OWNER overrides all of
+# them, for pushing to forks.
+owner_override="${CHIMERAHUB_OWNER:-}"
 
 command -v git >/dev/null || { echo "no git" >&2; exit 1; }
 
@@ -39,14 +41,18 @@ apps() {
     const m = require("./tools/apps.json");
     const want = process.argv.slice(1);
     for (const a of m.apps) {
-      const name = a.prefix.replace(/^apps\//, "");
+      const name = a.prefix.replace(/^apps\/(more\/)?/, "");
       if (want.length && !want.includes(name)) continue;
-      console.log([name, a.prefix, a.repo, a.branch].join(" "));
+      console.log([name, a.prefix, (a.owner || "Gagafutzi") + "/" + a.repo, a.branch].join(" "));
     }
   ' "$@"
 }
 
-remote_for() { echo "git@github.com:${owner}/$1.git"; }
+remote_for() {
+  local slug="$1"
+  [ -n "$owner_override" ] && slug="${owner_override}/${slug#*/}"
+  echo "git@github.com:${slug}.git"
+}
 
 # A dirty tree makes every one of these operations ambiguous, and `subtree` is
 # not the place to find that out.
