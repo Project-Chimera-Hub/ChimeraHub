@@ -66,6 +66,10 @@ dl.explain dd { margin: .2rem 0 0; }
 #stage.on { display: flex; }
 #symbol { font-size: min(62vmin, 480px); line-height: 1; user-select: none; }
 #stage.two #symbol { font-size: min(36vmin, 300px); }
+#stage.peri #symbol { font-size: min(18vmin, 170px); }
+ol.steps { text-align: left; margin: .8rem 0; padding-left: 1.4rem; }
+ol.steps li { margin: .35rem 0; }
+#brief-text .warn, .steps-warn { color: var(--bad); }
 #second { position: absolute; font-size: min(36vmin, 300px); line-height: 1; user-select: none; }
 #cue {
   position: absolute; max-width: 36rem; padding: 0 1rem; text-align: center;
@@ -135,8 +139,9 @@ textarea { width: 100%; min-height: 8rem; margin-top: .8rem; resize: vertical; }
     <p>
       <b>tiring it out</b> — an adapted eye reports what is no longer there
       (afterimages), or stops reporting what still is (fading);<br>
-      <b>leaving it undecided</b> — an image with two readings, or pure noise,
-      where the input cannot settle the question and you can;<br>
+      <b>leaving it undecided</b> — a faint object at the edge of vision that
+      comes and goes, an image with two readings, or pure noise, where the
+      input cannot settle the question and you can;<br>
       <b>cutting it short</b> — a flash, gone before the image is finished,
       so you finish it;<br>
       <b>taking it away</b> — a featureless field, or only words.
@@ -206,9 +211,12 @@ textarea { width: 100%; min-height: 8rem; margin-top: .8rem; resize: vertical; }
 <div class="sheet" id="brief">
   <div class="box">
     <h2 id="brief-title"></h2>
-    <p class="dim" id="brief-text"></p>
+    <div class="dim" id="brief-text"></div>
     <div class="legend" id="brief-legend"></div>
-    <button type="button" class="primary" id="brief-go">Begin</button>
+    <div class="row" style="justify-content:center">
+      <button type="button" class="primary" id="brief-go">Begin</button>
+      <button type="button" id="brief-back">Back</button>
+    </div>
   </div>
 </div>
 
@@ -375,6 +383,11 @@ const FIELDS = { FFFFFF: "White", "000000": "Black", rainbow: "Rainbow" };
 const TRIALS = {
   afterimage: { label: "Keep it", kind: "after", look: [20000, 4000], hold: [5000, 15000], field: "808080", fields: GREY, lengths: [6, 10, 15], trials: 10 },
   steer:      { label: "Steer it", kind: "steer", look: [15000, 4000], hold: [6000, 15000], field: "808080", fields: GREY, lengths: [6, 10, 15], trials: 10 },
+  /* Gaps: look is how long the object is fully up in each cycle and hold
+     how long each gap lasts, with soft fades between; Blink: look is how long
+     the steady object takes to fade to nothing, hold the blinking after. */
+  gaps:       { label: "Screen gaps", kind: "gaps", look: [900, 250], hold: [600, 2000], field: "808080", lengths: [6, 10, 15], trials: 10 },
+  blink:      { label: "Blink gaps", kind: "blink", look: [9000, 3000], hold: [4000, 12000], field: "808080", lengths: [6, 10, 15], trials: 10 },
   noise:      { label: "Seeded", kind: "noise", look: [7000, 2500], hold: [3000, 10000], seed: [90, 25], lengths: [10, 20, 30], trials: 20 },
   noisecue:   { label: "Word only", kind: "noisecue", look: [3000, 2500], hold: [4000, 12000], lengths: [10, 20, 30], trials: 20 },
   access:     { label: "Access", kind: "flash", look: [120, 16], hold: [750, 4000], field: "000000", fields: FIELDS, lengths: [20, 40, 60], trials: 40 },
@@ -404,6 +417,17 @@ const EXERCISES = [
       ["What you control", "Which way the gap gets filled. Attention is a lever here, though not in the expected direction: attending to a disc tends to make it fade sooner, not stay. Bringing one back, or keeping them, is a matter of what you expect to be there."],
       ["How", "Keep your eyes on the cross and do not chase the discs. Hold the space bar (or press and hold the screen) for as long as all of them are gone. In Watch, just let it happen. In Hold, try to keep them by expecting them. In Recall, once they have gone, bring one back without moving your eyes."],
       ["What to notice", "That the filled-in grey looks exactly as real as the grey that was always there. A filled-in region is a top-down image the brain made without asking you; this exercise is about noticing that it does that all the time, and that you can lean on it."],
+    ],
+  },
+  {
+    id: "gaps", name: "Gaps", variants: ["gaps", "blink"],
+    supply: "The screen supplies the object some of the time, faint, at the edge of vision. The gaps are yours to fill.",
+    explain: [
+      ["What it induces", "An object you go on seeing while it is not there: through gaps the screen makes, or gaps you make by blinking."],
+      ["Why it happens", "The visual system is built to bridge gaps. You blink fifteen or twenty times a minute and never see the world go dark: the brain suppresses the blackout and carries the last image across it. At the edge of vision, where detail and colour are poor, it bridges even more freely, because the signal there is too weak to contradict it. A faint object, far out, coming and going slowly, leaves you genuinely unsure what is on the screen at any moment, and that uncertainty is where top-down filling takes over."],
+      ["What you control", "What fills the gap. Left alone it is a vague continuation; the skill is filling it with the exact object — its shape, its colour, its place — and keeping it there as the screen helps less and less. Every return is a check: the real object corrects your version, and you hold again."],
+      ["How", "Follow the steps below exactly; they are shown again before the first trial."],
+      ["What to notice", "The moments when you cannot tell whether the symbol is on the screen or yours. That is the state this exercise is for. Notice too which goes first in a gap — colour, edge or position — since that is what to hold hardest."],
     ],
   },
   {
@@ -463,6 +487,32 @@ const EXERCISES = [
   },
 ];
 const byId = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
+
+/* Exact instructions for the two Gaps versions: on the detail panel and
+   again on the sheet before the first trial. */
+const GAP_STEPS = {
+  gaps: [
+    "Sit about an arm's length from the screen, with it at eye height, and dim the room. Sitting closer — half an arm's length — puts the symbol further out in your vision; do that once the exercise feels easy.",
+    "Keep your eyes on the cross the whole time. The cross sits off to one side and the symbol appears far out on the other, as close to the edge of your vision as the screen allows: never look at it. Vision out there is blurred and washed out, so you cannot be sure what is there — that uncertainty is what you are working with.",
+    "It fades in, stays a moment, and fades out. When it goes, do not wait for it to come back: keep seeing it, in the same place and the same colour, through the gap.",
+    "When it fades back in, compare. Did yours drift, shrink or change colour? Let the real one correct it, then hold again through the next gap.",
+    "Each gap is longer than the last and each return fainter. The trial ends on a long gap: keep it to the end, then rate how continuous it stayed.",
+    "Breathe normally and keep your gaze soft. If you catch yourself staring hard at the cross, let it go slightly out of focus.",
+  ],
+  blink: [
+    "Sit about an arm's length from the screen, with it at eye height, and dim the room. Sitting closer puts the symbol further out in your vision.",
+    "Keep your eyes on the cross. The cross sits off to one side and the symbol appears far out on the other, as close to the edge of your vision as the screen allows: never look at it.",
+    "When the screen says so, start blinking fast and light: about three blinks a second, the eyelids only just meeting — a flutter, not a squeeze. Keep your eyes pointed at the cross through every blink.",
+    "Every blink is a short gap. In each one keep the symbol exactly where it was: glimpse, hold, glimpse, hold.",
+    "The symbol fades out while you blink. Keep going: by the end there is nothing on the screen, and the glimpses are only yours. Keep blinking until the rating screen comes up.",
+    "Rest your eyes between trials. If they sting, water or feel dry, stop. Skip this version with dry eyes or contact lenses that are bothering you.",
+  ],
+};
+const GAP_WARN = {
+  gaps: "The symbol fades in and out slowly — under once a second, with soft edges, on an even background — which is far slower than the flicker known to trigger seizures. If you have photosensitive epilepsy, check with your doctor before using it.",
+  blink: "Nothing on the screen flickers in this version: the gaps are made by your eyelids.",
+};
+
 
 const TROX_TASKS = { watch: "Watch", hold: "Hold", recall: "Recall" };
 const BIST_TASKS = { passive: "Watch", hold: "Hold", switch: "Switch" };
@@ -543,7 +593,7 @@ function choiceRow(label, entries, current, onPick) {
 
 function lookName(t) {
   return { after: "stare", steer: "stare", flash: "flash", compose: "each flash", generate: "read",
-           noise: "seed fades over", noisecue: "read" }[t.kind];
+           noise: "seed fades over", noisecue: "read", gaps: "on", blink: "fades over" }[t.kind];
 }
 const timing = (v, level) => ({ look: geo(TRIALS[v].look, level), hold: geo(TRIALS[v].hold, level) });
 
@@ -591,6 +641,16 @@ function renderMenu() {
     note.textContent = "Difficulty follows your ratings on its own: clear holds raise it slowly, faint ones lower it. Set it by hand if you would rather.";
     box.appendChild(note);
     $("d-keys").textContent = "Keys: 1–5 to rate, Esc to stop.";
+    if (GAP_STEPS[v]) {
+      const ol = document.createElement("ol");
+      ol.className = "steps small";
+      ol.innerHTML = GAP_STEPS[v].map((t) => `<li>${esc(t)}</li>`).join("");
+      box.prepend(ol);
+      const h = document.createElement("p");
+      h.className = "dim small";
+      h.textContent = `${TRIALS[v].label}, step by step:`;
+      box.prepend(h);
+    }
   } else if (e.id === "troxler") {
     box.appendChild(choiceRow("Task", Object.entries(TROX_TASKS), T.troxTask, setT("troxTask")));
     box.appendChild(choiceRow("Minutes", [1, 2, 3].map((n) => [n, String(n)]), T.troxMin, setT("troxMin")));
@@ -606,7 +666,8 @@ function renderMenu() {
     box.appendChild(choiceRow("Minutes", [5, 10, 15, 20].map((n) => [n, String(n)]), T.gzMin, setT("gzMin")));
     $("d-keys").textContent = "Keys: Space to mark a blank-out or an image, Esc to stop.";
   }
-  $("d-warn").textContent = e.id === "flash"
+  $("d-warn").textContent = e.id === "gaps" ? GAP_WARN[v]
+    : e.id === "flash"
     ? "Flashing colour: each trial opens with a full-screen flash of saturated colour. If you have photosensitive epilepsy, or flashing light has ever made you unwell, skip this one."
     : e.id === "noise"
       ? "The static changes about twelve times a second at an even overall brightness. Stop if it is uncomfortable."
@@ -690,10 +751,10 @@ function paint(bg) {
 function clearStage() {
   clearTimeout(timer); cancelAnimationFrame(raf);
   sym.textContent = ""; sym2.textContent = ""; cue.textContent = "";
-  sym.style.transform = ""; sym2.style.transform = "";
-  stage.classList.remove("two", "rainbow");
+  sym.style.transform = ""; sym2.style.transform = ""; sym.style.opacity = "";
+  stage.classList.remove("two", "rainbow", "peri");
   stage.querySelectorAll(".disc").forEach((d) => d.remove());
-  fix.hidden = true; cross.hidden = true;
+  fix.hidden = true; cross.hidden = true; cross.style.transform = "";
   show(canvas, false); show(svg, false); svg.innerHTML = "";
 }
 
@@ -715,14 +776,15 @@ function leave() {
   renderMenu();
 }
 
-function brief(title, text, legend, go) {
+function brief(title, text, legend, go, html) {
   $("brief-title").textContent = title;
-  $("brief-text").textContent = text;
+  if (html) $("brief-text").innerHTML = html; else $("brief-text").textContent = text;
   $("brief-legend").innerHTML = legend.map(([k, t]) => `<div><b>${k}</b>${esc(t)}</div>`).join("");
   $("brief-legend").hidden = !legend.length;
   $("menu").hidden = true;
   show($("brief"), true);
-  $("brief-go").onclick = () => { show($("brief"), false); run.phase = "running"; go(); };
+  $("brief-go").onclick = () => { show($("brief"), false); if (run) run.phase = "running"; go(); };
+  $("brief-back").onclick = () => { run = null; leave(); };
 }
 
 /* ---------------------------------------------------------------- *
@@ -761,7 +823,8 @@ function nextTrial() {
   fix.hidden = false;
   run.phase = "fixation";
   ({ after: afterimageTrial, steer: steerTrial, flash: flashTrial, compose: composeTrial,
-     generate: generateTrial, noise: noiseTrial, noisecue: noiseTrial })[run.kind](stim, tm, tier);
+     generate: generateTrial, noise: noiseTrial, noisecue: noiseTrial,
+     gaps: gapsTrial, blink: blinkTrial })[run.kind](stim, tm, tier);
 }
 
 /* Stare, then the afterimage: the symbol as saturated as it goes, on black;
@@ -860,6 +923,92 @@ function generateTrial(stim, tm, tier) {
   }, tm.look);
 }
 
+/* Gaps. The object sits as far out in the periphery as a screen allows: the
+   cross moves a third of the way towards one edge and the object goes to the
+   other side, from 60% of the way to that edge to 95% as difficulty rises,
+   at a random height. A screen at arm's length spans only about 25° either
+   side of centre, so this roughly doubles what a centred cross would give.
+   Its peak strength falls with difficulty too, and within a trial each
+   return is fainter than the last. */
+const GAP_FADE_MS = 250, GAP_CYCLES = 6, BLINK_CUE_MS = 2500;
+
+function peripheral(level) {
+  const t = (level - 1) / (LEVELS - 1);
+  const ecc = 0.6 + 0.35 * t;
+  const side = Math.random() < 0.5 ? -1 : 1, ang = ((Math.random() * 50 - 25) * Math.PI) / 180;
+  const reach = innerWidth / 2 - Math.min(innerWidth * 0.09, 85);
+  return { x: side * reach * ecc * Math.cos(ang), y: reach * ecc * Math.sin(ang) * 0.5, ecc, side,
+           crossX: -side * (innerWidth / 2) * 0.33, peak: 1 - 0.55 * t };
+}
+
+function placePeripheral(stim) {
+  const pos = peripheral(run.level);
+  run.current.eccentricity = +pos.ecc.toFixed(2);
+  stage.classList.add("peri");
+  fix.hidden = true; cross.hidden = false;
+  cross.style.transform = `translateX(${Math.round(pos.crossX)}px)`;
+  sym.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y)}px)`;
+  sym.style.color = `hsl(${stim.hue}, 100%, 50%)`;
+  sym.style.opacity = "0";
+  sym.textContent = stim.symbol;
+  return pos;
+}
+
+/* Up, gap, up, gap: soft fades in and out, the whole cycle well under once a
+   second, every return fainter than the one before, and a long gap last. */
+function gapsTrial(stim, tm) {
+  const pos = placePeripheral(stim);
+  const period = tm.look + tm.hold + 2 * GAP_FADE_MS;
+  run.current.shownMs = tm.look;
+  run.current.cycleMs = period;
+  later(() => {
+    run.phase = "look";
+    const t0 = performance.now();
+    const tick = (now) => {
+      const e = now - t0, k = Math.floor(e / period);
+      if (k >= GAP_CYCLES) {
+        sym.style.opacity = "0";
+        run.phase = "hold";
+        later(askRating, tm.hold * 2);
+        return;
+      }
+      const p = e - k * period, f = GAP_FADE_MS;
+      const o = p < f ? p / f : p < f + tm.look ? 1 : p < 2 * f + tm.look ? 1 - (p - f - tm.look) / f : 0;
+      sym.style.opacity = (o * pos.peak * (1 - (0.6 * k) / (GAP_CYCLES - 1))).toFixed(3);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }, FIX_MS);
+}
+
+/* Steady on the screen; the blinking makes the gaps. The object fades to
+   nothing over the look time while you blink, and the blinking goes on with
+   nothing there until the rating. */
+function blinkTrial(stim, tm) {
+  fix.hidden = true;
+  run.phase = "cue";
+  cue.textContent = "Start blinking: fast and light, about three a second. Eyes on the cross when it appears.";
+  later(() => {
+    cue.textContent = "";
+    const pos = placePeripheral(stim);
+    run.current.shownMs = tm.look;
+    run.phase = "look";
+    const t0 = performance.now();
+    const tick = (now) => {
+      const k = (now - t0) / tm.look;
+      if (k >= 1) {
+        sym.style.opacity = "0";
+        run.phase = "hold";
+        later(askRating, tm.hold);
+        return;
+      }
+      sym.style.opacity = (pos.peak * (1 - k)).toFixed(3);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }, BLINK_CUE_MS);
+}
+
 /* Static on a coarse grid, redrawn about twelve times a second at an even
    mean brightness. In Seeded the symbol is added to it, brighter, at a
    strength that falls linearly to nothing over the look time; the hold that
@@ -953,6 +1102,8 @@ function askRating() {
     : kind === "compose" ? "How well did you hold both?"
     : kind === "noise" ? "Once the seed was gone, how well did you keep seeing it?"
     : kind === "noisecue" ? "How clearly did you see it in the static?"
+    : kind === "gaps" ? "How continuously did you keep it through the gaps?"
+    : kind === "blink" ? "How well did it stay through the blinks, and after it was gone?"
     : "How clearly did you see it?";
   const what = steer ? `“${c.instruction}”`
     : c.description ? `“${c.description}”`
@@ -1326,6 +1477,12 @@ $("start").onclick = () => {
   if (e.id === "troxler") startTroxler();
   else if (e.id === "bistable") startBistable();
   else if (e.id === "ganzfeld") startGanzfeld();
+  else if (e.id === "gaps") {
+    const v = variant();
+    brief(TRIALS[v].label, "", [], () => startTrials(v),
+      `<ol class="steps">${GAP_STEPS[v].map((t) => `<li>${esc(t)}</li>`).join("")}</ol>`
+      + `<p class="small steps-warn">${esc(GAP_WARN[v])}</p>`);
+  }
   else startTrials(variant());
 };
 

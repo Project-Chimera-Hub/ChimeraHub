@@ -300,9 +300,11 @@ adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
   but prophantasia is one skill on the way rather than the goal: the page is
   about inducing visual hallucinations and steering them top-down. It opens
   with a primer — seeing as the brain's best guess, top-down prediction held
-  in check by the bottom-up signal — and orders seven exercises by how much
+  in check by the bottom-up signal — and orders eight exercises by how much
   the screen still supplies: Afterimage (keep it, steer it), Fading (Troxler),
-  Two readings (a Necker cube and a turning ball of dots), Noise (a seed
+  Gaps (a faint object at the edge of vision that comes and goes — slow soft
+  fades under once a second, or held steady while the user blinks fast — to
+  be kept through every gap), Two readings (a Necker cube and a turning ball of dots), Noise (a seed
   faded out of static, or a word only), Flash (the original's Access and
   Projection, and Compose), Ganzfeld (an even field with pink noise and a
   journal) and Generate (an image from words alone). Each carries notes on
