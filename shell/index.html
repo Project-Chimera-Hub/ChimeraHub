@@ -46,7 +46,7 @@
     </summary>
     <p class="more__note">
       These run here like the six above, but <b>their time is not counted</b>
-      toward today or the quota — nothing reads their records yet.
+      toward today or the quota — the meter does not read their records.
     </p>
     <div class="grid" id="grid-more"></div>
   </details>
@@ -60,6 +60,28 @@
       not count toward the quota.
     </p>
     <a class="btn" id="archive-link" href="archive/">Open archive</a>
+  </div>
+
+  <!-- Built and saved here, uploaded by the player. The hub sends nothing
+       itself; see js/share.js for what the file holds and what it leaves out. -->
+  <h2>Share your data</h2>
+  <div class="aside-card share">
+    <p>
+      Optional, and it helps tune the trainers: how difficulty grows, where
+      people stall, whether one trainer carries over to another. The file holds,
+      for every answer in Syllogimous and every session in Relation Streams,
+      CCT, Chimera, Relational N-back, Earshot and Quad Box (and any
+      retired trainer this browser still remembers),
+      <b>the mode, its difficulty, how well it went and how long it took</b>, the
+      day, and a random participant id. No settings, nothing typed, no time of
+      day. eWMT and Attention Training keep no sessions, so they have nothing to
+      add. Quote the id in an issue on the repository to have your files deleted.
+    </p>
+    <label class="share__ok"><input type="checkbox" id="share-ok">
+      I agree to share this file for research on these trainers.</label>
+    <button class="btn" type="button" id="share-make" disabled>Create my data file</button>
+    <a class="btn" href="https://mega.nz/filerequest/F-2QAaKjCMY" target="_blank" rel="noopener">Upload ↗</a>
+    <span class="settings__note" id="share-note"></span>
   </div>
 
   <h2>Today's goal</h2>
@@ -113,9 +135,10 @@
 <script src="shared/record.js?v=4"></script>
 <script src="shared/adapters.js?v=4"></script>
 <script src="shared/quota.js?v=4"></script>
-<script src="js/today.js?v=4"></script>
+<script src="js/today.js?v=5"></script>
+<script src="shared/share-kit/share-kit.js?v=1"></script>
+<script src="js/share.js?v=3"></script>
 <script src="js/pause.js?v=1"></script>
 <script src="js/shell.js?v=13"></script>
 </body>
 </html>
-

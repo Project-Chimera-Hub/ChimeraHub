@@ -60,20 +60,13 @@ var Today = (function () {
   }
 
   /**
-   * Every trainer's minutes for one day, keyed by source.
-   * Sources with nothing today are absent rather than zero — "has not trained"
-   * and "trained for no time" are the same fact here, and the caller decides
-   * how to show it.
+   * Every adapter reading this browser holds, one per trainer (one per RNB
+   * profile). The meter takes the minutes out of them and the share card the
+   * records, so the two can never disagree about which trainers there are.
    */
-  function minutesOn(day) {
-    day = day || utcDay();
-    var out = {};
-
-    function take(reading) {
-      if (!reading || !reading.minutes) return;
-      var m = Number(reading.minutes[day]) || 0;
-      if (m > 0) out[reading.source] = (out[reading.source] || 0) + m;
-    }
+  function readings() {
+    var out = [];
+    function take(reading) { if (reading) out.push(reading); }
 
     /* Syllogimous spreads itself over many keys and is recognised by the shape
        of the whole bag, so it is gathered before it is read.
@@ -134,6 +127,25 @@ var Today = (function () {
   }
 
   /**
+   * Every trainer's minutes for one day, keyed by source.
+   * Sources with nothing today are absent rather than zero — "has not trained"
+   * and "trained for no time" are the same fact here, and the caller decides
+   * how to show it.
+   */
+  function minutesOn(day) {
+    day = day || utcDay();
+    var out = {};
+    var all = readings();
+    for (var i = 0; i < all.length; i++) {
+      var reading = all[i];
+      if (!reading.minutes) continue;
+      var m = Number(reading.minutes[day]) || 0;
+      if (m > 0) out[reading.source] = (out[reading.source] || 0) + m;
+    }
+    return out;
+  }
+
+  /**
    * The number the gate cares about: today's training in minutes.
    *
    * The archive is not in it and cannot be — it is not a trainer and has no
@@ -163,6 +175,7 @@ var Today = (function () {
 
   return {
     utcDay: utcDay,
+    readings: readings,
     minutesOn: minutesOn,
     totalMinutes: totalMinutes,
     streak: streak,

@@ -493,7 +493,7 @@ const AGE_LABEL = ms => {
 function importJSON(text) {
   const parsed = JSON.parse(text);
   const data = parsed && parsed.data ? parsed.data : parsed;
-  if (!data || !Array.isArray(data.blocks)) throw new Error('not a Relational N-Back export');
+  if (!data || !Array.isArray(data.blocks)) throw new Error('not a Relation Streams export');
   progress = data;
   if (progress.prog) Object.assign(prog, progress.prog);
   if (progress.tune) Object.assign(tune, progress.tune);

@@ -38,9 +38,9 @@ var WEEKS_NEEDED = 20;
 var SOURCE_NAMES = {
   syllogimous: "Syllogimous",
   isomorph: "Isomorph",
-  /* The ladder trainer, beside the four-stream one on the hub and named as
-     the hub names it. */
-  rnb: "Relational N-back - Loosh",
+  /* The ladder trainer, renamed so it is never mistaken for the four-stream
+     Relational N-back beside it on the hub. */
+  rnb: "Relation Streams",
   precision: "Precision N-back",
   rotation: "3D Rotation",
   cct: "CCT",
