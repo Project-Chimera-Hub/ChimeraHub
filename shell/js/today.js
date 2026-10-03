@@ -28,10 +28,15 @@ var Today = (function () {
 
   /* The same list `importNeighbours` walks in the archive, in the same order,
      for the same reason: these are the trainers that keep their whole state
-     under one key. Kept in sync by hand — there are eight of them and they
-     change about once a year. */
+     under one key. Kept in sync by hand — they change about once a year. */
   var SINGLE_KEY = [
     { key: "mp_prog", source: "cct" },
+    { key: "apasat_history_v1", source: "chimera" },
+    { key: "affective_nback_v3", source: "ewmt" },
+    { key: "rel4_nback_history_v2", source: "relational" },
+    /* Retired trainers, still read: the meter only counts what is on the
+       hub, but a streak is history, and history does not stop being true
+       when an app leaves. */
     { key: "rrt_prog", source: "rrt" },
     { key: "attentional_shield_v2", source: "ewmt" },
     { key: "synth5_en", source: "synth" },

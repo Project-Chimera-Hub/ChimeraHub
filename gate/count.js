@@ -13,8 +13,8 @@
  * today" in this project, and nothing here is allowed to invent a second.
  *
  * Prints one JSON object: { day, minutes, bySource, raw, capped }. `minutes`
- * is after the per-source ceilings in shared/quota.js — synth and CCT are
- * capped as a share of the day, so neither can carry a quota on its own.
+ * is after the per-source ceilings in shared/quota.js — CCT is capped as a
+ * share of the day, so it cannot carry a quota on its own.
  */
 
 const fs = require("fs");

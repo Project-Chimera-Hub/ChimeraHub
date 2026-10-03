@@ -444,6 +444,33 @@ Sessions written before the app recorded a clock have only a day; those land at
 noon UTC with `raw.inferredTime` set, and a duration derived from mean response
 time is flagged `raw.inferredSeconds` so nothing later reads it as measured.
 
+## Chimera, eWMT and Relational N-back from projectchimera-dot
+
+The hub's trainers now, beside CCT. All three are read from localStorage — none
+has an export — by "Read this browser", by `tools/firefox-storage.py` and by the
+hub's meter.
+
+**Chimera** (`apasat_history_v1`, source `chimera`) keeps a summary per finished
+session. Its `durationSec` is the length that was *set*, and a session ended
+early still writes it, so the adapter counts trials × average interval and holds
+that under the setting. Difficulty is the fastest interval reached, as a rate —
+`chimera-peak-items-per-min`.
+
+**eWMT** (`affective_nback_v3`, source `ewmt`) is the Affective N-Back, under the
+source name the Attentional Shield had. It keeps no sessions: only all-time
+milliseconds and one day's milliseconds, named by the *local* day. So it brings
+no records and one day of minutes per snapshot, and a day that is never
+snapshotted is lost to the calendar — the meter, which reads it live, is not
+affected.
+
+**Relational N-back** (`rel4_nback_history_v2`, source `relational`) keeps its
+last fifty finished sessions, each with its own id. It is a different source
+from `rnb`, the ladder trainer that used to share its name, because the two
+measure difficulty differently: this one in n, `relational-n`.
+
+Neither new unit has a ladder yet, so both are in the record and the calendar
+but not in the ability estimate.
+
 ## Adding a source
 
 Two ways, and the second is usually the right one.

@@ -1,21 +1,22 @@
 {
   "_comment": [
     "Where each app came from and where its changes go back to. Read by",
-    "tools/sync.sh, and the reason the eight repositories stay alive rather than",
+    "tools/sync.sh, and the reason the repositories stay alive rather than",
     "becoming a museum: each one is still the address its app is published from,",
     "still the thing someone else can fork, and still where an issue about that",
     "trainer belongs.",
     "",
-    "The monorepo is where the work happens. These are downstream of it."
+    "The monorepo is where the work happens. These are downstream of it.",
+    "`owner` is the GitHub account each one lives under."
   ],
   "apps": [
-    { "prefix": "apps/syllogimous", "repo": "LooshSyllogimous",                     "branch": "main" },
-    { "prefix": "apps/rnb",         "repo": "relationalNback---intuitive-progression", "branch": "main" },
-    { "prefix": "apps/precision",   "repo": "Precision-N-back",                     "branch": "main" },
-    { "prefix": "apps/rotation",    "repo": "3D-Spatial-Rotation",                  "branch": "molecule-mode" },
-    { "prefix": "apps/cct",         "repo": "CCT",                                  "branch": "main" },
-    { "prefix": "apps/synth",       "repo": "Synth-v2",                             "branch": "main" },
-    { "prefix": "apps/ewmt",        "repo": "eWMTurp",                              "branch": "main" },
-    { "prefix": "apps/archive",     "repo": "training-archive",                     "branch": "main" }
+    { "prefix": "apps/cct",          "owner": "projectchimera-dot", "repo": "CCT",                    "branch": "main" },
+    { "prefix": "apps/chimera",      "owner": "projectchimera-dot", "repo": "Chimera",                "branch": "main" },
+    { "prefix": "apps/ewmt",         "owner": "projectchimera-dot", "repo": "eWMT",                   "branch": "main" },
+    { "prefix": "apps/relational",   "owner": "projectchimera-dot", "repo": "Relational-nback",       "branch": "main" },
+    { "prefix": "apps/more/att",     "owner": "projectchimera-dot", "repo": "ATT",                    "branch": "main" },
+    { "prefix": "apps/more/earshot", "owner": "projectchimera-dot", "repo": "earshot",                "branch": "main" },
+    { "prefix": "apps/more/quadbox", "owner": "projectchimera-dot", "repo": "N-back-Constant-change", "branch": "main" },
+    { "prefix": "apps/archive",      "owner": "Gagafutzi",          "repo": "training-archive",       "branch": "main" }
   ]
 }

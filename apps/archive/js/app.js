@@ -38,13 +38,17 @@ var WEEKS_NEEDED = 20;
 var SOURCE_NAMES = {
   syllogimous: "Syllogimous",
   isomorph: "Isomorph",
-  rnb: "Relational N-back",
+  /* The ladder trainer that was on the hub before the four-stream one; the
+     name belongs to the trainer there now. */
+  rnb: "Relational N-back (ladder)",
   precision: "Precision N-back",
   rotation: "3D Rotation",
   cct: "CCT",
   ewmt: "eWMT",
   rrt: "Running Order",
   synth: "Synaesthesia colours",
+  chimera: "Chimera",
+  relational: "Relational N-back",
 };
 
 function sourceName(id) {
@@ -69,6 +73,8 @@ var SOURCE_COLOURS = {
   ewmt: "#ff7b72",
   rrt: "#ffa657",
   synth: "#56d4dd",
+  chimera: "#58a6ff",
+  relational: "#56d364",
 };
 
 function sourceColour(id) {
@@ -377,8 +383,11 @@ function importNeighbours() {
   try {
     var singles = [
       { key: "mp_prog", label: "cct" },
+      { key: "apasat_history_v1", label: "chimera" },
+      { key: "affective_nback_v3", label: "ewmt" },
+      { key: "rel4_nback_history_v2", label: "relational" },
       { key: "rrt_prog", label: "rrt" },
-      { key: "attentional_shield_v2", label: "ewmt" },
+      { key: "attentional_shield_v2", label: "ewmt (attentional shield)" },
       { key: "synth5_en", label: "synth" },
       { key: "nback-performance", label: "precision" },
       { key: "spatial-rotation.progress.v1", label: "rotation" },

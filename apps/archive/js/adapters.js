@@ -814,6 +814,206 @@ function readEwmt(data) {
 }
 
 /* ------------------------------------------------------------------ *
+ * eWMT — the Affective N-Back                                         *
+ * ------------------------------------------------------------------ */
+
+/**
+ * The eWMT that replaced the Attentional Shield, under the same source name:
+ * it is the same slot on the hub, and a day spent in either is a day of eWMT.
+ * Each reader says no to the other's key, so the two never meet.
+ *
+ * **It keeps no sessions at all.** `affective_nback_v3` holds settings and
+ * three running totals — all-time milliseconds, and the milliseconds of one
+ * day with that day's name beside them. So this reading has no records and one
+ * day of minutes, and a snapshot only ever adds the day it was taken on. Take
+ * them daily and the calendar fills; skip a day and that day's time is gone
+ * from storage before anything could read it.
+ *
+ * The day it names is the *local* one, written unpadded (`2026-10-3`), where
+ * everything else here is UTC. Padded and taken as it stands rather than
+ * shifted: there is no time of day to shift by. Near midnight, east or west
+ * of Greenwich, that can put an eWMT session on the day beside the one the
+ * other trainers put it on.
+ */
+function readAffective(data) {
+  var raw = data && typeof data === "object" ? data.affective_nback_v3 : null;
+  if (typeof raw !== "string") return null;
+
+  var store;
+  try { store = JSON.parse(raw); } catch (e) { return null; }
+  if (!store || typeof store !== "object" || !store.totals) return null;
+
+  var t = store.totals;
+  var allMs = Number(t.allMs) || 0;
+  if (allMs <= 0) return null;
+
+  var minutes = {};
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(t.dayKey || ""));
+  var dayMs = Number(t.dayMs) || 0;
+  if (m && dayMs > 0) {
+    var day = m[1] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[3]).slice(-2);
+    minutes[day] = dayMs / 60000;
+  }
+
+  var state = { lifetimeMinutes: Math.round(allMs / 600) / 100 };
+  var s = store.settings || {};
+  if (s.level != null) state.level = Number(s.level);
+  if (s.mode) state.mode = String(s.mode);
+
+  return { source: "ewmt", records: [], minutes: minutes, state: state };
+}
+
+/* ------------------------------------------------------------------ *
+ * Chimera — paced serial addition, and everything stacked on it       *
+ * ------------------------------------------------------------------ */
+
+/**
+ * `apasat_history_v1`: one summary per finished session, oldest first, the
+ * last five hundred kept.
+ *
+ * **Its `durationSec` is the length that was set, not the length played.**
+ * Ending a session early still writes the planned figure, so it is a ceiling
+ * rather than a reading. The time is taken from what did happen — trials times
+ * the average interval they ran at — and held under that ceiling. Pauses and
+ * interruptions fall outside it, which errs short, the direction a quota
+ * should err in.
+ *
+ * Difficulty is speed, as with CCT and for the same reason: Chimera adapts the
+ * interval. Carried as a rate so it rises with difficulty, from the fastest
+ * interval reached in adaptive mode and the fixed one otherwise.
+ */
+function readChimera(data) {
+  var raw = data && typeof data === "object" ? data.apasat_history_v1 : null;
+  if (typeof raw !== "string") return null;
+
+  var list;
+  try { list = JSON.parse(raw); } catch (e) { return null; }
+  if (!Array.isArray(list)) return null;
+
+  var origin = typeof data.__origin === "string" ? data.__origin : null;
+  var records = [];
+  var minutes = {};
+
+  for (var i = 0; i < list.length; i++) {
+    var h = list[i];
+    if (!h || !h.timestamp) continue;
+    var trials = Number(h.totalTrials) || 0;
+    if (trials <= 0) continue;
+
+    var planned = Math.max(0, Number(h.durationSec) || 0);
+    var isi = Number(h.avgSpeedMs) || Number(h.finalSpeedMs) || 0;
+    var seconds = isi > 0 ? trials * isi / 1000 : planned;
+    if (planned > 0) seconds = Math.min(seconds, planned);
+
+    var peakIsi = Number(h.mode === "adaptive" ? h.fastestSpeedMs : h.finalSpeedMs);
+    var rate = peakIsi > 0 ? 60000 / peakIsi : null;
+
+    var tags = [];
+    if (h.nBackMode) tags.push("n" + (h.nBackLevel == null ? "?" : h.nBackLevel));
+    if (h.ewmtMode) tags.push("ewmt");
+    if (h.cctMode) tags.push("cct");
+    if (h.dichoticMode) tags.push("dichotic");
+
+    records.push(_makeRecord({
+      source: "chimera",
+      id: _hashRow(h.timestamp + "|" + trials + "|" + h.overallAccuracy),
+      at: h.timestamp,
+      kind: "block",
+      seconds: seconds,
+      correct: h.overallAccuracy == null ? null : Number(h.overallAccuracy) / 100,
+      difficulty: rate == null ? null : Math.round(rate * 100) / 100,
+      unit: "chimera-peak-items-per-min",
+      label: (h.mode || "?") + (tags.length ? " " + tags.join("+") : ""),
+      raw: {
+        origin: origin,
+        mode: h.mode || null,
+        plannedSec: planned || null,
+        totalTrials: trials,
+        finalSpeedMs: h.finalSpeedMs == null ? null : Number(h.finalSpeedMs),
+        fastestSpeedMs: h.fastestSpeedMs == null ? null : Number(h.fastestSpeedMs),
+        avgSpeedMs: h.avgSpeedMs == null ? null : Number(h.avgSpeedMs),
+        avgRtMs: h.avgRtMs == null ? null : Number(h.avgRtMs),
+        misses: h.misses == null ? null : Number(h.misses),
+        falseAlarms: h.falseAlarms == null ? null : Number(h.falseAlarms),
+        byType: h.byType || null,
+        nBackLevel: h.nBackMode ? h.nBackLevel : null,
+        ewmt: !!h.ewmtMode,
+        cct: !!h.cctMode,
+        dichotic: !!h.dichoticMode,
+        interruptions: !!h.interruptionMode,
+      },
+    }));
+
+    var day = new Date(h.timestamp).toISOString().slice(0, 10);
+    minutes[day] = (minutes[day] || 0) + seconds / 60;
+  }
+
+  if (!records.length) return null;
+  return { source: "chimera", records: records, minutes: minutes, state: null };
+}
+
+/* ------------------------------------------------------------------ *
+ * Relational N-back — four streams of relations                       *
+ * ------------------------------------------------------------------ */
+
+/**
+ * `rel4_nback_history_v2`: the last fifty finished sessions, newest first, each
+ * with an id of its own. Abandoned sessions are never written.
+ *
+ * Its own source, not `rnb`. The Relational N-back that used to be on the hub
+ * was a different app with a different load measure, and the archive's rule is
+ * that a difficulty never travels without what it was measured in. Here that
+ * is n, the depth the session was set to.
+ */
+function readRelational(data) {
+  var raw = data && typeof data === "object" ? data.rel4_nback_history_v2 : null;
+  if (typeof raw !== "string") return null;
+
+  var list;
+  try { list = JSON.parse(raw); } catch (e) { return null; }
+  if (!Array.isArray(list)) return null;
+
+  var origin = typeof data.__origin === "string" ? data.__origin : null;
+  var records = [];
+  var minutes = {};
+
+  for (var i = 0; i < list.length; i++) {
+    var h = list[i];
+    var at = h && h.date ? Date.parse(h.date) : NaN;
+    if (!isFinite(at)) continue;
+    var seconds = Math.max(0, Number(h.durationSec) || 0);
+
+    records.push(_makeRecord({
+      source: "relational",
+      id: typeof h.id === "string" && h.id ? h.id : _hashRow(h.date + "|" + h.n + "|" + h.combinedAccuracy),
+      at: at,
+      kind: "block",
+      seconds: seconds,
+      correct: h.combinedAccuracy == null ? null : Number(h.combinedAccuracy) / 100,
+      difficulty: h.n == null ? null : Number(h.n),
+      unit: "relational-n",
+      label: "n" + (h.n == null ? "?" : h.n) + (h.mode ? " " + h.mode : ""),
+      raw: {
+        origin: origin,
+        mode: h.mode || null,
+        n: h.n == null ? null : Number(h.n),
+        variableN: !!h.variableN,
+        variableFloor: h.variableFloor == null ? null : Number(h.variableFloor),
+        trials: h.trials == null ? null : Number(h.trials),
+        streams: h.streams || null,
+        durationSec: seconds,
+      },
+    }));
+
+    var day = new Date(at).toISOString().slice(0, 10);
+    minutes[day] = (minutes[day] || 0) + seconds / 60;
+  }
+
+  if (!records.length) return null;
+  return { source: "relational", records: records, minutes: minutes, state: null };
+}
+
+/* ------------------------------------------------------------------ *
  * Precision N-back                                                    *
  * ------------------------------------------------------------------ */
 
@@ -1265,6 +1465,9 @@ var ADAPTERS = [
   { name: "cct", read: readCct },
   { name: "rrt", read: readRrt },
   { name: "ewmt", read: readEwmt },
+  { name: "affective", read: readAffective },
+  { name: "chimera", read: readChimera },
+  { name: "relational", read: readRelational },
   { name: "precision", read: readPrecision },
   { name: "rotation", read: readRotation },
   { name: "synth", read: readSynth },
@@ -1321,6 +1524,9 @@ if (typeof module !== "undefined") {
     readCct: readCct,
     readRrt: readRrt,
     readEwmt: readEwmt,
+    readAffective: readAffective,
+    readChimera: readChimera,
+    readRelational: readRelational,
     readPrecision: readPrecision,
     readRotation: readRotation,
     readSynth: readSynth,

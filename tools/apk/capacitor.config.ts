@@ -11,9 +11,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * here, which is the whole reason a new version is one command: there is no
  * app source to update, only a directory to replace.
  *
- * Versions match apps/syllogimous, which has been producing an APK from this
- * same toolchain for a while. Two Capacitor majors in one repository is a
- * problem nobody needs.
+ * Versions match the ones Syllogimous built its own APK with while it was
+ * here, a toolchain that had been producing working APKs for a while.
  */
 const config: CapacitorConfig = {
     // Kept from before the rename: a new id installs as a new app, with none

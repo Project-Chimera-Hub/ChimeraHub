@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Earshot is a listening game: follow moving sounds around your head by ear. Auditory multiple object tracking that runs offline in your browser.">
+  <title>Earshot: follow sounds by ear</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f2a30'/%3E%3Ccircle cx='16' cy='16' r='9.5' fill='none' stroke='%23e9f2ee' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23e9f2ee'/%3E%3Ccircle cx='22.7' cy='9.3' r='3.4' fill='%23e9b04b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <header class="topbar">
+      <button type="button" class="brand" data-nav="home" aria-label="Earshot, go to Train">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="2.4" fill="currentColor"/><circle cx="23.8" cy="8.2" r="3.6" style="fill: var(--target)"/></svg>
+        <span>Earshot</span>
+      </button>
+      <nav class="nav" aria-label="Main">
+        <button type="button" class="nav-link" data-nav="home">Train</button>
+        <button type="button" class="nav-link" data-nav="check">Headphone check</button>
+        <button type="button" class="nav-link" data-nav="history">Progress</button>
+        <button type="button" class="nav-link" data-nav="about">About</button>
+      </nav>
+    </header>
+
+    <main id="main">
+      <p id="env-warning" class="env-warning" role="alert" hidden></p>
+      <noscript><p class="env-warning">Earshot needs JavaScript. Allow it for this page, then reload.</p></noscript>
+
+      <!-- ============ Train ============ -->
+      <section id="screen-home" class="screen" aria-labelledby="home-heading">
+        <div class="home">
+          <div class="home-intro">
+            <h1 id="home-heading" class="hero-title">Track sounds you can’t see.</h1>
+            <p class="lead">Identical sounds move around your head. A few of them start out as targets. Follow the targets by ear, then pick them out when everything stops.</p>
+            <div class="cta-row">
+              <button type="button" class="btn btn-primary btn-large" id="btn-start">Start session</button>
+              <button type="button" class="btn btn-large" id="btn-practice">Practice with visuals</button>
+            </div>
+            <p class="fine">Headphones required. First time here? <button type="button" class="link" data-nav="check">Run the headphone check</button>.</p>
+          </div>
+
+          <div class="home-field">
+            <div class="field-frame"><canvas id="home-field" class="field-canvas" aria-hidden="true"></canvas></div>
+            <div class="field-caption">
+              <p>Top view. You’re in the middle, facing Front. Amber sounds are targets.</p>
+              <button type="button" class="btn btn-quiet" id="btn-demo">Hear a sound circle your head</button>
+            </div>
+          </div>
+
+          <div class="home-setup">
+            <h2 class="section-title" id="setup-heading">Setup</h2>
+            <div class="presets" id="preset-list" role="radiogroup" aria-labelledby="setup-heading"></div>
+            <p class="custom-note" id="custom-note" hidden></p>
+
+            <details class="adjust" id="adjust">
+              <summary>Adjust settings</summary>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label class="form-label" for="set-mode">Arena</label>
+                  <select id="set-mode" data-setting="mode">
+                    <option value="ring">Ring</option>
+                    <option value="disc">Floor</option>
+                    <option value="dome">Dome</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <span class="form-label" id="lbl-front">Directions</span>
+                  <div class="segmented" role="radiogroup" aria-labelledby="lbl-front">
+                    <label><input type="radio" name="frontOnly" value="false" data-setting="frontOnly">All around</label>
+                    <label><input type="radio" name="frontOnly" value="true" data-setting="frontOnly">Front only</label>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <span class="form-label" id="lbl-n">Sounds</span>
+                  <div class="stepper" data-stepper="n" role="group" aria-labelledby="lbl-n">
+                    <button type="button" data-step="-1" aria-label="Fewer sounds">−</button>
+                    <output id="out-n" aria-live="polite">4</output>
+                    <button type="button" data-step="1" aria-label="More sounds">+</button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <span class="form-label" id="lbl-t">Targets</span>
+                  <div class="stepper" data-stepper="t" role="group" aria-labelledby="lbl-t">
+                    <button type="button" data-step="-1" aria-label="Fewer targets">−</button>
+                    <output id="out-t" aria-live="polite">1</output>
+                    <button type="button" data-step="1" aria-label="More targets">+</button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="set-duration">Tracking time</label>
+                  <select id="set-duration" data-setting="duration">
+                    <option value="5">5 seconds</option>
+                    <option value="6">6 seconds</option>
+                    <option value="8">8 seconds</option>
+                    <option value="10">10 seconds</option>
+                    <option value="12">12 seconds</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="set-trials">Session length</label>
+                  <select id="set-trials" data-setting="trials">
+                    <option value="10">10 trials, about 4 min</option>
+                    <option value="15">15 trials, about 5 min</option>
+                    <option value="20">20 trials, about 7 min</option>
+                    <option value="30">30 trials, about 10 min</option>
+                    <option value="40">40 trials, about 14 min</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="set-sound">Sound</label>
+                  <select id="set-sound" data-setting="sound"></select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label" for="set-ambience">Room echo</label>
+                  <select id="set-ambience" data-setting="ambience">
+                    <option value="0">Off</option>
+                    <option value="1">Light</option>
+                    <option value="2">Strong</option>
+                  </select>
+                </div>
+                <div class="form-row span-2">
+                  <label class="form-label" for="set-volume">Volume</label>
+                  <input type="range" id="set-volume" min="0" max="1" step="0.05" data-setting="volume">
+                </div>
+                <div class="form-row span-2 checks">
+                  <label class="check"><input type="checkbox" data-setting="showPositions"><span>Show where the sounds stopped when choosing</span></label>
+                  <label class="check"><input type="checkbox" data-setting="voice"><span>Spoken prompts, using your device’s voice</span></label>
+                  <label class="check"><input type="checkbox" data-setting="autoAdvance"><span>Start the next trial automatically</span></label>
+                </div>
+                <p class="form-note span-2" id="setting-note"></p>
+              </div>
+            </details>
+
+            <p class="last-result" id="last-result"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Session ============ -->
+      <section id="screen-game" class="screen" aria-labelledby="game-heading" hidden>
+        <div class="game-bar">
+          <h1 id="game-heading" class="game-title">Session</h1>
+          <dl class="readouts">
+            <div><dt>Trial</dt><dd id="ro-trial">1 of 20</dd></div>
+            <div><dt>Speed</dt><dd><span id="ro-speed">20.0</span> <span class="unit">°/s</span></dd></div>
+            <div><dt>Targets</dt><dd id="ro-targets">1 of 4</dd></div>
+            <div><dt>Correct</dt><dd id="ro-correct">0</dd></div>
+          </dl>
+          <button type="button" class="btn" id="btn-pause">Pause</button>
+        </div>
+
+        <div class="game-body">
+          <div class="stage">
+            <div class="phase">
+              <p class="phase-name" id="phase-name">Listen</p>
+              <p class="phase-hint" id="phase-hint">These are all the sounds.</p>
+            </div>
+            <div class="field-frame"><canvas id="game-field" class="field-canvas" aria-hidden="true"></canvas></div>
+          </div>
+
+          <div class="side">
+            <ol class="steps" id="phase-steps" aria-hidden="true">
+              <li data-step="listen"><span class="step-name">Listen</span><span class="step-note">Every sound, standing still</span></li>
+              <li data-step="cue"><span class="step-name">Targets</span><span class="step-note">Bells ring from the targets</span></li>
+              <li data-step="hold"><span class="step-name">Remember</span><span class="step-note">All sounds identical again</span></li>
+              <li data-step="track"><span class="step-name">Track</span><span class="step-note">The sounds move and bounce</span></li>
+              <li data-step="respond"><span class="step-name">Choose</span><span class="step-note">Pick out the targets</span></li>
+            </ol>
+
+            <div class="practice-tools" id="practice-tools" hidden>
+              <p>Practice isn’t scored or saved. Use it to learn what the sounds are doing.</p>
+              <label class="check"><input type="checkbox" id="pr-show" checked><span>Show the sounds moving</span></label>
+              <label class="check"><input type="checkbox" id="pr-targets"><span>Keep the targets highlighted</span></label>
+            </div>
+
+            <div class="respond" id="respond" hidden>
+              <div id="respond-head">
+                <h2 class="respond-title" id="respond-title">Which one was the target?</h2>
+                <p class="respond-hint" id="respond-hint"></p>
+              </div>
+              <div class="sound-list" id="sound-list" role="group" aria-labelledby="respond-title"></div>
+              <div class="respond-actions" id="respond-actions">
+                <button type="button" class="btn btn-primary" id="btn-confirm" disabled>Confirm choice</button>
+                <button type="button" class="btn" id="btn-replay">Hear all in order</button>
+              </div>
+            </div>
+
+            <div class="result" id="result" hidden>
+              <p class="result-title" id="result-title">Correct</p>
+              <p class="result-detail" id="result-detail"></p>
+              <ul class="legend" aria-hidden="true">
+                <li><span class="swatch swatch-hit"></span>Target you found</li>
+                <li><span class="swatch swatch-miss"></span>Target you missed</li>
+                <li><span class="swatch swatch-false"></span>Picked, but not a target</li>
+              </ul>
+              <button type="button" class="btn btn-primary" id="btn-next">Next trial</button>
+            </div>
+
+            <ul class="keys" id="key-help" aria-label="Keyboard shortcuts" hidden>
+              <li><kbd>←</kbd><kbd>→</kbd><span>hear each sound</span></li>
+              <li><kbd>Space</kbd><span>pick or remove</span></li>
+              <li><kbd>1</kbd>–<kbd>8</kbd><span>pick by number</span></li>
+              <li><kbd>R</kbd><span>hear all in order</span></li>
+              <li><kbd>Enter</kbd><span>confirm, then go on</span></li>
+              <li><kbd>Esc</kbd><span>pause</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="overlay" id="pause-overlay" hidden>
+          <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pause-heading" aria-describedby="pause-note">
+            <h2 id="pause-heading">Paused</h2>
+            <p id="pause-note"></p>
+            <div class="dialog-actions">
+              <button type="button" class="btn btn-primary" id="btn-resume">Resume</button>
+              <button type="button" class="btn" id="btn-end">End session</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Summary ============ -->
+      <section id="screen-summary" class="screen summary" aria-labelledby="summary-heading" hidden>
+        <h1 id="summary-heading" class="page-title">Session complete</h1>
+        <p class="page-lead" id="sum-setup"></p>
+        <div class="score">
+          <p class="score-value"><span id="sum-threshold">–</span><span class="unit">°/s</span></p>
+          <div class="score-text">
+            <p class="score-label">Speed threshold</p>
+            <p>The speed you tracked correctly about half the time.</p>
+            <p class="score-lap" id="sum-lap"></p>
+          </div>
+        </div>
+        <dl class="stats">
+          <div><dt>Trials correct</dt><dd id="sum-correct">–</dd></div>
+          <div><dt>Fastest correct trial</dt><dd id="sum-fastest">–</dd></div>
+          <div><dt>Previous session</dt><dd id="sum-previous">–</dd></div>
+        </dl>
+        <figure class="chart-figure">
+          <canvas id="sum-chart" class="chart" role="img" aria-label="Speed on each trial"></canvas>
+          <figcaption>Speed on each trial. Filled dots were correct, open dots were not. The dashed line is your threshold.</figcaption>
+        </figure>
+        <p class="advice" id="sum-advice"></p>
+        <p class="warning" id="sum-storage" hidden>This browser didn’t allow saving, so this result disappears when you close the page. Download it from Progress first.</p>
+        <div class="actions">
+          <button type="button" class="btn btn-primary btn-large" id="btn-again">Start another session</button>
+          <button type="button" class="btn btn-large" data-nav="home">Change setup</button>
+          <button type="button" class="btn btn-large" data-nav="history">See progress</button>
+        </div>
+      </section>
+
+      <!-- ============ Headphone check ============ -->
+      <section id="screen-check" class="screen" aria-labelledby="check-heading" hidden>
+        <h1 id="check-heading" class="page-title">Headphone check</h1>
+        <p class="page-lead">Two short tests. The first makes sure left and right are the right way round. The second shows how well you can hear direction with these headphones.</p>
+        <p class="saved-check" id="check-saved" hidden></p>
+
+        <div class="check-layout">
+          <section class="check-part" aria-labelledby="lr-heading">
+            <h2 id="lr-heading">1. Left or right</h2>
+            <p>Play a sound, then choose the side it came from. Four rounds.</p>
+            <div class="button-row">
+              <button type="button" class="btn btn-primary" id="lr-play">Play a sound</button>
+              <button type="button" class="btn" id="lr-left" disabled>Left</button>
+              <button type="button" class="btn" id="lr-right" disabled>Right</button>
+            </div>
+            <p class="status" id="lr-status" aria-live="polite"></p>
+          </section>
+
+          <section class="check-part" aria-labelledby="loc-heading">
+            <h2 id="loc-heading">2. Point to the sound</h2>
+            <p>Each sound comes from one direction at ear level. Click where you heard it on the circle, or turn the pointer with ← and → and press Enter. Eight rounds.</p>
+            <div class="button-row">
+              <button type="button" class="btn btn-primary" id="loc-start">Start</button>
+              <button type="button" class="btn" id="loc-replay" disabled>Play it again</button>
+            </div>
+            <p class="status" id="loc-status" aria-live="polite"></p>
+            <div class="field-frame">
+              <canvas id="check-field" class="field-canvas" tabindex="0" role="slider" aria-label="Direction of the sound" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-valuetext="12 o’clock, straight ahead"></canvas>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============ Progress ============ -->
+      <section id="screen-history" class="screen history" aria-labelledby="history-heading" hidden>
+        <h1 id="history-heading" class="page-title">Progress</h1>
+        <p class="page-lead">Speed thresholds only compare fairly between sessions with the same setup, so results are grouped by setup.</p>
+
+        <div class="empty" id="hist-empty" hidden>
+          <p>No saved sessions yet. Finish a session of at least 6 trials and your threshold appears here.</p>
+          <button type="button" class="btn btn-primary" data-nav="home">Go to setup</button>
+        </div>
+
+        <div class="history-controls" id="hist-controls">
+          <label class="form-label" for="hist-setup">Setup</label>
+          <select id="hist-setup"></select>
+        </div>
+        <figure class="chart-figure" id="hist-figure">
+          <canvas id="hist-chart" class="chart" role="img" aria-label="Speed threshold for each session"></canvas>
+          <figcaption>Speed threshold for each session, oldest first. Open dots are sessions that ended early.</figcaption>
+        </figure>
+        <p class="fine" id="hist-single" hidden>One session so far with this setup. Finish another to start seeing a trend.</p>
+        <div class="table-wrap" id="hist-table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Date</th><th scope="col" class="num">Threshold, °/s</th><th scope="col" class="num">Correct</th><th scope="col">Status</th></tr>
+            </thead>
+            <tbody id="hist-rows"></tbody>
+          </table>
+        </div>
+        <div class="actions" id="hist-actions">
+          <button type="button" class="btn" id="btn-export-csv">Download CSV</button>
+          <button type="button" class="btn" id="btn-export-json">Download JSON</button>
+          <button type="button" class="btn btn-danger" id="btn-clear">Delete all results</button>
+        </div>
+        <p class="fine">Results are stored in this browser on this device only.</p>
+      </section>
+
+      <!-- ============ About ============ -->
+      <section id="screen-about" class="screen" aria-labelledby="about-heading" hidden>
+        <div class="prose">
+          <h1 id="about-heading" class="page-title">About Earshot</h1>
+          <p class="page-lead">Earshot turns multiple object tracking, a classic attention task usually done with the eyes, into a listening task. It follows the structure of 3D multiple object tracking (3D-MOT) and rebuilds each step for hearing.</p>
+
+          <h2>How a trial works</h2>
+          <ol>
+            <li><strong>Listen.</strong> Every sound clicks from where it starts.</li>
+            <li><strong>Targets.</strong> A bell rings from each target while the others stay quiet.</li>
+            <li><strong>Remember them.</strong> All the sounds click again for a second, now identical.</li>
+            <li><strong>Track.</strong> The sounds move for a few seconds, bouncing off each other and off the edges of the arena.</li>
+            <li><strong>Choose.</strong> Everything stops. Listen to each sound where it ended up, pick the targets and confirm. Bells then ring from where the targets really were.</li>
+          </ol>
+
+          <h2>How the score works</h2>
+          <p>After a correct trial the next one is faster. After a mistake it is slower. Each step changes the speed by about 26% at first, then by about 12% once the speed starts going back and forth. Your speed threshold is the average of those turning points: the speed you get right about half the time.</p>
+          <p>A threshold only compares fairly with other sessions that use the same arena, number of sounds, number of targets and tracking time. Each new session starts a little below your last threshold for that setup.</p>
+
+          <h2>Why the sounds are built this way</h2>
+          <p>In the visual task every ball looks the same once the targets are marked, so the only way to follow a target is to keep track of where it is. Earshot keeps that rule for sound.</p>
+          <ul>
+            <li>All sounds use the same recipe, and every click is a fresh burst of noise, so no sound has its own timbre.</li>
+            <li>The sounds take turns in a newly shuffled order each round, so none of them owns a rhythm.</li>
+            <li>Loudness varies slightly from click to click, so loudness can’t give a sound away. On the floor arena distance still changes loudness, just as it would in a room.</li>
+            <li>Short, broadband clicks are the default because they are the easiest sounds to locate.</li>
+          </ul>
+
+          <h2>Getting good results</h2>
+          <ul>
+            <li>Use headphones, not speakers. Turn off any spatial audio or head tracking feature on your device, because Earshot already places the sounds.</li>
+            <li>Keep your head still and face the screen.</li>
+            <li>Run the headphone check once. If front and back get mixed up, use the Front only option.</li>
+            <li>Expect the first sessions to feel hard. Hearing direction improves with practice.</li>
+            <li>When a setup gets easy, add a sound or a target rather than chasing more speed.</li>
+          </ul>
+
+          <h2>Keyboard</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Key</th><th scope="col">What it does</th></tr></thead>
+              <tbody>
+                <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>While choosing, move between sounds and hear each one where it stopped</td></tr>
+                <tr><td><kbd>Space</kbd></td><td>Pick or remove the current sound</td></tr>
+                <tr><td><kbd>1</kbd> to <kbd>8</kbd></td><td>Pick or remove a sound by its number</td></tr>
+                <tr><td><kbd>R</kbd></td><td>Hear every sound in order, clockwise from the front</td></tr>
+                <tr><td><kbd>Enter</kbd></td><td>Confirm your choice, then go to the next trial</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Pause the session</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>With spoken prompts turned on in the settings, Earshot reads out trial numbers, sound numbers and results, so it can be played without looking at the screen.</p>
+
+          <h2>Limits</h2>
+          <p>Earshot places sounds with your browser’s built-in, generic head-related transfer function (HRTF). That works well for left and right, less well for front and back, and poorly for height, and it varies between people and headphones. The Floor and Dome arenas are experimental.</p>
+          <p>Earshot is a prototype for exploring spatial listening and attention. It isn’t a medical or diagnostic tool and makes no claim to improve thinking, sport performance or anything else. It is an independent project, not affiliated with NeuroTracker or CogniSens.</p>
+
+          <h2>Background reading</h2>
+          <ul class="refs">
+            <li>Pylyshyn and Storm (1988). Tracking multiple independent targets. Spatial Vision.</li>
+            <li>Faubert (2013). Professional athletes have extraordinary skills for rapidly learning complex and neutral dynamic visual scenes. Scientific Reports.</li>
+            <li>Vater, Gray and Holcombe (2021). A critical systematic review of the Neurotracker perceptual-cognitive training tool. Psychonomic Bulletin and Review.</li>
+            <li>Perrott and Musicant (1977). Minimum auditory movement angle. Journal of the Acoustical Society of America.</li>
+            <li>Zhong and Yost (2017). How many images are in an auditory scene? Journal of the Acoustical Society of America.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <!-- Classic scripts, in dependency order, so the page works from file:// -->
+  <script src="js/utils.js"></script>
+  <script src="js/motion.js"></script>
+  <script src="js/staircase.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/field.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/summary.js"></script>
+  <script src="js/check.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

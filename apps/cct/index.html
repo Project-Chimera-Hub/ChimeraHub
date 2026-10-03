@@ -188,10 +188,7 @@
 
     .numpad{display:none;grid-template-columns:repeat(6,1fr);gap:5px}
     .numpad.visible{display:grid}
-    /* --pad-scale is the Button size setting, set on the pad rather than written
-       into every button: a rule can then raise the floor under it (see the
-       coarse-pointer block) instead of being outranked by an inline style. */
-    .numpad-btn{aspect-ratio:1;min-height:calc(2.2rem * var(--pad-scale,1));background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:calc(.92rem * var(--pad-scale,1));cursor:pointer;transition:all var(--t);touch-action:manipulation}
+    .numpad-btn{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:.92rem;cursor:pointer;transition:all var(--t)}
     .numpad-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
     .numpad-btn.selected{background:var(--accent);color:#000;border-color:var(--accent)}
     .numpad-btn.wrong-sel{background:var(--danger-dim);border-color:var(--danger);color:var(--danger)}
@@ -303,54 +300,6 @@
     .anim-in{animation:fadeUp .3s ease both}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
     @media(max-width:480px){h1{font-size:1.65rem}.timer-display{font-size:2rem}.stimulus-number{font-size:4rem}}
-
-    /* ── Touch ─────────────────────────────────────────────────────────
-       A coarse pointer is a fingertip, and a fingertip is about 9mm across.
-       Everything it has to hit gets at least 44px of it, and the slider —
-       a 17px thumb on a 5px rail, which is the control this app asks you to
-       set almost everything with — gets a thumb and a rail it can be dragged
-       by without the finger covering the value it is setting. */
-    @media(pointer:coarse){
-      .btn,.icon-btn,.tab-btn{min-height:44px}
-      .btn,.icon-btn,.tab-btn,.numpad-btn,.toggle-track{touch-action:manipulation}
-      .slider{height:8px}
-      .slider::-webkit-slider-thumb{width:28px;height:28px}
-      .slider::-moz-range-thumb{width:28px;height:28px}
-      .num-input{font-size:1.05rem;padding:.6rem .7rem}
-      .toggle{width:46px;height:26px}
-      .toggle-track::after{width:18px;height:18px}
-      .toggle input:checked+.toggle-track::after{transform:translateX(20px)}
-      .numpad-btn{min-height:max(44px, calc(2.2rem * var(--pad-scale,1)))}
-    }
-
-    /* The top bar's buttons ran off the right edge of a phone, which put the
-       settings reset and the theme switch somewhere no finger could reach.
-       They wrap instead. */
-    @media(max-width:560px){
-      .topbar{flex-wrap:wrap;gap:6px;padding:.6rem .75rem}
-      .topbar-actions{flex-wrap:wrap;justify-content:flex-end}
-    }
-    /* ── Training, portrait ────────────────────────────────────────────
-       The stimulus and the answer keys have to be on screen together: a trial
-       lasts a second or two, and scrolling to find the keys inside it is not
-       something a hand can do. So the furniture between them gives up its
-       padding — and the keys stop being forced square, which on a narrow grid
-       made them taller than the screen had to spare. */
-    @media(max-width:700px){
-      #pageTrain .train-layout{width:calc(100% - 1rem);padding:.6rem 0 .8rem;gap:.55rem}
-      #pageTrain .topbar{padding:.5rem .75rem}
-      #pageTrain .stat-tile{padding:.4rem .55rem}
-      #pageTrain .stat-tile-val{font-size:1.05rem}
-      #pageTrain .timer-display{font-size:1.6rem}
-      #pageTrain .speed-val{font-size:.85rem}
-      #pageTrain .stimulus-box{min-height:0;padding:.9rem .6rem;gap:.45rem}
-      #pageTrain .stimulus-number{font-size:3.2rem}
-      #pageTrain .stimulus-number.hidden-num{font-size:2rem}
-      #pageTrain .answer-input{font-size:1.25rem;padding:.6rem}
-      #pageTrain .answer-section{gap:.4rem}
-      #pageTrain .numpad-btn{aspect-ratio:auto}
-      #pageTrain .eq-stream{max-height:80px}
-    }
     ::-webkit-scrollbar{width:5px}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
     hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
@@ -391,7 +340,7 @@
       </button>
       <button class="btn btn-reset" id="resetAppBtn"
         style="background:var(--danger-dim);border-color:var(--danger);color:var(--danger);font-weight:600"
-        title="Delete this trainer's data: progress history, streaks, settings and profiles. Other trainers are not affected — cannot be undone">
+        title="Delete ALL data: progress history, streaks and settings — cannot be undone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Wipe all data
       </button>
@@ -439,10 +388,10 @@
               <label class="label">Duration</label>
               <div class="slider-row">
                 <div class="slider-wrap">
-                  <input type="range" class="slider" id="durationSlider" min="1" max="300" step="1" value="15">
+                  <input type="range" class="slider" id="durationSlider" min="1" max="60" step="1" value="15">
                   <div class="tick-row" id="durationTicks"></div>
                 </div>
-                <span class="slider-val" id="durationVal">15 min</span>
+                <span class="slider-val" id="durationVal">20 min</span>
               </div>
             </div>
             <div class="field">
@@ -593,44 +542,6 @@
           </div>
         </div>
 
-        <!-- ── Bayesian adaption ─────────────────────────────────────
-             A posterior over the interval at which you score the target,
-             updated on every trial and tempered toward flat each time, so
-             old trials fade out at a set rate instead of weighing for the
-             rest of the session. Overrides the two above.
-        ── -->
-        <hr class="div" style="margin-top:1rem">
-        <div class="field" style="margin-top:1rem">
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="bayesToggle"><div class="toggle-track"></div></label>
-            <span class="toggle-label"><strong>Bayesian adaption</strong> — estimates the interval at which you hit your target accuracy, and forgets old trials so it follows you quickly</span>
-          </div>
-          <p class="hint" style="margin-top:.5rem">Every answer updates an estimate of your threshold — the interval at which you would score the target — and the next trial is placed at it. Each update also fades everything before it, so a trial from fifty answers ago barely counts and a change in form shows up within a few trials. Overrides Smooth Adapt and Target Accuracy when active.</p>
-          <div class="sub-opts" id="bayesOpts" style="margin-top:.75rem">
-            <div class="field">
-              <label class="label">Target accuracy</label>
-              <div class="slider-row">
-                <div class="slider-wrap">
-                  <input type="range" class="slider" id="bayesTargetSlider">
-                  <div class="tick-row" id="bayesTargetTicks"></div>
-                </div>
-                <span class="slider-val" id="bayesTargetVal">80%</span>
-              </div>
-            </div>
-            <div class="field" style="margin-top:.75rem">
-              <label class="label">Memory</label>
-              <div class="slider-row">
-                <div class="slider-wrap">
-                  <input type="range" class="slider" id="bayesMemorySlider">
-                  <div class="tick-row" id="bayesMemoryTicks"></div>
-                </div>
-                <span class="slider-val" id="bayesMemoryVal">25 trials</span>
-              </div>
-              <p class="hint">Roughly how many recent trials the estimate rests on. Shorter follows you faster and wobbles more; longer is steadier and slower to notice a change. Default 25.</p>
-            </div>
-          </div>
-        </div>
-
         <!-- ISI lower bound — interval never drops below this value -->
         <hr class="div" style="margin-top:1rem">
         <div class="field" style="margin-top:1rem">
@@ -665,7 +576,7 @@
             <label class="label">Button size</label>
             <div class="slider-row">
               <div class="slider-wrap">
-                <input type="range" class="slider" id="padSizeSlider" min="0.6" max="2.5" step="0.1" value="1">
+                <input type="range" class="slider" id="padSizeSlider" min="0.6" max="1.5" step="0.1" value="1">
                 <div class="tick-row" id="padSizeTicks"></div>
               </div>
               <span class="slider-val" id="padSizeVal">1.0×</span>
@@ -1183,30 +1094,7 @@ const setPage = n => {
 };
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const rand  = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-/* Longest session the Duration slider offers, in minutes.
-
-   Named because the bound was written out four times: the input's own `max`
-   attribute, two wireSlider calls (one for first paint, one for the reset path)
-   and the tick row. wireSlider assigns sl.max, so the JS copies silently
-   override the HTML one -- and the tick row is drawn against its own idea of
-   the range, so missing that one alone would have crammed every label into the
-   first fifth of the track and mislabelled them. */
-const MAX_DURATION_MIN = 300;
-
-/* Countdown clock. Hours only once there are any: a 20-minute session should not
-   read "00:20:00", and a five-hour one must not read "300:00". */
-const fmtTime = s=>{
-  const h=Math.floor(s/3600), m=Math.floor(s/60)%60, sec=s%60;
-  const mm=String(m).padStart(2,'0'), ss=String(sec).padStart(2,'0');
-  return h ? `${h}:${mm}:${ss}` : `${String(Math.floor(s/60)).padStart(2,'0')}:${ss}`;
-};
-
-/* The slider's own read-out. "300 min" is arithmetic the reader has to do. */
-const fmtDuration = v=>{
-  if(v<60) return v+' min';
-  const h=Math.floor(v/60), m=v%60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-};
+const fmtTime = s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 
 /* ══ BEEP SOUNDS ═══════════════════════════════════════════════════════
    Defined first (before any wiring) so buildBeepTypeList() can safely
@@ -1274,13 +1162,9 @@ function playBeep(){
     playBeepType(settings.beepType||'sine', settings.beepVol);
 }
 
-/* ── Storage ──
-   Every key this page owns, and the only ones "Wipe all data" may remove.
-   This page shares its origin with every other trainer in Chimera Hub, so
-   nothing here may touch a key it does not own — hence no localStorage.clear(). */
-const KEYS = { prog:'mp_prog', sett:'mp_sett_v2', theme:'mp_theme', profiles:'cct_profiles' };
-const loadProgress = ()=>{ try{return JSON.parse(localStorage.getItem(KEYS.prog))||{};}catch{return {};} };
-const saveProgress = d=>{ try{localStorage.setItem(KEYS.prog,JSON.stringify(d));}catch{} };
+/* ── Storage ── */
+const loadProgress = ()=>{ try{return JSON.parse(localStorage.getItem('mp_prog'))||{};}catch{return {};} };
+const saveProgress = d=>{ try{localStorage.setItem('mp_prog',JSON.stringify(d));}catch{} };
 
 const DEFAULTS = {
   mode:'standard', duration:15, startISI:1500, nback:1,
@@ -1299,7 +1183,6 @@ const DEFAULTS = {
   fumble:false, fatFinger:false,
   smoothAdapt:false, adaptUp:20, adaptDown:20,
   targetAcc:false, targetAccPct:85,
-  bayesAdapt:false, bayesTargetPct:80, bayesMemory:25,
   isiMin:500,           /* lower bound for ISI (ms) — interval never goes below this */
   coyote:false, coyoteMs:150,
   singleDigit:false, minimalInput:false, hideInput:false, showStream:false,
@@ -1311,7 +1194,7 @@ const DEFAULTS = {
 
 function loadSettings(){
   try{
-    const s=JSON.parse(localStorage.getItem(KEYS.sett));
+    const s=JSON.parse(localStorage.getItem('mp_sett_v2'));
     if(!s) return Object.assign({},DEFAULTS,{switchOps:Object.assign({},DEFAULTS.switchOps),switchColors:Object.assign({},DEFAULTS.switchColors)});
     // Deep-merge object-valued keys so old saves don't lose new sub-keys
     const merged=Object.assign({},DEFAULTS,s);
@@ -1322,16 +1205,16 @@ function loadSettings(){
     return Object.assign({},DEFAULTS,{switchOps:Object.assign({},DEFAULTS.switchOps),switchColors:Object.assign({},DEFAULTS.switchColors)});
   }
 }
-function saveSettings(){ try{localStorage.setItem(KEYS.sett,JSON.stringify(settings));}catch{} }
+function saveSettings(){ try{localStorage.setItem('mp_sett_v2',JSON.stringify(settings));}catch{} }
 let settings = loadSettings();
 
 /* ── Theme ── */
-let theme = localStorage.getItem(KEYS.theme)||'dark';
+let theme = localStorage.getItem('mp_theme')||'dark';
 const sunIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z"/>`;
 const moonIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>`;
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
-  localStorage.setItem(KEYS.theme,t);
+  localStorage.setItem('mp_theme',t);
   const icon=$('themeBtnIcon'); const label=$('themeBtnLabel');
   if(icon){ icon.innerHTML = t==='dark' ? moonIcon : sunIcon; }
   if(label){ label.textContent = t==='dark' ? 'Dark' : 'Light'; }
@@ -1354,9 +1237,9 @@ function buildTicks(containerId, min, max, tickVals, labelFn){
   });
 }
 
-buildTicks('durationTicks',  1, MAX_DURATION_MIN, [1,30,60,120,180,240,300], v=>v<60?v+'m':(v/60)+'h');
+buildTicks('durationTicks',  1,  60, [1,10,20,30,45,60], v=>v+'m');
 buildTicks('startISITicks', 100,6000, [100,1000,2000,3000,4500,6000], v=>v<1000?v+'ms':(v/1000)+'s');
-buildTicks('padSizeTicks',  0.6,2.5, [0.6,1.0,1.5,2.0,2.5], v=>v+'×');
+buildTicks('padSizeTicks',  0.6,1.5, [0.6,0.8,1.0,1.2,1.5], v=>v+'×');
 buildTicks('speechRateTicks',0.5,3, [0.5,1.0,1.5,2.0,2.5,3.0], v=>v+'×');
 buildTicks('beepVolTicks',   0,  1,  [0,0.25,0.5,0.75,1], v=>Math.round(v*100)+'%');
 buildTicks('coyoteTicks',  100,2000, [100,500,1000,1500,2000], v=>v+'ms');
@@ -1383,9 +1266,9 @@ function wireSlider(id,valId,init,min,max,step,fmt,cb){
   sl.min=min;sl.max=max;sl.step=step;sl.value=init;vEl.textContent=fmt(+init);
   sl.addEventListener('input',()=>{ const v=+sl.value; vEl.textContent=fmt(v); cb(v); });
 }
-wireSlider('durationSlider','durationVal',  settings.duration,   1, MAX_DURATION_MIN, 1, fmtDuration,       v=>{settings.duration=v;saveSettings();});
+wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       v=>{settings.duration=v;saveSettings();});
 wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         v=>{settings.startISI=v;saveSettings();});
-wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 2.5,  0.1, v=>v.toFixed(1)+'×', v=>{settings.padScale=v;applyPadScale();saveSettings();});
+wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', v=>{settings.padScale=v;applyPadScale();saveSettings();});
 buildTicks('padColsTicks', 2, 10, [2,3,4,5,6,7,8,9,10], v=>String(v));
 wireSlider('padColsSlider','padColsVal', settings.padCols, 2, 10, 1, v=>String(v), v=>{settings.padCols=v;if(sessionActive)buildNumpad();saveSettings();});
 document.querySelectorAll('input[name="padOrder"]').forEach(r=>{
@@ -1460,11 +1343,6 @@ wireToggle('fumbleToggle', null,          settings.fumble,       v=>{settings.fu
 wireToggle('fatFingerToggle',null,        settings.fatFinger,    v=>{settings.fatFinger=v;saveSettings();});
 wireToggle('smoothAdaptToggle','smoothAdaptOpts',settings.smoothAdapt,v=>{settings.smoothAdapt=v;saveSettings();});
 wireToggle('targetAccToggle','targetAccOpts',settings.targetAcc,v=>{settings.targetAcc=v;saveSettings();});
-wireToggle('bayesToggle','bayesOpts',settings.bayesAdapt,v=>{settings.bayesAdapt=v;saveSettings();});
-buildTicks('bayesTargetTicks',50,95,[50,60,70,80,90,95],v=>v+'%');
-buildTicks('bayesMemoryTicks',8,100,[8,25,50,75,100],v=>String(v));
-wireSlider('bayesTargetSlider','bayesTargetVal',settings.bayesTargetPct,50,95,1,v=>v+'%',v=>{settings.bayesTargetPct=v;saveSettings();});
-wireSlider('bayesMemorySlider','bayesMemoryVal',settings.bayesMemory,8,100,1,v=>v+' trials',v=>{settings.bayesMemory=v;saveSettings();});
 buildTicks('targetAccTicks',50,99,[50,60,70,75,80,85,90,95,99],v=>v+'%');
 wireSlider('targetAccSlider','targetAccVal',settings.targetAccPct,50,99,1,v=>v+'%',v=>{settings.targetAccPct=v;saveSettings();});
 wireToggle('coyoteToggle','coyoteOpts',  settings.coyote,       v=>{settings.coyote=v;saveSettings();});
@@ -1503,9 +1381,9 @@ $('confirmModal').addEventListener('click',e=>{ if(e.target===$('confirmModal'))
 
 /* ── Reset ── */
 function applySettingsToUI(){
-  wireSlider('durationSlider','durationVal',  settings.duration,   1, MAX_DURATION_MIN, 1, fmtDuration,       ()=>{});
+  wireSlider('durationSlider','durationVal',  settings.duration,   1,   60,   1, v=>v+' min',       ()=>{});
   wireSlider('startISISlider','startISIVal',  settings.startISI,   100, 6000, 100, v=>v+' ms',         ()=>{});
-  wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 2.5,  0.1, v=>v.toFixed(1)+'×', ()=>{});
+  wireSlider('padSizeSlider', 'padSizeVal',   settings.padScale,   0.6, 1.5,  0.1, v=>v.toFixed(1)+'×', ()=>{});
   wireSlider('padColsSlider','padColsVal', settings.padCols, 2, 10, 1, v=>String(v), ()=>{});
   document.querySelectorAll('input[name="padOrder"]').forEach(r=>{ r.checked=r.value===(settings.padOrder||'asc'); });
   wireSlider('speechRateSlider','speechRateVal',settings.speechRate,0.5,3,    0.1, v=>v.toFixed(1)+'×', ()=>{});
@@ -1527,9 +1405,6 @@ function applySettingsToUI(){
   $('fatFingerToggle').checked=settings.fatFinger;
   $('smoothAdaptToggle').checked=settings.smoothAdapt; $('smoothAdaptOpts').classList.toggle('open',settings.smoothAdapt);
   $('targetAccToggle').checked=settings.targetAcc; $('targetAccOpts').classList.toggle('open',settings.targetAcc);
-  $('bayesToggle').checked=settings.bayesAdapt; $('bayesOpts').classList.toggle('open',settings.bayesAdapt);
-  wireSlider('bayesTargetSlider','bayesTargetVal',settings.bayesTargetPct,50,95,1,v=>v+'%',()=>{});
-  wireSlider('bayesMemorySlider','bayesMemoryVal',settings.bayesMemory,8,100,1,v=>v+' trials',()=>{});
   wireSlider('targetAccSlider','targetAccVal',settings.targetAccPct,50,99,1,v=>v+'%',()=>{});
   $('coyoteToggle').checked=settings.coyote;     $('coyoteOpts').classList.toggle('open',settings.coyote);
   initAnswerRangeUI();
@@ -1808,7 +1683,7 @@ function applyRuleSwitchColor(op){
    The Share button can export all current settings OR a single
    profile as a URL param.
 ════════════════════════════════════════════════════════════════════ */
-const PROFILES_KEY=KEYS.profiles;
+const PROFILES_KEY='cct_profiles';
 function loadProfiles(){ try{return JSON.parse(localStorage.getItem(PROFILES_KEY))||[];}catch{return[];} }
 function saveProfiles(p){ try{localStorage.setItem(PROFILES_KEY,JSON.stringify(p));}catch{} }
 
@@ -1946,13 +1821,13 @@ document.addEventListener('keydown',e=>{
 /* Reset app (wipe all data) */
 $('resetAppBtn').addEventListener('click',()=>{
   openModal(
-    'Wipe Cognitive Control Training data?',
-    'This will delete ALL of this trainer\'s session history, progress data, streaks, settings and saved profiles. Other trainers are not affected. This cannot be undone.',
+    'Reset entire app?',
+    'This will delete ALL session history, progress data, streaks, and settings. This cannot be undone.',
     ()=>{
-      Object.values(KEYS).forEach(k=>{ try{localStorage.removeItem(k);}catch{} });
+      localStorage.clear();
       location.reload();
     },
-    'Wipe', true
+    'Wipe everything', true
   );
 });
 
@@ -2257,58 +2132,6 @@ let timerSec=0;
 let timerInterval=null, trialTimeout=null, coyoteTimeout=null;
 let coyoteActive=false, sessionDuration=0;
 
-/* ── Pausing ───────────────────────────────────────────────────────
-   A hidden page stops being trained in front of. The shell hides this
-   trainer in a frame when you go back to the hub menu and delivers the
-   browser's own `visibilitychange`, which is the same signal a real tab
-   switch sends — so both are handled here and neither needs to know the
-   other exists.
-
-   What stops is the clock and the pace, and nothing else: the trial on
-   screen stays exactly as it is and is still scored by the callback that
-   was already pending, re-armed with the time it had left. Discarding it
-   would be the other honest answer, and it is not this one — a session
-   interrupted for a moment should cost that moment, not a trial.
-
-   The pending callback has to be *kept* rather than reconstructed. It is
-   the one that scores an unanswered trial before advancing, so re-arming
-   `runTrial` instead would silently drop the answer window the player
-   was still inside. That is why arming goes through `armTrial`. */
-let sessionPaused=false, pendingTrial=null;
-
-/* Remember the next trial's callback and deadline, so a pause can put
-   the same one back with the remainder of its wait. */
-function armTrial(fn, ms){
-  pendingTrial={ fn:fn, left:ms, at:Date.now()+ms };
-  clearTimeout(trialTimeout);
-  trialTimeout=setTimeout(()=>{ pendingTrial=null; fn(); }, ms);
-}
-
-function pauseSession(){
-  if(!sessionActive||sessionPaused) return;
-  sessionPaused=true;
-  clearInterval(timerInterval); timerInterval=null;
-  clearTimeout(trialTimeout); trialTimeout=null;
-  if(pendingTrial) pendingTrial.left=Math.max(50, pendingTrial.at-Date.now());
-  /* The coyote window is a few hundred milliseconds of grace, and it is
-     measured in wall-clock time. Carrying one across a pause would hand
-     back a window as long as the interruption, so it closes the way it
-     closes anywhere else. */
-  closeCoyoteWindow();
-}
-
-function resumeSession(){
-  if(!sessionPaused) return;
-  sessionPaused=false;
-  if(!sessionActive) return;
-  armTimer();
-  if(pendingTrial) armTrial(pendingTrial.fn, pendingTrial.left);
-}
-
-document.addEventListener('visibilitychange',()=>{
-  if(document.hidden) pauseSession(); else resumeSession();
-});
-
 /* ── adaptISI ──────────────────────────────────────────────────────
    Standard mode (new rule):
      Keep a rolling window of the last 5 scored trials.
@@ -2323,114 +2146,10 @@ let taWindow = [];      // rolling window of booleans (last 20 trials)
 const TA_WIN  = 20;     // window size
 const TA_MAX_NUDGE = 80; // ms — cap per-trial nudge so changes feel gradual
 
-/* ── Bayesian threshold estimate ───────────────────────────────────
-   One idea used twice: a posterior over T, the interval (in log10 ms) at
-   which you score a given accuracy, on a grid.
-
-   The likelihood of a trial at interval x is a psychometric curve that
-   rises with x: γ + (1−γ−λ)·logistic(β(x − T) + c), with c chosen so that
-   the curve passes through the target exactly at x = T. γ is the chance of a
-   right answer by luck (small — the answer is typed, not picked) and λ the
-   lapse rate, the share of trials lost however slow the pace.
-
-   Forgetting is tempering: before each update the log-posterior is scaled by
-   (1 − 1/memory), which pulls it toward flat. A trial's weight then decays
-   geometrically, so the estimate rests on roughly the last `memory` trials
-   rather than on every trial since the start, and when form changes the
-   posterior moves in a few answers instead of having to outvote the whole
-   session.
-
-   CONTROLLER: with Bayesian adaption on, each trial is placed at the current
-   estimate for the chosen target, a step capped at 15% so the pace never
-   lurches.
-
-   DIFFICULTY: a second posterior runs in every mode at a fixed 80%, so the
-   number a session records does not depend on which controller ran it or on
-   what target was set. See `cctDifficulty` for what is made of it.
-── */
-const BAY_GRID = (()=>{ const g=[]; for(let t=Math.log10(100); t<=Math.log10(8000)+1e-9; t+=0.01) g.push(t); return g; })();
-const BAY_SLOPE = 10;      // per log10 unit: 20%→80% over about a factor of 1.7 in interval
-const BAY_GUESS = 0.02, BAY_LAPSE = 0.04;
-const BAY_STEP_CAP = 0.15;
-
-function bayesCreate(startISI, target, memory){
-  const mu=Math.log10(startISI), sd=0.25;
-  return { target, memory, n:0,
-    log: BAY_GRID.map(t=>-0.5*((t-mu)/sd)**2) };
-}
-function bayesP(x, t, target){
-  const span=1-BAY_GUESS-BAY_LAPSE;
-  const q=clamp((target-BAY_GUESS)/span, 0.01, 0.99);
-  const c=Math.log(q/(1-q));
-  return BAY_GUESS + span/(1+Math.exp(-(BAY_SLOPE*(x-t)+c)));
-}
-function bayesObserve(b, isi, ok){
-  const x=Math.log10(Math.max(1,isi)), keep=1-1/Math.max(2,b.memory);
-  let max=-Infinity;
-  for(let i=0;i<BAY_GRID.length;i++){
-    const p=clamp(bayesP(x, BAY_GRID[i], b.target), 1e-6, 1-1e-6);
-    b.log[i]=b.log[i]*keep + Math.log(ok?p:1-p);
-    if(b.log[i]>max) max=b.log[i];
-  }
-  for(let i=0;i<b.log.length;i++) b.log[i]-=max;   // keep the numbers small
-  b.n++;
-}
-/** Posterior mean of T and its spread, both in log10 ms. */
-function bayesStats(b){
-  let z=0, m=0, v=0;
-  const w=b.log.map(l=>Math.exp(l));
-  w.forEach((wi,i)=>{ z+=wi; m+=wi*BAY_GRID[i]; });
-  m/=z;
-  w.forEach((wi,i)=>{ v+=wi*(BAY_GRID[i]-m)**2; });
-  return { mean:m, sd:Math.sqrt(v/z) };
-}
-const bayesThresholdMs = b => Math.round(Math.pow(10, bayesStats(b).mean));
-
-/* ── Difficulty ─────────────────────────────────────────────────────
-   The archive's old figure was the fastest interval reached, as items per
-   minute. Two things wrong with it: the fastest interval is the luckiest
-   moment of the session, not its level, and a 1-back at 1000 ms and a 3-back
-   at 1000 ms came out the same.
-
-   Now: items per minute at the THRESHOLD — the interval the always-on 80%
-   posterior settled at, best over the session once it has 20 trials behind
-   it — times a weight for the depth held. The weight is 1 + log2(n): the step
-   from 1-back to 2-back doubles the work (one number held becomes an ordered
-   pair that shifts every trial), and each further step adds less, since what
-   grows is the length of a list you already know how to rotate. 1, 2, 2.58,
-   3, 3.32 for n = 1…5. A judgement rather than a measurement — kept in one
-   function so it can be revised against the record.
-── */
-const nbackWeight = n => 1 + Math.log2(Math.max(1, n||1));
-function cctDifficulty(thresholdISI, n){
-  if(!(thresholdISI>0)) return null;
-  return Math.round(60000/thresholdISI * nbackWeight(n) * 10) / 10;
-}
-
-let bayesCtrl = null;      // the controller, when Bayesian adaption is on
-let bayesMeter = null;     // the difficulty posterior, always on
-let bestThresholdISI = null;
-const METER_TARGET = 0.80, METER_MEMORY = 30, METER_MIN_TRIALS = 20;
-
 function adaptISI(ok){
   const lo = Math.max(50, settings.isiMin||0);
 
-  /* The trial just answered ran at currentISI; both posteriors learn from it
-     before anything moves the interval. */
-  if(bayesMeter){
-    bayesObserve(bayesMeter, currentISI, ok);
-    if(bayesMeter.n >= METER_MIN_TRIALS){
-      const t=bayesThresholdMs(bayesMeter);
-      if(bestThresholdISI==null || t<bestThresholdISI) bestThresholdISI=t;
-    }
-  }
-
-  if(settings.bayesAdapt && bayesCtrl){
-    bayesObserve(bayesCtrl, currentISI, ok);
-    const want=bayesThresholdMs(bayesCtrl);
-    const step=clamp(want, currentISI*(1-BAY_STEP_CAP), currentISI*(1+BAY_STEP_CAP));
-    currentISI = clamp(Math.round(step), lo, 6000);
-  } else if(settings.targetAcc){
+  if(settings.targetAcc){
     /* ── Target Accuracy controller ─────────────────────────────────
        Maintains a rolling window of recent trial outcomes.
        Each trial, it compares the rolling accuracy to the target and
@@ -2564,7 +2283,7 @@ function runTrial(){
   if(correctAnswer===null){
     // No answer needed for warm-up trials (building up n-back buffer).
     // Minimum 50ms prevents recursion stack overflow at very low ISI values.
-    armTrial(runTrial, Math.max(50, currentISI));
+    trialTimeout=setTimeout(runTrial, Math.max(50, currentISI));
     return;
   }
 
@@ -2594,7 +2313,7 @@ function runTrial(){
 
   // Schedule next trial unconditionally after ISI — pace never changes.
   // Math.max(50,...) prevents stack overflow at very low ISI settings.
-  armTrial(()=>{
+  trialTimeout=setTimeout(()=>{
     if(!sessionActive) return;
 
     if(!answerProcessed && correctAnswer!==null){
@@ -2642,8 +2361,7 @@ function closeCoyoteWindow(){
   if(!coyoteActive) return;
   coyoteActive=false; clearTimeout(coyoteTimeout);
   $('stimulusBox').classList.remove('coyote-active');
-  $('inputHint').textContent=settings.useNumpad
-    ? 'Tap your answer' : 'Type your answer · Enter to confirm';
+  $('inputHint').textContent='Type your answer · Enter to confirm';
 }
 
 function closeIctState(){
@@ -2798,10 +2516,7 @@ function updateTrainStats(){
   // Target accuracy pill — shows rolling window accuracy vs target
   const tap=$('targetAccPill');
   if(tap){
-    if(settings.bayesAdapt && bayesCtrl && bayesCtrl.n>=3){
-      tap.style.display='';
-      tap.textContent=`🎯 ${settings.bayesTargetPct}% at ~${bayesThresholdMs(bayesCtrl)} ms`;
-    } else if(settings.targetAcc && taWindow.length>=5){
+    if(settings.targetAcc && taWindow.length>=5){
       const ra=Math.round(taWindow.filter(Boolean).length/taWindow.length*100);
       tap.style.display='';
       tap.textContent=`🎯 ${ra}% → ${settings.targetAccPct}%`;
@@ -2875,26 +2590,16 @@ function buildNumpad(){
   $('numpad').style.gridTemplateColumns=`repeat(${cols},1fr)`;
 }
 function applyPadScale(){
-  const pad=$('numpad');
-  if(pad) pad.style.setProperty('--pad-scale', settings.padScale||1);
+  document.querySelectorAll('.numpad-btn').forEach(b=>{ b.style.fontSize=(0.92*settings.padScale)+'rem'; b.style.minHeight=(2.2*settings.padScale)+'rem'; });
 }
 function deselect(){ $('numpad').querySelectorAll('.numpad-btn').forEach(b=>b.classList.remove('selected','wrong-sel')); }
 
 /* Timer */
 function startTimer(){
-  timerSec=sessionDuration;
+  timerSec=sessionDuration; const total=sessionDuration;
   $('timerDisplay').textContent=fmtTime(timerSec); $('progressFill').style.width='100%';
-  armTimer();
-}
-
-/* The countdown on its own, so resuming can put it back without resetting
-   it — `startTimer` reassigns `timerSec` and is the wrong thing to call
-   when the session is being continued rather than begun. */
-function armTimer(){
-  const total=sessionDuration;
-  clearInterval(timerInterval);
   timerInterval=setInterval(()=>{
-    if(!sessionActive||sessionPaused) return;
+    if(!sessionActive) return;
     timerSec--; $('timerDisplay').textContent=fmtTime(Math.max(0,timerSec));
     $('progressFill').style.width=(timerSec/total*100)+'%';
     if(timerSec<=0) endSession();
@@ -2910,9 +2615,6 @@ function startSession(){
   totalCorrect=totalAttempts=currentStreak=0;
   recentResults=[];
   taWindow=[];
-  bayesCtrl = bayesCreate(currentISI, (settings.bayesTargetPct||80)/100, settings.bayesMemory||25);
-  bayesMeter = bayesCreate(currentISI, METER_TARGET, METER_MEMORY);
-  bestThresholdISI = null;
   trialHistory=[]; numberSequence=[]; correctAnswer=prevCorrectAnswer=null;
   prevAnswerMissed=false; answerProcessed=true; coyoteActive=false; ictTrial=false;
   rrtArrowGiven=null; ndmArrowGiven=null;
@@ -2936,8 +2638,7 @@ function startSession(){
   // Show number presentation mode in the topbar subtitle
   const presLabel={'both':'audio+visual','visual':'visual only','audio':'audio only'};
   $('trainSubStatus').textContent='adaptive · '+(presLabel[settings.numberPresentation]||'audio');
-  $('inputHint').textContent=settings.useNumpad
-    ? 'Tap your answer' : 'Type your answer · Enter to confirm';
+  $('inputHint').textContent='Type your answer · Enter to confirm';
   $('feedbackBand').className='feedback-band';
   $('stimInstruction').textContent='Waiting for first number…';
   $('stimNumber').textContent='·'; $('stimNumber').className='stimulus-number hidden-num';
@@ -3007,10 +2708,6 @@ function handleKeydown(e){
 function endSession(){
   sessionActive=false;
   clearInterval(timerInterval); clearTimeout(trialTimeout); clearTimeout(coyoteTimeout);
-  /* A session that ends while the page is hidden must not leave the pause
-     state behind: the next one would arm its countdown and then skip every
-     tick, because the flag the tick reads was never cleared. */
-  sessionPaused=false; pendingTrial=null;
   coyoteActive=false; ictTrial=false;
   speechQueue=null; speechBusy=false;
   try{ synth.cancel(); }catch(e){}
@@ -3118,11 +2815,6 @@ function showResults(){
     durationSec,
     nback: settings.nback,
     ict: settings.ict,
-    /* The 80% threshold and the n-weighted figure made from it; absent when
-       the session was too short to say (under 20 answered trials). */
-    ...(bestThresholdISI ? { thresholdISI: bestThresholdISI,
-                             difficulty: cctDifficulty(bestThresholdISI, settings.nback) } : {}),
-    adapt: settings.bayesAdapt ? 'bayes' : settings.targetAcc ? 'target' : settings.smoothAdapt ? 'smooth' : 'standard',
   });
   if(prog.history.length>100) prog.history=prog.history.slice(0,100); // keep last 100
   saveProgress(prog);
@@ -3131,11 +2823,7 @@ function showResults(){
   $('resultMainStats').innerHTML=
     mkStat('Correct Answers',`${totalCorrect} / ${totalAttempts}`)+
     mkStat('Accuracy',acc+'%','accent-val')+
-    mkStat('Lowest Interval',lowestISI+' ms')+
-    (bestThresholdISI
-      ? mkStat('80% Threshold',bestThresholdISI+' ms')+
-        mkStat('Difficulty',cctDifficulty(bestThresholdISI,settings.nback),'accent-val')
-      : mkStat('Difficulty','needs 20 trials'));
+    mkStat('Lowest Interval',lowestISI+' ms');
   $('resultCumStats').innerHTML=
     mkStat('Sessions',prog.sessions)+
     mkStat('Total Questions',prog.totalQ.toLocaleString('en'))+
