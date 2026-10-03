@@ -179,14 +179,111 @@ test("both builds in one browser are two trainers, not one", () => {
 });
 
 /* ------------------------------------------------------------------ *
- * share-kit, kept for any tool that wants it                          *
- * ------------------------------------------------------------------ *
- *
- * The hub's own "Share your data" card left with Syllogimous, whose answers
- * were the only thing it shared. The kit is a standalone piece and stays.
- */
+ * The file a player shares                                            *
+ * ------------------------------------------------------------------ */
 
 const Kit = require("../shared/share-kit/share-kit.js");
+const Share = require("../shell/js/share.js");
+
+/* Quad Box's games as its IndexedDB holds them: the game's meta, its scores
+   per stimulus, and a status. */
+const quadGame = (h, extra) => ({
+  id: h, title: "quad", nBack: 3, rules: "default", tags: ["position", "audio", "shape", "color"],
+  trialTime: 2500, numTrials: 30, start: at(h) - 75000, timestamp: at(h), completedTrials: 30,
+  status: "completed",
+  scores: { position: { hits: 9, misses: 1 }, audio: { hits: 8, misses: 2 }, shape: { hits: 7, misses: 3 }, color: { hits: 6, misses: 4 } },
+  ...extra,
+});
+
+test("every trainer that keeps sessions is in the shared file", () => {
+  reset();
+  chimera([{ at: at(9), minutes: 2 }]);
+  relational([{ at: at(10), minutes: 3 }]);
+  store.mp_prog = JSON.stringify({ history: [{ ts: at(11), acc: 80, correct: 40, total: 50, lowestISI: 1500, durationSec: 300, nback: 2 }] });
+  store["earshot.sessions.v1"] = JSON.stringify([{
+    id: "x", startedAt: at(12) - 240000, endedAt: at(12), partial: false, key: "ring/6/2/all/8",
+    setup: "Ring, 6 sounds, 2 targets, all around, 8 s tracking",
+    config: { mode: "ring", n: 6, t: 2, frontOnly: false, duration: 8, sound: "beeps" },
+    threshold: 42.5, accuracy: 0.7, reversals: 6, trials: [{ n: 1, speed: 40, correct: true, picked: [3, 5] }],
+  }]);
+  /* eWMT has a day of minutes and no sessions, so it adds nothing. */
+  store.affective_nback_v3 = JSON.stringify({ v: 3, settings: {}, totals: { allMs: 60000, dayKey: "2026-9-10", dayMs: 60000 } });
+
+  const file = Share.build(at(23), [quadGame(13), quadGame(14, { status: "tombstone" })]);
+  assert.deepStrictEqual(Kit.validate(file), { ok: true, errors: [] });
+  assert.deepStrictEqual(file.apps, { chimera: 1, relational: 1, cct: 1, earshot: 1, quadbox: 1 });
+
+  const by = Object.fromEntries(file.rows.map((r) => [r.app, r]));
+  assert.deepStrictEqual(file.rows.map((r) => r.app), ["chimera", "relational", "cct", "earshot", "quadbox"],
+    "not in the order trained");
+  assert.strictEqual(by.chimera.correct, 0.75);
+  assert.strictEqual(by.relational.level, 2);
+  assert.strictEqual(by.cct.level, 40, "CCT's level is its peak rate, 60000 / 1500 ms");
+  assert.deepStrictEqual(
+    [by.earshot.mode, by.earshot.level, by.earshot.correct, by.earshot.seconds],
+    ["ring 6/2 all 8s", 42.5, 0.7, 240]);
+  assert.deepStrictEqual(
+    [by.quadbox.mode, by.quadbox.level, by.quadbox.correct, by.quadbox.seconds, by.quadbox.clock],
+    ["quad", 3, 0.75, 75, 2.5]);
+  assert.deepStrictEqual(by.quadbox.rungs, ["position", "audio", "shape", "color"]);
+
+  /* What the player configured or did inside a session stays home. */
+  const text = JSON.stringify(file);
+  for (const leak of ["beeps", "picked", "Ring, 6 sounds", String(at(12))]) {
+    assert.ok(!text.includes(leak), `the shared file carries ${JSON.stringify(leak)}`);
+  }
+});
+
+test("a session the kit cannot hold whole keeps its row", () => {
+  /* A two-hour Relational session is over the kit's hour. Losing the row for
+     it would be losing the session; the figure goes, the row stays. */
+  reset();
+  relational([{ at: at(9), minutes: 120 }]);
+  const file = Share.build(at(23), [quadGame(10, { status: "cancelled", title: "tally dual", rules: "variable" })]);
+  assert.strictEqual(file.answers, 2);
+  assert.strictEqual(file.rows[0].seconds, null);
+  assert.strictEqual(file.rows[1].mode, "tally dual variable");
+  assert.ok(file.rows[1].rungs.includes("ended-early"));
+});
+
+test("the shared file keeps a retired trainer's answers and none of its words", () => {
+  /* Syllogimous left the hub, and a browser that played it still holds its
+     answers — the ones this card was first made for. */
+  reset();
+  const q = (t, type, extra) => ({
+    answeredAt: t, createdAt: t - 20000, answered: true, type,
+    userAnswer: true, isValid: true, answerMode: "boolean",
+    premises: ["<span class=\"subject\">Wallet</span> is left of Scale", "Scale is left of Puppy"],
+    conclusion: "Wallet is left of Puppy",
+    timerTypeOnAnswer: "2", gameModeOnAnswer: "1",
+    difficulty: { level: 6.2, premises: 2, rungs: ["negation"], seconds: 40, carousel: true },
+    ...extra,
+  });
+  store.SYL_HISTORY_IDX = JSON.stringify([0]);
+  store["SYL_HISTORY_C:0"] = JSON.stringify([q(at(10), "Syllogism"), q(at(9), "Linear Arrangement", { userAnswer: false })]);
+  store.SYL_KEYBINDS = JSON.stringify({ answerTrue: "ArrowUp" });
+
+  const file = Share.build(at(23));
+  const text = JSON.stringify(file);
+  for (const leak of ["Wallet", "Puppy", "ArrowUp", "subject", String(at(9))]) {
+    assert.ok(!text.includes(leak), `the shared file carries ${JSON.stringify(leak)}`);
+  }
+  const [wrong, right] = file.rows;
+  assert.deepStrictEqual(right, {
+    app: "syllogimous", mode: "Syllogism", level: 6.2, premises: 2, rungs: ["negation"],
+    clock: 40, presentation: "1", timer: "2", answerMode: "boolean", correct: 1,
+    seconds: 20, day: DAY, seq: 2,
+  });
+  assert.strictEqual(wrong.correct, 0);
+});
+
+test("the participant id is made once and kept", () => {
+  reset();
+  const a = Share.build().participant;
+  assert.match(a, /^[0-9a-f]{16}$/);
+  assert.strictEqual(Share.build().participant, a,
+    "a second file got a new id, so one player's files cannot be joined or deleted together");
+});
 
 function kitFile(answers, participant) {
   return Kit.makeFile(answers, { tool: "test", participant: participant || "0123456789abcdef", now: at(23) }).file;
