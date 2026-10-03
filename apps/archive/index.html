@@ -8,7 +8,7 @@
      that loaded the page while the wiring was broken would keep serving
      itself the broken script for ten more minutes — and the failure is
      silent, so it would read as "the fix did not work". Bump on release. -->
-<link rel="stylesheet" href="css/base.css?v=10">
+<link rel="stylesheet" href="css/base.css?v=11">
 </head>
 <body>
 
@@ -57,6 +57,7 @@
 
     <span class="nav-label">Yours</span>
     <a class="nav-item" href="#notes"><svg class="icon"><use href="#i-pen"/></svg>Notes</a>
+    <a class="nav-item" href="#anecdote"><svg class="icon"><use href="#i-trend"/></svg>Anecdote</a>
     <a class="nav-item" href="#imports"><svg class="icon"><use href="#i-scroll"/></svg>Log</a>
     <a class="nav-item" href="#tests"><svg class="icon"><use href="#i-list"/></svg>Online tests</a>
 
@@ -245,6 +246,40 @@
   <ul id="noteList" class="notes"></ul>
 </section>
 
+<!-- The before-and-after post, compiled from what is already here: two scores
+     out of the notes, the training between them, each trainer's difficulty.
+     See js/anecdote.js. Nothing is sent anywhere; the copy and the picture are
+     made in this page and handed to the person to post. -->
+<section id="anecdote" class="panel">
+  <div class="panel-head"><h2>Anecdote</h2></div>
+  <p class="dim">
+    A test before training and the same test after, with everything done in
+    between: total time, days trained, each trainer's difficulty from start to
+    end. The two scores come from your notes &mdash; add a note with a
+    <b>measure</b> (say <code>JCTI</code>, <code>118</code>, <code>IQ</code>) for each sitting.
+  </p>
+  <p id="anecEmpty" class="dim" hidden></p>
+  <div id="anecControls" class="anecform">
+    <div class="row">
+      <label class="grow">Before <select id="anecBefore"></select></label>
+      <label class="grow">After <select id="anecAfter"></select></label>
+    </div>
+    <label class="grow">Anything to add
+      <textarea id="anecExtra" rows="2" placeholder="Sleep, other training, what changed — it goes into the post"></textarea>
+    </label>
+    <div class="row">
+      <button id="anecCopy" class="btn btn-primary" type="button">Copy as text</button>
+      <button id="anecPng" class="btn" type="button"><svg class="icon"><use href="#i-download"/></svg>Download image</button>
+      <span id="anecNote" class="dim" role="status"></span>
+    </div>
+  </div>
+  <div id="anecFigure" class="anecfig"></div>
+  <details id="anecTextBox" class="about anectext">
+    <summary>Text version</summary>
+    <textarea id="anecText" rows="12" readonly></textarea>
+  </details>
+</section>
+
 <!-- Outside tests, for checking where training has got you. Links only: the
      archive sends nothing to any of them and reads nothing back. -->
 <section id="tests" class="panel">
@@ -283,6 +318,7 @@
 <script src="js/archive.js?v=6"></script>
 <script src="js/insight.js?v=6"></script>
 <script src="js/ability.js?v=6"></script>
-<script src="js/app.js?v=7"></script>
+<script src="js/anecdote.js?v=1"></script>
+<script src="js/app.js?v=8"></script>
 </body>
 </html>

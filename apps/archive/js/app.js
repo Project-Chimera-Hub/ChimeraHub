@@ -38,9 +38,9 @@ var WEEKS_NEEDED = 20;
 var SOURCE_NAMES = {
   syllogimous: "Syllogimous",
   isomorph: "Isomorph",
-  /* The ladder trainer that was on the hub before the four-stream one; the
-     name belongs to the trainer there now. */
-  rnb: "Relational N-back (ladder)",
+  /* The ladder trainer, beside the four-stream one on the hub and named as
+     the hub names it. */
+  rnb: "Relational N-back - Loosh",
   precision: "Precision N-back",
   rotation: "3D Rotation",
   cct: "CCT",
@@ -431,6 +431,7 @@ function render() {
   renderNotes();
   renderMeasures();
   renderKnownTags();
+  renderAnecdote();
   renderSaveState();
   refreshUndo();
   /* Notes count as something to download, not just records.
@@ -1280,6 +1281,158 @@ function renderKnownTags() {
 }
 
 /* ------------------------------------------------------------------ *
+ * The anecdote                                                        *
+ * ------------------------------------------------------------------ *
+ *
+ * The two scores and the words are remembered in this browser only, as a
+ * convenience: the scores themselves are notes and live in the file, and the
+ * anecdote is recompiled from the file every time, so nothing here can drift
+ * from the record.
+ */
+
+var ANEC_KEY = "archive.anecdote.v1";
+var anecPick = { before: "", after: "", extra: "" };
+
+function loadAnecPick() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(ANEC_KEY) || "null");
+    if (saved && typeof saved === "object") {
+      anecPick.before = String(saved.before || "");
+      anecPick.after = String(saved.after || "");
+      anecPick.extra = String(saved.extra || "");
+    }
+  } catch (e) { /* storage off: start from the default pair */ }
+}
+
+function storeAnecPick() {
+  try { localStorage.setItem(ANEC_KEY, JSON.stringify(anecPick)); } catch (e) { /* convenience only */ }
+}
+
+/** The pair currently chosen, falling back to the likeliest one when a choice no longer exists. */
+function anecPair() {
+  var scores = anecdoteScores(archive);
+  var ids = scores.map(function (x) { return x.id; });
+  var pair = { before: anecPick.before, after: anecPick.after };
+  if (ids.indexOf(pair.before) < 0 || ids.indexOf(pair.after) < 0 || pair.before === pair.after) {
+    pair = anecdoteDefaultPair(archive) || { before: "", after: "" };
+  }
+  return pair;
+}
+
+var anecCurrent = null;
+var anecTyping = null;
+
+function renderAnecdote() {
+  var scores = anecdoteScores(archive);
+  var enough = scores.length >= 2;
+  $("anecControls").hidden = !enough;
+  $("anecTextBox").hidden = !enough;
+  $("anecEmpty").hidden = enough;
+  if (!enough) {
+    $("anecEmpty").textContent = scores.length
+      ? "One score so far (" + scores[0].name + ", " + scores[0].day + "). Add the second sitting as a note with a measure and the anecdote compiles itself."
+      : "No test scores yet. Add a note under Notes with a measure for the test you took before training, and another for the one after.";
+    $("anecFigure").innerHTML = "";
+    anecCurrent = null;
+    return;
+  }
+
+  var pair = anecPair();
+  ["anecBefore", "anecAfter"].forEach(function (id, k) {
+    var chosen = k ? pair.after : pair.before;
+    $(id).innerHTML = scores.map(function (x) {
+      return "<option value='" + esc(x.id) + "'" + (x.id === chosen ? " selected" : "") + ">"
+        + esc(x.name + " — " + x.value + (x.unit ? " " + x.unit : "") + " · " + x.day) + "</option>";
+    }).join("");
+  });
+  if (document.activeElement !== $("anecExtra")) $("anecExtra").value = anecPick.extra;
+
+  anecCurrent = compileAnecdote(archive, pair.before, pair.after);
+  if (!anecCurrent) { $("anecFigure").innerHTML = ""; return; }
+
+  var same = pair.before === pair.after;
+  $("anecNote").textContent = same ? "Pick two different sittings." : "";
+  $("anecText").value = same ? "" : anecdoteMarkdown(anecCurrent, sourceName, anecPick.extra);
+  var wide = $("anecFigure").clientWidth >= 760 || !$("anecFigure").clientWidth;
+  $("anecFigure").innerHTML = same ? "" : anecdoteSvg(anecCurrent, {
+    width: wide ? 1000 : 560, nameOf: sourceName, extra: anecPick.extra,
+  });
+}
+
+function anecChanged() {
+  anecPick.before = $("anecBefore").value;
+  anecPick.after = $("anecAfter").value;
+  anecPick.extra = $("anecExtra").value;
+  storeAnecPick();
+  renderAnecdote();
+}
+
+function anecSay(text) {
+  $("anecNote").textContent = text;
+  setTimeout(function () { if ($("anecNote").textContent === text) $("anecNote").textContent = ""; }, 4000);
+}
+
+function copyAnecdote() {
+  if (!anecCurrent || $("anecBefore").value === $("anecAfter").value) return;
+  var md = anecdoteMarkdown(anecCurrent, sourceName, anecPick.extra);
+  var done = function () { anecSay("Copied — paste it into the post."); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(md).then(done, function () { fallback(); });
+  } else {
+    fallback();
+  }
+  /* A page without clipboard access still gets the text: selected in a box,
+     ready for the keyboard shortcut. */
+  function fallback() {
+    var ta = document.createElement("textarea");
+    ta.value = md;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    if (ok) { done(); return; }
+    $("anecTextBox").open = true;
+    $("anecText").focus();
+    $("anecText").select();
+    anecSay("This browser would not copy by itself; the text is selected below.");
+  }
+}
+
+/** The picture is always drawn wide, whatever the screen, so every posted one reads the same. */
+function downloadAnecdotePng() {
+  if (!anecCurrent || $("anecBefore").value === $("anecAfter").value) return;
+  var svg = anecdoteSvg(anecCurrent, { width: 1000, nameOf: sourceName, extra: anecPick.extra });
+  var m = /viewBox='0 0 (\d+) (\d+)'/.exec(svg);
+  var w = Number(m[1]), h = Number(m[2]), scale = 2;
+  var url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  var img = new Image();
+  img.onload = function () {
+    var canvas = document.createElement("canvas");
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    var ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(function (blob) {
+      if (!blob) { anecSay("The picture could not be made in this browser."); return; }
+      var out = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = out;
+      a.download = "training-anecdote-" + anecCurrent.from + "-to-" + anecCurrent.to + ".png";
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(out); }, 1000);
+    }, "image/png");
+  };
+  img.onerror = function () { URL.revokeObjectURL(url); anecSay("The picture could not be made in this browser."); };
+  img.src = url;
+}
+
+/* ------------------------------------------------------------------ *
  * Taking the archive out                                              *
  * ------------------------------------------------------------------ */
 
@@ -1345,6 +1498,24 @@ window.addEventListener("DOMContentLoaded", function () {
   });
 
   $("noteForm").addEventListener("submit", submitNote);
+  loadAnecPick();
+  $("anecBefore").addEventListener("change", anecChanged);
+  $("anecAfter").addEventListener("change", anecChanged);
+  $("anecExtra").addEventListener("input", function () {
+    anecPick.extra = $("anecExtra").value;
+    storeAnecPick();
+    clearTimeout(anecTyping);
+    anecTyping = setTimeout(renderAnecdote, 300);
+  });
+  $("anecCopy").addEventListener("click", copyAnecdote);
+  $("anecPng").addEventListener("click", downloadAnecdotePng);
+  /* The drawing has a narrow layout and a wide one; rotate a phone and it
+     should pick again. */
+  var anecWidth = 0;
+  window.addEventListener("resize", function () {
+    var w = $("anecFigure").clientWidth >= 760;
+    if (w !== anecWidth) { anecWidth = w; renderAnecdote(); }
+  });
   $("noteCancel").addEventListener("click", function () { clearNoteForm(); });
   $("noteFilter").addEventListener("input", function (e) {
     noteFilter = e.target.value.trim(); renderNotes();

@@ -90,6 +90,35 @@ The convenience cache keeps notes **whole**, unlike records, which it stores
 lossy on purpose. Records can be rebuilt by dropping the exports in again;
 notes cannot be rebuilt from anything.
 
+## The anecdote
+
+The post the community writes to say whether training worked — a test before,
+the same test after, and what happened in between — compiled from what is
+already in the file, under **Anecdote**.
+
+The two scores are measured notes: pick the before and the after (it defaults
+to the first and latest sitting of the test you repeated most recently). The
+rest is read off the record for the days between them: hours, days trained,
+minutes per training day and per calendar day, minutes per week, and each
+trainer's difficulty from its first five days played to its last five, in its
+own unit. The test's whole history and any other tests taken in between come
+with it, and so does anything you type into the box.
+
+**Copy as text** gives Markdown that Reddit and Discord both render; **Download
+image** gives the same drawing as a PNG, always 1000px wide so every posted one
+reads the same. Nothing is sent anywhere.
+
+It follows the rules below rather than bending them for a better-looking post:
+
+- **Two different tests are not a difference.** They are shown side by side and
+  no change is computed.
+- **No difficulty is added across trainers.** Each trainer gets its own start,
+  end and line.
+- **Days nobody vouches for are counted and said**, because hours over a span
+  whose exports are half missing are an undercount and have to look like one.
+- **The post says what it is**: one test before and one after is an anecdote,
+  and the picture and the text both end by saying so.
+
 ## The rules it is built on
 
 **Merging is a union, never an addition.** Records key on `source + id`;

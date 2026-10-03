@@ -530,7 +530,7 @@ test("the page renders an archive without throwing", () => {
     .replace(/typeof require === "function"/g, "false");
 
   for (const f of ["js/record.js", "js/notes.js", "js/adapters.js", "js/archive.js",
-                   "js/insight.js", "js/ability.js", "js/app.js"]) {
+                   "js/insight.js", "js/ability.js", "js/anecdote.js", "js/app.js"]) {
     vm.runInContext(strip(f), ctx, { filename: f });
   }
 
@@ -587,6 +587,16 @@ test("the page renders an archive without throwing", () => {
   assert.ok(!nodes.noteList.innerHTML.includes("deleted"), "a deleted note is still on the page");
   assert.ok(nodes.measures.innerHTML.includes("RAPM"), "the measure series is empty");
   assert.ok(nodes.daysTable.innerHTML.includes("&#9998;"), "the day with a note carries no marker");
+
+  /* One score is not an anecdote, and says what is missing; two compile one. */
+  assert.strictEqual(nodes.anecControls.hidden, true, "one score offered an anecdote");
+  assert.ok(nodes.anecEmpty.textContent.includes("RAPM"), "the empty anecdote did not name the score it has");
+  ctx.archive.notes.push(N.makeNote({ id: "n3", day: "2026-08-26", at: 2, text: "",
+    measure: { name: "RAPM", value: 30, unit: "raw" } }));
+  ctx.render();
+  assert.strictEqual(nodes.anecControls.hidden, false, "two scores offered no anecdote");
+  assert.ok(nodes.anecFigure.innerHTML.startsWith("<svg"), "the anecdote drew nothing");
+  assert.ok(nodes.anecText.value.includes("RAPM: 27 raw → 30 raw (+3)"), "the text version is wrong");
 
   /* A note and nothing else must still be downloadable. Writing one marks the
      file behind and arms the warning on close, so a Download that stayed
@@ -1989,6 +1999,105 @@ test("ability: nothing outside the window speaks for today", () => {
   const est = AB.estimate(arc, { asOf: "2027-09-22" });
   assert.strictEqual(est.level, null);
   assert.ok(/nothing in the last 180 days/.test(est.unused[0].why), est.unused[0].why);
+});
+
+/* ------------------------------------------------------------------ *
+ * The anecdote                                                        *
+ * ------------------------------------------------------------------ */
+
+const AN = require("../js/anecdote.js");
+
+/* Two RNB weeks with a load that rises, one Syllogimous day, a JCTI before and
+   after with one more sitting in the middle, and a day nobody vouches for. */
+function anecArchive() {
+  const ar = A.emptyArchive();
+  const day = (d) => Date.UTC(2026, 0, d, 12);
+  ar.minutes = { rnb: {}, syllogimous: { "2026-01-05": 30 } };
+  ar.records = [];
+  for (let d = 2; d <= 15; d++) {
+    if (d === 9) continue;                       // a rest day, inside coverage
+    ar.minutes.rnb["2026-01-" + String(d).padStart(2, "0")] = 20;
+    for (let k = 0; k < 3; k++) {
+      ar.records.push(makeRecord({ source: "rnb", id: "r" + d + "-" + k, at: day(d) + k,
+        seconds: 60, correct: 1, difficulty: 2 + d / 10, unit: "rnb-load" }));
+    }
+  }
+  ar.minutes.rnb["2025-12-20"] = 500;            // before the first test: not counted
+  ar.coverage = { rnb: [["2026-01-01", "2026-01-15"]], syllogimous: [["2026-01-05", "2026-01-05"]] };
+  ar.notes = [
+    N.makeNote({ id: "a", day: "2026-01-01", text: "", measure: { name: "JCTI", value: "118", unit: "IQ" } }),
+    N.makeNote({ id: "m", day: "2026-01-08", text: "", measure: { name: "JCTI", value: "121", unit: "IQ" } }),
+    N.makeNote({ id: "o", day: "2026-01-10", text: "", measure: { name: "RAPM", value: "27", unit: "raw" } }),
+    N.makeNote({ id: "b", day: "2026-01-16", text: "", measure: { name: "JCTI", value: "125", unit: "IQ" } }),
+  ];
+  return ar;
+}
+
+test("anecdote: the default pair is the first and last sitting of the latest repeated test", () => {
+  assert.deepStrictEqual(AN.anecdoteDefaultPair(anecArchive()), { before: "a", after: "b" });
+});
+
+test("anecdote: totals cover the span between the tests and nothing outside it", () => {
+  const a = AN.compileAnecdote(anecArchive(), "a", "b");
+  assert.strictEqual(a.spanDays, 16);
+  assert.strictEqual(a.totalMinutes, 13 * 20 + 30, "minutes outside the span were counted, or inside ones lost");
+  assert.strictEqual(a.trainedDays, 13);
+  assert.strictEqual(a.delta, 7);
+  assert.ok(a.sameTest);
+});
+
+test("anecdote: the pair is put in order whichever way it is picked", () => {
+  const a = AN.compileAnecdote(anecArchive(), "b", "a");
+  assert.strictEqual(a.before.id, "a");
+  assert.strictEqual(a.delta, 7);
+});
+
+test("anecdote: a day nobody vouches for is unknown, not a rest day", () => {
+  /* Jan 16 is past the coverage and untrained; Jan 9 is inside it. */
+  const a = AN.compileAnecdote(anecArchive(), "a", "b");
+  assert.strictEqual(a.unknownDays, 1);
+});
+
+test("anecdote: each trainer's progress is in its own unit, from its first days to its last", () => {
+  const a = AN.compileAnecdote(anecArchive(), "a", "b");
+  const rnb = a.perSource.find((p) => p.source === "rnb");
+  assert.strictEqual(rnb.unit, "rnb-load");
+  assert.ok(Math.abs(rnb.start - (2 + (2 + 3 + 4 + 5 + 6) / 50)) < 1e-9, "start is not the first days' mean");
+  assert.ok(rnb.end > rnb.start);
+  const syl = a.perSource.find((p) => p.source === "syllogimous");
+  assert.strictEqual(syl.start, null, "a trainer with no difficulty was given a progress figure");
+});
+
+test("anecdote: two different tests are not a difference", () => {
+  const a = AN.compileAnecdote(anecArchive(), "a", "o");
+  assert.strictEqual(a.sameTest, false);
+  assert.strictEqual(a.delta, null);
+  assert.ok(!/\(\+|\(−/.test(AN.anecdoteHeadline(a)), "a cross-test headline printed a change");
+});
+
+test("anecdote: the test's own history and the tests in between are carried", () => {
+  const a = AN.compileAnecdote(anecArchive(), "a", "b");
+  assert.deepStrictEqual(a.history.map((s) => s.id), ["a", "m", "b"]);
+  assert.deepStrictEqual(a.between.map((s) => s.id), ["o"]);
+});
+
+test("anecdote: a score that is not in the archive compiles nothing", () => {
+  assert.strictEqual(AN.compileAnecdote(anecArchive(), "a", "nope"), null);
+});
+
+test("anecdote: the text and the picture say the same headline, and the picture escapes what was typed", () => {
+  const ar = anecArchive();
+  ar.notes[0].measure.name = "JC<TI";
+  ar.notes[1].measure.name = "JC<TI";
+  ar.notes[3].measure.name = "JC<TI";
+  const a = AN.compileAnecdote(ar, "a", "b");
+  const md = AN.anecdoteMarkdown(a, (s) => s, "slept <well>");
+  assert.ok(md.includes("JC<TI: 118 IQ → 125 IQ (+7)"));
+  assert.ok(md.includes("slept <well>"));
+  const svg = AN.anecdoteSvg(a, { extra: "slept <well>" });
+  assert.ok(!svg.includes("<well>") && svg.includes("&lt;well&gt;"), "typed text reached the SVG unescaped");
+  assert.ok(!svg.includes("JC<TI"), "a measure name reached the SVG unescaped");
+  assert.ok(/^<svg[^>]*viewBox='0 0 1000 \d+'/.test(svg));
 });
 
 for (const [name, fn] of cases) {

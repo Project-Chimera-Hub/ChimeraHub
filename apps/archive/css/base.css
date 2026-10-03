@@ -836,6 +836,15 @@ tr:last-child td { border-block-end: 0; }
 .about summary:hover { color: var(--text-primary); }
 .about p { margin: 8px 0 0; }
 
+/* The anecdote: the controls, then the drawing that becomes the picture. */
+.anecform label.grow { flex: 1 1 16rem; display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 500; }
+.anecform textarea { width: 100%; resize: vertical; line-height: 1.5; }
+.anecform > label.grow { margin-top: 10px; }
+.anecfig { margin-top: 16px; overflow-x: auto; }
+.anectext { margin-top: 12px; }
+.anectext textarea { width: 100%; margin-top: 8px; resize: vertical; font-size: 12px; line-height: 1.5; }
+.anecfig svg { display: block; inline-size: 100%; block-size: auto; max-inline-size: 1000px; border: 1px solid var(--border); }
+
 /* The online tests: a folded list of links out, in the panel's own type. */
 #tests { padding-block: 14px; }
 .tests { margin: 0; }
