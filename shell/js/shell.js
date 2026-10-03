@@ -64,19 +64,11 @@
                   colour: "var(--dim)", what: "The record. Not training." };
 
   /* Openable and on the menu, but kept out of TRAINERS for the archive's
-   * reason: TRAINERS is what the meter sums, and none of these has an adapter
-   * yet, so the day cannot see them. They sit in their own box on the hub and
-   * their own directory in the repository, apps/more/. Giving one an adapter
+   * reason: TRAINERS is what the meter sums, and DorsalFlow has no adapter
+   * yet, so the day cannot see it. It sits in its own box on the hub and
+   * its own directory in the repository, apps/more/. Giving it an adapter
    * is what moves it up into the list above. */
   var MORE = [
-    { id: "goated", name: "GOATED n-Back", path: "more/goated/", colour: "#2be3c6",
-      what: "Relational n-back over abstract relationships" },
-    { id: "posner", name: "Adaptive Posner", path: "more/posner/", colour: "#9ecbff",
-      what: "Semantic cueing, adaptive timing" },
-    { id: "schulte", name: "Speed Memory × Schulte", path: "more/schulte/", colour: "#c8b8ff",
-      what: "Schulte tables against a memory span" },
-    { id: "integration", name: "Relational Integration", path: "more/integration/", colour: "#f2cc60",
-      what: "N-back over differences between numbers" },
     { id: "dorsalflow", name: "DorsalFlow", path: "more/dorsalflow/", colour: "#6e9bff",
       what: "Motion contrast and visual timing in noise" },
   ];
