@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<title>Attention Training</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Karla:wght@400;500;600;700&display=swap');
+
+:root{
+  --ink: #17140F;
+  --panel: #221D14;
+  --line: #3A3226;
+  --parchment: #EDE6D6;
+  --muted: #A79A80;
+  --brass: #C89B4A;
+  --brass-dim: #8A6B34;
+  --rust: #B5624A;
+  --good: #6FA287;
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Karla', sans-serif;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--ink);
+  color:var(--parchment);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{ font-family:var(--font-body); }
+input[type=checkbox],input[type=range]{ accent-color:var(--brass); }
+
+.app{ max-width:600px; margin:0 auto; padding:32px 20px 70px; }
+
+.topbar h1{
+  font-family:var(--font-display); font-weight:600; font-size:23px;
+  margin:0 0 20px; letter-spacing:.2px;
+}
+.tabs{ display:flex; gap:22px; border-bottom:1px solid var(--line); }
+.tab-btn{
+  background:none; border:none; color:var(--muted); font-size:14px;
+  padding:9px 1px 10px; cursor:pointer; position:relative; margin-bottom:-1px;
+}
+.tab-btn.active{ color:var(--parchment); }
+.tab-btn.active::after{
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--brass);
+}
+
+.view{ display:none; }
+.view.active{ display:block; }
+main{ padding-top:26px; }
+
+.panel{ padding-top:26px; margin-top:26px; border-top:1px solid var(--line); }
+.panel:first-child{ padding-top:0; margin-top:0; border-top:none; }
+.panel h2{
+  font-family:var(--font-display); font-weight:500; font-size:16px;
+  margin:0 0 14px; color:var(--parchment);
+}
+.panel-header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+.panel-header h2{ margin-bottom:0; }
+.btn-text{ background:none; border:none; color:var(--brass); font-size:13px; cursor:pointer; padding:0; }
+.btn-text:hover{ text-decoration:underline; }
+
+.hint{ color:var(--muted); font-size:13px; line-height:1.5; margin:10px 0 0; }
+
+/* Difficulty segmented control */
+.segmented{ display:flex; gap:8px; }
+.seg-btn{
+  flex:1; background:transparent; border:1px solid var(--line); color:var(--parchment);
+  padding:11px 6px; cursor:pointer; border-radius:3px;
+  display:flex; flex-direction:column; align-items:center; gap:3px; font-size:14px;
+}
+.seg-btn.active{ border-color:var(--brass); color:var(--brass); }
+.seg-sub{ font-size:11px; color:var(--muted); }
+.seg-btn.active .seg-sub{ color:var(--brass-dim); }
+
+/* Compass */
+.compass-wrap{ display:flex; justify-content:center; padding:22px 0 10px; }
+.compass{ position:relative; width:min(300px,88vw); aspect-ratio:1/1; }
+.compass-bg{ position:absolute; inset:0; width:100%; height:100%; }
+.compass-center{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:50px; height:50px; border-radius:50%; background:var(--panel);
+  border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:var(--muted); z-index:2; transition:border-color .3s;
+}
+@keyframes pulse{
+  0%,100%{ transform:translate(-50%,-50%) scale(1); }
+  50%{ transform:translate(-50%,-50%) scale(1.1); }
+}
+.compass-center.pulsing{ animation:pulse 2.4s ease-in-out infinite; border-color:var(--brass); }
+
+.compass-marker{
+  position:absolute; transform:translate(-50%,-50%); display:flex;
+  flex-direction:column; align-items:center; gap:5px; width:84px;
+}
+.marker-label{ font-size:11px; color:var(--muted); text-align:center; }
+.marker-select{
+  width:100%; font-size:11px; padding:5px 3px; border-radius:2px;
+  border:1px solid var(--line); background:var(--panel); color:var(--parchment); text-align:center;
+}
+
+.session-marker{
+  position:absolute; transform:translate(-50%,-50%); display:flex;
+  flex-direction:column; align-items:center; gap:6px; transition:opacity .3s;
+}
+.marker-dot{ width:13px; height:13px; border-radius:50%; background:var(--line); transition:.3s; }
+.session-marker.focused .marker-dot{
+  background:var(--brass); box-shadow:0 0 18px rgba(200,155,74,.65); transform:scale(1.35);
+}
+.session-marker.dimmed{ opacity:.32; }
+.session-marker .marker-label{ font-size:11px; }
+
+/* Session composition */
+.mode-row{ display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
+.mode-row:last-of-type{ border-bottom:none; }
+.mode-info{ flex:1; display:flex; flex-direction:column; gap:1px; }
+.mode-info strong{ font-size:14px; font-weight:500; }
+.mode-info span{ font-size:12px; color:var(--muted); }
+.mins-input{ display:flex; align-items:center; gap:5px; font-size:13px; color:var(--muted); }
+.mins-input input{
+  width:50px; padding:6px; border-radius:2px; border:1px solid var(--line);
+  background:var(--panel); color:var(--parchment); text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.mins-input input:disabled{ opacity:.4; }
+.total-row{ margin-top:12px; font-size:13px; color:var(--muted); text-align:right; }
+.total-row strong{ color:var(--brass); font-size:16px; font-variant-numeric:tabular-nums; }
+
+.switch{ position:relative; display:inline-block; width:36px; height:21px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; position:absolute; }
+.switch span{ position:absolute; inset:0; background:var(--line); border-radius:999px; cursor:pointer; transition:.2s; }
+.switch span:before{
+  content:''; position:absolute; height:15px; width:15px; left:3px; top:3px;
+  background:var(--parchment); border-radius:50%; transition:.2s;
+}
+.switch input:checked + span{ background:var(--brass-dim); }
+.switch input:checked + span:before{ transform:translateX(15px); background:var(--brass); }
+
+.field-row{ display:flex; align-items:center; gap:14px; padding:9px 0; }
+.field-row label:not(.switch){ font-size:13px; color:var(--muted); min-width:100px; }
+.voice-row{ flex:1; display:flex; gap:8px; }
+.voice-row select{
+  flex:1; padding:9px 10px; border-radius:2px; border:1px solid var(--line);
+  background:var(--panel); color:var(--parchment); font-size:13px;
+}
+input[type=range]{ flex:1; }
+
+.btn-primary{
+  background:var(--brass); color:var(--ink); border:none; padding:14px 20px;
+  border-radius:3px; font-weight:600; font-size:14px; cursor:pointer;
+}
+.btn-primary:disabled{ opacity:.35; cursor:not-allowed; }
+.btn-secondary{
+  background:transparent; color:var(--parchment); border:1px solid var(--line);
+  padding:9px 15px; border-radius:3px; font-size:13px; cursor:pointer;
+}
+.btn-secondary.btn-danger{ color:var(--rust); border-color:var(--rust); }
+.btn-large{ width:100%; padding:16px; font-size:15px; margin-top:8px; }
+.btn-icon{
+  background:var(--panel); border:1px solid var(--line); color:var(--parchment);
+  width:29px; height:29px; border-radius:3px; cursor:pointer; font-size:12px;
+}
+
+/* Sound library */
+.sound-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; margin-top:4px; }
+.sound-slot{ border:1px solid var(--line); border-radius:3px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+.sound-slot.loaded{ border-color:var(--brass-dim); }
+.slot-info{ display:flex; flex-direction:column; gap:2px; }
+.slot-info strong{ font-size:14px; font-weight:500; }
+.slot-info .slot-desc{ font-size:11px; color:var(--muted); }
+.slot-info .filename-hint{
+  font-family: Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size:10.5px; color:var(--brass-dim); background:rgba(200,155,74,.08);
+  padding:2px 6px; border-radius:2px; align-self:flex-start; margin-top:2px;
+}
+.slot-pending{ font-size:11px; color:var(--muted); }
+.slot-actions{ display:flex; gap:6px; align-items:center; }
+.file-btn{
+  background:var(--panel); border:1px solid var(--line); padding:7px 10px;
+  border-radius:3px; font-size:12px; cursor:pointer; color:var(--muted); text-align:center;
+}
+.file-btn.small{ flex:1; }
+.library-actions{ margin-bottom:10px; }
+.slot-volume{ display:flex; align-items:center; gap:8px; }
+.slot-volume-label{ font-size:11px; color:var(--muted); width:24px; flex-shrink:0; }
+.slot-volume-value{ font-size:11px; color:var(--muted); width:32px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
+
+.custom-add-row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
+.custom-add-row input[type=text]{
+  flex:1; min-width:150px; padding:9px 11px; border-radius:2px; border:1px solid var(--line);
+  background:var(--panel); color:var(--parchment); font-size:13px;
+}
+.file-name{ font-size:11px; color:var(--muted); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Session view */
+.session-header{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.mode-pill{
+  background:rgba(200,155,74,.12); color:var(--brass); border:1px solid var(--brass-dim);
+  padding:7px 14px; border-radius:3px; font-size:13px; font-weight:600; flex:1; text-align:center;
+}
+.caption{
+  text-align:center; font-family:var(--font-display); font-size:21px; font-weight:500;
+  min-height:30px; margin:18px 0 22px; color:var(--parchment);
+}
+.progress-block{ display:flex; flex-direction:column; gap:11px; }
+.progress-row{ display:flex; align-items:center; gap:10px; font-size:11px; color:var(--muted); }
+.progress-row > span:first-child{ width:74px; }
+.progress-row > span:last-child{ width:82px; text-align:right; font-variant-numeric:tabular-nums; }
+.progress-bar{ flex:1; height:5px; background:var(--line); border-radius:999px; overflow:hidden; }
+.progress-fill{ height:100%; background:var(--brass); width:0%; transition:width .2s linear; }
+
+/* In-session mixer */
+.mixer-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+.mixer-row:last-child{ border-bottom:none; }
+.mixer-row-label{ display:flex; flex-direction:column; gap:1px; flex:1 1 88px; min-width:0; }
+.mixer-row-label strong{ font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mixer-row-label span{ font-size:11px; color:var(--muted); }
+.mixer-row input[type=range]{ flex:1.6; }
+.mixer-row-value{ font-size:11px; color:var(--muted); width:32px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
+
+/* Focus challenge */
+.challenge-stats{ display:flex; gap:22px; margin-bottom:14px; }
+.challenge-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
+.challenge-btn{
+  background:var(--panel); border:1px solid var(--line); color:var(--parchment);
+  padding:11px 8px; border-radius:3px; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; gap:3px; transition:border-color .15s ease, color .15s ease;
+}
+.challenge-btn-num{ font-family:var(--font-display); font-size:17px; font-weight:600; }
+.challenge-btn-label{ font-size:10.5px; color:var(--muted); }
+.challenge-btn.challenge-correct{ border-color:var(--good); color:var(--good); }
+.challenge-btn.challenge-correct .challenge-btn-label{ color:var(--good); }
+.challenge-btn.challenge-wrong{ border-color:var(--rust); color:var(--rust); }
+.challenge-btn.challenge-wrong .challenge-btn-label{ color:var(--rust); }
+.challenge-btn.challenge-reveal{ border-color:var(--brass); color:var(--brass); }
+.challenge-btn.challenge-reveal .challenge-btn-label{ color:var(--brass-dim); }
+
+/* Zen mode: scoped to the session view so it can never affect Setup's own .compass-wrap */
+#view-session.zen-mode .mode-pill,
+#view-session.zen-mode .compass-wrap,
+#view-session.zen-mode .caption,
+#view-session.zen-mode .progress-block,
+#view-session.zen-mode #session-mixer-panel,
+#view-session.zen-mode #session-challenge-panel h2,
+#view-session.zen-mode #session-challenge-panel .challenge-stats{
+  display:none;
+}
+
+.center-card{ text-align:center; padding:60px 10px 20px; }
+.summary-total{ font-family:var(--font-display); font-size:28px; color:var(--brass); margin:8px 0 16px; font-weight:600; }
+.summary-list{ list-style:none; padding:0; margin:0 0 26px; color:var(--muted); font-size:13px; display:flex; flex-direction:column; gap:5px; }
+
+/* History */
+.history-summary{ display:flex; gap:26px; margin-bottom:20px; }
+.stat{ display:flex; flex-direction:column; }
+.stat strong{ font-family:var(--font-display); font-size:22px; color:var(--brass); font-weight:600; font-variant-numeric:tabular-nums; }
+.stat span{ font-size:11px; color:var(--muted); }
+.history-day{ margin-bottom:16px; }
+.history-day-header{ display:flex; justify-content:space-between; font-size:13px; padding-bottom:7px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.history-day-header span{ color:var(--muted); font-variant-numeric:tabular-nums; }
+.history-session{ display:flex; align-items:center; gap:10px; padding:6px 0; flex-wrap:wrap; }
+.difficulty-badge{
+  text-transform:capitalize; border:1px solid var(--line); padding:2px 8px;
+  border-radius:2px; font-size:11px; color:var(--muted);
+}
+.session-total{ font-size:12px; color:var(--parchment); font-variant-numeric:tabular-nums; }
+.mode-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-left:auto; }
+.mode-chip{ font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:2px; }
+
+#toast-container{
+  position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; gap:8px; z-index:999; width:min(340px,90vw);
+}
+.toast{
+  background:var(--panel); border:1px solid var(--line); color:var(--parchment);
+  padding:11px 14px; border-radius:3px; font-size:13px; opacity:0; transform:translateY(8px);
+  transition:.25s;
+}
+.toast.show{ opacity:1; transform:translateY(0); }
+.toast.toast-error{ border-color:var(--rust); color:#e3a99a; }
+
+@media (max-width:420px){
+  .app{ padding:24px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1>Attention Training</h1>
+    <nav class="tabs" id="tabs">
+      <button type="button" class="tab-btn active" data-tab="setup">Setup</button>
+      <button type="button" class="tab-btn" data-tab="library">Sound Library</button>
+      <button type="button" class="tab-btn" data-tab="history">History</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-setup" class="view active">
+      <div class="panel">
+        <h2>Difficulty</h2>
+        <div class="segmented">
+          <button type="button" class="seg-btn active" data-difficulty="easy">Easy<span class="seg-sub">4 positions</span></button>
+          <button type="button" class="seg-btn" data-difficulty="intermediate">Intermediate<span class="seg-sub">6 positions</span></button>
+          <button type="button" class="seg-btn" data-difficulty="advanced">Advanced<span class="seg-sub">8 positions</span></button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Sound placement</h2>
+          <button type="button" id="randomize-btn" class="btn-text">Randomize</button>
+        </div>
+        <div class="compass-wrap">
+          <div class="compass" id="compass"></div>
+        </div>
+        <p class="hint" id="start-hint"></p>
+        <button type="button" id="start-session-btn" class="btn-primary btn-large">Start Session</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Session</h2>
+          <button type="button" id="default-composition-btn" class="btn-text">Use default (5 / 5 / 2)</button>
+        </div>
+        <div class="mode-row" data-mode="selective">
+          <label class="switch"><input type="checkbox" checked /><span></span></label>
+          <div class="mode-info"><strong>Selective Attention</strong><span>Focus shifts every 10&ndash;20s</span></div>
+          <div class="mins-input"><input type="number" min="0" max="60" step="0.5" value="5" /><span>min</span></div>
+        </div>
+        <div class="mode-row" data-mode="rapid">
+          <label class="switch"><input type="checkbox" checked /><span></span></label>
+          <div class="mode-info"><strong>Rapid Attention Switching</strong><span>Focus shifts every 5s</span></div>
+          <div class="mins-input"><input type="number" min="0" max="60" step="0.5" value="5" /><span>min</span></div>
+        </div>
+        <div class="mode-row" data-mode="divided">
+          <label class="switch"><input type="checkbox" checked /><span></span></label>
+          <div class="mode-info"><strong>Divided Attention</strong><span>Attend to all sounds, or none</span></div>
+          <div class="mins-input"><input type="number" min="0" max="60" step="0.5" value="2" /><span>min</span></div>
+        </div>
+        <div class="total-row">Total session <strong id="total-minutes">12</strong> min</div>
+      </div>
+
+      <div class="panel">
+        <h2>Voice &amp; volume</h2>
+        <div class="field-row">
+          <label for="voice-select">Narration</label>
+          <div class="voice-row">
+            <select id="voice-select"></select>
+            <button type="button" id="test-voice-btn" class="btn-secondary">Test</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <label class="switch"><input type="checkbox" id="divided-prompt-toggle" checked /><span></span></label>
+          <span>Play the divided attention explanation</span>
+        </div>
+        <div class="field-row">
+          <label for="volume-slider">Master volume</label>
+          <input type="range" id="volume-slider" min="0" max="100" value="100" />
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Focus Challenge</h2>
+        <div class="field-row">
+          <label class="switch"><input type="checkbox" id="challenge-toggle" /><span></span></label>
+          <span>Randomly mute one sound for a few seconds during the session</span>
+        </div>
+        <p class="hint">When it goes quiet, press the number for the sound that stopped as soon as you notice &mdash; there's nothing on screen to give it away.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Zen mode</h2>
+        <div class="field-row">
+          <label class="switch"><input type="checkbox" id="zen-toggle" /><span></span></label>
+          <span>Hide the compass, captions, and progress during the session</span>
+        </div>
+        <p class="hint">Only pause/end and the Focus Challenge buttons (if that's on) stay on screen. You can flip this on or off mid-session too.</p>
+      </div>
+    </section>
+
+    <section id="view-library" class="view">
+      <div class="panel" style="padding-top:0;margin-top:0;border-top:none;">
+        <h2>Sound library</h2>
+        <p class="hint" style="margin:0 0 14px;">Put your 12 clips in the same folder as this HTML file, named exactly as shown under each card below. They load on their own when the page opens &mdash; nothing to upload.</p>
+        <div class="library-actions">
+          <button type="button" id="reload-sounds-btn" class="btn-secondary">Reload sounds</button>
+        </div>
+        <div class="sound-grid" id="default-sound-grid"></div>
+      </div>
+      <div class="panel">
+        <h2>Custom sounds</h2>
+        <div class="custom-add-row">
+          <input type="text" id="custom-name-input" placeholder="Name (used in voice cues)" maxlength="40" />
+          <label class="file-btn">Choose file<input type="file" id="custom-file-input" accept="audio/*" hidden /></label>
+          <span id="custom-file-name" class="file-name"></span>
+          <button type="button" id="custom-add-btn" class="btn-secondary" disabled>Add</button>
+        </div>
+        <div class="sound-grid" id="custom-sound-grid"></div>
+      </div>
+    </section>
+
+    <section id="view-history" class="view">
+      <div class="panel" style="padding-top:0;margin-top:0;border-top:none;">
+        <h2>Training history</h2>
+        <div id="history-summary" class="history-summary"></div>
+        <div id="history-list"></div>
+      </div>
+    </section>
+
+    <section id="view-session" class="view">
+      <div class="session-header">
+        <span class="mode-pill" id="session-mode-pill">Selective Attention</span>
+        <button type="button" id="zen-toggle-btn" class="btn-secondary">Zen</button>
+        <button type="button" id="pause-btn" class="btn-secondary">Pause</button>
+        <button type="button" id="stop-btn" class="btn-secondary btn-danger">End</button>
+      </div>
+      <div class="compass-wrap">
+        <div class="compass" id="session-compass"></div>
+      </div>
+      <div class="caption" id="session-caption">&mdash;</div>
+      <div class="progress-block">
+        <div class="progress-row">
+          <span>This phase</span>
+          <div class="progress-bar"><div class="progress-fill" id="phase-progress"></div></div>
+          <span id="phase-time-label">0:00 / 0:00</span>
+        </div>
+        <div class="progress-row">
+          <span>Whole session</span>
+          <div class="progress-bar"><div class="progress-fill" id="session-progress"></div></div>
+          <span id="session-time-label">0:00 / 0:00</span>
+        </div>
+      </div>
+
+      <div class="panel" id="session-mixer-panel">
+        <div class="panel-header">
+          <h2>Mixer</h2>
+          <button type="button" id="mixer-toggle-btn" class="btn-text">Show</button>
+        </div>
+        <div id="session-mixer-list" style="display:none;"></div>
+      </div>
+
+      <div class="panel" id="session-challenge-panel" style="display:none;">
+        <h2>Focus Challenge</h2>
+        <div class="challenge-stats">
+          <div class="stat"><strong id="challenge-correct">0</strong><span>correct</span></div>
+          <div class="stat"><strong id="challenge-missed">0</strong><span>missed</span></div>
+          <div class="stat"><strong id="challenge-wrong">0</strong><span>wrong</span></div>
+        </div>
+        <div class="challenge-grid" id="challenge-buttons"></div>
+      </div>
+    </section>
+
+    <section id="view-summary" class="view">
+      <div class="center-card">
+        <h2 style="font-family:var(--font-display);font-size:18px;font-weight:500;margin:0;">Session complete</h2>
+        <div id="summary-breakdown"></div>
+        <button type="button" id="summary-done-btn" class="btn-primary" style="padding:12px 28px;">Done</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast-container"></div>
+
+<script>
+(function(){
+'use strict';
+
+// ---------- Constants ----------
+var DEFAULT_SOUNDS = [
+  {id:'dogs', word:'Dogs', desc:'Dogs barking'},
+  {id:'wind', word:'wind', desc:'Wind blowing'},
+  {id:'train', word:'train', desc:'A train'},
+  {id:'steps', word:'steps', desc:'The sound of steps'},
+  {id:'people', word:'People', desc:'People talking'},
+  {id:'pages', word:'Pages', desc:'The turning of pages'},
+  {id:'birds', word:'birds', desc:'Birds chirping'},
+  {id:'frogs', word:'frogs', desc:'Frogs'},
+  {id:'fire', word:'fire', desc:'Fire'},
+  {id:'rain', word:'Rain', desc:'Rain'},
+  {id:'boxer', word:'Boxer', desc:'Someone hitting a boxing bag'},
+  {id:'drums', word:'Drums', desc:'Drums'}
+];
+
+var POSITION_META = {
+  'front':        {angle:0,   label:'Front'},
+  'front-right':  {angle:45,  label:'Front-Right'},
+  'right':        {angle:90,  label:'Right'},
+  'back-right':   {angle:135, label:'Back-Right'},
+  'back':         {angle:180, label:'Back'},
+  'back-left':    {angle:225, label:'Back-Left'},
+  'left':         {angle:270, label:'Left'},
+  'front-left':   {angle:315, label:'Front-Left'}
+};
+var POSITION_SETS = {
+  easy: ['front','right','back','left'],
+  intermediate: ['front','front-right','back-right','back','back-left','front-left'],
+  advanced: ['front','front-right','right','back-right','back','back-left','left','front-left']
+};
+
+var DIVIDED_PROMPT_TEXT = "In divided attention mode you can now listen to every sound, or no sound at all and instead divert your focus to the inside of the mind";
+var MODE_LABELS = {selective:'Selective Attention', rapid:'Rapid Attention Switching', divided:'Divided Attention'};
+var MODE_ORDER = ['selective','rapid','divided'];
+
+var CHALLENGE_MIN_GAP_MS = 6000;      // quiet time between challenge rounds
+var CHALLENGE_MAX_GAP_MS = 14000;
+var CHALLENGE_MIN_SILENCE_MS = 2500;  // how long a sound drops out for
+var CHALLENGE_MAX_SILENCE_MS = 4000;
+var CHALLENGE_REVEAL_MS = 900;        // how long the correct/incorrect flash lasts
+
+// ---------- State ----------
+var library = {};           // id -> {id, word, desc, isCustom, audioBuffer, mimeType}
+var assignment = {};        // positionId -> soundId
+var difficulty = 'easy';
+var modesConfig = {
+  selective: {enabled:true, minutes:5},
+  rapid: {enabled:true, minutes:5},
+  divided: {enabled:true, minutes:2}
+};
+var ttsVoiceURI = null;
+var playDividedPrompt = true;
+var masterVolume = 1;
+var soundVolumes = {};      // soundId -> 0..1, persisted, applies whether or not the sound is currently playing
+var challengeEnabled = false;
+var zenMode = false;
+
+var audioCtx = null;
+var masterGain = null;
+var activeNodes = {};       // positionId -> {handle, panner, gain, soundId}
+var silencedPositions = {}; // positionId -> true while the focus challenge has that position muted
+var activePreviewGains = {}; // soundId -> GainNode, while previewSound() is playing that sound
+var voicesList = [];
+var session = null;
+var pendingCustomFile = null;
+
+var challengeState = {
+  timerId: null,        // pending "start next round" timeout
+  roundTimeoutId: null,  // pending "auto-resolve this round" timeout
+  round: null,           // {posId, soundId, answered}
+  stats: {correct:0, missed:0, wrong:0}
+};
+
+var clockState = {running:false, paused:false, lastTick:0, phaseElapsed:0, focusElapsed:0, nextFocusDelay:0};
+
+// ---------- Utility ----------
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
+function randRange(min,max){ return min + Math.random()*(max-min); }
+function shuffle(arr){
+  var a = arr.slice();
+  for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+function fmtTime(ms){
+  var s = Math.max(0, Math.round(ms/1000));
+  var m = Math.floor(s/60);
+  var r = s%60;
+  return m+':'+(r<10?'0':'')+r;
+}
+function todayStr(){
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function escapeHtml(s){
+  var d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML;
+}
+function showToast(msg, isError){
+  var container = $('#toast-container');
+  var el = document.createElement('div');
+  el.className = 'toast' + (isError?' toast-error':'');
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(function(){ el.classList.add('show'); });
+  setTimeout(function(){
+    el.classList.remove('show');
+    setTimeout(function(){ el.remove(); }, 300);
+  }, 3800);
+}
+
+// ---------- Base64 helpers ----------
+function arrayBufferToBase64(buffer){
+  var binary = '';
+  var bytes = new Uint8Array(buffer);
+  var chunk = 0x8000;
+  for (var i=0;i<bytes.length;i+=chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  }
+  return btoa(binary);
+}
+function base64ToArrayBuffer(base64){
+  var binary = atob(base64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+// ---------- Storage ----------
+async function safeStorageGet(key){
+  try{ var r = await window.storage.get(key, false); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+async function safeStorageSet(key, value){
+  try{ var r = await window.storage.set(key, value, false); return !!r; }
+  catch(e){ console.error('storage set failed', key, e); return false; }
+}
+async function safeStorageDelete(key){
+  try{ await window.storage.delete(key, false); }catch(e){}
+}
+
+async function saveLibraryMeta(){
+  // Only custom sounds are ever persisted here \u2014 the 12 default sounds load
+  // fresh from the adjacent folder every time, so there's nothing to save for them.
+  var meta = Object.keys(library).filter(function(id){ return library[id].isCustom; }).map(function(id){
+    var s = library[id];
+    return {id:s.id, word:s.word, desc:s.desc, isCustom:s.isCustom};
+  });
+  await safeStorageSet('library-meta', JSON.stringify(meta));
+}
+
+async function persistSound(id, entry, arrayBuffer){
+  var base64 = arrayBufferToBase64(arrayBuffer);
+  if (base64.length > 6500000){
+    showToast('"'+entry.word+'" is large, so it won\'t be saved for next time \u2014 it still works in this session.');
+    return;
+  }
+  var payload = JSON.stringify({word:entry.word, desc:entry.desc, isCustom:entry.isCustom, mimeType:entry.mimeType, base64:base64});
+  var ok = await safeStorageSet('sound:'+id, payload);
+  if (ok) await saveLibraryMeta();
+  else showToast('Couldn\'t save "'+entry.word+'" for next session.');
+}
+
+async function restoreLibrary(){
+  var metaRaw = await safeStorageGet('library-meta');
+  if (!metaRaw) return;
+  var meta;
+  try{ meta = JSON.parse(metaRaw); } catch(e){ return; }
+  var defaultIds = {};
+  DEFAULT_SOUNDS.forEach(function(d){ defaultIds[d.id] = true; });
+  var ctx = ensureAudioContext();
+  for (var i=0;i<meta.length;i++){
+    var m = meta[i];
+    if (defaultIds[m.id]) continue; // defaults come from the adjacent folder now, never from storage
+    var raw = await safeStorageGet('sound:'+m.id);
+    if (!raw) continue;
+    try{
+      var data = JSON.parse(raw);
+      var buf = base64ToArrayBuffer(data.base64);
+      var audioBuffer = await ctx.decodeAudioData(buf);
+      library[m.id] = {id:m.id, word:data.word, desc:data.desc, isCustom:data.isCustom, mimeType:data.mimeType, audioBuffer:audioBuffer};
+    }catch(e){ console.error('restore sound failed', m.id, e); }
+  }
+}
+
+async function restoreHistory(){
+  var raw = await safeStorageGet('session-history');
+  if (!raw) return [];
+  try{ return JSON.parse(raw); } catch(e){ return []; }
+}
+async function appendHistory(record){
+  var list = await restoreHistory();
+  list.push(record);
+  await safeStorageSet('session-history', JSON.stringify(list));
+}
+
+// Per-sound volumes live in their own key (rather than app-config) and are
+// keyed by sound id, so a level set on a default sound or a not-yet-loaded
+// one is remembered whether or not that sound is currently playing.
+async function restoreSoundVolumes(){
+  var raw = await safeStorageGet('sound-volumes');
+  if (!raw) return;
+  try{ soundVolumes = JSON.parse(raw) || {}; }catch(e){ soundVolumes = {}; }
+}
+async function saveSoundVolumes(){
+  await safeStorageSet('sound-volumes', JSON.stringify(soundVolumes));
+}
+
+async function restoreConfig(){
+  var raw = await safeStorageGet('app-config');
+  if (!raw) return;
+  try{
+    var cfg = JSON.parse(raw);
+    if (cfg.difficulty) difficulty = cfg.difficulty;
+    if (cfg.modesConfig) modesConfig = cfg.modesConfig;
+    if (cfg.ttsVoiceURI) ttsVoiceURI = cfg.ttsVoiceURI;
+    if (typeof cfg.playDividedPrompt === 'boolean') playDividedPrompt = cfg.playDividedPrompt;
+    if (cfg.assignment) assignment = cfg.assignment;
+    if (typeof cfg.masterVolume === 'number') masterVolume = cfg.masterVolume;
+    if (typeof cfg.challengeEnabled === 'boolean') challengeEnabled = cfg.challengeEnabled;
+    if (typeof cfg.zenMode === 'boolean') zenMode = cfg.zenMode;
+  }catch(e){}
+}
+async function saveConfig(){
+  await safeStorageSet('app-config', JSON.stringify({
+    difficulty: difficulty, modesConfig: modesConfig, ttsVoiceURI: ttsVoiceURI,
+    playDividedPrompt: playDividedPrompt, assignment: assignment, masterVolume: masterVolume,
+    challengeEnabled: challengeEnabled, zenMode: zenMode
+  }));
+}
+
+async function removeSound(id){
+  delete library[id];
+  Object.keys(assignment).forEach(function(pos){ if (assignment[pos]===id) delete assignment[pos]; });
+  await saveLibraryMeta();
+  await safeStorageDelete('sound:'+id);
+  renderLibrary();
+  renderCompass();
+  updateStartHint();
+  saveConfig();
+}
+
+// ---------- Audio engine ----------
+function ensureAudioContext(){
+  if (!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = masterVolume;
+    masterGain.connect(audioCtx.destination);
+    setupListener(audioCtx);
+  }
+  return audioCtx;
+}
+function ensureRunning(){
+  var ctx = ensureAudioContext();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+function setupListener(ctx){
+  var l = ctx.listener;
+  if (l.forwardX){
+    l.forwardX.value=0; l.forwardY.value=0; l.forwardZ.value=-1;
+    l.upX.value=0; l.upY.value=1; l.upZ.value=0;
+    l.positionX.value=0; l.positionY.value=0; l.positionZ.value=0;
+  } else if (l.setOrientation){
+    l.setOrientation(0,0,-1,0,1,0);
+    l.setPosition(0,0,0);
+  }
+}
+function angleToXYZ(angleDeg){
+  var rad = angleDeg*Math.PI/180;
+  return { x: Math.sin(rad), y:0, z:-Math.cos(rad) };
+}
+function angleToPercent(angleDeg){
+  var rad = angleDeg*Math.PI/180;
+  return { xPct: 50+40*Math.sin(rad), yPct: 50-40*Math.cos(rad) };
+}
+
+// Builds a uniform {outputNode, start, stop} handle regardless of whether the
+// sound came from a decoded buffer (custom uploads) or an <audio> element
+// pointed at a relative file next to this page (the 12 default sounds).
+function makeSourceHandle(entry, ctx){
+  if (entry.audioBuffer){
+    var src = ctx.createBufferSource();
+    src.buffer = entry.audioBuffer;
+    src.loop = true;
+    return {
+      outputNode: src,
+      start: function(){ src.start(0); },
+      stop: function(){ try{ src.stop(); }catch(e){} }
+    };
+  }
+  if (entry.mediaSource){
+    try{ entry.mediaSource.disconnect(); }catch(e){} // clear any stale routing (e.g. a lingering preview)
+    entry.audioEl.loop = true;
+    return {
+      outputNode: entry.mediaSource,
+      start: function(){
+        entry.audioEl.currentTime = 0;
+        var p = entry.audioEl.play();
+        if (p && p.catch) p.catch(function(e){ console.error('playback failed for', entry.id, e); });
+      },
+      stop: function(){ try{ entry.audioEl.pause(); }catch(e){} }
+    };
+  }
+  return null;
+}
+
+// ---------- Per-sound volume ----------
+function getSoundVolume(id){
+  var v = soundVolumes[id];
+  return (typeof v === 'number' && isFinite(v)) ? clamp(v,0,1) : 1;
+}
+// Applies a new level for one sound: updates the stored value, nudges any
+// position currently playing that sound and any active preview, and syncs
+// every rendered slider for it (library card + in-session mixer). Pass
+// persist=false while the user is still dragging, and save once on release.
+function setSoundVolume(id, vol, persist){
+  vol = clamp(vol, 0, 1);
+  soundVolumes[id] = vol;
+  Object.keys(activeNodes).forEach(function(posId){
+    if (activeNodes[posId].soundId === id) applyPositionGain(posId, 60);
+  });
+  if (activePreviewGains[id]){
+    try{ activePreviewGains[id].gain.value = vol; }catch(e){}
+  }
+  syncVolumeUI(id, vol);
+  if (persist) saveSoundVolumes();
+}
+function syncVolumeUI(id, vol){
+  var pct = Math.round(vol*100);
+  $all('.volume-range[data-sound-id="'+id+'"]').forEach(function(input){
+    input.value = pct;
+    var out = input.parentNode.querySelector('.slot-volume-value, .mixer-row-value');
+    if (out) out.textContent = pct+'%';
+  });
+}
+function wireVolumeInput(input, id){
+  input.addEventListener('input', function(){
+    setSoundVolume(id, parseInt(input.value,10)/100, false);
+  });
+  input.addEventListener('change', function(){ saveSoundVolumes(); });
+}
+
+// A position's audible gain is its sound's set volume, unless the focus
+// challenge currently has that position silenced.
+function targetGainForPosition(posId){
+  var node = activeNodes[posId];
+  if (!node) return 0;
+  if (silencedPositions[posId]) return 0;
+  return getSoundVolume(node.soundId);
+}
+function applyPositionGain(posId, rampMs){
+  var node = activeNodes[posId];
+  if (!node || !audioCtx) return;
+  var target = targetGainForPosition(posId);
+  var now = audioCtx.currentTime;
+  var dur = Math.max((typeof rampMs==='number' ? rampMs : 150)/1000, 0.01);
+  try{
+    node.gain.gain.cancelScheduledValues(now);
+    node.gain.gain.setValueAtTime(node.gain.gain.value, now);
+    node.gain.gain.linearRampToValueAtTime(target, now+dur);
+  }catch(e){}
+}
+
+function startAllPositionAudio(){
+  var ctx = ensureRunning();
+  stopAllPositionAudio();
+  var positions = POSITION_SETS[difficulty];
+  positions.forEach(function(posId){
+    var soundId = assignment[posId];
+    var entry = soundId && library[soundId];
+    if (!entry) return;
+    var handle = makeSourceHandle(entry, ctx);
+    if (!handle) return;
+    var panner = ctx.createPanner();
+    panner.panningModel = 'HRTF';
+    var xyz = angleToXYZ(POSITION_META[posId].angle);
+    if (panner.positionX){ panner.positionX.value=xyz.x; panner.positionY.value=xyz.y; panner.positionZ.value=xyz.z; }
+    else if (panner.setPosition) panner.setPosition(xyz.x,xyz.y,xyz.z);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(getSoundVolume(soundId), ctx.currentTime+0.6);
+    handle.outputNode.connect(panner).connect(gain).connect(masterGain);
+    handle.start();
+    activeNodes[posId] = {handle:handle, panner:panner, gain:gain, soundId:soundId};
+  });
+}
+function stopAllPositionAudio(){
+  var ctx = audioCtx;
+  var nodes = activeNodes;
+  activeNodes = {};
+  silencedPositions = {};
+  Object.keys(nodes).forEach(function(posId){
+    var n = nodes[posId];
+    try{
+      if (ctx){
+        n.gain.gain.cancelScheduledValues(ctx.currentTime);
+        n.gain.gain.setValueAtTime(n.gain.gain.value, ctx.currentTime);
+        n.gain.gain.linearRampToValueAtTime(0, ctx.currentTime+0.15);
+      }
+      setTimeout(function(){
+        n.handle.stop();
+        try{ n.handle.outputNode.disconnect(n.panner); }catch(e){}
+        try{ n.panner.disconnect(); n.gain.disconnect(); }catch(e){}
+      }, 200);
+    }catch(e){}
+  });
+}
+
+// ---------- TTS ----------
+function loadVoices(){
+  voicesList = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  renderVoiceOptions();
+}
+function renderVoiceOptions(){
+  var sel = $('#voice-select');
+  if (!sel) return;
+  var prevValue = ttsVoiceURI;
+  sel.innerHTML = '';
+  if (voicesList.length===0){
+    var opt = document.createElement('option');
+    opt.textContent = 'Default voice'; opt.value='';
+    sel.appendChild(opt);
+    return;
+  }
+  voicesList.forEach(function(v){
+    var o = document.createElement('option');
+    o.value = v.voiceURI; o.textContent = v.name+' ('+v.lang+')';
+    sel.appendChild(o);
+  });
+  var stillPresent = prevValue && voicesList.some(function(v){ return v.voiceURI===prevValue; });
+  if (stillPresent){ sel.value = prevValue; }
+  else { ttsVoiceURI = voicesList[0].voiceURI; sel.value = ttsVoiceURI; }
+}
+function speak(text, onEnd){
+  if (!window.speechSynthesis){ if (onEnd) onEnd(); return; }
+  var utter = new SpeechSynthesisUtterance(text);
+  var voice = voicesList.filter(function(v){ return v.voiceURI===ttsVoiceURI; })[0];
+  if (voice) utter.voice = voice;
+  if (onEnd) utter.onend = onEnd;
+  utter.onerror = function(){ if (onEnd) onEnd(); };
+  speechSynthesis.speak(utter);
+}
+
+// ---------- Compass rendering ----------
+function buildCompassBackgroundSVG(activePositions){
+  var activeAngles = {};
+  activePositions.forEach(function(p){ activeAngles[POSITION_META[p].angle] = true; });
+  var allAngles = [0,45,90,135,180,225,270,315];
+  var ticks = '';
+  allAngles.forEach(function(angle){
+    var isActive = !!activeAngles[angle];
+    var rad = angle*Math.PI/180;
+    var outerR = 47, innerR = isActive?37:42;
+    var x1 = (50+outerR*Math.sin(rad)).toFixed(2), y1 = (50-outerR*Math.cos(rad)).toFixed(2);
+    var x2 = (50+innerR*Math.sin(rad)).toFixed(2), y2 = (50-innerR*Math.cos(rad)).toFixed(2);
+    ticks += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(isActive?'#C89B4A':'#3A3226')+'" stroke-width="'+(isActive?'1.4':'1')+'" stroke-linecap="round" />';
+  });
+  return '<svg class="compass-bg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"><circle cx="50" cy="50" r="47" fill="none" stroke="#3A3226" stroke-width="1"/>'+ticks+'</svg>';
+}
+
+function renderCompass(){
+  var compass = $('#compass');
+  if (!compass) return;
+  var positions = POSITION_SETS[difficulty];
+  compass.innerHTML = buildCompassBackgroundSVG(positions);
+  var centerEl = document.createElement('div');
+  centerEl.className = 'compass-center';
+  centerEl.innerHTML = '<span>You</span>';
+  compass.appendChild(centerEl);
+  positions.forEach(function(posId){
+    var meta = POSITION_META[posId];
+    var pct = angleToPercent(meta.angle);
+    var marker = document.createElement('div');
+    marker.className = 'compass-marker';
+    marker.style.left = pct.xPct+'%';
+    marker.style.top = pct.yPct+'%';
+    var labelEl = document.createElement('div');
+    labelEl.className = 'marker-label';
+    labelEl.textContent = meta.label;
+    var select = document.createElement('select');
+    select.className = 'marker-select';
+    select.dataset.position = posId;
+    populateSoundSelect(select, posId);
+    select.addEventListener('change', onAssignmentChange);
+    marker.appendChild(labelEl);
+    marker.appendChild(select);
+    compass.appendChild(marker);
+  });
+  updateStartHint();
+}
+function populateSoundSelect(select, posId){
+  select.innerHTML = '';
+  var emptyOpt = document.createElement('option');
+  emptyOpt.value=''; emptyOpt.textContent='\u2014 choose \u2014';
+  select.appendChild(emptyOpt);
+  var usedElsewhere = {};
+  Object.keys(assignment).forEach(function(p){ if (p!==posId && assignment[p]) usedElsewhere[assignment[p]]=true; });
+  Object.keys(library).forEach(function(id){
+    if (usedElsewhere[id]) return;
+    var o = document.createElement('option');
+    o.value = id; o.textContent = library[id].word;
+    select.appendChild(o);
+  });
+  select.value = assignment[posId] || '';
+}
+function onAssignmentChange(e){
+  var posId = e.target.dataset.position;
+  var soundId = e.target.value;
+  if (soundId) assignment[posId] = soundId; else delete assignment[posId];
+  saveConfig();
+  renderCompass();
+}
+function randomizeAssignment(){
+  var positions = POSITION_SETS[difficulty];
+  var available = shuffle(Object.keys(library));
+  if (available.length < positions.length){
+    showToast('You need '+positions.length+' different sounds loaded for '+difficulty+' mode \u2014 you have '+available.length+'. Add more in the Sound Library tab.', true);
+  }
+  assignment = {};
+  positions.forEach(function(posId, i){ if (available[i]) assignment[posId] = available[i]; });
+  saveConfig();
+  renderCompass();
+}
+
+function setDifficulty(newDiff){
+  difficulty = newDiff;
+  var newPositions = POSITION_SETS[difficulty];
+  var usedSounds = {};
+  Object.keys(assignment).forEach(function(p){ usedSounds[assignment[p]] = true; });
+  var unusedLibrary = Object.keys(library).filter(function(id){ return !usedSounds[id]; });
+  var ui = 0;
+  newPositions.forEach(function(posId){
+    if (!assignment[posId] && unusedLibrary[ui]){ assignment[posId] = unusedLibrary[ui]; ui++; }
+  });
+  Object.keys(assignment).forEach(function(posId){
+    if (newPositions.indexOf(posId)===-1) delete assignment[posId];
+  });
+  $all('.seg-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.difficulty===difficulty); });
+  renderCompass();
+  saveConfig();
+}
+
+// ---------- Library UI ----------
+function isNameTaken(name){
+  var lower = name.toLowerCase();
+  if (DEFAULT_SOUNDS.some(function(d){ return d.word.toLowerCase()===lower; })) return true;
+  return Object.keys(library).some(function(id){ return library[id].isCustom && library[id].word.toLowerCase()===lower; });
+}
+
+function renderLibrary(){
+  var grid = $('#default-sound-grid');
+  grid.innerHTML = '';
+  DEFAULT_SOUNDS.forEach(function(def){
+    grid.appendChild(buildSoundSlot(def.id, def.word, def.desc, false));
+  });
+  var customGrid = $('#custom-sound-grid');
+  customGrid.innerHTML = '';
+  Object.keys(library).forEach(function(id){
+    var s = library[id];
+    if (s.isCustom) customGrid.appendChild(buildSoundSlot(s.id, s.word, s.desc||'', true));
+  });
+}
+function buildSoundSlot(id, word, desc, isCustom){
+  var entry = library[id];
+  var wrap = document.createElement('div');
+  wrap.className = 'sound-slot' + (entry?' loaded':'');
+  var info = document.createElement('div');
+  info.className = 'slot-info';
+  var filenameHtml = isCustom ? '' : '<span class="filename-hint">'+id+'.mp3</span>';
+  info.innerHTML = '<strong>'+escapeHtml(word)+'</strong><span class="slot-desc">'+escapeHtml(desc||'')+'</span>'+filenameHtml;
+  wrap.appendChild(info);
+  var actions = document.createElement('div');
+  actions.className = 'slot-actions';
+  if (entry){
+    var playBtn = document.createElement('button');
+    playBtn.type='button'; playBtn.className='btn-icon'; playBtn.textContent='\u25B6'; playBtn.title='Preview';
+    playBtn.addEventListener('click', function(){ previewSound(id); });
+    actions.appendChild(playBtn);
+  } else if (!isCustom){
+    var pending = document.createElement('span');
+    pending.className = 'slot-pending';
+    pending.textContent = 'Not found';
+    actions.appendChild(pending);
+  }
+  if (isCustom){
+    var uploadLabel = document.createElement('label');
+    uploadLabel.className = 'file-btn small';
+    uploadLabel.textContent = entry?'Replace':'Upload';
+    var input = document.createElement('input');
+    input.type='file'; input.accept='audio/*'; input.hidden=true;
+    input.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if (file) handleSoundUpload(id, word, desc, file, isCustom);
+    });
+    uploadLabel.appendChild(input);
+    actions.appendChild(uploadLabel);
+    if (entry){
+      var rmBtn = document.createElement('button');
+      rmBtn.type='button'; rmBtn.className='btn-icon'; rmBtn.textContent='\u2715'; rmBtn.title='Remove';
+      rmBtn.addEventListener('click', function(){ removeSound(id); });
+      actions.appendChild(rmBtn);
+    }
+  }
+  wrap.appendChild(actions);
+  var volRow = document.createElement('div');
+  volRow.className = 'slot-volume';
+  var pct = Math.round(getSoundVolume(id)*100);
+  volRow.innerHTML = '<span class="slot-volume-label">Vol</span>'
+    +'<input type="range" min="0" max="100" value="'+pct+'" class="volume-range" data-sound-id="'+id+'" />'
+    +'<span class="slot-volume-value">'+pct+'%</span>';
+  wrap.appendChild(volRow);
+  wireVolumeInput(volRow.querySelector('input'), id);
+  return wrap;
+}
+function previewSound(id){
+  var entry = library[id];
+  if (!entry) return;
+  var ctx = ensureRunning();
+  var handle = makeSourceHandle(entry, ctx);
+  if (!handle) return;
+  var g = ctx.createGain(); g.gain.value = getSoundVolume(id);
+  activePreviewGains[id] = g;
+  handle.outputNode.connect(g).connect(masterGain);
+  handle.start();
+  setTimeout(function(){
+    handle.stop();
+    try{ handle.outputNode.disconnect(g); }catch(e){}
+    try{ g.disconnect(); }catch(e){}
+    if (activePreviewGains[id]===g) delete activePreviewGains[id];
+  }, 3000);
+}
+async function handleSoundUpload(id, word, desc, file, isCustom){
+  try{
+    var arrayBuffer = await file.arrayBuffer();
+    var ctx = ensureRunning();
+    var audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    library[id] = {id:id, word:word, desc:desc, isCustom:isCustom, audioBuffer:audioBuffer, mimeType:file.type};
+    renderLibrary();
+    renderCompass();
+    showToast('"'+word+'" loaded.');
+    persistSound(id, library[id], arrayBuffer);
+  }catch(e){
+    console.error(e);
+    showToast('Couldn\'t load that file for "'+word+'". Try a different audio file.', true);
+  }
+}
+
+// Loads the 12 named sounds from files sitting next to this HTML file
+// (e.g. "dogs.mp3"). No upload UI for these \u2014 just place the files and open
+// (or reload) the page. Only works when the page is served from that same
+// folder; see the chat notes on file:// vs. Claude's artifact preview.
+function tryLoadDefaultSound(def){
+  return new Promise(function(resolve){
+    var audioEl = new Audio();
+    audioEl.preload = 'auto';
+    var settled = false;
+    var timeoutId = setTimeout(function(){ finish(false); }, 6000);
+    function finish(success){
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      if (success){
+        try{
+          var ctx = ensureAudioContext();
+          var mediaSource = ctx.createMediaElementSource(audioEl);
+          library[def.id] = {id:def.id, word:def.word, desc:def.desc, isCustom:false, audioEl:audioEl, mediaSource:mediaSource};
+        }catch(e){ console.error('could not set up', def.id, e); }
+      } else {
+        delete library[def.id]; // handles a re-scan after a file was removed/renamed
+      }
+      resolve();
+    }
+    audioEl.addEventListener('loadeddata', function(){ finish(true); });
+    audioEl.addEventListener('canplaythrough', function(){ finish(true); });
+    audioEl.addEventListener('error', function(){ finish(false); });
+    audioEl.src = def.id + '.mp3';
+    audioEl.load();
+  });
+}
+async function loadDefaultSoundsFromFolder(){
+  await Promise.all(DEFAULT_SOUNDS.map(tryLoadDefaultSound));
+}
+function updateCustomAddBtn(){
+  var name = $('#custom-name-input').value.trim();
+  $('#custom-add-btn').disabled = !(name && pendingCustomFile);
+}
+async function onCustomAddClicked(){
+  var name = $('#custom-name-input').value.trim();
+  if (!name || !pendingCustomFile) return;
+  if (isNameTaken(name)){
+    showToast('"'+name+'" is already used by another sound \u2014 choose a different name.', true);
+    return;
+  }
+  var id = 'custom-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+Date.now().toString(36);
+  var file = pendingCustomFile;
+  $('#custom-name-input').value=''; $('#custom-file-name').textContent='';
+  pendingCustomFile = null; $('#custom-file-input').value='';
+  updateCustomAddBtn();
+  await handleSoundUpload(id, name, '', file, true);
+}
+
+// ---------- Session composition UI ----------
+function wireModeRows(){
+  $all('.mode-row').forEach(function(row){
+    var mode = row.dataset.mode;
+    var checkbox = row.querySelector('input[type=checkbox]');
+    var numberInput = row.querySelector('input[type=number]');
+    checkbox.checked = modesConfig[mode].enabled;
+    numberInput.value = modesConfig[mode].minutes;
+    numberInput.disabled = !checkbox.checked;
+    checkbox.addEventListener('change', function(){
+      modesConfig[mode].enabled = checkbox.checked;
+      numberInput.disabled = !checkbox.checked;
+      updateTotalMinutes(); saveConfig(); updateStartHint();
+    });
+    numberInput.addEventListener('input', function(){
+      modesConfig[mode].minutes = clamp(parseFloat(numberInput.value)||0, 0, 60);
+      updateTotalMinutes(); saveConfig(); updateStartHint();
+    });
+  });
+}
+function updateTotalMinutes(){
+  var total = 0;
+  MODE_ORDER.forEach(function(m){ if (modesConfig[m].enabled) total += modesConfig[m].minutes; });
+  $('#total-minutes').textContent = String(Math.round(total*10)/10);
+}
+function refreshModeRowsUI(){
+  $all('.mode-row').forEach(function(row){
+    var mode = row.dataset.mode;
+    row.querySelector('input[type=checkbox]').checked = modesConfig[mode].enabled;
+    var ni = row.querySelector('input[type=number]');
+    ni.value = modesConfig[mode].minutes;
+    ni.disabled = !modesConfig[mode].enabled;
+  });
+}
+function applyDefaultComposition(){
+  modesConfig = {
+    selective:{enabled:true,minutes:5},
+    rapid:{enabled:true,minutes:5},
+    divided:{enabled:true,minutes:2}
+  };
+  refreshModeRowsUI();
+  updateTotalMinutes();
+  saveConfig();
+  updateStartHint();
+}
+
+// ---------- Start validation ----------
+function getRequiredSoundCount(){ return POSITION_SETS[difficulty].length; }
+function getFilledAssignmentCount(){
+  return POSITION_SETS[difficulty].filter(function(p){ return assignment[p] && library[assignment[p]]; }).length;
+}
+function canStartSession(){
+  var enabledModes = MODE_ORDER.filter(function(m){ return modesConfig[m].enabled && modesConfig[m].minutes>0; });
+  if (enabledModes.length===0) return {ok:false, reason:'Turn on at least one mode with a duration above 0.'};
+  var required = getRequiredSoundCount();
+  var filled = getFilledAssignmentCount();
+  if (filled < required) return {ok:false, reason:'Assign a sound to all '+required+' positions first ('+filled+'/'+required+' set). Add sounds in the Library tab if you need more.'};
+  return {ok:true};
+}
+function updateStartHint(){
+  var btn = $('#start-session-btn');
+  var hint = $('#start-hint');
+  var check = canStartSession();
+  btn.disabled = !check.ok;
+  hint.textContent = check.ok ? '' : check.reason;
+}
+
+// ---------- Session state machine ----------
+function buildPhaseList(){
+  return MODE_ORDER.filter(function(m){ return modesConfig[m].enabled && modesConfig[m].minutes>0; })
+    .map(function(m){ return {type:m, durationMs: modesConfig[m].minutes*60000}; });
+}
+function startSession(){
+  var check = canStartSession();
+  if (!check.ok){ showToast(check.reason, true); return; }
+  ensureRunning();
+  session = {
+    phases: buildPhaseList(),
+    phaseIndex: 0,
+    firstCueDone: false,
+    cycleQueue: [],
+    currentFocus: null,
+    elapsedByMode: {selective:0, rapid:0, divided:0},
+    startedAt: new Date().toISOString(),
+    difficulty: difficulty
+  };
+  startAllPositionAudio();
+  switchView('session');
+  renderSessionCompass();
+  renderSessionMixer();
+  $('#session-mixer-list').style.display = 'none';
+  $('#mixer-toggle-btn').textContent = 'Show';
+  challengeState.stats = {correct:0, missed:0, wrong:0};
+  updateChallengeScoreUI();
+  $('#session-challenge-panel').style.display = challengeEnabled ? '' : 'none';
+  if (challengeEnabled) renderChallengeButtons();
+  applyZenMode();
+  clockState.running = true; clockState.paused = false;
+  clockState.lastTick = performance.now();
+  clockState.phaseElapsed = 0;
+  $('#pause-btn').textContent = 'Pause';
+  enterPhase(session.phases[0]);
+  scheduleNextChallengeRound();
+}
+function setCompassCenterPulsing(on){
+  var el = $('#session-compass .compass-center');
+  if (el) el.classList.toggle('pulsing', on);
+}
+function enterPhase(phase){
+  $('#session-mode-pill').textContent = MODE_LABELS[phase.type];
+  clockState.phaseElapsed = 0;
+  setCompassCenterPulsing(phase.type==='divided');
+  if (phase.type==='divided'){
+    session.currentFocus = 'ALL';
+    updateSessionCompassHighlight();
+    if (playDividedPrompt) speakCaption(DIVIDED_PROMPT_TEXT);
+  } else {
+    triggerFocusChange(phase.type);
+  }
+}
+function triggerFocusChange(phaseType){
+  var soundIds = POSITION_SETS[difficulty].map(function(p){ return assignment[p]; }).filter(Boolean);
+  if (!session.cycleQueue.length){
+    var ids = shuffle(soundIds);
+    if (session.currentFocus && session.currentFocus!=='ALL' && ids[0]===session.currentFocus && ids.length>1){
+      var tmp = ids[0]; ids[0]=ids[1]; ids[1]=tmp;
+    }
+    session.cycleQueue = ids;
+  }
+  var nextId = session.cycleQueue.shift();
+  session.currentFocus = nextId;
+  var word = library[nextId] ? library[nextId].word : '';
+  var text = session.firstCueDone ? word : ('Focus on the sound of '+word);
+  session.firstCueDone = true;
+  speakCaption(text);
+  updateSessionCompassHighlight();
+  clockState.focusElapsed = 0;
+  clockState.nextFocusDelay = phaseType==='selective' ? randRange(10000,20000) : 5000;
+}
+function speakCaption(text){
+  $('#session-caption').textContent = text;
+  speak(text);
+}
+function clockTick(){
+  if (!clockState.running || clockState.paused || !session) return;
+  var now = performance.now();
+  var dt = now - clockState.lastTick;
+  clockState.lastTick = now;
+  clockState.phaseElapsed += dt;
+  var phase = session.phases[session.phaseIndex];
+  if (phase.type!=='divided'){
+    clockState.focusElapsed += dt;
+    if (clockState.focusElapsed >= clockState.nextFocusDelay){
+      triggerFocusChange(phase.type);
+    }
+  }
+  if (clockState.phaseElapsed >= phase.durationMs){
+    session.elapsedByMode[phase.type] += phase.durationMs;
+    session.phaseIndex++;
+    if (session.phaseIndex >= session.phases.length){ endSession(); return; }
+    enterPhase(session.phases[session.phaseIndex]);
+  }
+  updateSessionProgressUI(phase);
+}
+function updateSessionProgressUI(phase){
+  $('#phase-time-label').textContent = fmtTime(clockState.phaseElapsed)+' / '+fmtTime(phase.durationMs);
+  $('#phase-progress').style.width = clamp(clockState.phaseElapsed/phase.durationMs*100,0,100)+'%';
+  var totalDuration = session.phases.reduce(function(a,p){ return a+p.durationMs; },0);
+  var elapsedTotal = 0;
+  for (var i=0;i<session.phaseIndex;i++) elapsedTotal += session.phases[i].durationMs;
+  elapsedTotal += clockState.phaseElapsed;
+  $('#session-time-label').textContent = fmtTime(elapsedTotal)+' / '+fmtTime(totalDuration);
+  $('#session-progress').style.width = clamp(elapsedTotal/totalDuration*100,0,100)+'%';
+}
+
+function renderSessionCompass(){
+  var compass = $('#session-compass');
+  var positions = POSITION_SETS[difficulty];
+  compass.innerHTML = buildCompassBackgroundSVG(positions);
+  var centerEl = document.createElement('div');
+  centerEl.className = 'compass-center';
+  centerEl.innerHTML = '<span>You</span>';
+  compass.appendChild(centerEl);
+  positions.forEach(function(posId){
+    var meta = POSITION_META[posId];
+    var pct = angleToPercent(meta.angle);
+    var marker = document.createElement('div');
+    marker.className = 'session-marker';
+    marker.dataset.position = posId;
+    marker.style.left = pct.xPct+'%';
+    marker.style.top = pct.yPct+'%';
+    var soundId = assignment[posId];
+    var word = (soundId && library[soundId]) ? library[soundId].word : '';
+    marker.innerHTML = '<div class="marker-dot"></div><div class="marker-label">'+escapeHtml(word)+'</div>';
+    compass.appendChild(marker);
+  });
+}
+function updateSessionCompassHighlight(){
+  $all('.session-marker').forEach(function(marker){
+    var posId = marker.dataset.position;
+    var soundId = assignment[posId];
+    var isFocused = session.currentFocus==='ALL' || soundId===session.currentFocus;
+    marker.classList.toggle('focused', isFocused);
+    marker.classList.toggle('dimmed', !isFocused && session.currentFocus!=='ALL');
+  });
+}
+
+function renderSessionMixer(){
+  var wrap = $('#session-mixer-list');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  POSITION_SETS[difficulty].forEach(function(posId){
+    var soundId = assignment[posId];
+    if (!soundId) return;
+    var word = library[soundId] ? library[soundId].word : soundId;
+    var pct = Math.round(getSoundVolume(soundId)*100);
+    var row = document.createElement('div');
+    row.className = 'mixer-row';
+    row.innerHTML = '<div class="mixer-row-label"><strong>'+escapeHtml(word)+'</strong><span>'+escapeHtml(POSITION_META[posId].label)+'</span></div>'
+      +'<input type="range" min="0" max="100" value="'+pct+'" class="volume-range" data-sound-id="'+soundId+'" />'
+      +'<span class="mixer-row-value">'+pct+'%</span>';
+    wrap.appendChild(row);
+    wireVolumeInput(row.querySelector('input'), soundId);
+  });
+}
+
+// ---------- Focus Challenge (silence-and-guess) ----------
+// A separate, opt-in layer on top of a running session: at random intervals
+// it mutes one currently-playing position for a few seconds. Nothing on
+// screen marks which one or even that a round is underway \u2014 the only
+// signal is the audio itself. The person presses the matching numbered
+// button (or keys 1\u20138) for the position they think went quiet.
+function eligibleChallengePositions(){
+  // Skip any position already at (or near) zero volume \u2014 silencing it would be imperceptible.
+  return Object.keys(activeNodes).filter(function(posId){
+    return getSoundVolume(activeNodes[posId].soundId) > 0.05;
+  });
+}
+function renderChallengeButtons(){
+  var wrap = $('#challenge-buttons');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  POSITION_SETS[difficulty].forEach(function(posId, i){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'challenge-btn';
+    btn.dataset.position = posId;
+    btn.innerHTML = '<span class="challenge-btn-num">'+(i+1)+'</span><span class="challenge-btn-label">'+escapeHtml(POSITION_META[posId].label)+'</span>';
+    btn.addEventListener('click', function(){ resolveChallengeRound(posId); });
+    wrap.appendChild(btn);
+  });
+}
+function scheduleNextChallengeRound(){
+  if (challengeState.timerId){ clearTimeout(challengeState.timerId); challengeState.timerId = null; }
+  if (!challengeEnabled || !session || !clockState.running || clockState.paused) return;
+  var delay = randRange(CHALLENGE_MIN_GAP_MS, CHALLENGE_MAX_GAP_MS);
+  challengeState.timerId = setTimeout(startChallengeRound, delay);
+}
+function startChallengeRound(){
+  challengeState.timerId = null;
+  if (!challengeEnabled || !session || !clockState.running || clockState.paused) return;
+  var candidates = eligibleChallengePositions();
+  if (candidates.length < 2){ scheduleNextChallengeRound(); return; } // not enough audible sounds to make a fair round
+  var posId = candidates[Math.floor(Math.random()*candidates.length)];
+  var silenceMs = randRange(CHALLENGE_MIN_SILENCE_MS, CHALLENGE_MAX_SILENCE_MS);
+  silencedPositions[posId] = true;
+  applyPositionGain(posId, 120);
+  challengeState.round = {posId:posId, soundId:activeNodes[posId].soundId, answered:false};
+  challengeState.roundTimeoutId = setTimeout(function(){ resolveChallengeRound(null); }, silenceMs);
+}
+function resolveChallengeRound(guessedPosId){
+  var round = challengeState.round;
+  if (!round || round.answered) return; // no round in progress, or already settled \u2014 quietly ignore
+  round.answered = true;
+  if (challengeState.roundTimeoutId){ clearTimeout(challengeState.roundTimeoutId); challengeState.roundTimeoutId = null; }
+  silencedPositions[round.posId] = false;
+  applyPositionGain(round.posId, 150);
+  var outcome = guessedPosId===null ? 'missed' : (guessedPosId===round.posId ? 'correct' : 'wrong');
+  challengeState.stats[outcome]++;
+  flashChallengeOutcome(round.posId, guessedPosId, outcome);
+  updateChallengeScoreUI();
+  challengeState.round = null;
+  scheduleNextChallengeRound();
+}
+function cancelChallengeRound(){
+  if (challengeState.roundTimeoutId){ clearTimeout(challengeState.roundTimeoutId); challengeState.roundTimeoutId = null; }
+  if (challengeState.round && !challengeState.round.answered){
+    silencedPositions[challengeState.round.posId] = false;
+    applyPositionGain(challengeState.round.posId, 0);
+  }
+  challengeState.round = null;
+}
+function stopChallengeScheduling(){
+  if (challengeState.timerId){ clearTimeout(challengeState.timerId); challengeState.timerId = null; }
+  cancelChallengeRound();
+}
+function flashClass(el, cls){
+  el.classList.add(cls);
+  setTimeout(function(){ el.classList.remove(cls); }, CHALLENGE_REVEAL_MS);
+}
+function flashChallengeOutcome(correctPosId, guessedPosId, outcome){
+  var correctBtn = $('.challenge-btn[data-position="'+correctPosId+'"]');
+  var guessedBtn = guessedPosId ? $('.challenge-btn[data-position="'+guessedPosId+'"]') : null;
+  if (outcome==='correct'){
+    if (guessedBtn) flashClass(guessedBtn, 'challenge-correct');
+  } else {
+    if (guessedBtn) flashClass(guessedBtn, 'challenge-wrong');
+    if (correctBtn) flashClass(correctBtn, 'challenge-reveal'); // reveal the right answer once the round is over
+  }
+}
+function updateChallengeScoreUI(){
+  var s = challengeState.stats;
+  if ($('#challenge-correct')) $('#challenge-correct').textContent = s.correct;
+  if ($('#challenge-missed')) $('#challenge-missed').textContent = s.missed;
+  if ($('#challenge-wrong')) $('#challenge-wrong').textContent = s.wrong;
+}
+function handleChallengeKeydown(e){
+  if (!challengeEnabled || !session) return;
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  var n = parseInt(e.key, 10);
+  if (!n || n<1 || n>8) return;
+  var posId = POSITION_SETS[difficulty][n-1];
+  if (!posId || !activeNodes[posId]) return;
+  e.preventDefault();
+  resolveChallengeRound(posId);
+}
+
+function applyZenMode(){
+  $('#view-session').classList.toggle('zen-mode', zenMode);
+  $('#zen-toggle-btn').textContent = zenMode ? 'Exit Zen' : 'Zen';
+}
+
+function togglePause(){
+  if (!session) return;
+  if (!clockState.paused){
+    clockState.paused = true;
+    if (audioCtx) audioCtx.suspend();
+    if (window.speechSynthesis) speechSynthesis.pause();
+    stopChallengeScheduling();
+    $('#pause-btn').textContent = 'Resume';
+  } else {
+    clockState.paused = false;
+    clockState.lastTick = performance.now();
+    if (audioCtx) audioCtx.resume();
+    if (window.speechSynthesis) speechSynthesis.resume();
+    scheduleNextChallengeRound();
+    $('#pause-btn').textContent = 'Pause';
+  }
+}
+function onStopClicked(){
+  if (!session) return;
+  if (confirm('End this session early? Your progress so far will be saved to History.')){
+    var phase = session.phases[session.phaseIndex];
+    session.elapsedByMode[phase.type] += clockState.phaseElapsed;
+    endSession();
+  }
+}
+async function endSession(){
+  if (!session) return;
+  var snap = session;
+  session = null;
+  clockState.running = false;
+  stopChallengeScheduling();
+  stopAllPositionAudio();
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  var totalMs = snap.elapsedByMode.selective + snap.elapsedByMode.rapid + snap.elapsedByMode.divided;
+  var record = {
+    date: todayStr(),
+    startedAt: snap.startedAt,
+    endedAt: new Date().toISOString(),
+    difficulty: snap.difficulty,
+    minutesByMode: {
+      selective: Math.round(snap.elapsedByMode.selective/6000)/10,
+      rapid: Math.round(snap.elapsedByMode.rapid/6000)/10,
+      divided: Math.round(snap.elapsedByMode.divided/6000)/10
+    },
+    totalMinutes: Math.round(totalMs/6000)/10,
+    challenge: challengeEnabled ? {correct:challengeState.stats.correct, missed:challengeState.stats.missed, wrong:challengeState.stats.wrong} : null
+  };
+  await appendHistory(record);
+  showSummary(record);
+}
+function showSummary(record){
+  var parts = [];
+  if (record.minutesByMode.selective>0) parts.push('<li>Selective Attention: '+record.minutesByMode.selective+' min</li>');
+  if (record.minutesByMode.rapid>0) parts.push('<li>Rapid Switching: '+record.minutesByMode.rapid+' min</li>');
+  if (record.minutesByMode.divided>0) parts.push('<li>Divided Attention: '+record.minutesByMode.divided+' min</li>');
+  if (record.challenge){
+    var challengeTotal = record.challenge.correct + record.challenge.missed + record.challenge.wrong;
+    if (challengeTotal>0) parts.push('<li>Focus Challenge: '+record.challenge.correct+' of '+challengeTotal+' correct</li>');
+  }
+  $('#summary-breakdown').innerHTML = '<p class="summary-total">'+record.totalMinutes+' minutes trained</p><ul class="summary-list">'+parts.join('')+'</ul>';
+  switchView('summary');
+}
+
+// ---------- History ----------
+function formatDateHeader(dateStr){
+  var parts = dateStr.split('-').map(Number);
+  var date = new Date(parts[0], parts[1]-1, parts[2]);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var diffDays = Math.round((today-date)/86400000);
+  if (diffDays===0) return 'Today';
+  if (diffDays===1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+}
+function sessionToRowHtml(r){
+  var chips = ['selective','rapid','divided']
+    .filter(function(m){ return r.minutesByMode[m]>0; })
+    .map(function(m){ return '<span class="mode-chip">'+MODE_LABELS[m].split(' ')[0]+' '+r.minutesByMode[m]+' min</span>'; })
+    .join('');
+  return '<div class="history-session"><span class="difficulty-badge">'+escapeHtml(r.difficulty)+'</span>'
+    +'<span class="session-total">'+r.totalMinutes+' min</span>'
+    +'<span class="mode-chips">'+chips+'</span></div>';
+}
+async function renderHistory(){
+  var list = await restoreHistory();
+  var summaryEl = $('#history-summary');
+  var listEl = $('#history-list');
+  if (list.length===0){
+    summaryEl.innerHTML = '';
+    listEl.innerHTML = '<p class="hint">No sessions yet \u2014 your training history will show up here.</p>';
+    return;
+  }
+  var totalMinutes = list.reduce(function(a,r){ return a+r.totalMinutes; },0);
+  summaryEl.innerHTML = '<div class="stat"><strong>'+Math.round(totalMinutes)+'</strong><span>total minutes</span></div>'
+    +'<div class="stat"><strong>'+list.length+'</strong><span>sessions</span></div>';
+  var byDate = {};
+  list.forEach(function(r){ (byDate[r.date] = byDate[r.date]||[]).push(r); });
+  var dates = Object.keys(byDate).sort().reverse();
+  listEl.innerHTML = dates.map(function(date){
+    var sessions = byDate[date];
+    var dayTotal = sessions.reduce(function(a,r){ return a+r.totalMinutes; },0);
+    var rows = sessions.map(sessionToRowHtml).join('');
+    return '<div class="history-day"><div class="history-day-header"><strong>'+formatDateHeader(date)+'</strong><span>'+(Math.round(dayTotal*10)/10)+' min</span></div>'+rows+'</div>';
+  }).join('');
+}
+
+// ---------- View switching ----------
+function switchView(name){
+  $all('.view').forEach(function(v){ v.classList.remove('active'); });
+  $('#view-'+name).classList.add('active');
+  $('#tabs').style.display = (name==='session'||name==='summary') ? 'none' : 'flex';
+}
+
+// ---------- Static event wiring ----------
+function wireDifficultyButtons(){
+  $all('.seg-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.dataset.difficulty===difficulty);
+    btn.addEventListener('click', function(){ setDifficulty(btn.dataset.difficulty); });
+  });
+}
+function wireStaticEvents(){
+  $all('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      $all('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      switchView(btn.dataset.tab);
+      if (btn.dataset.tab==='history') renderHistory();
+    });
+  });
+  $('#reload-sounds-btn').addEventListener('click', async function(){
+    await loadDefaultSoundsFromFolder();
+    renderLibrary();
+    renderCompass();
+    updateStartHint();
+    showToast('Sounds reloaded.');
+  });
+  $('#randomize-btn').addEventListener('click', randomizeAssignment);
+  $('#default-composition-btn').addEventListener('click', applyDefaultComposition);
+  $('#test-voice-btn').addEventListener('click', function(){ speak('This is a preview of the selected voice.'); });
+  $('#voice-select').addEventListener('change', function(e){ ttsVoiceURI = e.target.value; saveConfig(); });
+  $('#divided-prompt-toggle').addEventListener('change', function(e){ playDividedPrompt = e.target.checked; saveConfig(); });
+  $('#volume-slider').addEventListener('input', function(e){
+    masterVolume = clamp(parseInt(e.target.value,10)/100, 0, 1);
+    if (masterGain) masterGain.gain.value = masterVolume;
+    saveConfig();
+  });
+  $('#start-session-btn').addEventListener('click', startSession);
+  $('#pause-btn').addEventListener('click', togglePause);
+  $('#stop-btn').addEventListener('click', onStopClicked);
+  $('#summary-done-btn').addEventListener('click', function(){
+    switchView('setup');
+    $all('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab==='setup'); });
+  });
+  $('#custom-file-input').addEventListener('change', function(e){
+    pendingCustomFile = e.target.files[0] || null;
+    $('#custom-file-name').textContent = pendingCustomFile ? pendingCustomFile.name : '';
+    updateCustomAddBtn();
+  });
+  $('#custom-name-input').addEventListener('input', updateCustomAddBtn);
+  $('#custom-add-btn').addEventListener('click', onCustomAddClicked);
+  $('#challenge-toggle').addEventListener('change', function(e){ challengeEnabled = e.target.checked; saveConfig(); });
+  $('#zen-toggle').addEventListener('change', function(e){ zenMode = e.target.checked; saveConfig(); });
+  $('#zen-toggle-btn').addEventListener('click', function(){
+    zenMode = !zenMode;
+    applyZenMode();
+    $('#zen-toggle').checked = zenMode;
+    saveConfig();
+  });
+  $('#mixer-toggle-btn').addEventListener('click', function(){
+    var list = $('#session-mixer-list');
+    var willShow = list.style.display === 'none';
+    list.style.display = willShow ? '' : 'none';
+    $('#mixer-toggle-btn').textContent = willShow ? 'Hide' : 'Show';
+  });
+  document.addEventListener('keydown', handleChallengeKeydown);
+}
+
+// ---------- Init ----------
+async function init(){
+  await restoreConfig();
+  await restoreSoundVolumes();
+  await loadDefaultSoundsFromFolder();
+  await restoreLibrary();
+  renderLibrary();
+  wireDifficultyButtons();
+  wireModeRows();
+  updateTotalMinutes();
+  renderCompass();
+  wireStaticEvents();
+  $('#divided-prompt-toggle').checked = playDividedPrompt;
+  $('#challenge-toggle').checked = challengeEnabled;
+  $('#zen-toggle').checked = zenMode;
+  $('#volume-slider').value = Math.round(masterVolume*100);
+  if (window.speechSynthesis){
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+  } else {
+    $('#voice-select').innerHTML = '<option>Not supported in this browser</option>';
+    $('#voice-select').disabled = true;
+    $('#test-voice-btn').disabled = true;
+  }
+  setInterval(clockTick, 200);
+}
+init();
+})();
+</script>
+</body>
+</html>
