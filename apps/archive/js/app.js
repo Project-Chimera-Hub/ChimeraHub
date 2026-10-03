@@ -40,7 +40,7 @@ var SOURCE_NAMES = {
   isomorph: "Isomorph",
   /* The ladder trainer that was on the hub before the four-stream one; the
      name belongs to the trainer there now. */
-  rnb: "Relational N-back (ladder)",
+  rnb: "Relational N-back - Loosh",
   precision: "Precision N-back",
   rotation: "3D Rotation",
   cct: "CCT",

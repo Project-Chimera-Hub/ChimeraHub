@@ -836,6 +836,15 @@ tr:last-child td { border-block-end: 0; }
 .about summary:hover { color: var(--text-primary); }
 .about p { margin: 8px 0 0; }
 
+/* The online tests: a folded list of links out, in the panel's own type. */
+#tests { padding-block: 14px; }
+.tests { margin: 0; }
+.tests summary { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; font-weight: 400; color: var(--text-primary); }
+.tests__list { margin: 10px 0 0; padding: 0; list-style: none; columns: 2 18rem; column-gap: 24px; }
+.tests__list li { padding: 4px 0; break-inside: avoid; }
+.tests__list a { color: var(--accent-hover); text-decoration: none; }
+.tests__list a:hover { text-decoration: underline; }
+
 /* ------------------------------------------------------------------ *
  * Over time                                                           *
  * ------------------------------------------------------------------ */

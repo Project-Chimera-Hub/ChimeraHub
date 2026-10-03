@@ -8,7 +8,7 @@
      that loaded the page while the wiring was broken would keep serving
      itself the broken script for ten more minutes — and the failure is
      silent, so it would read as "the fix did not work". Bump on release. -->
-<link rel="stylesheet" href="css/base.css?v=9">
+<link rel="stylesheet" href="css/base.css?v=10">
 </head>
 <body>
 
@@ -58,6 +58,7 @@
     <span class="nav-label">Yours</span>
     <a class="nav-item" href="#notes"><svg class="icon"><use href="#i-pen"/></svg>Notes</a>
     <a class="nav-item" href="#imports"><svg class="icon"><use href="#i-scroll"/></svg>Log</a>
+    <a class="nav-item" href="#tests"><svg class="icon"><use href="#i-list"/></svg>Online tests</a>
 
     <!-- One row per source, filled by renderSources: the dot is the source's
          colour, the same one its card, its chart and the hub's bar use. -->
@@ -242,6 +243,30 @@
     </label>
   </div>
   <ul id="noteList" class="notes"></ul>
+</section>
+
+<!-- Outside tests, for checking where training has got you. Links only: the
+     archive sends nothing to any of them and reads nothing back. -->
+<section id="tests" class="panel">
+  <details class="about tests">
+    <summary>Online tests</summary>
+    <ul class="tests__list">
+      <li><a href="https://www.cogn-iq.org/tests/product/jcti/" target="_blank" rel="noopener">JCTI — PRI ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://www.reddit.com/r/iqtests/comments/1i2fczs/the_pre1994_sat/#:~:text=Form%200Z" target="_blank" rel="noopener">Pre-1994 SAT ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://canyone2015.github.io/WAIS-IV-Symbol-Search/" target="_blank" rel="noopener">WAIS-IV — Symbol Search ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://canyone2015.github.io/WAIS-IV-Digit-Span/" target="_blank" rel="noopener">WAIS-IV — Digit Span ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://www.neurevo.net/dashboard/exercises" target="_blank" rel="noopener">Neurevo Cognitive Baseline Evaluation ↗</a> <span class="dim">(Paid)</span></li>
+      <li><a href="https://braintrain.dev/test/arithmetic" target="_blank" rel="noopener">Arithmetic ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://www.elnazmohamadi.com/wp-content/uploads/2020/08/9.GRE_big_book.pdf" target="_blank" rel="noopener">Old GREs ↗</a></li>
+      <li><a href="https://www.cogn-iq.org/tests/product/jcfs/" target="_blank" rel="noopener">JCCES — Crystallized Intelligence ↗</a> <span class="dim">(Free)</span></li>
+      <li><a href="https://pdfhost.io/v/fPi.mgfl3_PAT_Update_1_Copyconverted_Copy.pdf" target="_blank" rel="noopener">DAT/PAT — VSI ↗</a></li>
+      <li><a href="https://www.cogn-iq.org/tests/omnibus.php" target="_blank" rel="noopener">OMN (QRI/VCI/FRI) ↗</a></li>
+      <li><a href="https://www.queendom.com/tests/access_page/index.htm?idRegTest=3108" target="_blank" rel="noopener">Queendom ↗</a></li>
+      <li><a href="https://openpsychometrics.org/tests/FSIQ/" target="_blank" rel="noopener">OpenPsychometrics — FSIQ ↗</a></li>
+      <li><a href="https://taketest.xyz/#kind=objective" target="_blank" rel="noopener">General Psych Tests ↗</a></li>
+      <li><a href="https://www.personalityassessor.com/ipip-300/" target="_blank" rel="noopener">Big 5 Personality Traits Test ↗</a></li>
+    </ul>
+  </details>
 </section>
 
 <section id="imports" class="panel">

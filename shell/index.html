@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="css/shell.css?v=13">
 </head>
-<body data-base="%BASE%" data-gate="on">
+<body data-base="%BASE%">
 
 <main id="hub">
 
@@ -15,7 +15,7 @@
     <h1>Chimera Hub</h1>
     <a class="btn ghost discord" href="https://discord.com/invite/chmr" target="_blank" rel="noopener">Discord ↗</a>
   </div>
-  <p class="dim">Four trainers, three more exercises, one record, one day's total.</p>
+  <p class="dim">Six trainers, three more exercises, one record, one day's total.</p>
 
   <section class="today" aria-labelledby="today-h">
     <div class="today__head">
@@ -38,14 +38,14 @@
   <!-- Exercises that run here but are not counted toward the day: no adapter
        reads their storage, so the meter cannot see them. Boxed apart from
        the counted ones rather than mixed in, for the same reason the archive
-       is — the rule the gate enforces should be visible in the layout. -->
+       is — the rule the meter applies should be visible in the layout. -->
   <details class="more" id="more" open>
     <summary class="more__head">
       <span class="more__title">Additional exercises</span>
       <span class="more__count" id="more-count"></span>
     </summary>
     <p class="more__note">
-      These run here like the four above, but <b>their time is not counted</b>
+      These run here like the six above, but <b>their time is not counted</b>
       toward today or the quota — the meter does not read their records.
     </p>
     <div class="grid" id="grid-more"></div>
@@ -69,8 +69,9 @@
     <p>
       Optional, and it helps tune the trainers: how difficulty grows, where
       people stall, whether one trainer carries over to another. The file holds,
-      for every session in CCT, Chimera, Relation Streams, Earshot and Quad Box
-      (and any retired trainer this browser still remembers),
+      for every answer in Syllogimous and every session in Relational N-back -
+      Loosh, CCT, Chimera, Relation Streams, Earshot and Quad Box (and any
+      retired trainer this browser still remembers),
       <b>the mode, its difficulty, how well it went and how long it took</b>, the
       day, and a random participant id. No settings, nothing typed, no time of
       day. eWMT and Attention Training keep no sessions, so they have nothing to
@@ -83,18 +84,6 @@
     <span class="settings__note" id="share-note"></span>
   </div>
 
-  <!-- gate:begin --><!-- Dropped wholesale by the gate-free build; see
-       tools/build-site.mjs. The markers are what it cuts between, so the card
-       and the heartbeat that fills it leave together or not at all. -->
-  <h2>Gate</h2>
-  <div class="aside-card">
-    <p id="gate-state" class="dim">Checking for the gate…</p>
-  </div>
-  <!-- gate:end -->
-
-  <!-- Outside the gate markers on purpose: this is the one setting the
-       gate-free builds — the open hub and the APK — need most, because there
-       is no gate on either to say what the day is supposed to be. -->
   <h2>Today's goal</h2>
   <div class="settings">
     <span class="settings__label">Minutes a day</span>
@@ -150,6 +139,6 @@
 <script src="shared/share-kit/share-kit.js?v=1"></script>
 <script src="js/share.js?v=3"></script>
 <script src="js/pause.js?v=1"></script>
-<script src="js/shell.js?v=12"></script>
+<script src="js/shell.js?v=13"></script>
 </body>
 </html>

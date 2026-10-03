@@ -103,12 +103,27 @@ function ensureDeps(dir) {
 rmrf(DIST);
 fs.mkdirSync(DIST, { recursive: true });
 
-/* The four trainers, and the archive. They are already a website and use
+/* The trainers that are pages, and the archive. They are already a website and use
    relative paths throughout — checked, not assumed — so they run at whatever
    depth they are put, and they are copied rather than built. */
-for (const name of ["cct", "chimera", "ewmt", "relational", "archive"]) {
+for (const name of ["rnb", "cct", "chimera", "ewmt", "relational", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
+}
+
+/* Angular. `--base-href` is the whole of what changes; the Capacitor build in
+   apps/syllogimous is untouched and still builds its own dist for the APK. */
+log("[build] syllogimous (angular)");
+{
+  const dir = path.join(ROOT, "apps", "syllogimous");
+  ensureDeps(dir);
+  run("npx", ["ng", "build", "--configuration=production",
+    "--output-path", path.join(DIST, "syllogimous"),
+    "--base-href", `${BASE}syllogimous/`], dir);
+  /* Pages has no router, so a deep link 404s. Serving index.html as the 404
+     page is how a project site fakes history-mode routing. */
+  fs.copyFileSync(path.join(DIST, "syllogimous", "index.html"),
+                  path.join(DIST, "syllogimous", "404.html"));
 }
 
 /* The additional exercises under apps/more: offered by the hub in their own

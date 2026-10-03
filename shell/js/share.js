@@ -11,7 +11,8 @@
 
    Every trainer that keeps a history is in the file:
 
-   - The counted trainers, and any retired one still in this browser, are read
+   - The counted trainers (Syllogimous, Relational N-back - Loosh, CCT,
+     Chimera, Relation Streams), and any retired one still in this browser, are read
      through the archive's own adapters by way of `Today.readings()`, the same
      readings the meter counts from, so the file agrees with the record about
      what a session is and whether it went well.
@@ -20,7 +21,7 @@
    - eWMT keeps running totals and no sessions, and Attention Training keeps
      nothing, so neither has anything to put in a file.
 
-   One row is one answer for Syllogimous and Isomorph, which stored every
+   One row is one answer for Syllogimous and Isomorph, which store every
    question, and one session for everything else, which is all those apps
    keep. `app` says which.
 
@@ -189,9 +190,10 @@ var Share = (function () {
   }
 
   var NAMES = {
+    syllogimous: "Syllogimous", rnb: "Relational N-back - Loosh",
     cct: "CCT", chimera: "Chimera", relational: "Relation Streams",
     earshot: "Earshot", quadbox: "Quad Box",
-    syllogimous: "Syllogimous", isomorph: "Isomorph", rnb: "RNB", rrt: "Running Order",
+    isomorph: "Isomorph", rrt: "Running Order",
     synth: "Synth", precision: "Precision N-back", rotation: "3D Rotation", ewmt: "eWMT",
   };
 

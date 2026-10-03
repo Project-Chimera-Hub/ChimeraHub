@@ -1,0 +1,152 @@
+import { CHAIN_CLASS } from "./phrasing";
+/**
+ * How much of an item has to be held together at once.
+ *
+ * The difficulty model prices premise count and, once fitted, width and depth.
+ * Those are three different things and none of them is a fourth: how many
+ * separate pieces of structure the reader is carrying, and how many of them one
+ * premise joins in a single step.
+ *
+ * Both are properties of the *order the premises are shown in*, not of the
+ * layout behind them, which is why they belong here rather than in any one
+ * generator. Scramble decides them and currently measures neither.
+ *
+ * Pure. Reads the rendered card, because that is what the reader sees — a
+ * measurement taken from the layout would describe an item nobody was shown.
+ */
+
+/**
+ * Objects are wrapped by `subj`, and the span shape is a contract several other
+ * readers already depend on. Matched here rather than imported so this file
+ * stays free of the generator machinery.
+ */
+const SUBJECT = /<span class="subject">([\s\S]*?)<\/span>/g;
+
+export function subjectsOf(html: string): string[] {
+    SUBJECT.lastIndex = 0;
+    return [...html.matchAll(SUBJECT)].map(m => m[1]);
+}
+
+export interface IntegrationLoad {
+    /**
+     * Distinct groups the heaviest premise welds together.
+     *
+     * Bounded by how many objects a premise names: two for every ordinary
+     * relation, three for a wide premise, four for a meta one. This is the
+     * naive count, and it says what the premise *form* allows.
+     */
+    arity: number;
+    /**
+     * Of those, how many were already structures rather than single objects.
+     *
+     * The distinction the naive count misses. A premise naming three objects
+     * welds three groups when all three are new — which is an introduction, and
+     * nothing was integrated — and welds three when each was already part of
+     * something held, which is the demand worth measuring. Order decides which,
+     * so `arity` alone can be satisfied by scheduling the easy case.
+     */
+    integration: number;
+    /**
+     * Object pairs whose relation the heaviest premise settles at once.
+     *
+     * The size-aware one, and the reason the count above is not enough on its
+     * own: joining two pairs and joining two six-object structures both weld
+     * two groups, and they are nothing like the same thing to do in your head.
+     * The demand is not that several groups meet — it is that several *large*
+     * ones do, and everything across the seam becomes determined together.
+     *
+     * Counted as the pairs that were undetermined before the premise and
+     * determined after it: `C(total, 2)` less the pairs already settled inside
+     * each group. Extending a six-chain by a name settles six; joining two
+     * four-groups settles sixteen; joining two six-groups settles thirty-six.
+     * A chain read in order never rises above its own length.
+     */
+    pairsSettled: number;
+    /**
+     * Peak number of part-built structures carried at once.
+     *
+     * Counted as components of two or more objects: a name you have been told
+     * nothing about yet is not something you are holding. A chain read in order
+     * never exceeds one; a scrambled one opens fragments that cannot be joined
+     * until a later premise bridges them.
+     */
+    openGroups: number;
+}
+
+/**
+ * Walk the premises in the order they are shown, joining as we go.
+ *
+ * Premises naming fewer than two objects are skipped rather than counted as
+ * nothing: a setup line, a transformation applied to the whole space, or a
+ * report about a speaker states no relation between two named things and has no
+ * groups to weld.
+ */
+export function integrationLoad(premises: string[]): IntegrationLoad {
+    const parent = new Map<string, string>();
+    const size = new Map<string, number>();
+
+    const find = (x: string): string => {
+        if (!parent.has(x)) { parent.set(x, x); size.set(x, 1); return x; }
+        let r = x;
+        while (parent.get(r) !== r) r = parent.get(r)!;
+        // Path compression, so a long chain of premises does not make this
+        // quadratic on the modes that state the most of them.
+        let n = x;
+        while (parent.get(n) !== r) { const up = parent.get(n)!; parent.set(n, r); n = up; }
+        return r;
+    };
+
+    let arity = 0, integration = 0, openGroups = 0, pairsSettled = 0;
+    const pairs = (n: number) => (n * (n - 1)) / 2;
+
+    /** One relation being stated: everything it names is joined at once. */
+    const step = (names: string[]) => {
+        const roots = [...new Set(names.map(find))];
+        // Nothing is welded when a relation restates a pair already connected.
+        if (roots.length < 2) return;
+
+        arity = Math.max(arity, roots.length);
+        integration = Math.max(integration,
+            roots.filter(r => (size.get(r) ?? 1) > 1).length);
+
+        const sizes = roots.map(r => size.get(r) ?? 1);
+        const total = sizes.reduce((a, n) => a + n, 0);
+        pairsSettled = Math.max(pairsSettled,
+            pairs(total) - sizes.reduce((a, n) => a + pairs(n), 0));
+
+        const into = roots[0];
+        for (const r of roots.slice(1)) {
+            parent.set(r, into);
+            size.set(into, (size.get(into) ?? 1) + (size.get(r) ?? 1));
+        }
+
+        let open = 0;
+        for (const [node, root] of parent) {
+            if (node === root && (size.get(root) ?? 1) > 1) open++;
+        }
+        openGroups = Math.max(openGroups, open);
+    };
+
+    for (const premise of premises) {
+        const names = subjectsOf(premise);
+        if (names.length < 2) continue;
+
+        /*
+         * A sentence is not always a relation.
+         *
+         * "A is above B, which is above C" names three objects and states two
+         * binary relations sharing a middle term — two steps, each joining two
+         * groups. Treating the sentence as one step reports the reader as
+         * having held three things at once, which is the thing that separates
+         * it from a genuinely ternary premise like "B is between A and C". The
+         * writer marks the join; nothing here reads the wording.
+         */
+        if (premise.includes(`class="${CHAIN_CLASS}"`)) {
+            for (let i = 0; i + 1 < names.length; i++) step([names[i], names[i + 1]]);
+        } else {
+            step(names);
+        }
+    }
+
+    return { arity, integration, pairsSettled, openGroups };
+}

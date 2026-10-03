@@ -413,8 +413,11 @@ test("every card on the hub opens an app that is in the repository", () => {
   const paths = [...src.matchAll(/path: "([^"]+)"/g)].map((m) => m[1]);
   assert.ok(paths.length >= 8, `only ${paths.length} cards found — the pattern no longer matches`);
   for (const p of paths) {
-    const file = path.join(__dirname, "..", "apps", p, "index.html");
-    assert.ok(require("fs").existsSync(file), `the card for ${p} opens nothing: no ${file}`);
+    /* Syllogimous is Angular, and its page is built from src/. */
+    const dir = path.join(__dirname, "..", "apps", p);
+    const file = ["index.html", "src/index.html"].map((f) => path.join(dir, f))
+      .find((f) => require("fs").existsSync(f));
+    assert.ok(file, `the card for ${p} opens nothing: no index.html in ${dir}`);
   }
 });
 
@@ -424,10 +427,13 @@ test("every counted trainer is a source an adapter reports", () => {
   const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
   const block = src.slice(src.indexOf("var TRAINERS = ["), src.indexOf("];", src.indexOf("var TRAINERS = [")));
   const ids = [...block.matchAll(/id: "([^"]+)"/g)].map((m) => m[1]);
-  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "relational"]);
+  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "relational", "rnb", "syllogimous"]);
   const adapters = readFileSync(path.join(__dirname, "..", "apps", "archive", "js", "adapters.js"), "utf8");
   for (const id of ids) {
-    assert.ok(adapters.includes(`source: "${id}"`), `no adapter reports source "${id}"`);
+    /* Syllogimous's reader is shared with Isomorph's and takes the source as
+       an argument rather than spelling it out. */
+    assert.ok(adapters.includes(`source: "${id}"`) || adapters.includes(`Shaped(data, "${id}"`),
+      `no adapter reports source "${id}"`);
   }
 });
 

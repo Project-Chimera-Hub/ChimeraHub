@@ -26,10 +26,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          # One app has a lockfile and a build; the rest are copied as they
+          # Two apps have lockfiles and a build; the rest are copied as they
           # are.
           cache: npm
-          cache-dependency-path: apps/more/quadbox/package-lock.json
+          cache-dependency-path: |
+            apps/syllogimous/package-lock.json
+            apps/more/quadbox/package-lock.json
 
       - name: Build the site
         run: node tools/build-site.mjs

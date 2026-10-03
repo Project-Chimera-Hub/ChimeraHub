@@ -1,0 +1,197 @@
+import { EnumQuestionType } from "./question.constants";
+import { EnumScreens } from "./game.constants";
+
+export const LS_DONT_SHOW = "SYL_DONT_SHOW:";
+/**
+ * Suppress every per-mode tutorial, including modes not met yet.
+ *
+ * Separate from the per-mode `LS_DONT_SHOW:` keys because those can only be set
+ * by dismissing a tutorial you have already been shown — which is no use to
+ * someone who knows the game and does not want to be interrupted sixteen more
+ * times to say so.
+ */
+export const LS_SKIP_TUTORIALS = "SYL_SKIP_TUTORIALS";
+/**
+ * The pre-chunk history key.
+ *
+ * Still read once, to carry an existing player's answers into the chunked
+ * store, and still written by importing a backup taken before that change. See
+ * `utils/history-store.utils.ts`.
+ */
+export const LS_HISTORY = "SYL_HISTORY";
+/** One chunk of the answered history; the suffix is its sequence number. */
+export const LS_HISTORY_CHUNK = "SYL_HISTORY_C:";
+/** Which history chunks exist, newest first. */
+export const LS_HISTORY_INDEX = "SYL_HISTORY_IDX";
+export const LS_TIMER = "SYL_TIMER_TYPE";
+export const LS_GAME_MODE = "SYL_GAME_MODE";
+export const LS_CAROUSEL_ADVANCE = "SYL_CAROUSEL_ADVANCE";
+export const LS_CAROUSEL_SECONDS = "SYL_CAROUSEL_SECONDS";
+export const LS_DAILY_PROGRESS = "SYL_DAILY_PROGRESS";
+export const LS_PG_SETTINGS = "SYL_PG_SETTINGSv1";
+export const LS_DAILY_GOAL = "SYL_DAILY_GOAL";
+export const LS_WEEKLY_GOAL = "SYL_WEEKLY_GOAL";
+export const LS_TRAINING_UNIT = "SYL_TRAINING_UNIT:";
+export const LS_TRAINING_UNIT_LENGTH = "SYL_TRAINING_UNIT_LENGTH";
+/*
+ * Stored as an *off* switch so absence means on, which keeps every existing
+ * player on the behaviour they already had without a migration.
+ */
+export const LS_TRAINING_UNITS_OFF = "SYL_TRAINING_UNITS_OFF";
+export const LS_PREMISES_UP_THRESHOLD = "SYL_PREMISES_UP_THRESHOLD";
+export const LS_PREMISES_DOWN_THRESHOLD = "SYL_PREMISES_DOWN_THRESHOLD";
+export const LS_SCORE = "SYL_SCORE";
+export const LS_COLOR_BLINDNESS_MODE = "SYL_COLOR_BLINDNESS_MODE";
+/** Which settings sections the reader has folded away. */
+export const LS_PANEL_OPEN = "SYL_PANEL_OPEN";
+
+/**
+ * Every prefix this app writes under.
+ *
+ * `LS_PROPS` below is a hand-written list, and it had drifted badly: nine key
+ * families were being written and none of them were in it — the whole ability
+ * model, the Customise overrides and their profiles, the residual window, the
+ * trial log, the theme. Export produced a backup missing all of it, import
+ * restored a partial account, and `clearAllData` left the very state a player
+ * would be resetting to escape.
+ *
+ * Enumerating what is actually there cannot drift. The list survives because
+ * some callers still want a *named* set, but nothing that means "everything"
+ * may be built from it.
+ */
+export const LS_PREFIXES = ["SYL_", "syllogimous-", "darkmode"];
+
+/** Every key this app owns, read from storage rather than assumed. */
+export function allStorageKeys(): string[] {
+    const out: string[] = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && LS_PREFIXES.some(p => key.startsWith(p))) out.push(key);
+        }
+    } catch { /* private mode */ }
+    return out;
+}
+
+export const LS_PROPS = [
+    LS_SKIP_TUTORIALS,
+    LS_HISTORY,
+    LS_TIMER,
+    LS_GAME_MODE,
+    LS_CAROUSEL_ADVANCE,
+    LS_CAROUSEL_SECONDS,
+    LS_DAILY_PROGRESS,
+    LS_PG_SETTINGS,
+    LS_DAILY_GOAL,
+    LS_WEEKLY_GOAL,
+    LS_TRAINING_UNIT_LENGTH,
+    LS_PREMISES_UP_THRESHOLD,
+    LS_PREMISES_DOWN_THRESHOLD,
+    LS_SCORE,
+];
+
+for (const screen of Object.values(EnumScreens)) {
+    LS_PROPS.push(LS_DONT_SHOW + screen);
+}
+
+for (const type of Object.values(EnumQuestionType)) {
+    LS_PROPS.push(LS_DONT_SHOW + type);
+    LS_PROPS.push(LS_TRAINING_UNIT + type);
+}
+
+/** Seconds handed back for each claim of a series answered. */
+export const LS_SERIES_BONUS = "SYL_SERIES_BONUS";
+/** An optional self-reported score, and which test it came from. */
+export const LS_SELF_IQ = "SYL_SELF_IQ";
+export const LS_SELF_IQ_SOURCE = "SYL_SELF_IQ_SOURCE";
+
+/**
+ * Suppress the explanation overlay after a wrong answer.
+ *
+ * Stored as an *off* switch, like `LS_TRAINING_UNITS_OFF` and for the same
+ * reason: absence means shown, so nobody has to be migrated onto the behaviour
+ * they already had.
+ */
+export const LS_EXPLANATIONS_OFF = "SYL_EXPLANATIONS_OFF";
+
+/**
+ * Zen mode: no answer buttons, no explanation, arrows for everything.
+ *
+ * Stored as an *on* switch — absent means off — because unlike the other two
+ * flags here this one did not exist before, so there is no prior behaviour to
+ * preserve for anybody.
+ */
+export const LS_ZEN = "SYL_ZEN";
+
+/**
+ * Silence every sound the app makes.
+ *
+ * There is no audio asset anywhere in the project — the verdict blips and the
+ * daily-goal chime are synthesised on an `AudioContext` — so this is not a
+ * volume control over a mixer, it is whether the oscillator is built at all.
+ *
+ * An *off* switch, like the two below it: absence means the sound plays, which
+ * is what everyone already has.
+ */
+export const LS_SOUND_OFF = "SYL_SOUND_OFF";
+
+/**
+ * Suppress the Correct / Wrong / Timeout flash between questions.
+ *
+ * Separate from the explanation switch because they are separate requests. The
+ * explanation is a panel you read; this is one word telling you how the last
+ * item went, and somebody drilling for volume can want the second gone while
+ * keeping the first, or the other way round.
+ *
+ * An *off* switch, for the reason `LS_EXPLANATIONS_OFF` is.
+ */
+export const LS_FEEDBACK_OFF = "SYL_FEEDBACK_OFF";
+
+/**
+ * Minimal mode: relations printed as marks instead of words.
+ *
+ * An *on* switch — absent means words — because this one did not exist before,
+ * so there is no prior behaviour to preserve for anybody, and words are what
+ * every card has always said.
+ */
+export const LS_SYMBOL_RELATIONS = "SYL_SYMBOL_RELATIONS";
+
+/**
+ * Continuous stream: premises arrive one at a time and old ones expire.
+ *
+ * A way of *showing* an item rather than a kind of item, which is why it lives
+ * beside the game mode on Display & timer and not among the question types. The
+ * relations come from whichever mode `LS_STREAM_TYPE` names.
+ */
+export const LS_STREAM = "SYL_STREAM";
+export const LS_STREAM_TYPE = "SYL_STREAM_TYPE";
+/** How many relations stay live, in premises. */
+export const LS_STREAM_WINDOW = "SYL_STREAM_WINDOW";
+/** How many questions a run asks before it ends. No small ceiling. */
+export const LS_STREAM_LENGTH = "SYL_STREAM_LENGTH";
+/** Ask analogies rather than positions, at the same frequency. */
+export const LS_STREAM_ANALOGY = "SYL_STREAM_ANALOGY";
+
+/*
+ * Delay line: read an arrangement now, judge it several screens later.
+ *
+ * Its own keys rather than a variant of the stream's, because the two are
+ * opposite demands and somebody will want them set differently: the stream is
+ * about letting go of what has expired, this is about keeping a whole finished
+ * structure intact while another is built on top of it.
+ */
+export const LS_DELAY = "SYL_DELAY";
+export const LS_DELAY_TYPE = "SYL_DELAY_TYPE";
+/** How many screens back each conclusion reaches. */
+export const LS_DELAY_DEPTH = "SYL_DELAY_DEPTH";
+/** Conclusions asked before the run ends. */
+export const LS_DELAY_ROUNDS = "SYL_DELAY_ROUNDS";
+
+/**
+ * Relation labels invented per item rather than read from the fixed table.
+ *
+ * Separate from minimal mode on purpose: a fixed arbitrary table is learned
+ * like the words it replaced, and if the case for arbitrary labels is
+ * variability then making every item arbitrary is only a new constant.
+ */
+export const LS_RANDOM_LABELS = "SYL_RANDOM_LABELS";

@@ -1,6 +1,6 @@
 # Chimera Hub
 
-Four trainers and three more exercises, one record, one day's total — and a
+Six trainers and three more exercises, one record, one day's total — and a
 quota the desktop enforces.
 
 **Live:** <https://project-chimera-hub.github.io/ChimeraHub/> ·
@@ -23,12 +23,14 @@ test/       the hub's tests
 
 | Trainer | What it trains |
 |---|---|
+| Syllogimous | relational and syllogistic reasoning (Angular) |
+| Relational N-back - Loosh | n-back over relations, with a ladder |
 | CCT | spoken arithmetic against the clock |
 | Chimera | add the digits you hear, judge the number you see — with n-back, eWMT, CCT and dichotic modes stacked on top |
 | eWMT | the Affective N-Back: position, colour and voice, n steps back |
 | Relation Streams | four streams of relations, n back |
 
-And three **additional exercises**, which run here like the four but are not
+And three **additional exercises**, which run here like the six but are not
 counted toward the day:
 
 | Exercise | What it trains |
@@ -37,14 +39,17 @@ counted toward the day:
 | Earshot | tracking moving sounds by ear — 3D multiple object tracking for the ears |
 | N-back Constant Change | Quad Box's 3D quad n-back, with modalities and variant that keep changing (Vite) |
 
-All seven come from [projectchimera-dot](https://github.com/projectchimera-dot).
+Syllogimous and Relational N-back - Loosh come from
+[Gagafutzi](https://github.com/Gagafutzi); the other seven from
+[projectchimera-dot](https://github.com/projectchimera-dot).
 The **Training archive** sits beside them: not a trainer, the record.
 
 ## A shell, not a rewrite
 
-Each app was merged here by **moving** it, not rewriting it. A Svelte app built
-with Vite and a set of plain HTML pages are each still exactly what they were
-and each still runs on its own, without knowing this repository exists.
+Each app was merged here by **moving** it, not rewriting it. An Angular app, a
+Svelte app built with Vite and a set of plain HTML pages are each still exactly
+what they were and each still runs on its own, without knowing this repository
+exists — Syllogimous still produces its Android APK from `apps/syllogimous`.
 Working trainers are worth more than consistent ones.
 
 So the shared part is small on purpose: `tools/build-site.mjs` decides where
@@ -105,10 +110,11 @@ The hub's **Share your data** card makes a file of every session this browser
 holds and leaves the upload to the player: the hub itself still sends nothing.
 It reads:
 
-- **CCT, Chimera and Relation Streams** through the archive's adapters, the
-  same readings the meter counts from (`Today.readings()`), along with any
-  retired trainer still in the browser. Syllogimous and Isomorph go in answer
-  by answer, as they always did.
+- **Syllogimous, Relational N-back - Loosh, CCT, Chimera and Relation
+  Streams** through the archive's adapters, the same readings the meter counts
+  from (`Today.readings()`), along with any retired trainer still in the
+  browser. Syllogimous (and Isomorph, if it was ever played) go in answer by
+  answer, as they always did.
 - **Earshot** (`earshot.sessions.v1`) and **Quad Box** (its `QuadBoxNBack`
   IndexedDB) directly, in `shell/js/share.js`, because the meter does not count
   them and so they have no adapter. The Quad Box database is only ever opened,
@@ -118,8 +124,8 @@ It reads:
 
 One row is one session (one answer for Syllogimous and Isomorph), in
 [share-kit](shared/share-kit/README.md)'s fixed format, with `level` in the
-trainer's own unit: CCT's and Chimera's peak items a minute, Relational's and
-Quad Box's n, Earshot's speed threshold in degrees per second. `app` says
+trainer's own unit: Syllogimous's level, Loosh's load, CCT's and Chimera's peak
+items a minute, Relation Streams' and Quad Box's n, Earshot's speed threshold in degrees per second. `app` says
 which, and levels are never comparable across apps.
 
 `node tools/check-shared.mjs <folder>` validates and merges uploads into
@@ -225,7 +231,7 @@ like two applications is the thing a shared look exists to prevent.
 
 ## Retired trainers, and what removing them kept
 
-Syllogimous, Isomorph, the ladder Relational N-back, Precision N-back, 3D
+Isomorph, Precision N-back, 3D
 Rotation, Synaesthesia colours, Running Order, the Attentional Shield eWMT,
 DorsalFlow and Controlled Hallucination all used to be here. They are gone
 from the hub; their history is in this repository's log.
@@ -238,16 +244,16 @@ months of their training and still reads. A record that stops being readable
 when an app is retired is not a record.
 
 The meter reads them too, for the streak — a day trained is a day trained —
-but counts only the four trainers on the hub toward today and the quota:
+but counts only the six trainers on the hub toward today and the quota:
 `TRAINERS` in `shell/js/shell.js` is the filter.
 
 Two names carried over. **eWMT** is the Affective N-Back now, under the source
 name the Attentional Shield had, because it is the same slot and a day of
-either is a day of eWMT. **Relation Streams**, the four-stream trainer that
-arrived as "Relational N-back", has its own source name (`relational`) and,
-since then, its own name too: the ladder trainer that had that name measured
-difficulty in a different unit, and the archive never lets a number travel
-without its unit, nor two trainers share a name.
+either is a day of eWMT. **Relation Streams** is the four-stream trainer that
+arrived as "Relational N-back", under its own source name (`relational`) and
+now its own name, because the ladder trainer, back on the hub as **Relational
+N-back - Loosh** (source `rnb`), measures difficulty in a different unit and
+the archive never lets a number travel without its unit.
 
 ## The archive is not a trainer
 

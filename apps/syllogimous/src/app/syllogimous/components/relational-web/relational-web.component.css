@@ -1,0 +1,105 @@
+.web {
+    width: 100%;
+    /* The card has the room; the old cap left most of it empty and made every
+       node and arrowhead smaller than it needed to be. */
+    max-width: 24rem;
+    height: auto;
+    overflow: visible;
+}
+
+/*
+ * The arrows are the premises, so nothing on the canvas should be brighter.
+ *
+ * They were `--th-text-dim` — the colour chosen for things that should recede —
+ * at 1.7, which is how a picture whose entire content is "which way does each
+ * arrow run" ended up with the arrows as the faintest thing in it. `--th-text`
+ * at 2.2 is the same weight the reference drawing gives them.
+ */
+.web__arrow {
+    fill: none;
+    stroke: var(--th-text, #d7e3f4);
+    stroke-width: 2.2;
+}
+
+/*
+ * The head, coloured here rather than inherited from the line.
+ *
+ * One marker serves every arrow and they are all the same colour, so there is
+ * nothing to inherit — and doing it this way does not depend on `context-stroke`
+ * being implemented.
+ */
+.web__head {
+    fill: var(--th-text, #d7e3f4);
+}
+
+.web__loop {
+    fill: none;
+    stroke: var(--th-text, #d7e3f4);
+    stroke-width: 1.8;
+}
+
+/*
+ * Opaque, so an arrow passing behind a node does not read as passing into it.
+ *
+ * It was the panel colour at 85%, and the missing 15% was enough for a shaft to
+ * show through a circle — which in a picture about what points at what is not a
+ * cosmetic difference.
+ */
+.web__node {
+    fill: var(--th-panel, #12161f);
+    stroke: rgba(var(--th-accent-rgb, 34, 211, 238), 0.75);
+    stroke-width: 1.6;
+}
+
+/* The node being asked about. Filled rather than merely outlined, so it is
+ * found before the picture is read rather than after. */
+.web__node.is-lit {
+    fill: var(--th-accent);
+    stroke: var(--th-accent);
+}
+
+.web__label {
+    fill: var(--th-text, #d7e3f4);
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+}
+
+.web__label.is-lit { fill: var(--th-bg, #05070c); }
+
+/*
+ * A node that is part of the match.
+ *
+ * Stroke and fill come from the palette inline, because the slot is only known
+ * at runtime; what belongs here is the weight, which has to hold against a
+ * background of unmarked nodes without shouting over the arrows.
+ */
+.web__node.is-marked {
+    stroke-width: 3;
+}
+
+.web__order {
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    /* Never intercepts the click meant for the node under it. */
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Bigger than it looks, so pointing at a node is not a test of aim. */
+.web__target {
+    fill: transparent;
+    stroke: none;
+}
+
+.web__pickable {
+    cursor: pointer;
+}
+
+.web__pickable:hover .web__node {
+    stroke-width: 3;
+}
