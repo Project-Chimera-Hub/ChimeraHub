@@ -47,7 +47,7 @@ const test = (name, fn) => cases.push([name, fn]);
  * Fixtures — each in the shape its own trainer writes                 *
  * ------------------------------------------------------------------ */
 
-/* Relation Streams: newest first, with an id and a wall-clock duration. */
+/* Relational N-back: newest first, with an id and a wall-clock duration. */
 function relational(sessions) {
   store.rel4_nback_history_v2 = JSON.stringify(sessions.map((s, i) => ({
     id: s.at + "-" + i,

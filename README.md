@@ -24,11 +24,11 @@ test/       the hub's tests
 | Trainer | What it trains |
 |---|---|
 | Syllogimous | relational and syllogistic reasoning (Angular) |
-| Relational N-back - Loosh | n-back over relations, with a ladder |
+| Relation Streams | n-back over relations, with a ladder |
 | CCT | spoken arithmetic against the clock |
 | Chimera | add the digits you hear, judge the number you see — with n-back, eWMT, CCT and dichotic modes stacked on top |
 | eWMT | the Affective N-Back: position, colour and voice, n steps back |
-| Relation Streams | four streams of relations, n back |
+| Relational N-back | four streams of relations, n back |
 
 And three **additional exercises**, which run here like the six but are not
 counted toward the day:
@@ -39,7 +39,7 @@ counted toward the day:
 | Earshot | tracking moving sounds by ear — 3D multiple object tracking for the ears |
 | N-back Constant Change | Quad Box's 3D quad n-back, with modalities and variant that keep changing (Vite) |
 
-Syllogimous and Relational N-back - Loosh come from
+Syllogimous and Relation Streams come from
 [Gagafutzi](https://github.com/Gagafutzi); the other seven from
 [projectchimera-dot](https://github.com/projectchimera-dot).
 The **Training archive** sits beside them: not a trainer, the record.
@@ -110,8 +110,8 @@ The hub's **Share your data** card makes a file of every session this browser
 holds and leaves the upload to the player: the hub itself still sends nothing.
 It reads:
 
-- **Syllogimous, Relational N-back - Loosh, CCT, Chimera and Relation
-  Streams** through the archive's adapters, the same readings the meter counts
+- **Syllogimous, Relation Streams, CCT, Chimera and Relational N-back**
+  through the archive's adapters, the same readings the meter counts
   from (`Today.readings()`), along with any retired trainer still in the
   browser. Syllogimous (and Isomorph, if it was ever played) go in answer by
   answer, as they always did.
@@ -124,8 +124,8 @@ It reads:
 
 One row is one session (one answer for Syllogimous and Isomorph), in
 [share-kit](shared/share-kit/README.md)'s fixed format, with `level` in the
-trainer's own unit: Syllogimous's level, Loosh's load, CCT's and Chimera's peak
-items a minute, Relation Streams' and Quad Box's n, Earshot's speed threshold in degrees per second. `app` says
+trainer's own unit: Syllogimous's level, Relation Streams' load, CCT's and
+Chimera's peak items a minute, Relational N-back's and Quad Box's n, Earshot's speed threshold in degrees per second. `app` says
 which, and levels are never comparable across apps.
 
 `node tools/check-shared.mjs <folder>` validates and merges uploads into
@@ -249,11 +249,11 @@ but counts only the six trainers on the hub toward today and the quota:
 
 Two names carried over. **eWMT** is the Affective N-Back now, under the source
 name the Attentional Shield had, because it is the same slot and a day of
-either is a day of eWMT. **Relation Streams** is the four-stream trainer that
-arrived as "Relational N-back", under its own source name (`relational`) and
-now its own name, because the ladder trainer, back on the hub as **Relational
-N-back - Loosh** (source `rnb`), measures difficulty in a different unit and
-the archive never lets a number travel without its unit.
+either is a day of eWMT. **Relational N-back** is the four-stream trainer,
+under its own source name (`relational`). The ladder trainer that had the name
+first is back on the hub as **Relation Streams** (source `rnb`), renamed so the
+two are never mistaken for each other: they measure difficulty in different
+units, and the archive never lets a number travel without its unit.
 
 ## The archive is not a trainer
 

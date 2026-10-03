@@ -27,7 +27,7 @@
   var TRAINERS = [
     { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#d29922",
       what: "Relational and syllogistic reasoning" },
-    { id: "rnb", name: "Relational N-back - Loosh", path: "rnb/", colour: "#f778ba",
+    { id: "rnb", name: "Relation Streams", path: "rnb/", colour: "#f778ba",
       what: "N-back over relations, with a ladder" },
     { id: "cct", name: "CCT", path: "cct/", colour: "#a371f7",
       what: "Spoken arithmetic against the clock" },
@@ -35,7 +35,7 @@
       what: "Add the digits you hear, judge the number you see" },
     { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
       what: "Affective n-back: position, colour and voice" },
-    { id: "relational", name: "Relation Streams", path: "relational/", colour: "#56d364",
+    { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
       what: "Four streams of relations, n back" },
   ];
 

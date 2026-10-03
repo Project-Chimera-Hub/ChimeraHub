@@ -953,7 +953,7 @@ function readChimera(data) {
 }
 
 /* ------------------------------------------------------------------ *
- * Relation Streams — four streams of relations                        *
+ * Relational N-back — four streams of relations                       *
  * ------------------------------------------------------------------ */
 
 /**

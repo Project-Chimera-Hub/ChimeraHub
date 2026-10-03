@@ -238,7 +238,7 @@ def focus(value):
 @test
 def a_trainer_in_front_of_you_stands_the_panel_down():
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relation Streams — Chimera Hub — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — Chimera Hub — Mozilla Firefox"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed, "the panel stayed up while a trainer had focus"
 
@@ -248,7 +248,7 @@ def switching_to_anything_else_brings_it_straight_back():
     """The whole point. No grace, no fuse — the other application is the thing
     being blocked, and it is in front of you now."""
     g = gate_with(0, required_minutes=20, active_from="00:00", active_to="23:59")
-    with focus('_NET_WM_NAME(UTF8_STRING) = "Relation Streams — Chimera Hub"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
+    with focus('_NET_WM_NAME(UTF8_STRING) = "Relational N-back — Chimera Hub"\nWM_CLASS(STRING) = "Navigator", "firefox"'):
         g.evaluate()
     assert not g.closed
     with focus('_NET_WM_NAME(UTF8_STRING) = "Inbox (12) — Mozilla Thunderbird"'):

@@ -38,9 +38,9 @@ var WEEKS_NEEDED = 20;
 var SOURCE_NAMES = {
   syllogimous: "Syllogimous",
   isomorph: "Isomorph",
-  /* The ladder trainer that was on the hub before the four-stream one; the
-     name belongs to the trainer there now. */
-  rnb: "Relational N-back - Loosh",
+  /* The ladder trainer, renamed so it is never mistaken for the four-stream
+     Relational N-back beside it on the hub. */
+  rnb: "Relation Streams",
   precision: "Precision N-back",
   rotation: "3D Rotation",
   cct: "CCT",
@@ -48,7 +48,7 @@ var SOURCE_NAMES = {
   rrt: "Running Order",
   synth: "Synaesthesia colours",
   chimera: "Chimera",
-  relational: "Relation Streams",
+  relational: "Relational N-back",
 };
 
 function sourceName(id) {

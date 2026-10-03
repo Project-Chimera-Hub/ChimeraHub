@@ -11,8 +11,8 @@
 
    Every trainer that keeps a history is in the file:
 
-   - The counted trainers (Syllogimous, Relational N-back - Loosh, CCT,
-     Chimera, Relation Streams), and any retired one still in this browser, are read
+   - The counted trainers (Syllogimous, Relation Streams, CCT, Chimera,
+     Relational N-back), and any retired one still in this browser, are read
      through the archive's own adapters by way of `Today.readings()`, the same
      readings the meter counts from, so the file agrees with the record about
      what a session is and whether it went well.
@@ -190,8 +190,8 @@ var Share = (function () {
   }
 
   var NAMES = {
-    syllogimous: "Syllogimous", rnb: "Relational N-back - Loosh",
-    cct: "CCT", chimera: "Chimera", relational: "Relation Streams",
+    syllogimous: "Syllogimous", rnb: "Relation Streams",
+    cct: "CCT", chimera: "Chimera", relational: "Relational N-back",
     earshot: "Earshot", quadbox: "Quad Box",
     isomorph: "Isomorph", rrt: "Running Order",
     synth: "Synth", precision: "Precision N-back", rotation: "3D Rotation", ewmt: "eWMT",

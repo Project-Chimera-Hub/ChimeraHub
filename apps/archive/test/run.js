@@ -817,7 +817,7 @@ test("neither new adapter claims a file belonging to another source", () => {
  * ------------------------------------------------------------------ *
  *
  * Chimera, the Affective N-Back (the eWMT now on the hub) and the
- * Relation Streams. All three are storage snapshots, so again
+ * four-stream Relational N-back. All three are storage snapshots, so again
  * the sniff matters as much as the reading.
  */
 
@@ -892,7 +892,7 @@ const relSession = (over) => Object.assign({
 }, over || {});
 const relDump = list => ({ rel4_nback_history_v2: JSON.stringify(list) });
 
-test("Relation Streams: a session is one record, on n, under its own id", () => {
+test("Relational N-back: a session is one record, on n, under its own id", () => {
   const out = readRelational(relDump([relSession()]));
   assert.strictEqual(out.source, "relational",
     "not rnb: the ladder trainer measured load, and units do not travel");
@@ -1740,7 +1740,7 @@ test("ability: every unit the adapters emit has a ladder", () => {
       unit + " was given a ladder — say where its anchors came from, or take it back out");
   }
 
-  /* Chimera's and Relation Streams', absent for want of
+  /* Chimera's and the four-stream Relational N-back's, absent for want of
      anchors: nobody has yet said where either app starts you and where it runs
      out. Records and minutes until somebody does. */
   for (const unit of ["chimera-peak-items-per-min", "relational-n"]) {

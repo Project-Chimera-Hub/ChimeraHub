@@ -1,6 +1,6 @@
-# Relation Streams
+# Relational N-Back
 
-Four-stream relational N-back trainer, formerly called Relational N-Back. Static site, browser ES modules, no build step and no dependencies.
+Four-stream relational N-back trainer. Static site, browser ES modules, no build step and no dependencies.
 
 ## The one rule for relation icons
 
