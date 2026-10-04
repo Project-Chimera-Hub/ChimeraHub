@@ -37,7 +37,7 @@ import { canGenerateQuestion, clampPremises } from "../models/settings.models";
 import { getRandomSymbols, shuffle } from "../utils/question.utils";
 import { hi, own, subj } from "../utils/phrasing";
 import {
-    AxisSpec, axesForDimensions, renderNdPattern,
+    AxisSpec, axesForDimensions, renderNdDirection, renderNdPattern,
 } from "../utils/ndspace.utils";
 import { GeneratorContext } from "./context";
 
@@ -71,10 +71,18 @@ export function createPivotTransforms(ctx: GeneratorContext, numOfPremises: numb
     const placement = (a: string, b: string, delta: Point) =>
         `${subj(a)} is ${pattern(delta)} relative to ${subj(b)}`;
 
-    /** The axis pair a quarter turn happens in, named by its two directions. */
-    const planeName = (i: number, j: number) =>
-        `${renderNdPattern(axes, axes.map((_, k) => (k === i ? 1 : 0)))} and `
-        + `${renderNdPattern(axes, axes.map((_, k) => (k === j ? 1 : 0)))}`;
+    /*
+     * A quarter turn, named by where it takes one direction: "from east to
+     * north". That says the plane and which way round in four words.
+     *
+     * It named the plane by two whole patterns, so every other axis came along
+     * as "same latitude" — "in east, same latitude and same longitude, north"
+     * — and it never said which way round the turn went, which a quarter turn
+     * cannot be carried through without. The turn takes `i`'s positive
+     * direction to `j`'s, so that is the pair named.
+     */
+    const turnName = (i: number, j: number) =>
+        `from ${renderNdDirection(axes, i, 1)} to ${renderNdDirection(axes, j, 1)}`;
 
     for (let attempt = 0; attempt < 400; attempt++) {
         /* Enough before the move to be worth carrying, and at least two after it
@@ -125,7 +133,7 @@ export function createPivotTransforms(ctx: GeneratorContext, numOfPremises: numb
             },
             {
                 label: `everything ${own("pv-turn")} ${subj(pivot)}, `
-                    + `in ${planeName(plane[0], plane[1])}`,
+                    + turnName(plane[0], plane[1]),
                 apply: (p, at) => {
                     const out = [...p];
                     const [i, j] = plane;
@@ -146,8 +154,10 @@ export function createPivotTransforms(ctx: GeneratorContext, numOfPremises: numb
         /* The late entities, placed against the moved arrangement. */
         const lateLines: string[] = [];
         const late = words.slice(before + 1);
+        const anchorOf = new Map<string, string>();
         for (const w of late) {
             const anchor = early[Math.floor(Math.random() * early.length)];
+            anchorOf.set(w, anchor);
             const delta: Point = axes.map(() =>
                 Math.random() < 0.25 ? 0 : (Math.random() < 0.5 ? 1 : -1));
             if (delta.every(v => v === 0)) delta[Math.floor(Math.random() * dims)] = 1;
@@ -163,6 +173,14 @@ export function createPivotTransforms(ctx: GeneratorContext, numOfPremises: numb
             Math.floor(Math.random() * Math.max(1, early.length - 1))];
         const to = late[Math.floor(Math.random() * late.length)];
         if (!from || !to) continue;
+        /*
+         * **Not the pair a late premise states.** Placed against the moved
+         * arrangement, "to is east of from" is the answer, printed: the question
+         * asks how they stand at the end, and the line after the move says so.
+         * Reported from play — Brush placed against Field, then asked about
+         * Brush and Field — and nothing checked for it.
+         */
+        if (anchorOf.get(to) === from) continue;
 
         const answer = sub(moved.get(to)!, moved.get(from)!).map(sign);
         if (answer.every(v => v === 0)) continue;

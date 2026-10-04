@@ -891,6 +891,15 @@ export function renderNdPattern(axes: AxisSpec[], deltas: number[]): string {
         .join(", ");
 }
 
+/**
+ * One direction of one axis, in that axis's colour — "east", not "east, same
+ * latitude". For naming a direction on its own, where a whole pattern would
+ * state a position on every other axis that nobody meant.
+ */
+export function renderNdDirection(axes: AxisSpec[], axis: number, delta: number): string {
+    return hi(axisClause(axes[axis], delta), ndAxisColors(axes)[axis]);
+}
+
 export function renderNdPremises(layout: NdLayout, options: NdRenderOptions = {}): string[] {
     return layout.edges.map(e => renderNdPremise(layout, e, Math.random() > 0.5, options));
 }

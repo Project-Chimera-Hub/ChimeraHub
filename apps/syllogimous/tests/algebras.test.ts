@@ -277,16 +277,20 @@ test("Pivot Transforms marks the carried answer and offers the uncarried one", (
         const pivotAt = place.get(pivot)!;
         /* The plane a quarter turn happens in, read off the move line's own
            clauses — two directions named, each one axis's positive word. */
+        /* The turn, read off the move line: "from <i+> to <j+>", one word
+           each, which says the plane and the way round. */
         const plane: number[] = [];
         if (kind === "turn") {
             const named = strip(q.premises[q.premises.findIndex(
                 l => /own--pv-turn/.test(l))]);
-            for (let i = 0; i < dims; i++) {
-                const word = Object.keys(table[i]).find(k => table[i][k] === 1)!;
-                if (new RegExp(`\\b${word}\\b`).test(named.split(" in ")[1] ?? "")) plane.push(i);
+            const m = named.match(/, from (.+) to (.+)\.$/);
+            assert(!!m, `the turn does not say which way it goes: ${named}`);
+            for (const word of [m![1], m![2]]) {
+                const axis = table.findIndex(t => t[word] === 1);
+                assert(axis >= 0, `"${word}" in the turn is not one axis's direction: ${named}`);
+                plane.push(axis);
             }
-            equal(plane.length, 2,
-                `the turn names ${plane.length} directions for its plane, not two`);
+            assert(plane[0] !== plane[1], `the turn goes from an axis to itself: ${named}`);
         }
 
         const apply = (p: number[]) => {
@@ -334,5 +338,26 @@ test("Pivot Transforms marks the carried answer and offers the uncarried one", (
         assert(carried.join(",") !== naive.join(","),
             "carrying the placement through the move changes nothing, so the move is "
             + "decoration and the item passes without it");
+    }
+});
+
+/**
+ * The answer is not printed.
+ *
+ * Reported from play: "Brush is east, same latitude relative to Field" after the
+ * move, then "At the end, how does Brush stand to Field?". A late premise
+ * describes the new positions, so one placing the asked entity against the
+ * other one is the answer, and the move — the whole item — is skipped.
+ */
+test("Pivot Transforms never asks about a pair a premise after the move states", () => {
+    for (const q of pivotItems()) {
+        const { late } = readPivot(q);
+        const m = q.choicePrompt.match(/how does (\S+) stand to (\S+)\?$/i);
+        assert(!!m, `the prompt does not name two things: ${q.choicePrompt}`);
+        const asked = new Set([m![1], m![2]]);
+        const stated = late.find(p => asked.has(p.a) && asked.has(p.b));
+        assert(!stated,
+            `${m![1]} and ${m![2]} are asked about, and the card already says how they `
+            + `stand after the move: ${stated?.a} relative to ${stated?.b}`);
     }
 });
