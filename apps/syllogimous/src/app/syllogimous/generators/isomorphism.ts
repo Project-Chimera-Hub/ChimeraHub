@@ -524,9 +524,20 @@ export function createPartialIsomorphism(ctx: GeneratorContext, numOfPremises: n
         const [oddA, oddB] = pairs[0];
         if (isomorphic(a, b)) continue;                    // then nothing is odd at all
 
+        /*
+         * Four offered: the two with no counterpart, and one other from each
+         * system so the menu does not split by side. Every entity of both
+         * systems was a button — ten at the top — and the menu is capped at
+         * four everywhere now.
+         */
+        const pickOther = (n2: number, odd: number) => {
+            const rest = [...Array(n2).keys()].filter(i => i !== odd);
+            return rest[Math.floor(Math.random() * rest.length)];
+        };
+        const otherA = pickOther(left.length, oddA), otherB = pickOther(right.length, oddB);
         const candidates = shuffle([
-            ...left.map((w, i) => ({ word: w, odd: i === oddA })),
-            ...right.map((w, i) => ({ word: w, odd: i === oddB })),
+            { word: left[oddA], odd: true }, { word: left[otherA], odd: false },
+            { word: right[oddB], odd: true }, { word: right[otherB], odd: false },
         ]);
         const answer = candidates.map((c, i) => c.odd ? i : -1).filter(i => i >= 0);
         if (answer.length !== 2) continue;
@@ -639,7 +650,22 @@ export function createCommonSubsystem(ctx: GeneratorContext, numOfPremises: numb
         if (distinct.size !== 1) continue;
         const group = found[0].inA;
 
-        const candidates = shuffle([...Array(n).keys()]);
+        /*
+         * Four offered, some of the group and some not, in a mix that varies.
+         *
+         * Every entity of the first system was a button, and the answer was
+         * however many the card said — the whole group. With the menu capped at
+         * four, offering the group whole would be "select all" at four and
+         * "which is left out" at three, the exclusion the six-a-side note above
+         * exists to avoid. So the card still says how big the group is, and
+         * the question is which of these four are in it: one to three of them,
+         * so the count on the card does not give the answer's size.
+         */
+        const inside = shuffle([...group]);
+        const outside = shuffle([...Array(n).keys()].filter(v => !group.includes(v)));
+        const lo = Math.max(1, 4 - outside.length), hi2 = Math.min(3, inside.length);
+        const k = lo + Math.floor(Math.random() * (hi2 - lo + 1));
+        const candidates = shuffle([...inside.slice(0, k), ...outside.slice(0, 4 - k)]);
         const answer = candidates.map((v, i) => group.includes(v) ? i : -1).filter(i => i >= 0);
 
         const question = new Question(type);
@@ -652,7 +678,7 @@ export function createCommonSubsystem(ctx: GeneratorContext, numOfPremises: numb
         question.selectAnswer = answer;
         question.selectAsked = true;
         question.answerMode = "select";
-        question.choicePrompt = `Select the ${group.length} that match a group of the other system.`;
+        question.choicePrompt = "Select every one of these that is in that group.";
         question.isValid = true;
         question.conclusion = "";
 
@@ -661,7 +687,8 @@ export function createCommonSubsystem(ctx: GeneratorContext, numOfPremises: numb
             + "Nothing connects the two.",
             `They share a structure all the same: ${hi(String(group.length))} of the first `
             + "stand to each other exactly as some of the second do, and <b>no larger "
-            + "group does</b>. Select those from the <b>first</b> system.",
+            + "group does</b>. Select the ones offered that are in that group of the "
+            + "<b>first</b> system.",
         ];
 
         const bigger = group.length + 1;

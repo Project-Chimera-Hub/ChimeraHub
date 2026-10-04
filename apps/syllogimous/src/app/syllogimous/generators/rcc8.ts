@@ -48,6 +48,7 @@ import {
     PatchFact, RCC8_DEFINITIONS, RCC8_NAMES, intervalStates, rcc8Between, rcc8Possible,
 } from "../utils/interval-algebra.utils";
 import { GeneratorContext } from "./context";
+import { offerFour } from "./intervals";
 
 /** How the card states one relation, and how it offers one. */
 const claim = (a: string, r: number, b: string) =>
@@ -111,10 +112,13 @@ export function createRcc8(ctx: GeneratorContext, numOfPremises: number): Questi
          * larger number buys nothing.
          */
         if (vague > 0) {
-            const tight = said.map(f => ({ ...f, options: [f.options.find(
-                r => r === rcc8Between(truth, f.a, f.b))!] }));
-            const narrow = rcc8Possible(n, tight, x, y).possible;
-            if (narrow.join(",") === possible.join(",")) continue;
+            /* One premise at a time, each to one of its branches: some single
+               narrowing has to shrink the answer. Narrowing every widened
+               premise at once could shrink it when no one of them did. */
+            const shrinks = said.some(f => f.options.length > 1 && f.options.some(only =>
+                rcc8Possible(n, said.map(g => (g === f ? { ...g, options: [only] } : g)), x, y)
+                    .possible.length < possible.length));
+            if (!shrinks) continue;
         }
 
         const question = new Question(type);
@@ -126,12 +130,16 @@ export function createRcc8(ctx: GeneratorContext, numOfPremises: number): Questi
             ctx.settingsOverrideService.scramble,
             ctx.mergeTarget());
 
-        /* All eight, in the order the guide names them, each saying what it means —
-           the same reasoning Interval Algebra's thirteen follow. */
-        question.choices = RCC8_NAMES.map((_, r) =>
+        /* Four of the eight, in the order the guide names them, each saying what
+           it means — one to three possible, the near misses first among the
+           rest. All eight were buttons; the menu is capped at four everywhere
+           now, and Interval Algebra's thirteen follow the same rule. */
+        const menu = offerFour(possible, RCC8_NAMES.map((_, r) => r).filter(r => !possible.includes(r)));
+        if (!menu) continue;
+        question.choices = menu.map(r =>
             `${claim(words[x], r, words[y])}`
             + `<span class="d-block small text-muted">${RCC8_DEFINITIONS[r]}</span>`);
-        question.selectAnswer = [...possible];
+        question.selectAnswer = menu.map((r, i) => possible.includes(r) ? i : -1).filter(i => i >= 0);
         question.selectAsked = true;
         question.answerMode = "select";
         question.choicePrompt = "Select every relation that is still possible.";
@@ -142,8 +150,8 @@ export function createRcc8(ctx: GeneratorContext, numOfPremises: number): Questi
             "These are <b>rectangular patches</b> of a surface, and there are eight ways "
             + "two of them can stand. Chaining two of those gives a <b>set</b> of "
             + "possibilities rather than one answer — usually a large one.",
-            `Select <b>every</b> relation still possible between ${subj(words[x])} and `
-            + `${subj(words[y])}.`,
+            `Four of the eight are offered. Select <b>each</b> one still possible between `
+            + `${subj(words[x])} and ${subj(words[y])}.`,
         ];
 
         question.explanation = [

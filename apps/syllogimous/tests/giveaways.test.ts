@@ -207,7 +207,6 @@ test("no option is offered twice", () => {
 /** Modes whose answer size is stated on the card, so it is not a guess. */
 const SIZE_STATED = new Set<string>([
     EnumQuestionType.PartialIsomorphism,   // "select both of them"
-    EnumQuestionType.CommonSubsystem,      // the sub-system's size is given
 ]);
 
 /*

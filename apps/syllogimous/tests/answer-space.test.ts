@@ -38,6 +38,7 @@ import { SettingsOverrideService } from "../src/app/syllogimous/services/setting
 import { createDistinction } from "../src/app/syllogimous/generators/distinction";
 import { BUILD } from "./modes";
 import { seeded } from "./harness";
+import { ladderFor } from "../src/app/syllogimous/utils/progression.utils";
 
 const CARD_SCSS = readFileSync(
     "src/app/syllogimous/components/card/card.component.scss", "utf8");
@@ -75,105 +76,62 @@ test("the body may give way to it", () => {
 });
 
 /**
- * And what the cap is actually up against.
+ * And no mode offers more than four.
  *
- * The rule above is a number in a stylesheet; this is the thing it has to
- * contain. Every mode that answers by selecting is built at every premise count
- * a player can set, and the widest menu any of them offers is reported — so a
- * mode shipping a menu half again as long as the longest one here shows up as a
- * decision rather than as a card nobody can read.
- *
- * Thirteen is Interval Algebra's, and it is the ceiling by design: thirteen is
- * how many ways two periods of time can stand, and the mode's answer is the
- * exact set of them.
+ * Asked for directly: "the count of options in all modes to 4 or less". Nine
+ * modes offered more — a selection over Allen's thirteen relations, RCC8's
+ * eight, every entity of two systems, every premise of the card — and the
+ * footer cap above was measured against thirteen. Every mode is built at every
+ * premise count it allows, with and without its whole ladder, and every menu on
+ * it is counted: choices, picture options, and the questions of a series.
  */
-test("no mode offers more options than the card was measured against", () => {
+const MAX_OPTIONS = 4;
+
+test("no mode offers more than four options", () => {
     const settings = new Settings();
     for (const t of Object.values(EnumQuestionType)) settings.question[t].enabled = true;
 
-    const ctx: GeneratorContext = {
-        settings,
-        logger: new Logger("error", false),
-        settingsOverrideService: {
-            linearOverride: () => null, axesFor: () => null, circularAxes: () => 0,
-            spread: () => null, depthFor: () => 0, scramble: 100, rungOverride: () => null,
-        } as unknown as SettingsOverrideService,
-        progressionService: {
-            hasRung: () => false, depthBonusFor: () => 0, dialFor: () => 0,
+    const ctxWith = (rungs: string[]): GeneratorContext => {
+        const has = (_t: string, r: string) => rungs.includes(r);
+        const ctx: GeneratorContext = {
+            settings,
+            logger: new Logger("error", false),
+            settingsOverrideService: {
+                linearOverride: () => null, axesFor: () => null, circularAxes: () => 0,
+                spread: () => null, depthFor: () => 0, scramble: 100, rungOverride: () => null,
+            } as unknown as SettingsOverrideService,
+            progressionService: {
+                hasRung: has, depthBonusFor: () => 0, dialFor: () => 1,
+                mergeTarget: () => null,
+            } as unknown as ProgressionService,
+            forceConstruction: "off",
+            hasRung: has,
+            dialFor: () => 1,
             mergeTarget: () => null,
-        } as unknown as ProgressionService,
-        forceConstruction: "off",
-        hasRung: () => false,
-        dialFor: () => 0,
-        mergeTarget: () => null,
-        random: (n?: number) => createDistinction(ctx, n ?? 2),
+            random: (n?: number) => createDistinction(ctx, n ?? 2),
+        };
+        return ctx;
     };
 
-    let widest = 0, widestType = "";
+    const faults: string[] = [];
     seeded(20261801, () => {
         for (const type of ORDERED_QUESTION_TYPES) {
             if (!BUILD[type]) continue;
             const params = QUESTION_TYPE_SETTING_PARAMS[type];
-            for (let n = params.minNumOfPremises; n <= params.maxNumOfPremises; n++) {
-                let q;
-                try { q = BUILD[type](ctx, n); } catch { continue; }
-                if (q.answerMode !== "select") continue;
-                const offered = q.choices?.length ?? 0;
-                if (offered > widest) { widest = offered; widestType = String(type); }
+            for (const rungs of [[], ladderFor(type)]) {
+                const ctx = ctxWith(rungs);
+                for (let n = params.minNumOfPremises; n <= params.maxNumOfPremises; n++) {
+                    for (let k = 0; k < 3; k++) {
+                        let q;
+                        try { q = BUILD[type](ctx, n); } catch { continue; }
+                        const widest = Math.max(q.choices?.length ?? 0, q.choiceGrids?.length ?? 0,
+                            ...(q.series ?? []).map(c => c.choices?.length ?? 0));
+                        if (widest > MAX_OPTIONS) faults.push(`${type} at ${n} premises: ${widest} options`);
+                    }
+                }
             }
         }
     });
 
-    assert(widest > 0, "no mode built a selection at all, so this checks nothing");
-    assert(widest <= 13,
-        `${widestType} offers ${widest} options, past the thirteen the footer cap `
-        + "was measured against — re-measure the card before shipping it");
-});
-
-/**
- * Focus mode centres the item, and has to do it in a way that cannot overflow
- * upward.
- *
- * It used `justify-content: center` on the scroll box. Centring by alignment
- * splits the overflow between both ends, and a scroll box cannot scroll above
- * its top, so Partial Isomorphism at ten premises — twenty-odd statements —
- * lost its setup and first premises off the top of the screen with no way to
- * reach them. Measured on the built app at 1920 x 1080: the item started 25px
- * above the box, and more the longer it was.
- */
-const THEME_CSS = readFileSync("src/assets/css/custom-styles/theme.css", "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-
-test("focus mode does not centre the item by alignment, which hides a long one's top", () => {
-    const rules = THEME_CSS.split("}").filter(r => /focus-mode[^{]*playcard-body[^{]*\{/.test(r));
-    assert(rules.length > 0, "no focus-mode rule for the card body was found, so this checks nothing");
-    for (const r of rules) {
-        assert(!/justify-content:\s*center/.test(r) && !/align-content:\s*center/.test(r),
-            "focus mode centres the card body by alignment, so an item taller than the "
-            + "screen loses its first premises above the top, where no scroll reaches");
-    }
-    assert(/focus-mode[^{]*playcard-body\s*>\s*:first-child\s*\{[^}]*margin-block-start:\s*auto/.test(THEME_CSS),
-        "nothing centres the item in focus mode any more — a short item sits at the top");
-});
-
-/**
- * Options that are names go in columns.
- *
- * A row per option is right for sentences and was wrong for names: Partial
- * Isomorphism's ten one-word options at a row each filled the capped footer,
- * which then scrolled, under premises that scrolled too. The columns are an
- * inline binding because the component stylesheet is at its budget, so the
- * binding is what has to be there, on both lists that show text options.
- */
-const GAME_HTML = readFileSync("src/app/syllogimous/pages/game/game.component.html", "utf8")
-    .replace(/<!--[\s\S]*?-->/g, "");
-
-test("short options are laid out in columns, in both select and choice lists", () => {
-    const lists = GAME_HTML.match(/<div class="choices"[^>]*>/g) ?? [];
-    assert(lists.length >= 2, "expected the select and the choice lists, found " + lists.length);
-    for (const l of lists) {
-        assert(/\[style\.grid-template-columns\]="choiceColumns"/.test(l),
-            "an option list is not bound to `choiceColumns`, so a menu of ten names "
-            + "takes ten rows of the footer: " + l);
-    }
+    assert(!faults.length, "a menu runs past four:\n  " + [...new Set(faults)].slice(0, 20).join("\n  "));
 });

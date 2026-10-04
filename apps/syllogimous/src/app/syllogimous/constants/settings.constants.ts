@@ -407,12 +407,14 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
         maxNumOfPremises: 9,
         basic: false
     },
-    /* The count is the arrows on each side; six is the fewest that leaves one
-       lining-up strictly better than every other. */
+    /* The count sets the arrows on each side, two below it. Five — three
+       arrows a side — still leaves one lining-up strictly better than every
+       other, now that the card is the two systems alone. Eight is about
+       thirteen lines; ten was twenty. */
     [EnumQuestionType.PartialAnalogy]: {
         enabled: true,
-        minNumOfPremises: 6,
-        maxNumOfPremises: 10,
+        minNumOfPremises: 5,
+        maxNumOfPremises: 8,
         basic: false
     },
     /* Six is the floor. Seven was, on the grounds that the layout needs enough

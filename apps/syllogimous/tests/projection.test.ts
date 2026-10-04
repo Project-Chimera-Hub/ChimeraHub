@@ -152,13 +152,15 @@ function readCard(q: Question) {
     };
 }
 
-test("everyone but the named one is offered, exactly once", () => {
+/*
+ * Four offered — everyone but the named one was, up to nine, and the menu is
+ * capped at four everywhere now. The checks below hold for whoever is offered.
+ */
+test("four others are offered, each exactly once", () => {
     for (const q of items()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
         const { named, candidates } = readCard(q);
-        equal(candidates.length, q.bucket.length - 1,
-            "the candidates are not everyone but the named one — someone who "
-            + "coincides would have nowhere to be selected");
+        equal(candidates.length, 4, `${candidates.length} candidates, not four`);
         equal(new Set(candidates).size, candidates.length, "a name is offered twice");
         assert(!candidates.includes(named),
             "the named thing is offered as coinciding with itself");

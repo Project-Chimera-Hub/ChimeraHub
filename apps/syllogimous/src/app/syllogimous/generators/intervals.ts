@@ -133,10 +133,23 @@ export function createIntervals(ctx: GeneratorContext, numOfPremises: number): Q
          * largest thing on the screen. Styled with the utilities already loaded,
          * since `game.component.css` has no room for a rule of its own.
          */
-        question.choices = ALLEN_NAMES.map((_, r) =>
+        /*
+         * Four of the thirteen offered: one to three that are possible, and the
+         * rest impossible — the impossible ones taken first from beside a
+         * possible one in Allen's order, which are the near misses ("starts"
+         * beside "is during"), before any from further off.
+         *
+         * All thirteen were buttons, and the menu is capped at four everywhere
+         * now. Still in Allen's order, so the list reads the way the relations
+         * are learnt.
+         */
+        const impossible = ALLEN_NAMES.map((_, r) => r).filter(r => !possible.includes(r));
+        const menu = offerFour(possible, impossible);
+        if (!menu) continue;
+        question.choices = menu.map(r =>
             `${claim(words[x], r, words[y])}`
             + `<span class="d-block small text-muted">${ALLEN_DEFINITIONS[r]}</span>`);
-        question.selectAnswer = [...possible];
+        question.selectAnswer = menu.map((r, i) => possible.includes(r) ? i : -1).filter(i => i >= 0);
         question.selectAsked = true;
         question.answerMode = "select";
         question.choicePrompt = "Select every relation that is still possible.";
@@ -147,8 +160,8 @@ export function createIntervals(ctx: GeneratorContext, numOfPremises: number): Q
             "These are <b>periods of time</b>, and they have length, so there are "
             + "thirteen ways two of them can stand. Chaining two of those gives a "
             + "<b>set</b> of possibilities rather than one answer.",
-            `Select <b>every</b> relation still possible between ${subj(words[x])} `
-            + `and ${subj(words[y])} — which may be one, and is usually several.`,
+            `Four of the thirteen are offered. Select <b>each</b> one still possible `
+            + `between ${subj(words[x])} and ${subj(words[y])}.`,
         ];
 
         question.explanation = explain(words, survivors.length, possible, x, y);
@@ -156,6 +169,28 @@ export function createIntervals(ctx: GeneratorContext, numOfPremises: number): Q
     }
 
     throw new Error("Cannot generate.");
+}
+
+/**
+ * Four relations to offer: some possible, the rest not, in the scale's order.
+ *
+ * Shared by the three modes that ask which relations survive — Allen's
+ * thirteen, RCC8's eight, the concave twenty — since the cap and the reason for
+ * it are the same. One to three possible, so neither "select all" nor "select
+ * none" is the answer and the count is no guide; the impossible ones nearest a
+ * possible one first, by their place in the scale, since a neighbour is the
+ * relation a slip lands on.
+ */
+export function offerFour(possible: number[], impossible: number[]): number[] | null {
+    const hi = Math.min(3, possible.length);
+    const lo = Math.max(1, 4 - impossible.length);
+    if (lo > hi) return null;
+    const k = lo + Math.floor(Math.random() * (hi - lo + 1));
+    const yes = [...possible].sort(() => Math.random() - 0.5).slice(0, k);
+    const near = (r: number) => Math.min(...yes.map(p => Math.abs(p - r)));
+    const no = [...impossible].sort(() => Math.random() - 0.5)
+        .sort((a, b) => near(a) - near(b)).slice(0, 4 - k);
+    return [...yes, ...no].sort((a, b) => a - b);
 }
 
 /**

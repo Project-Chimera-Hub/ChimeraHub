@@ -507,33 +507,44 @@ test("the explanation gives its reasons and counts what it ruled out", () => {
 });
 
 /**
- * The menu grows with the ask, and the supply does not run out.
+ * The menu stays at four, and the ask moves how close the four are.
  *
- * The menu is the mode's only growth axis — there are always two premises — so if it
- * did not move with `numOfPremises` the ladder's larger numbers would buy nothing.
+ * The menu was this mode's only growth axis, three options to eight, and the menu
+ * is capped at four everywhere now. So the count draws the four from a narrower
+ * neighbourhood of the answer as it rises: at the top, the ruled-out options sit
+ * nearer the possible ones, by the paper's own measure, than at the floor. If they
+ * did not, the ladder's larger numbers would buy nothing.
  */
-test("asking for more premises gives a longer menu", () => {
+test("asking for more premises brings the four options closer", () => {
     const ctx = context();
-    const widths = new Map<number, number>();
+    const near = new Map<number, number[]>();
     seeded(20261703, () => {
         for (let n = RANGE.minNumOfPremises; n <= RANGE.maxNumOfPremises; n++) {
-            for (let rep = 0; rep < 4; rep++) {
-                try {
-                    const q = createConcaveRegions(ctx, n);
-                    equal(q.premises.length, 2,
-                        `${n} premises asked for gave ${q.premises.length} — the chain is `
-                        + "three patches and the count is the menu");
-                    widths.set(n, q.choices!.length);
-                } catch { /* an undrawable draw */ }
+            for (let rep = 0; rep < 12; rep++) {
+                let q: Question;
+                try { q = createConcaveRegions(ctx, n); } catch { continue; }
+                equal(q.premises.length, 2,
+                    `${n} premises asked for gave ${q.premises.length} — the chain is three patches`);
+                equal(q.choices!.length, 4, `${n} premises offers ${q.choices!.length} options, not four`);
+
+                const [a, , c] = q.bucket;
+                const keys = q.choices!.map(choice => {
+                    const text = strip(choice);
+                    return poolRelations().find(key => text === strip(spellOutRelation(parseKey(key), a, c)))!;
+                });
+                const yes = q.selectAnswer!.map(i => keys[i]);
+                const no = keys.filter((_, i) => !q.selectAnswer!.includes(i));
+                const gaps = no.map(k => Math.min(...yes.map(y => relationDistance(k, y))));
+                near.set(n, [...(near.get(n) ?? []), ...gaps]);
             }
         }
     });
-    const seen = [...widths.entries()].sort((a, b) => a[0] - b[0]);
-    equal(seen.length, RANGE.maxNumOfPremises - RANGE.minNumOfPremises + 1,
-        `only ${seen.length} of the settable premise counts built an item`);
-    for (let i = 1; i < seen.length; i++) {
-        assert(seen[i][1] > seen[i - 1][1],
-            `${seen[i][0]} premises offers ${seen[i][1]} options and ${seen[i - 1][0]} `
-            + `offers ${seen[i - 1][1]} — the extra premise bought nothing`);
-    }
+    const mean = (xs: number[]) => xs.reduce((p, x) => p + x, 0) / xs.length;
+    const counts = [...near.keys()].sort((x, y) => x - y);
+    equal(counts.length, RANGE.maxNumOfPremises - RANGE.minNumOfPremises + 1,
+        `only ${counts.length} of the settable premise counts built an item`);
+    const floor = mean(near.get(counts[0])!), top = mean(near.get(counts[counts.length - 1])!);
+    assert(top < floor,
+        `the ruled-out options are ${top.toFixed(2)} cells from an answer at the top and `
+        + `${floor.toFixed(2)} at the floor — the extra premises bought nothing`);
 });

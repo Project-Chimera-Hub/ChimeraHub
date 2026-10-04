@@ -108,7 +108,23 @@ export function createProjection(ctx: GeneratorContext, numOfPremises: number): 
             .sort((a, b) => a - b);
 
         const named = words[Math.floor(Math.random() * words.length)];
-        const candidates = shuffle(words.filter(w => w !== named));
+        /*
+         * Four offered, some who coincide and some who do not.
+         *
+         * Everybody else was a button, up to nine, and the menu is capped at
+         * four everywhere now. How many of the four coincide is drawn rather
+         * than left to fall out, so the count is no guide: one to three, and
+         * now and then none, for the reason given below.
+         */
+        const everyone = words.filter(w => w !== named);
+        const hit = shuffle(everyone.filter(w => coincide(layout, lens, named, w)));
+        const miss = shuffle(everyone.filter(w => !coincide(layout, lens, named, w)));
+        const none = Math.random() < 0.08;
+        const lo = none ? 0 : Math.max(1, 4 - miss.length);
+        const hi2 = none ? 0 : Math.min(3, hit.length);
+        if (lo > hi2 || miss.length < 4 - hi2) continue;
+        const k = lo + Math.floor(Math.random() * (hi2 - lo + 1));
+        const candidates = shuffle([...hit.slice(0, k), ...miss.slice(0, 4 - k)]);
         const answer = candidates
             .map((w, i) => coincide(layout, lens, named, w) ? i : -1)
             .filter(i => i >= 0);
@@ -133,7 +149,6 @@ export function createProjection(ctx: GeneratorContext, numOfPremises: number): 
            and positions that differ, a whole card collapsing did not occur once
            in six hundred items, so deleting this line leaves the suite green. */
         if (answer.length === candidates.length) continue;
-        if (!answer.length && Math.random() > 0.06) continue;
 
         const ignored = [...Array(dims).keys()].filter(i => !lens.includes(i));
 
@@ -148,7 +163,7 @@ export function createProjection(ctx: GeneratorContext, numOfPremises: number): 
         question.selectAnswer = answer;
         question.selectAsked = true;
         question.answerMode = "select";
-        question.choicePrompt = `Select everyone who coincides with ${named}.`;
+        question.choicePrompt = `Select each of these who coincides with ${named}.`;
         question.isValid = true;
         question.conclusion = "";
 
@@ -158,8 +173,8 @@ export function createProjection(ctx: GeneratorContext, numOfPremises: number): 
             + `${listed(ignored.map(i => axisName(axes, i)))} `
             + `${ignored.length === 1 ? "is" : "are"} <b>ignored</b>.`,
             `Two things coincide when nothing but the ignored directions separates `
-            + `them. Select <b>everyone</b> who coincides with ${subj(named)} — which `
-            + "may be nobody.",
+            + `them. Select <b>each</b> of the four offered who coincides with `
+            + `${subj(named)} — which may be none of them.`,
         ];
 
         question.explanation = explain(layout, axes, lens, named, candidates, answer);

@@ -33,7 +33,7 @@
 import { EnumQuestionType } from "../constants/question.constants";
 import { Question } from "../models/question.models";
 import { canGenerateQuestion, clampPremises } from "../models/settings.models";
-import { getRandomSymbols, pickUniqueItems } from "../utils/question.utils";
+import { getRandomSymbols, pickUniqueItems, shuffle } from "../utils/question.utils";
 import { hi, rel, subj } from "../utils/phrasing";
 import {
     ALL_SYSTEMS, RelationSystem, consistentStates, settledBy,
@@ -145,8 +145,22 @@ export function createMinimalPremises(ctx: GeneratorContext, numOfPremises: numb
          * follow.
          */
         question.premises = facts.map(line);
-        question.choices = facts.map(line);
-        question.selectAnswer = [...answer].sort((p, q) => p - q);
+
+        /*
+         * Four of them offered: the set that settles it, and the spare premises
+         * most likely to be taken for part of it — those that name one of the
+         * pair — before any that do not. Every premise was a button, up to
+         * seven, and the menu is capped at four everywhere now.
+         */
+        const touches = (i: number) =>
+            [facts[i].a, facts[i].b].some(v => v === x || v === y);
+        const spare = facts.map((_, i) => i).filter(i => !answer.includes(i));
+        const near = shuffle(spare.filter(touches));
+        const far = shuffle(spare.filter(i => !touches(i)));
+        const menu = [...answer, ...[...near, ...far].slice(0, 4 - answer.length)]
+            .sort((p, q) => p - q);
+        question.choices = menu.map(i => line(facts[i]));
+        question.selectAnswer = answer.map(i => menu.indexOf(i)).sort((p, q) => p - q);
         question.selectAsked = true;
         question.answerMode = "select";
         question.choicePrompt = "Select the smallest set that still settles it.";

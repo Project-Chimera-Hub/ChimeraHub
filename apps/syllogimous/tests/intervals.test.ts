@@ -96,17 +96,24 @@ function readCard(q: Question) {
     return { n: q.bucket.length, said, x: at.get(asked[0])!, y: at.get(asked[1])! };
 }
 
-test("all thirteen are offered, in Allen's order, each saying what it means", () => {
+/** The relations offered, and which of them the item marks. */
+const offered = (q: Question) => q.choices.map(relationOf);
+const marked = (q: Question) => q.selectAnswer.map(i => relationOf(q.choices[i]));
+
+/*
+ * Four of the thirteen, not all of them. All thirteen were buttons, and the
+ * menu is capped at four everywhere now — one to three possible and the rest
+ * not, so the four are a question rather than a shortlist that answers it.
+ */
+test("four of the thirteen are offered, in Allen's order, each saying what it means", () => {
     for (const q of items()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
-        equal(q.choices.length, 13,
-            "the options are a shortlist, which answers the question — the thirteen "
-            + "are the answer space");
-        q.choices.forEach((c, r) => {
-            equal(relationOf(c), r,
-                `option ${r} is not the ${r}th relation, so the ladder is out of order`);
-            assert(strip(c).includes(ALLEN_DEFINITIONS[r]),
-                `"${ALLEN_NAMES[r]}" is offered without saying what it means`);
+        equal(q.choices.length, 4, `${q.choices.length} options, not four`);
+        const rs = offered(q);
+        equal([...rs].sort((a, b) => a - b), rs, "the options are not in Allen's order");
+        q.choices.forEach((c, i) => {
+            assert(strip(c).includes(ALLEN_DEFINITIONS[rs[i]]),
+                `"${ALLEN_NAMES[rs[i]]}" is offered without saying what it means`);
         });
     }
 });
@@ -139,11 +146,11 @@ test("the premises can be laid out, so the answer is never empty", () => {
  * a true answer given by selecting everything. It is the one reading this mode
  * cannot afford to serve, since it is also the cheapest.
  */
-test("the premises always rule something out", () => {
+test("the premises always rule something out, among the four as well", () => {
     for (const q of items()) {
-        assert(q.selectAnswer.length < 13,
-            "every relation is still possible, so the card is answered by selecting "
-            + "all thirteen without reading a premise");
+        assert(q.selectAnswer.length < q.choices.length,
+            "every relation offered is still possible, so the card is answered by "
+            + "selecting all four without reading a premise");
     }
 });
 
@@ -151,7 +158,7 @@ test("every relation marked is one some arrangement realises", () => {
     for (const q of items()) {
         const { n, said, x, y } = readCard(q);
         const fits = consistentIntervalStates(n, said);
-        for (const r of q.selectAnswer) {
+        for (const r of marked(q)) {
             assert(fits.some(m => allenBetween(m, x, y) === r),
                 `"${ALLEN_NAMES[r]}" is marked possible but no arrangement the premises `
                 + "allow puts the two periods that way");
@@ -171,8 +178,8 @@ test("every relation left unmarked is one no arrangement realises", () => {
     for (const q of items()) {
         const { n, said, x, y } = readCard(q);
         const fits = consistentIntervalStates(n, said);
-        for (let r = 0; r < 13; r++) {
-            if (q.selectAnswer.includes(r)) continue;
+        for (const r of offered(q)) {
+            if (marked(q).includes(r)) continue;
             assert(!fits.some(m => allenBetween(m, x, y) === r),
                 `"${ALLEN_NAMES[r]}" is possible and is not marked, so a player who `
                 + "worked it out is failed for it");

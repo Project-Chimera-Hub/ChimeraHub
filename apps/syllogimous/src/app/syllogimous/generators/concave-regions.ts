@@ -45,7 +45,8 @@
  *
  * ── What grows ──
  *
- * The menu, and nothing else. There are always two premises: the chain is three
+ * How near the four options are to an answer, and nothing else (see
+ * `neighbourhood`; the menu itself is capped at four). There are always two premises: the chain is three
  * patches and the third pair is the question. A fourth patch would need the
  * composition of a composition, and the intermediate relation is not determined —
  * so that would need the exact set this mode has just finished explaining it cannot
@@ -56,7 +57,7 @@
 import { EnumQuestionType } from "../constants/question.constants";
 import { Question } from "../models/question.models";
 import { canGenerateQuestion, clampPremises } from "../models/settings.models";
-import { getRandomSymbols, pickUniqueItems } from "../utils/question.utils";
+import { getRandomSymbols, pickUniqueItems, shuffle } from "../utils/question.utils";
 import { hi, rel, subj } from "../utils/phrasing";
 import { orderPremises } from "../utils/premise-order.utils";
 import {
@@ -101,15 +102,17 @@ function option(key: string, a: string, b: string): string {
 }
 
 /**
- * How long the menu is.
+ * How wide a neighbourhood the four options are drawn from.
  *
- * Three at the floor, because a selection shorter than that is a choice wearing a
- * submit button — which `registries.test.ts` says in as many words. Eight at the
- * ceiling: the supply of chains stops growing past a seven-long menu, so a ninth
- * option would be the same items with a relation added that nothing was straining
- * to exclude.
+ * The menu was the lever — three options at the floor, eight at the top — and the
+ * menu is capped at four everywhere now. So the count moves how *close* the four
+ * are instead: at the top they are the four nearest relations to an answer, most
+ * a single clause away from it; at the floor they are four of the nearest nine,
+ * and some of them are far enough off to be ruled out on sight. Harder by the
+ * same measure the menu was chosen by, without being longer.
  */
-const menuSize = (numOfPremises: number) => Math.max(3, Math.min(8, numOfPremises + 1));
+const neighbourhood = (numOfPremises: number) => Math.max(4, Math.min(9, 11 - numOfPremises));
+const MENU = 4;
 
 export function createConcaveRegions(ctx: GeneratorContext, numOfPremises: number): Question {
     ctx.logger.info("createConcaveRegions");
@@ -119,7 +122,7 @@ export function createConcaveRegions(ctx: GeneratorContext, numOfPremises: numbe
     if (!canGenerateQuestion(type, numOfPremises, settings)) throw new Error("Cannot generate.");
     numOfPremises = clampPremises(type, numOfPremises);
 
-    const size = menuSize(numOfPremises);
+    const size = neighbourhood(numOfPremises);
     const chains = usableChains(size);
     if (!chains.length) throw new Error("Cannot generate.");
 
@@ -139,10 +142,24 @@ export function createConcaveRegions(ctx: GeneratorContext, numOfPremises: numbe
             ctx.settingsOverrideService.scramble,
             ctx.mergeTarget());
 
-        question.choices = item.options.map(key => option(key, a, c));
-        question.selectAnswer = item.options
+        /* Four of the neighbourhood: one to three still possible, the rest
+           ruled out, kept in the neighbourhood's order. */
+        const yes = item.options.filter(k => item.possible.includes(k));
+        const no = item.options.filter(k => !item.possible.includes(k));
+        const lo = Math.max(1, MENU - no.length), hi2 = Math.min(MENU - 1, yes.length);
+        if (lo > hi2) continue;
+        const k = lo + Math.floor(Math.random() * (hi2 - lo + 1));
+        const chosen = new Set([...shuffle(yes).slice(0, k), ...shuffle(no).slice(0, MENU - k)]);
+        const shown = {
+            ...item,
+            options: item.options.filter(key => chosen.has(key)),
+            possible: item.possible.filter(key => chosen.has(key)),
+        };
+
+        question.choices = shown.options.map(key => option(key, a, c));
+        question.selectAnswer = shown.options
             .map((key, i) => ({ key, i }))
-            .filter(({ key }) => item.possible.includes(key))
+            .filter(({ key }) => shown.possible.includes(key))
             .map(({ i }) => i);
         question.selectAsked = true;
         question.answerMode = "select";
@@ -172,7 +189,7 @@ export function createConcaveRegions(ctx: GeneratorContext, numOfPremises: numbe
            whatever they are given, and "the first" is only the placeholder. */
         const because = provableConstraint(
             chain.first, chain.second, subj(a), subj(b), subj(c)).because;
-        question.explanation = explain(item, because, a, c);
+        question.explanation = explain(shown, because, a, c);
         return question;
     }
 

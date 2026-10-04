@@ -107,11 +107,24 @@ function pairs(lines: string[]): boolean {
 
 const without = (lines: string[], i: number) => lines.filter((_, j) => j !== i);
 
-test("the analogies are the options, and neither is stated twice", () => {
+/* The marked option's place in the full list of analogies. */
+const markedPremise = (q: Question) =>
+    q.premises.map(strip).indexOf(strip(q.choices[q.correctChoice]));
+
+/*
+ * Four of the analogies, not all of them: every one was a button, up to nine,
+ * and the menu is capped at four everywhere now. They are still the card's own
+ * sentences, which is what lets a menu run past two.
+ */
+test("the options are four of the analogies, the breaking one among them", () => {
     for (const q of items()) {
         equal(q.answerMode, "choice", "the item is not answered by choosing");
-        equal(q.choices.map(strip), q.premises.map(strip),
-            "the options are not the premises they are meant to be");
+        assert(q.choices.length <= 4, `${q.choices.length} options — the cap is four`);
+        const premises = q.premises.map(strip);
+        for (const c of q.choices) {
+            assert(premises.includes(strip(c)), `"${strip(c)}" is offered and is not an analogy on the card`);
+        }
+        assert(markedPremise(q) >= 0, "the marked option is not one of the analogies");
         assert(q.correctChoice >= 0 && q.correctChoice < q.choices.length,
             `the marked analogy is at ${q.correctChoice}, which is not an option`);
         equal(new Set(q.choices.map(strip)).size, q.choices.length,
@@ -142,7 +155,7 @@ test("the long menu is the analogy list, and priced as one", () => {
 
 test("the analogies cannot all give one counterpart each", () => {
     for (const q of items()) {
-        assert(!pairs(q.choices),
+        assert(!pairs(q.premises),
             "the analogies pair up perfectly well, so the item asks which of them "
             + "breaks the pairing when none of them does");
     }
@@ -150,7 +163,7 @@ test("the analogies cannot all give one counterpart each", () => {
 
 test("withdrawing the marked analogy makes the rest agree", () => {
     for (const q of items()) {
-        assert(pairs(without(q.choices, q.correctChoice)),
+        assert(pairs(without(q.premises, markedPremise(q))),
             "the rest still clash without the one the item marks, so it is not the "
             + "analogy the conflict runs through");
     }
@@ -165,10 +178,10 @@ test("withdrawing the marked analogy makes the rest agree", () => {
  */
 test("withdrawing any other analogy leaves the clash where it was", () => {
     for (const q of items()) {
-        for (let i = 0; i < q.choices.length; i++) {
-            if (i === q.correctChoice) continue;
-            assert(!pairs(without(q.choices, i)),
-                `withdrawing "${strip(q.choices[i])}" also repairs the pairing, so the `
+        for (let i = 0; i < q.premises.length; i++) {
+            if (i === markedPremise(q)) continue;
+            assert(!pairs(without(q.premises, i)),
+                `withdrawing "${strip(q.premises[i])}" also repairs the pairing, so the `
                 + "card's \"exactly one\" is false and a right answer is marked wrong");
         }
     }
@@ -185,7 +198,7 @@ test("no name appears on both sides of an analogy", () => {
     for (const q of items()) {
         const left = new Set<string>();
         const right = new Set<string>();
-        for (const line of q.choices) {
+        for (const line of q.premises) {
             const names = extractSubjects(line);
             left.add(names[0]); left.add(names[1]);
             right.add(names[2]); right.add(names[3]);

@@ -98,13 +98,21 @@ function readCard(q: Question) {
     };
 }
 
-test("the premises are the options, and neither is stated twice", () => {
+/*
+ * Four of the premises, the settling set among them. Every premise was a
+ * button, up to seven; the menu is capped at four everywhere now. The checks
+ * below read the options, and a smallest set among the premises is the
+ * smallest among any of them that contain it.
+ */
+test("the options are four of the premises, and none is stated twice", () => {
     for (const q of items()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
-        equal(q.choices.length, q.premises.length,
-            "the options and the premises are different lists");
-        equal(q.choices.map(strip), q.premises.map(strip),
-            "the options are not the premises they are meant to be");
+        assert(q.choices.length <= 4, `${q.choices.length} options — the cap is four`);
+        const premises = q.premises.map(strip);
+        for (const c of q.choices) {
+            assert(premises.includes(strip(c)), `"${strip(c)}" is offered and is not a premise`);
+        }
+        equal(new Set(q.choices.map(strip)).size, q.choices.length, "an option is offered twice");
         assert(q.selectAnswer.length > 0, "no premise is needed, which cannot be");
         assert(q.selectAnswer.length < q.choices.length,
             "every premise is needed, so there was nothing to pare down");

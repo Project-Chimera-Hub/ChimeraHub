@@ -143,8 +143,28 @@ export function createContradiction(ctx: GeneratorContext, numOfPremises: number
          * or the player is matching text instead of withdrawing a claim.
          */
         question.premises = facts.map(line);
-        question.choices = facts.map(line);
-        question.correctChoice = wrong;
+
+        /*
+         * Four of them offered, the wrong one among them.
+         *
+         * Every premise was a button — up to nine. The three beside the wrong
+         * one are drawn from those that share a name with it, which are the
+         * ones a reader has to withdraw in their head to rule out; one that
+         * shares nothing is dismissed by looking. And not the only one of its
+         * polarity among the four, for the reason the whole list was held to.
+         */
+        const touches = (i: number) => {
+            const f = facts[i], w = facts[wrong];
+            return f.a === w.a || f.a === w.b || f.b === w.a || f.b === w.b;
+        };
+        const others = facts.map((_, i) => i).filter(i => i !== wrong);
+        const near = shuffle(others.filter(touches));
+        const far = shuffle(others.filter(i => !touches(i)));
+        const offered = [...near, ...far].slice(0, 3);
+        if (!offered.some(i => facts[i].holds === facts[wrong].holds)) continue;
+        const menu = [...offered, wrong].sort((x, y) => x - y);
+        question.choices = menu.map(i => line(facts[i]));
+        question.correctChoice = menu.indexOf(wrong);
         question.answerMode = "choice";
         question.choicePrompt = "Which premise is the wrong one?";
         question.isValid = true;

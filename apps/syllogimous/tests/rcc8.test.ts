@@ -206,17 +206,26 @@ function readCard(q: Question) {
     return { said, x: at.get(asked[0])!, y: at.get(asked[1])! };
 }
 
-test("all eight are offered, in order, each saying what it means", () => {
+/** Which relation an option offers, read off the definition it carries. */
+const relationOf = (c: string) => {
+    const hits = RCC8_DEFINITIONS.map((d, r) => (strip(c).includes(d) ? r : -1)).filter(r => r >= 0);
+    equal(hits.length, 1, `an option carries ${hits.length} definitions: ${strip(c)}`);
+    return hits[0];
+};
+
+/*
+ * Four of the eight, not all of them: all eight were buttons, and the menu is
+ * capped at four everywhere now — one to three possible, the rest not.
+ */
+test("four of the eight are offered, in order, each saying what it means", () => {
     for (const q of items()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
-        equal(q.choices.length, 8,
-            "the options are a shortlist, which answers the question — the eight are "
-            + "the answer space");
-        q.choices.forEach((c, r) => {
-            assert(strip(c).includes(RCC8_NAMES[r]),
-                `option ${r} is not "${RCC8_NAMES[r]}", so the ladder is out of order`);
-            assert(strip(c).includes(RCC8_DEFINITIONS[r]),
-                `"${RCC8_NAMES[r]}" is offered without saying what it means`);
+        equal(q.choices.length, 4, `${q.choices.length} options, not four`);
+        const rs = q.choices.map(relationOf);
+        equal([...rs].sort((a, b) => a - b), rs, "the options are out of order");
+        q.choices.forEach((c, i) => {
+            assert(strip(c).includes(RCC8_NAMES[rs[i]]),
+                `"${RCC8_NAMES[rs[i]]}" is offered under another name`);
         });
     }
 });
@@ -236,12 +245,14 @@ test("the marked set is exactly what the arrangements allow", () => {
     for (const q of items()) {
         const { said, x, y } = readCard(q);
         const { possible } = rcc8Possible(q.bucket.length, said, x, y);
-        equal(q.selectAnswer.slice().sort((a, b) => a - b), possible,
-            "the marked relations are not exactly the ones some arrangement allowed by "
-            + "the premises realises");
-        assert(possible.length < 8,
-            "every relation is still possible, so the card is answered by selecting all "
-            + "eight without reading a premise");
+        const offered = q.choices.map(relationOf);
+        equal(q.selectAnswer.map(i => offered[i]).sort((a, b) => a - b),
+            offered.filter(r => possible.includes(r)).sort((a, b) => a - b),
+            "the marked relations are not exactly the offered ones some arrangement allowed "
+            + "by the premises realises");
+        assert(q.selectAnswer.length >= 1 && q.selectAnswer.length < q.choices.length,
+            "all or none of the four is possible, so the card is answered without "
+            + "reading a premise");
     }
 });
 
@@ -259,7 +270,7 @@ test("a disjunctive premise leaves more open than the exact one would", () => {
         const loose = said.filter(f => f.options.length > 1);
         if (!loose.length) continue;
 
-        const answer = q.selectAnswer.slice().sort((a, b) => a - b);
+        const answer = rcc8Possible(q.bucket.length, said, x, y).possible;
         /* Narrowed to each single branch in turn: at least one has to give a
            smaller set, or the extra branch changed nothing. */
         const narrowed = loose.flatMap(f => f.options.map(only =>

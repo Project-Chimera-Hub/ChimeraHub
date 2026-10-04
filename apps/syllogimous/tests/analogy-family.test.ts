@@ -97,30 +97,24 @@ const partialItems = () =>
     itemsOf(EnumQuestionType.PartialAnalogy, createPartialAnalogy, 20261201);
 
 /**
- * The card as two webs and a kind pairing, told apart by the premise's wording.
+ * The card as two webs, the systems named by the setup.
  *
- * Arrow premises and kind premises use different relations, so which is which is
- * read off the sentence rather than off the order they were written in — a card
- * whose premises were scrambled together still parses.
+ * The setup names who is in which — "A, B, C and D form one system; …" — and
+ * the arrows are every premise. There was a kind pairing too, which was how the
+ * groups used to be read; it went because it gave the answer away.
  */
 function readPartial(q: Question) {
-    const arrows: Array<[string, string]> = [];
-    const kinds: Array<[string, string]> = [];
-    for (const line of q.premises) {
+    const named = extractSubjects(q.setup[0]);
+    assert(named.length % 2 === 0 && named.length >= 6,
+        `the setup does not name two systems: ${strip(q.setup[0])}`);
+    const left = named.slice(0, named.length / 2);
+    const right = named.slice(named.length / 2);
+
+    const arrows: Array<[string, string]> = q.premises.map(line => {
         const [a, b] = extractSubjects(line);
         assert(!!a && !!b, `a premise does not name two things: ${strip(line)}`);
-        (/same kind|≐/.test(strip(line)) ? kinds : arrows).push([a, b]);
-    }
-
-    /* The two systems are the two sides of the kind pairing, which covers
-       everybody exactly once — that is what makes it a plausible rival answer. */
-    const left = kinds.map(([a]) => a);
-    const right = kinds.map(([, b]) => b);
-    equal(new Set(left).size, left.length, "the kind pairing names an entity twice on the left");
-    equal(new Set(right).size, right.length, "the kind pairing names an entity twice on the right");
-    equal(new Set([...left, ...right]).size, q.bucket.length,
-        "the kind pairing does not cover every entity exactly once, so it is not a "
-        + "rival correspondence but a hint");
+        return [a, b];
+    });
 
     const webFor = (names: string[]) => {
         const at = new Map(names.map((w, i) => [w, i]));
@@ -131,7 +125,7 @@ function readPartial(q: Question) {
         }
         return w;
     };
-    return { left, right, a: webFor(left), b: webFor(right), kinds };
+    return { left, right, a: webFor(left), b: webFor(right) };
 }
 
 const agreement = (a: Web, b: Web, perm: number[]) => {
@@ -145,26 +139,45 @@ const agreement = (a: Web, b: Web, perm: number[]) => {
     return kept;
 };
 
-test("Partial Analogy offers the best correspondence and the kind pairing", () => {
+/**
+ * The other option is the runner-up, and nothing on the card points at either.
+ *
+ * It was the asked entity's partner in a stated "same kind" pairing — always,
+ * so "never the one of the same kind" answered every item without reading an
+ * arrow. Now it is where the best rival lining-up sends the asked entity, which
+ * keeps fewer arrows than the best and more than anything else that disagrees
+ * with it there; and no premise is anything but an arrow.
+ */
+test("Partial Analogy offers the best lining-up and its nearest rival", () => {
     for (const q of partialItems()) {
         equal(q.answerMode, "choice", "the item is not answered by choosing");
         equal(q.choices.length, 2, `${q.choices.length} options, not two`);
+        assert(!q.premises.some(l => /same kind|≐/.test(strip(l))),
+            "a kind premise is back, and its partner was always the wrong option");
 
-        const { left, right, kinds } = readPartial(q);
+        const { left, right, a, b } = readPartial(q);
         const asked = extractSubjects(q.setup[1])[0];
-        assert(left.includes(asked),
-            "the entity asked about is not in the first system");
+        const at = left.indexOf(asked);
+        assert(at >= 0, "the entity asked about is not in the first system");
 
         const options = q.choices.map(c => strip(c).trim());
         for (const o of options) {
             assert(right.includes(o), `${o} is offered and is not in the second system`);
         }
-        const lure = kinds.find(([a]) => a === asked)![1];
-        assert(options.includes(lure),
-            "the entity of the same kind is not offered, so there is no lure");
-        assert(options[q.correctChoice] !== lure,
-            "the item marks the entity of the same kind, which the setup says counts "
-            + "for nothing");
+
+        /* The best that sends the asked entity to the wrong option. */
+        const wrong = right.indexOf(options[1 - q.correctChoice]);
+        let rivalBest = -1, othersBest = -1;
+        for (const perm of permutations(a.n)) {
+            const kept = agreement(a, b, perm);
+            if (perm[at] === wrong) rivalBest = Math.max(rivalBest, kept);
+            else if (perm[at] !== right.indexOf(options[q.correctChoice])) {
+                othersBest = Math.max(othersBest, kept);
+            }
+        }
+        assert(rivalBest >= othersBest,
+            `the wrong option is not the nearest rival: sending ${asked} there keeps at most `
+            + `${rivalBest}, somewhere else ${othersBest}`);
     }
 });
 
@@ -173,8 +186,7 @@ test("Partial Analogy offers the best correspondence and the kind pairing", () =
  *
  * Five a side was fixed, and it made this mode's easiest item a card of two
  * systems plus a complete kind pairing — sixteen and a half statements, while the
- * ladder said six. Four a side at the floor is fourteen, and it draws a
- * well-formed item about as often.
+ * ladder said six. Four a side at the floor, and no kind pairing, is about seven.
  *
  * Asserted as a step rather than as the number four, so the check is about the
  * mode having a bottom rather than about a constant. It is read off the card —

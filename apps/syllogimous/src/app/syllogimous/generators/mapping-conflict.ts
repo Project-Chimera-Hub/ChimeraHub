@@ -157,8 +157,23 @@ export function createMappingConflict(ctx: GeneratorContext, numOfPremises: numb
            and scrambling the premises again would leave the buttons in a
            different order from the list they are meant to be. */
         question.premises = lines;
-        question.choices = [...lines];
-        question.correctChoice = shown.indexOf(wrong);
+
+        /*
+         * Four of them offered, the breaking one among them.
+         *
+         * Every analogy was a button, up to nine. The three beside it are drawn
+         * from those that name somebody it names, on either side — the ones a
+         * reader has to weigh against it — before any that share nobody.
+         */
+        const names = (c: Claim) => [c.a, c.b, c.p, c.q];
+        const touches = (i: number) => names(claims[i]).some(v => names(claims[wrong]).includes(v));
+        const rest = shown.filter(i => i !== wrong);
+        const near = shuffle(rest.filter(touches));
+        const far = shuffle(rest.filter(i => !touches(i)));
+        const offered = new Set([...near, ...far].slice(0, 3).concat(wrong));
+        const menu = shown.filter(i => offered.has(i));
+        question.choices = menu.map(i => line(claims[i]));
+        question.correctChoice = menu.indexOf(wrong);
         question.answerMode = "choice";
         question.choicePrompt = "Which analogy breaks the pairing?";
         question.isValid = true;

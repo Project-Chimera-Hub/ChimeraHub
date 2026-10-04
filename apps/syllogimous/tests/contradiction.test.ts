@@ -93,23 +93,34 @@ function readCard(q: Question): {
     equal(found.length, 1, `the setup names ${found.length} relations: ${setup}`);
 
     const at = new Map(q.bucket.map((w, i) => [w, i]));
-    const facts = q.choices.map(line => {
+    const facts = q.premises.map(line => {
         const [a, b] = extractSubjects(line);
         return { a: at.get(a)!, b: at.get(b)!, holds: !/does not/.test(strip(line)) };
     });
     return { system: found[0], n: q.bucket.length, facts };
 }
 
+/** Where the marked option sits in the premise list. */
+const markedPremise = (q: Question) =>
+    q.premises.map(strip).indexOf(strip(q.choices[q.correctChoice]));
+
 const fits = (system: RelationSystem, n: number, facts: Fact[]) =>
     consistentStates(system, n, facts).length > 0;
 
-test("the premises are the options, and neither is stated twice", () => {
+/*
+ * Four of the premises, not all of them. Every premise was a button, up to
+ * nine; the menu is capped at four everywhere now, and the four are still the
+ * card's own sentences — which is what lets a menu run past two at all.
+ */
+test("the options are four of the premises, the wrong one among them", () => {
     for (const q of items()) {
         equal(q.answerMode, "choice", "the item is not answered by choosing");
-        equal(q.choices.map(strip), q.premises.map(strip),
-            "the options are not the premises they are meant to be");
-        assert(q.correctChoice >= 0 && q.correctChoice < q.choices.length,
-            `the marked premise is at ${q.correctChoice}, which is not an option`);
+        assert(q.choices.length <= 4, `${q.choices.length} options — the cap is four`);
+        const premises = q.premises.map(strip);
+        for (const c of q.choices) {
+            assert(premises.includes(strip(c)), `"${strip(c)}" is offered and is not a premise`);
+        }
+        assert(markedPremise(q) >= 0, "the marked option is not one of the premises");
     }
 });
 
@@ -169,7 +180,7 @@ test("nothing can be arranged so that every premise holds", () => {
 test("withdrawing the marked premise makes the rest agree", () => {
     for (const q of items()) {
         const { system, n, facts } = readCard(q);
-        const rest = facts.filter((_, i) => i !== q.correctChoice);
+        const rest = facts.filter((_, i) => i !== markedPremise(q));
         assert(fits(system, n, rest),
             "the premises still clash without the one the item marks, so it is not "
             + "the premise the conflict runs through");
@@ -188,9 +199,9 @@ test("withdrawing any other premise leaves the clash where it was", () => {
     for (const q of items()) {
         const { system, n, facts } = readCard(q);
         for (let i = 0; i < facts.length; i++) {
-            if (i === q.correctChoice) continue;
+            if (i === markedPremise(q)) continue;
             assert(!fits(system, n, facts.filter((_, j) => j !== i)),
-                `withdrawing "${strip(q.choices[i])}" also resolves the clash, so the `
+                `withdrawing "${strip(q.premises[i])}" also resolves the clash, so the `
                 + "card's \"exactly one\" is false and a right answer is marked wrong");
         }
     }

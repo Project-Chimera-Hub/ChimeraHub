@@ -334,8 +334,14 @@ test("Partial Isomorphism marks one entity from each system", () => {
     for (const q of partialItems()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
         const { left, right } = twoSystems(q);
-        equal(q.choices.length, left.length + right.length,
-            "the candidates are not both systems' entities");
+        /* Four offered, two from each system — every entity was a button, up
+           to ten, and the menu is capped at four everywhere now. */
+        equal(q.choices.length, 4, `${q.choices.length} candidates, not four`);
+        const offered = q.choices.map(c => strip(c).trim());
+        equal(offered.filter(w => left.includes(w)).length, 2,
+            "the menu does not offer two from the first system, so it splits by side");
+        equal(offered.filter(w => right.includes(w)).length, 2,
+            "the menu does not offer two from the second system, so it splits by side");
         equal(q.selectAnswer.length, 2, "the item does not mark exactly two entities");
 
         const marked = q.selectAnswer.map(i => strip(q.choices[i]).trim());
@@ -364,8 +370,7 @@ test("Partial Isomorphism marks one entity from each system", () => {
  * Four only at the floor, and the reason is in the generator: a four-a-side
  * shared core saturates at six arrows, so from eight premises up it would build
  * the same item while the ladder printed a larger number. Asserted as a step,
- * read off the menu — every entity of both systems is offered, so the menu is
- * twice the size of a side.
+ * read off the setup, which names both systems.
  */
 /**
  * **Every entity this family names is one its premises say something about.**
@@ -433,7 +438,7 @@ test("Partial Isomorphism's floor is a smaller pair of systems than its ceiling"
                 let q: Question;
                 try { q = createPartialIsomorphism(ctx, n); } catch { continue; }
                 const held = sides.get(n) ?? new Set<number>();
-                held.add(q.choices.length / 2);
+                held.add(twoSystems(q).left.length);
                 sides.set(n, held);
             }
         }
@@ -450,8 +455,8 @@ test("Partial Isomorphism's floor is a smaller pair of systems than its ceiling"
     const floor = [...rungs[0][1]][0];
     const ceiling = [...rungs[rungs.length - 1][1]][0];
     assert(floor < ceiling,
-        `every rung is ${floor} entities a side, so the first card of this mode is a `
-        + `menu of ${floor * 2} and there is no bottom step`);
+        `every rung is ${floor} entities a side, so the first card of this mode is `
+        + "its hardest and there is no bottom step");
 });
 
 test("Partial Isomorphism leaves exactly one pair whose removal lines the rest up", () => {
@@ -492,44 +497,51 @@ const commonItems = () =>
  * systems, so all three are walked. "No larger group does" is the one a
  * generator is most likely to get wrong by searching upwards from small.
  */
-test("Common Sub-System marks the largest group the two systems share", () => {
+/*
+ * The group is worked out from the card — its size from the setup, its members
+ * by search — and the options are checked against it. The menu is four now, some
+ * of the group and some not; it used to be the whole first system with the whole
+ * group to select, which at four options would be "select all" or "which is left
+ * out".
+ */
+test("Common Sub-System marks the offered members of the largest shared group", () => {
     for (const q of commonItems()) {
         equal(q.answerMode, "select", "the item is not answered by selecting");
         const { left, right } = twoSystems(q);
-        equal(q.choices.length, left.length,
-            "the candidates are not the first system's entities");
+        equal(q.choices.length, 4, `${q.choices.length} candidates, not four`);
+        const offered = q.choices.map(c => strip(c).trim());
+        for (const o of offered) assert(left.includes(o), `${o} is offered and is not in the first system`);
+
+        const m = strip(q.setup[1]).match(/(\d+) of the first/);
+        assert(!!m, "the setup does not say how large the shared group is");
+        const size = Number(m![1]);
+        assert(size >= 3, `a group of ${size} is too small to be worth finding`);
+        assert(size <= left.length - 2,
+            `a group of ${size} of ${left.length} asks which are left out rather than which form it`);
 
         const a = webOf(q, left), b = webOf(q, right);
-        const marked = q.selectAnswer.map(i => strip(q.choices[i]).trim());
-        const size = marked.length;
-        assert(size >= 3, `the item marks ${size} entities, which is too few to be a group`);
-        assert(size <= left.length - 2,
-            `the item marks ${size} of ${left.length}, which asks which entities are left `
-            + "out rather than which form the group");
-
-        const shape = induced(a, marked.map(w => left.indexOf(w)));
         const fitsIn = (w: Web, k: number, target: Web) =>
             subsets(w.n, k).some(pick => isomorphic(induced(w, pick), target));
-        assert(fitsIn(b, size, shape),
-            "the marked group does not stand to itself as any group of the other system "
-            + "does, so the card's shared structure is not shared");
 
         /* Nothing larger, on either side — the card says so outright. */
         for (let bigger = size + 1; bigger <= Math.min(a.n, b.n); bigger++) {
             for (const inA of subsets(a.n, bigger)) {
-                const target = induced(a, inA);
-                assert(!fitsIn(b, bigger, target),
+                assert(!fitsIn(b, bigger, induced(a, inA)),
                     `a group of ${bigger} is shared as well, so "no larger group does" is `
                     + "false and a reader who found it is failed for it");
             }
         }
 
-        /* And no other group of the same size in the first system. */
-        const others = subsets(a.n, size)
-            .filter(pick => pick.map(i => left[i]).sort().join(",") !== [...marked].sort().join(","))
-            .filter(pick => fitsIn(b, size, induced(a, pick)));
-        equal(others.map(p => p.map(i => left[i]).join("+")), [],
-            "another group of the first system matches a group of the second, so the "
-            + "item marks one of several right answers");
+        /* Exactly one group of that size, or "that group" names several. */
+        const groups = subsets(a.n, size).filter(pick => fitsIn(b, size, induced(a, pick)));
+        equal(groups.length, 1,
+            `${groups.length} groups of ${size} in the first system match the second`);
+        const members = new Set(groups[0].map(i => left[i]));
+
+        const marked = q.selectAnswer.map(i => offered[i]);
+        equal([...marked].sort(), offered.filter(o => members.has(o)).sort(),
+            "the marked options are not exactly the offered members of the group");
+        assert(marked.length >= 1 && marked.length <= 3,
+            `${marked.length} of the four are in the group — none or all is no selection`);
     }
 });

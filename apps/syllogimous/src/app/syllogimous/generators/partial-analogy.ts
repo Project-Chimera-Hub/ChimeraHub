@@ -13,29 +13,21 @@
  * worth comparing are rarely isomorphic, and the question is almost always which
  * correspondence to prefer rather than whether one exists.
  *
- * ── Kind, where Isomorph says colour ──
+ * ── No lure ──
  *
- * The lure is an attribute the entities carry that plays no part in the
- * structure. This app already has one — "is the same kind as", the Distinction
- * scale's own relation — so that is what it uses, rather than introducing a
- * second vocabulary for the same idea. It converts under the symbol switch and
- * renames with the fresh-labels feature like every other relation here, which a
- * colour written into this file would not.
- *
- * Kind is stated as a *complete* pairing across the two systems, not as one hint.
- * A single kind premise would be visibly the trap; a pairing that covers
- * everybody is a second, plausible, wrong answer to the whole question — which is
- * what a lure is supposed to be. The reader has two bijections in front of them
- * and has to know which one the question is about.
+ * Isomorph adds a colour per entity as a lure, and this mode had one: a complete
+ * "is the same kind as" pairing across the two systems. It did not work as a
+ * lure. The wrong option was always the asked entity's kind partner, so "never
+ * the one of the same kind" answered every item without reading an arrow — and
+ * the pairing was a line per entity, a third of the card. The rival now is the
+ * runner-up lining-up, which can only be told from the best by counting.
  *
  * ── What makes an item well-formed ──
  *
  * The best correspondence is found by trying every one, and the item is kept only
  * if exactly one achieves the maximum — otherwise "the correspondence that keeps
  * the most" names several and the card marks one of them. The systems must
- * disagree somewhere, or the analogy is total and this is Structure Match. And the
- * kind pairing must disagree with the best correspondence *at the entity asked
- * about*, or the lure is the answer.
+ * disagree somewhere, or the analogy is total and this is Structure Match.
  */
 
 import { EnumQuestionType } from "../constants/question.constants";
@@ -50,11 +42,11 @@ import {
 } from "../utils/web.utils";
 import { GeneratorContext } from "./context";
 
-/** The relation the Distinction scale uses for an attribute with no order. */
-const SAME_KIND = "is the same kind as";
-
 const arrow = (a: string, b: string) => `${subj(a)} ${rel(EDGE_WORDS["→"])} ${subj(b)}`;
-const kindLine = (a: string, b: string) => `${subj(a)} ${rel(SAME_KIND)} ${subj(b)}`;
+
+/** A group named by its members, which is how the card says who is in which. */
+const groupText = (names: string[]) =>
+    `${names.slice(0, -1).map(subj).join(", ")} and ${subj(names[names.length - 1])}`;
 
 const systemLines = (w: Web, names: string[]) =>
     edgesOf(w).map(([i, j]) => arrow(names[i], names[j]));
@@ -122,7 +114,11 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
     numOfPremises = clampPremises(type, numOfPremises);
 
     const n = systemSize(numOfPremises);
-    const wanted = Math.max(4, Math.min(n * (n - 1) - 2, numOfPremises - 2));
+    /* Three arrows a side at the floor, from four: with the kind pairing gone
+       the card is the two systems and nothing else, and three is still enough
+       for one lining-up to keep strictly more than every other — which the
+       draw checks rather than assumes. */
+    const wanted = Math.max(3, Math.min(n * (n - 1) - 2, numOfPremises - 2));
 
     for (let attempt = 0; attempt < 300; attempt++) {
         const words = getRandomSymbols(settings, 2 * n);
@@ -131,7 +127,7 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
         const right = words.slice(n);
 
         const a = randomWeb(n, 0.3);
-        if (edgesOf(a).length < wanted || edgesOf(a).length > wanted + 2) continue;
+        if (edgesOf(a).length < wanted || edgesOf(a).length > wanted + 1) continue;
         /* Nobody unconnected: an entity with no arrow appears in no arrow premise
            and its correspondence is decided by nothing. */
         const touched = (w: Web, v: number) => w.adj[v].some(Boolean) || w.adj.some(r => r[v]);
@@ -162,19 +158,30 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
         const correspondence = perms[0];
 
         /*
-         * The kind pairing: a bijection of its own, disagreeing with the
-         * structural one somewhere. Drawn rather than derived, and then the
-         * asked entity is chosen from where the two differ — so the lure is a
-         * real alternative answer rather than a marked one.
+         * The other option is where the *runner-up* sends the asked entity: the
+         * best lining-up among those that put it somewhere else. A real rival,
+         * one that keeps nearly as much, so it is ruled out by counting what it
+         * loses and not by anything about the name.
+         *
+         * It used to be the asked entity's partner in a stated "same kind"
+         * pairing, there as a lure — and always the wrong answer, so "never
+         * the one of the same kind" settled every item without looking at an
+         * arrow. That pairing was also a line per entity, a third of the card.
+         * Both went together.
          */
-        const kinds = randomPermutation(n);
-        const differ = [...Array(n).keys()].filter(i => kinds[i] !== correspondence[i]);
-        if (!differ.length) continue;
-        const asked = differ[Math.floor(Math.random() * differ.length)];
+        const asked = Math.floor(Math.random() * n);
+        let rival: number[] | null = null;
+        let rivalKept = -1;
+        for (const perm of permutations(n)) {
+            if (perm[asked] === correspondence[asked]) continue;
+            const kept = agreement(a, b, perm);
+            if (kept > rivalKept) { rivalKept = kept; rival = perm; }
+        }
+        if (!rival) continue;
 
         const shown = shuffle([
             { word: right[correspondence[asked]], right: true },
-            { word: right[kinds[asked]], right: false },
+            { word: right[rival[asked]], right: false },
         ]);
 
         const question = new Question(type);
@@ -182,9 +189,6 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
         question.premises = [
             ...orderPremises(systemLines(a, left), ctx.settingsOverrideService.scramble, ctx.mergeTarget()),
             ...orderPremises(systemLines(b, right), ctx.settingsOverrideService.scramble, ctx.mergeTarget()),
-            ...orderPremises(
-                left.map((w, i) => kindLine(w, right[kinds[i]])),
-                ctx.settingsOverrideService.scramble, ctx.mergeTarget()),
         ];
         question.choices = shown.map(c => subj(c.word));
         question.correctChoice = shown.findIndex(c => c.right);
@@ -194,21 +198,11 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
         question.conclusion = "";
 
         question.setup = [
-            "Two systems that agree in <b>most</b> of their arrows and not all, so no "
-            + "lining-up of the names keeps every one.",
-            /*
-             * The kind relation is named through `rel`, not spelled out in prose.
-             *
-             * "Same kind" is a relation word in this app's own tables, so written
-             * as plain text the line named a relation the card had already
-             * converted to a symbol or renamed — the setup would tell the reader
-             * to ignore something by a name that appears nowhere on the card.
-             * Through `rel` it is written in whatever the relation is called here,
-             * which is the same reason the ring note names its axis that way.
-             */
+            `${groupText(left)} form one system; ${groupText(right)} form another. They `
+            + "agree in <b>most</b> of their arrows and not all, so no lining-up of the "
+            + "names keeps every one.",
             `Under the correspondence that keeps the ${hi("most")} of them, which entity `
-            + `does ${subj(left[asked])} correspond to? A premise saying one thing `
-            + `${rel(SAME_KIND)} another is not an arrow, and counts for nothing here.`,
+            + `does ${subj(left[asked])} correspond to?`,
         ];
 
         const total = n * (n - 1);
@@ -217,9 +211,8 @@ export function createPartialAnalogy(ctx: GeneratorContext, numOfPremises: numbe
             + "arrows and disagreements, and no other keeps as many",
             `under it, ${subj(left[asked])} goes to `
             + `${hi(right[correspondence[asked]])}`,
-            `${subj(right[kinds[asked]])} is the one that ${rel(SAME_KIND)} it, which is `
-            + "why it is offered — that pairs every entity off and has nothing to do with "
-            + "the arrows",
+            `the best lining-up that sends it to ${subj(right[rival[asked]])} instead keeps `
+            + `${rivalKept}`,
         ];
         return question;
     }
