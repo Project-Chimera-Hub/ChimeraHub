@@ -260,13 +260,19 @@ export const MODE_SCALE: Record<EnumQuestionType, ModeScale> = {
     // A relation carried through a sequence of operations, where the sequence
     // matters: reasoning about operations on structures rather than on things.
     [EnumQuestionType.ContextShifts]: { weight: 2.7, ceiling: 27 },
-    // Two vocabularies and no translation given. The heaviest in the app: the
-    // dictionary has to be built before one relation can be carried across.
-    [EnumQuestionType.CrossAnalogy]: { weight: 2.9, ceiling: 28 },
+    // Two vocabularies and no translation given: the dictionary has to be built
+    // before one relation can be carried across. It was 2.9, which priced its
+    // first item — eight premises, twelve lines on two axes — at level 23, above
+    // anything the player unlocking it at 20 can reach, and well above cards of
+    // the same length in the isomorphism family. Still near the top of the app.
+    [EnumQuestionType.CrossAnalogy]: { weight: 2.5, ceiling: 28 },
     // Eight relations over containment and contact, and almost nothing settles
     // anything — a card of three patches, priced on the size of its answer
-    // rather than on the size of its reading.
-    [EnumQuestionType.Rcc8]: { weight: 2.2, ceiling: 24 },
+    // rather than on the size of its reading. It cannot grow past four premises
+    // — a fourth patch is 23,917 squared to walk — so at 2.2 its hardest item
+    // was level 8.8, under what anyone it unlocks for is served. 2.4 puts the
+    // top of it, two premises naming two relations each, within reach of them.
+    [EnumQuestionType.Rcc8]: { weight: 2.4, ceiling: 24 },
     /*
      * The same eight relations with the bays put back, so thirty-two — and a menu
      * drawn from the answer's nearest neighbours, so nothing on it can be dropped
@@ -325,7 +331,9 @@ export const MODE_SCALE: Record<EnumQuestionType, ModeScale> = {
      * rows are read rather than composed, so a member is worth less than a
      * premise that has to be held against the ones before it.
      */
-    [EnumQuestionType.WidestGroup]: { weight: 1.2, ceiling: 6 },
+    /* 1.2 was, and its first item — six placements on four axes at level 6.1
+       — read at two and a half times the app's median per level. */
+    [EnumQuestionType.WidestGroup]: { weight: 1.8, ceiling: 6 },
     /*
      * Each speaker is a biconditional that interacts with every other, so the
      * work grows faster than the count: a fourth statement can invalidate a

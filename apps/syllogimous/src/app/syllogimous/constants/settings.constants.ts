@@ -429,9 +429,12 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
     /* Stops at eight: the chain caps at six steps and the codex at three words, so
        past that the mode built the same item while the ladder printed a larger
        number. Measured across the range, not guessed. */
+    /* Six, from seven: still three axes and three codex words, and a chain of
+       four steps rather than five — a smaller item, not the same one with a
+       smaller number. Seven opened three levels above the player unlocking it. */
     [EnumQuestionType.ObliqueBasis]: {
         enabled: true,
-        minNumOfPremises: 7,
+        minNumOfPremises: 6,
         maxNumOfPremises: 8,
         basic: false
     },
@@ -538,9 +541,12 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
         maxNumOfPremises: 10,
         basic: false
     },
+    /* Three is two objects and two transforms, a genuinely smaller item than
+       four's three objects — and the first item at the level the mode unlocks
+       at was two levels above what that player is served. */
     [EnumQuestionType.Transformation]: {
         enabled: true,
-        minNumOfPremises: 4,
+        minNumOfPremises: 3,
         maxNumOfPremises: 20,
         basic: false
     },

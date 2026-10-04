@@ -156,11 +156,14 @@ const FITS: Fit[] = seeded(20261004, () => {
         const { choice, target, guess, claimed } = serve(type, unlock, NEW_MODE_SD);
 
         let statements = 0, chars = 0, built = 0;
-        for (let k = 0; k < 6; k++) {
+        for (let k = 0; k < 12; k++) {
             let q;
             try { q = BUILD[type](ctxFor(claimed, choice.dials), choice.premises); } catch { continue; }
+            /* The premises, not the setup: the setup is the mode's standing
+               instructions, the same on every item and skimmed after the first
+               few, and counting it charged a mode for explaining itself. */
             const text = [
-                ...(q.setup ?? []), ...q.premises,
+                ...q.premises,
                 ...(q.series ?? []).flatMap(s => s.premises ?? []),
             ].map(plain).join(" ");
             statements += q.premises.length;
@@ -227,12 +230,21 @@ const WORDY = (() => {
  * list that has stopped failing, so the list cannot outlive the problem.
  */
 const KNOWN: Record<string, string[]> = {
-    "opens harder than its player": [
-        "Cross-System Analogy", "Oblique Basis", "Context Shifts", "Transformation",
-        "Infer the Relation",
-    ],
-    "cannot grow to its players": ["Interval Algebra", "Region Connection"],
-    "prints more than it is priced for": ["Axis Maps", "Widest Group", "Analogy Completion"],
+    "opens harder than its player": [],
+    "cannot grow to its players": [],
+    /*
+     * Infer the Relation and Analogy Completion are long because composed-space
+     * wording is ("same longitude, same latitude, below relative to"), not
+     * because the item is bigger than its price: three or four placements and a
+     * few claims. Shortening that wording is a change to every composed space at
+     * once. Pricing either up far enough opens it too hard instead.
+     *
+     * Axis Maps is different: its load is the worked examples its cheap rungs
+     * add — four lines of composed changes at level 7. A higher weight barely
+     * moves it (3.0 still reads at over three times the median), so it wants a
+     * look at what those rungs cost rather than at the weight.
+     */
+    "prints more than it is priced for": ["Infer the Relation", "Analogy Completion", "Axis Maps"],
 };
 
 function ratchet(name: string, found: Map<string, string>, advice: string) {
