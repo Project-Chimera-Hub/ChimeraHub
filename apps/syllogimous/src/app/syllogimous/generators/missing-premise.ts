@@ -81,8 +81,24 @@ export function createMissingPremise(ctx: GeneratorContext, numOfPremises: numbe
         const pairs: Array<[number, number]> = [];
         for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) if (a !== b) pairs.push([a, b]);
 
+        /*
+         * One statement per pair, whichever way round.
+         *
+         * Drawn over ordered pairs, "A does not brand B" and "B does not brand
+         * A" came out as two premises — under a relation that runs both ways,
+         * the same fact twice on a card of three. Under one that does not, the
+         * second is usually implied by the first ("Hole quells Mill", then
+         * "Mill does not quell Hole"). So the draw is over unordered pairs, and
+         * a one-way relation is stated in a direction chosen per pair.
+         */
+        const symmetric = every.every(st => pairs.every(([a, b]) =>
+            system.holds(st, a, b) === system.holds(st, b, a)));
+        const facets = pairs
+            .filter(([a, b]) => a < b)
+            .map(([a, b]) => (!symmetric && Math.random() < 0.5 ? [b, a] : [a, b]) as [number, number]);
+
         const [x, y] = pickUniqueItems(pairs, 1).picked[0];
-        const speakable = pairs.filter(([a, b]) =>
+        const speakable = facets.filter(([a, b]) =>
             !(a === x && b === y) && !(a === y && b === x));
 
         /* Fewer premises than the count asks for: the rest of the budget is the
@@ -101,8 +117,22 @@ export function createMissingPremise(ctx: GeneratorContext, numOfPremises: numbe
          */
         if (settles(system, n, facts, x, y)) continue;
 
+        /*
+         * Both of the pair are in the premises.
+         *
+         * Reported as obvious, and it was: Chick appeared in no premise, so
+         * nothing could settle it but a statement naming Chick — and only one
+         * option did. An entity the premises never mention is open for a reason
+         * that takes no reasoning to see.
+         */
+        const named = new Set(facts.flatMap(f => [f.a, f.b]));
+        if (!named.has(x) || !named.has(y)) continue;
+
+        /* Nothing about a pair the premises already speak to, either way
+           round: an option that restates or reverses a premise is either
+           implied by it or contradicts it. */
         const spare = speakable.filter(([a, b]) =>
-            !drawn.some(([c, d]) => c === a && d === b));
+            !drawn.some(([c, d]) => (c === a && d === b) || (c === b && d === a)));
         const offers: Fact[] = spare.map(([a, b]) => ({ a, b, holds: system.holds(truth, a, b) }));
 
         /*
@@ -114,22 +144,46 @@ export function createMissingPremise(ctx: GeneratorContext, numOfPremises: numbe
          */
         const closing = offers.filter(f => settles(system, n, [...facts, f], x, y));
         if (!closing.length) continue;
-        const answer = closing[Math.floor(Math.random() * closing.length)];
+        const fair = closing.filter(f => named.has(f.a) && named.has(f.b));
+        if (!fair.length) continue;
+        const answer = fair[Math.floor(Math.random() * fair.length)];
 
-        /* The distractor closes something, just not this. */
+        /*
+         * The distractor closes something, just not this — and something it
+         * does not state. Every fact settles its own pair, so "useful somewhere"
+         * checked against every open pair was true of any statement at all,
+         * including one about a name the card never mentions. It has to settle
+         * a pair by inference, as the answer does.
+         *
+         * And it has to look as much like an answer as the answer does: names
+         * from the premises only, and the asked pair named as often. Otherwise
+         * the item is solved by noticing which option is on topic — "Light does
+         * not brand Restaurant" beside "Chick brands Bathrobe", when the
+         * question is about Chick and Light appears nowhere else.
+         */
+        const asked = (f: Fact) => [f.a, f.b].filter(v => v === x || v === y).length;
+        const own = (f: Fact, a: number, b: number) =>
+            (a === f.a && b === f.b) || (a === f.b && b === f.a);
         const open = pairs.filter(([a, b]) =>
-            !(a === x && b === y) && !settles(system, n, facts, a, b));
+            !(a === x && b === y) && !(a === y && b === x) && !settles(system, n, facts, a, b));
         const useful = offers.filter(f =>
-            f !== answer
+            f !== answer && !own(answer, f.a, f.b)
+            && named.has(f.a) && named.has(f.b)
+            && asked(f) === asked(answer)
             && !settles(system, n, [...facts, f], x, y)
-            && open.some(([a, b]) => settles(system, n, [...facts, f], a, b)));
+            && open.some(([a, b]) => !own(f, a, b) && settles(system, n, [...facts, f], a, b)));
         if (!useful.length) continue;
         const decoy = useful[Math.floor(Math.random() * useful.length)];
 
         const word = INVENTED[Math.floor(Math.random() * INVENTED.length)];
-        const line = (f: Fact) => f.holds
-            ? `${subj(words[f.a])} ${rel(word.third)} ${subj(words[f.b])}`
-            : `${subj(words[f.a])} does not ${rel(word.stem)} ${subj(words[f.b])}`;
+        /* Either way round when the relation is, so the order on the card
+           carries nothing. */
+        const line = (f: Fact) => {
+            const [a, b] = symmetric && Math.random() < 0.5 ? [f.b, f.a] : [f.a, f.b];
+            return f.holds
+                ? `${subj(words[a])} ${rel(word.third)} ${subj(words[b])}`
+                : `${subj(words[a])} does not ${rel(word.stem)} ${subj(words[b])}`;
+        };
 
         const question = new Question(type);
         question.bucket = [...words];

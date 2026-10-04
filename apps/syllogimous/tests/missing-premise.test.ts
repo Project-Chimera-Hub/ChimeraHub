@@ -187,3 +187,82 @@ test("the wrong candidate settles some other pair", () => {
             + "item is solved by finding the candidate that does something");
     }
 });
+
+/*
+ * Reported as "entirely obvious": premises about Restaurant, Cockpit and
+ * Bathrobe; the pair asked was Chick and Restaurant; the options were "Light
+ * does not brand Restaurant" and "Chick brands Bathrobe". Chick was in no
+ * premise, so only a statement naming Chick could settle it, and Light was in
+ * nothing at all. Every check above passed it. These are what it failed.
+ */
+
+const names = (q: Question, lines: string[]) => new Set(lines.flatMap(extractSubjects));
+
+test("both of the asked pair appear in the premises", () => {
+    for (const q of items()) {
+        const premised = names(q, q.premises);
+        for (const w of extractSubjects(q.setup[1])) {
+            assert(premised.has(w),
+                `${w} is asked about and appears in no premise, so only an option naming `
+                + "it could settle anything — which is the answer, read off the menu");
+        }
+    }
+});
+
+test("an option names nobody the premises do not", () => {
+    for (const q of items()) {
+        const premised = names(q, q.premises);
+        for (const c of q.choices) {
+            for (const w of extractSubjects(c)) {
+                assert(premised.has(w),
+                    `"${strip(c)}" names ${w}, who appears in no premise — an option about `
+                    + "a stranger is dismissed without being reasoned about");
+            }
+        }
+    }
+});
+
+test("both options name the asked pair equally often", () => {
+    for (const q of items()) {
+        const asked = new Set(extractSubjects(q.setup[1]));
+        const [a, b] = q.choices.map(c => extractSubjects(c).filter(w => asked.has(w)).length);
+        equal(a, b,
+            `one option names the asked pair ${a} times and the other ${b}: `
+            + `"${strip(q.choices[0])}" / "${strip(q.choices[1])}" — the on-topic one is the answer`);
+    }
+});
+
+test("the wrong candidate settles a pair it does not itself state", () => {
+    for (const q of items()) {
+        const { system, n, x, y, facts, offered } = readCard(q);
+        const other = offered[1 - q.correctChoice];
+        let inferred = false;
+        for (let a = 0; a < n && !inferred; a++) {
+            for (let b = 0; b < n && !inferred; b++) {
+                if (a === b || (a === x && b === y) || (a === y && b === x)) continue;
+                if ((a === other.a && b === other.b) || (a === other.b && b === other.a)) continue;
+                inferred = !decides(system, n, facts, a, b)
+                    && decides(system, n, [...facts, other], a, b);
+            }
+        }
+        assert(inferred,
+            `"${strip(q.choices[1 - q.correctChoice])}" settles only the pair it states — `
+            + "true of any statement, so \"useful somewhere else\" is not a claim at all");
+    }
+});
+
+/*
+ * Either way round. Under a relation that runs both ways it is the same fact
+ * twice; under one that does not, "Cloud quells Paw" beside "Paw does not quell
+ * Cloud" offered two statements about one pair, the stronger of them the answer.
+ */
+test("no pair is spoken of twice on one card", () => {
+    for (const q of items()) {
+        const seen = new Set<string>();
+        for (const line of [...q.premises, ...q.choices]) {
+            const key = extractSubjects(line).sort().join("|");
+            assert(!seen.has(key), `one pair is stated twice: ${strip(line)}`);
+            seen.add(key);
+        }
+    }
+});
