@@ -283,6 +283,10 @@ test("a tier is one level of measured ability", () => {
 const RETIRED: Array<[EnumQuestionType, EnumQuestionType]> = [
     [EnumQuestionType.TransformMatching, EnumQuestionType.AxisMap],
     [EnumQuestionType.OddestRelation, EnumQuestionType.WidestGroup],
+    /* Several analogies to check and one to reject — the Analogy rung asked
+       again and again. Analogy Completion carries one relation to a place,
+       which is the demand without the repetition. */
+    [EnumQuestionType.OddAnalogy, EnumQuestionType.AnalogyCompletion],
 ];
 
 test("a retired mode is not offered at any tier", () => {

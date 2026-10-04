@@ -342,8 +342,16 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
      * `analogyCount` in the generator for why four everywhere was too much to
      * start on.
      */
+    /*
+     * Off by default, and retired: three or four analogies to verify and one
+     * to reject is the Analogy rung asked several times over, with nothing a
+     * reader learns here that Analogy Completion, Partial Analogy or
+     * Second-Order Analogy does not already ask more directly. Kept rather
+     * than deleted, as Transformation Matching was — the ability history is
+     * real, and Customise can switch it back on.
+     */
     [EnumQuestionType.OddAnalogy]: {
-        enabled: true,
+        enabled: false,
         minNumOfPremises: 6,
         maxNumOfPremises: 9,
         basic: false
