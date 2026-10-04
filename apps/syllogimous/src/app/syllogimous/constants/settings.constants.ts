@@ -171,9 +171,12 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
         basic: false,
         group: EnumQuestionGroup.Direction
     },
+    /* Four: below it no pair of graphs can differ with every link count kept
+       the same, so the base form could only ever say "they match" — two and
+       three premises came out true every time. */
     [EnumQuestionType.GraphMatching]: {
         enabled: true,
-        minNumOfPremises: 2,
+        minNumOfPremises: 4,
         maxNumOfPremises: 20,
         basic: false
     },

@@ -135,8 +135,8 @@ export function createContextShifts(ctx: GeneratorContext, numOfPremises: number
                 })),
             {
                 say: from => `is context ${hi(from)} counted only along the directions `
-                    + `context ${hi(LETTERS[1])} moves in`,
-                apply: v => v.map((x, k) => (other[k] === 0 ? 0 : x)),
+                    + `context ${hi(LETTERS[0])} moves in`,
+                apply: v => v.map((x, k) => (base[k] === 0 ? 0 : x)),
             },
         ];
 
@@ -147,7 +147,18 @@ export function createContextShifts(ctx: GeneratorContext, numOfPremises: number
          */
         const howMany = Math.max(2, Math.min(4, numOfPremises - 5));
         const chain: Shift[] = [];
-        let running = [...base];
+        /*
+         * From context B, the one the first operation names.
+         *
+         * This started from A while the card said "context C is context B …", so
+         * a reader who did exactly what the card said worked out the wrong
+         * context and got the item wrong. The derivation repeated the card's
+         * wording over A's arithmetic, and the test read the wording, so nothing
+         * caught it until an item was worked by hand. A is still a context the
+         * card names; the one operation that needs a second context counts
+         * along A's directions.
+         */
+        let running = [...other];
         for (let step = 0; step < howMany; step++) {
             const choice = shuffle([...catalogue]).find(s =>
                 s.apply(running).map(sign).join(",") !== running.map(sign).join(","));
@@ -159,7 +170,7 @@ export function createContextShifts(ctx: GeneratorContext, numOfPremises: number
 
         const answer = running.map(sign);
         if (answer.every(v => v === 0)) continue;
-        if (answer.join(",") === base.map(sign).join(",")) continue;   // the chain undid itself
+        if (answer.join(",") === other.map(sign).join(",")) continue;   // the chain undid itself
 
         /*
          * **Order has to matter.** Swapping the last two operations must change the
@@ -170,15 +181,20 @@ export function createContextShifts(ctx: GeneratorContext, numOfPremises: number
             const order = [...chain];
             const last = order.length - 1;
             [order[last - 1], order[last]] = [order[last], order[last - 1]];
-            return order.reduce((v, s) => s.apply(v), [...base]).map(sign);
+            return order.reduce((v, s) => s.apply(v), [...other]).map(sign);
         })();
         if (swapped.join(",") === answer.join(",")) continue;
 
-        /* One axis apart, so neither candidate is obviously wrong. */
-        const axis = Math.floor(Math.random() * dims);
+        /*
+         * One axis apart, so neither candidate is obviously wrong — by reversing
+         * a direction the answer moves in. Toggling an axis between moving and
+         * "same" made the shorter option right two times in three, since the
+         * operations leave a context moving on most axes.
+         */
+        const moving = answer.map((_, i) => i).filter(i => answer[i] !== 0);
+        const axis = moving[Math.floor(Math.random() * moving.length)];
         const off = [...answer];
-        off[axis] = off[axis] === 0 ? 1 : 0;
-        if (off.join(",") === answer.join(",")) continue;
+        off[axis] = -off[axis] as -1 | 0 | 1;
 
         const shown = shuffle([
             { v: answer, right: true },
@@ -220,10 +236,11 @@ export function createContextShifts(ctx: GeneratorContext, numOfPremises: number
         ];
 
         question.explanation = [
-            `context ${names[0]} is ${hi(pattern(base))}, worked out along the chain`,
-            `context ${names[1]} is ${pattern(other)}`,
+            `context ${names[0]} is ${pattern(base)}, worked out along the chain`,
+            `context ${names[1]} is ${hi(pattern(other))}, worked out along the chain — `
+            + "the one the operations start from",
             ...chain.map((s, i) => {
-                const upto = chain.slice(0, i + 1).reduce((v, t) => t.apply(v), [...base]);
+                const upto = chain.slice(0, i + 1).reduce((v, t) => t.apply(v), [...other]);
                 /* Not stripped: the operation's own-rule markup has to survive
                    into the derivation, or the line names a wording the card has
                    already converted. */

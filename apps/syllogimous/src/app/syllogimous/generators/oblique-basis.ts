@@ -119,11 +119,21 @@ export function createObliqueBasis(ctx: GeneratorContext, numOfPremises: number)
          */
         if (basis.some(b => b.step.map(sign).join(",") === answer.join(","))) continue;
 
-        /* The decoy is one axis away, so neither candidate is obviously wrong. */
-        const axis = Math.floor(Math.random() * dims);
+        /*
+         * The decoy is one axis away, so neither candidate is obviously wrong —
+         * and away by its *direction*, the answer's step on that axis reversed.
+         *
+         * It used to toggle the axis between moving and "same", and a sum of
+         * several steps is almost never exactly zero on an axis, so the decoy
+         * was nearly always the one with a "same latitude" in it: the longer
+         * option, and wrong 93% of the time. Reversing a direction keeps both
+         * candidates naming the same kinds of thing, so neither reads
+         * differently, and telling them apart is still the whole sum.
+         */
+        const moving = answer.map((v, i) => i).filter(i => answer[i] !== 0);
+        const axis = moving[Math.floor(Math.random() * moving.length)];
         const off = [...answer];
-        off[axis] = off[axis] === 0 ? (Math.random() < 0.5 ? 1 : -1) : 0;
-        if (off.join(",") === answer.join(",")) continue;
+        off[axis] = -off[axis] as -1 | 0 | 1;
 
         const shown = shuffle([
             { v: answer, right: true },

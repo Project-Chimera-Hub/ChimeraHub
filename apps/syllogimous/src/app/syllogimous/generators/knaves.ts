@@ -93,11 +93,16 @@ function fillConclusion(
     const n = names.length;
 
     /*
+     * The answer first, then how to reach it.
+     *
      * Open items ask about someone the statements do not pin down, and are
-     * false whichever type they name. Roughly half the time when the rung is
-     * live, so the wording gives nothing away.
+     * false whichever type they name. They were half of every item when the
+     * rung was live, and the other half a coin flip — so three in four were
+     * false, and "false" was the thing to press when unsure. Now an open item
+     * is one way of being false, drawn out of the false half.
      */
-    if (allowOpen) {
+    const want = coinFlip();
+    if (allowOpen && !want) {
         const open = [...Array(n).keys()].filter(i => !settled.has(i));
         if (open.length && coinFlip()) {
             const who = open[Math.floor(Math.random() * open.length)];
@@ -119,7 +124,7 @@ function fillConclusion(
 
     const who = options[Math.floor(Math.random() * options.length)];
     const truth = settled.get(who)!;
-    const claimTrue = coinFlip();
+    const claimTrue = want;
     const claimed = claimTrue ? truth : !truth;
 
     question.conclusion = allowOpen ? mustBe(names[who], claimed) : plainly(names[who], claimed);

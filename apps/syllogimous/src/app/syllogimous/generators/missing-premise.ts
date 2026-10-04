@@ -68,7 +68,7 @@ export function createMissingPremise(ctx: GeneratorContext, numOfPremises: numbe
 
     const usable = ALL_SYSTEMS.filter(CHAINING);
 
-    for (let attempt = 0; attempt < 300; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
         const system = pickUniqueItems(usable, 1).picked[0];
         const n = Math.min(system.maxN, 5);
         const words = getRandomSymbols(settings, n);
@@ -166,8 +166,15 @@ export function createMissingPremise(ctx: GeneratorContext, numOfPremises: numbe
             (a === f.a && b === f.b) || (a === f.b && b === f.a);
         const open = pairs.filter(([a, b]) =>
             !(a === x && b === y) && !(a === y && b === x) && !settles(system, n, facts, a, b));
+        /*
+         * And it says the same kind of thing as the answer: both "brands" or
+         * both "does not brand". A positive fact chains further than a negative
+         * one, so the answer came out positive more often than the distractor
+         * did — and "does not" is the longer line, so the shorter option was
+         * right two times in three without reading either.
+         */
         const useful = offers.filter(f =>
-            f !== answer && !own(answer, f.a, f.b)
+            f !== answer && !own(answer, f.a, f.b) && f.holds === answer.holds
             && named.has(f.a) && named.has(f.b)
             && asked(f) === asked(answer)
             && !settles(system, n, [...facts, f], x, y)

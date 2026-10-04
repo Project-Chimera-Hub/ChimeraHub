@@ -94,6 +94,16 @@ export function createRelationalWeb(ctx: GeneratorContext, numOfPremises: number
     // Enough arrows to have structure, few enough to see it.
     const density = 0.22 + Math.random() * 0.12;
 
+    /*
+     * The answer to a true-or-false trial, decided once for every attempt.
+     *
+     * Both judged trials could fail to build their false case — a near miss
+     * that will not come, a second web that will not disagree — and the retry
+     * drew again from scratch, answer included. Failures only ever cost a
+     * "false", so the mode came out true about two times in three.
+     */
+    const want = Math.random() < 0.5;
+
     for (let attempt = 0; attempt < 240; attempt++) {
         const trial = pickTrial(ctx.hasRung(type, "structure-match"));
         const left = randomWeb(n, density, trial === "properties");
@@ -102,8 +112,8 @@ export function createRelationalWeb(ctx: GeneratorContext, numOfPremises: number
         const question = new Question(type);
         const built = trial === "mapping" ? buildMapping(ctx, question, left, n)
             : trial === "structure" ? buildStructure(ctx, question, left, n)
-            : trial === "comparison" ? buildComparison(question, left, n)
-            : buildProperties(question, left, n);
+            : trial === "comparison" ? buildComparison(question, left, n, want)
+            : buildProperties(question, left, n, want);
         if (!built) continue;
 
         return question;
@@ -272,8 +282,7 @@ function buildMapping(ctx: GeneratorContext, question: Question, left: Web, n: n
 }
 
 /** "Same shape or not?" — with a false case that survives counting. */
-function buildComparison(question: Question, left: Web, n: number): boolean {
-    const same = Math.random() < 0.5;
+function buildComparison(question: Question, left: Web, n: number, same: boolean): boolean {
     const right = same
         ? permuteWeb(left, randomPermutation(n))
         : nearMiss(permuteWeb(left, randomPermutation(n)));
@@ -296,7 +305,7 @@ function buildComparison(question: Question, left: Web, n: number): boolean {
 }
 
 /** "Do both webs agree about this property?" */
-function buildProperties(question: Question, left: Web, n: number): boolean {
+function buildProperties(question: Question, left: Web, n: number, agree: boolean): boolean {
     const property = WEB_PROPERTIES[Math.floor(Math.random() * WEB_PROPERTIES.length)];
 
     /*
@@ -304,10 +313,19 @@ function buildProperties(question: Question, left: Web, n: number): boolean {
      * whether the two agree, and a relabelling always agrees, which would make
      * every item true.
      */
-    const right = randomWeb(n, 0.22 + Math.random() * 0.16, true);
-    if (edgesOf(right).length < n) return false;
-
+    /*
+     * Drawn until it says what was decided. Random webs rarely have the
+     * property, so "neither has it" — agreement — was the usual draw. Redrawn
+     * here rather than by the caller, which would move on to another trial
+     * and make this one rarer instead of fairer.
+     */
     const l = property.holds(left);
+    let right: Web | null = null;
+    for (let tries = 0; tries < 60 && !right; tries++) {
+        const w = randomWeb(n, 0.22 + Math.random() * 0.16, true);
+        if (edgesOf(w).length >= n && (l === property.holds(w)) === agree) right = w;
+    }
+    if (!right) return false;
     const r = property.holds(right);
 
     attach(question, left, right);

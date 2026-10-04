@@ -181,7 +181,8 @@ test("Context Shifts is an item where the order of the operations changes the an
             const text = strip(l);
             return toVector(text.slice(text.lastIndexOf(", which is ") + 11), table);
         });
-        const walk = [toVector(q.explanation[0].replace(/, worked out.*$/, "")
+        /* From context B, which is where the operations start. */
+        const walk = [toVector(strip(q.explanation[1]).replace(/, worked out.*$/, "")
             .replace(/^[^]*?\bis\b /, ""), table), ...running];
         for (let i = 1; i < walk.length; i++) {
             assert(walk[i].join(",") !== walk[i - 1].join(","),
@@ -197,6 +198,80 @@ test("Context Shifts is an item where the order of the operations changes the an
         const swapped = toVector(m![1], table);
         assert(swapped.join(",") !== answer.join(","),
             "the last two operations commute on this item, so its order is decoration");
+    }
+});
+
+/**
+ * The answer, worked out from the card and nothing else.
+ *
+ * The checks above read the card's wording and the derivation's arithmetic,
+ * and both agreed while the card was wrong: it said "context C is context B
+ * turned…" and the arithmetic started from A. A reader who did what the card
+ * said got the item wrong. So this does what the card says — places everyone
+ * from the layout premises, works out each context as the card defines it,
+ * applies each operation to the context it names — and has to land on the
+ * marked answer.
+ */
+test("Context Shifts: doing exactly what the card says gives the marked answer", () => {
+    for (const q of shiftItems()) {
+        const dims = strip(q.choices[0]).split(", ").length;
+        const table = clauseTable(dims);
+        const axisOf = (pair: string) => {
+            const [pos] = pair.split("/");
+            const i = table.findIndex(t => t[pos] !== undefined && t[pos] !== 0);
+            assert(i >= 0, `"${pair}" names no axis`);
+            return i;
+        };
+
+        /* The layout: "X is <pattern> relative to Y", one step per premise. */
+        const at = new Map<string, number[]>();
+        const placements = q.premises.map(strip).filter(l => / relative to /.test(l)).map(l => {
+            const m = l.match(/^(.+?) is (.+) relative to (.+)$/)!;
+            return { x: m[1], d: toVector(m[2], table), y: m[3] };
+        });
+        at.set(placements[0].y, Array(dims).fill(0));
+        for (let pass = 0; pass <= placements.length; pass++) {
+            for (const p of placements) {
+                if (at.has(p.y) && !at.has(p.x)) at.set(p.x, at.get(p.y)!.map((v, k) => v + p.d[k]));
+                else if (at.has(p.x) && !at.has(p.y)) at.set(p.y, at.get(p.x)!.map((v, k) => v - p.d[k]));
+            }
+        }
+
+        const contexts = new Map<string, number[]>();
+        for (const line of definitionsOf(q).map(strip)) {
+            const letter = line.match(/^Context ([A-F]) /)![1];
+            let m: RegExpMatchArray | null;
+            if ((m = line.match(/is how (.+) stands to (.+)\.$/))) {
+                const [x, y] = [m[1], m[2]];
+                assert(at.has(x) && at.has(y), `cannot place ${x} or ${y}`);
+                contexts.set(letter, at.get(x)!.map((v, k) => v - at.get(y)![k]));
+                continue;
+            }
+            const from = line.match(/is context ([A-F]) /)![1];
+            const v = contexts.get(from);
+            assert(!!v, `context ${letter} is built from ${from}, which is not defined before it`);
+            let out: number[];
+            if (/ reversed\.$/.test(line)) out = v!.map(x => -x);
+            else if ((m = line.match(/turned a quarter, from (\S+) towards (\S+)\.$/))) {
+                const i = axisOf(m[1]), j = axisOf(m[2]);
+                out = [...v!];
+                out[i] = -v![j];
+                out[j] = v![i];
+            } else if ((m = line.match(/counted only along the directions context ([A-F]) moves in/))) {
+                const mask = contexts.get(m[1])!;
+                out = v!.map((x, k) => (mask[k] === 0 ? 0 : x));
+            } else if ((m = line.match(/ along (\S+)\.$/))) {
+                const i = axisOf(m[1]);
+                out = v!.map((x, k) => (k === i ? -x : x));
+            } else {
+                throw new Error(`an operation this check cannot read: ${line}`);
+            }
+            contexts.set(letter, out);
+        }
+
+        const asked = q.choicePrompt.match(/context ([A-F]) point/)![1];
+        equal(contexts.get(asked)!.map(sign), toVector(q.choices[q.correctChoice], table),
+            "doing what the card says does not give the marked answer");
     }
 });
 

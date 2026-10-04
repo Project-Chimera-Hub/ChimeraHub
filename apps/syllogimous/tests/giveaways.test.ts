@@ -186,3 +186,113 @@ test("no option is offered twice", () => {
     }
     assert(!faults.length, "the same option appears twice:\n  " + report(faults));
 });
+
+/* ------------------------------------------------------------------ *
+ * Answers a reader can guess without reading                          *
+ * ------------------------------------------------------------------ */
+
+/*
+ * The other kind of giveaway: not a fault on one card but a lean across many.
+ * Measured on today's generators, five modes had one — Graph Matching came out
+ * true 85% of the time (two and three premises, every time); Knights and
+ * Knaves false 63%; Oblique Basis's right answer was the shorter option 93%,
+ * Context Shifts' 68%, Missing Premise's 65%; Minimal Premises' answer was two
+ * premises 91% of the time. Each is a strategy that beats the item without
+ * reading it.
+ *
+ * The bands are wide on purpose: a mode is built a hundred-odd times here, and
+ * the point is to catch a lean a player would feel, not to test randomness.
+ */
+
+/** Modes whose answer size is stated on the card, so it is not a guess. */
+const SIZE_STATED = new Set<string>([
+    EnumQuestionType.PartialIsomorphism,   // "select both of them"
+    EnumQuestionType.CommonSubsystem,      // the sub-system's size is given
+]);
+
+/*
+ * A sample of its own, larger than the sweep's: a lean of fifteen points is
+ * invisible in forty items and plain in three hundred. Spread over the
+ * same counts and ladder cuts, round-robin, so every mode gets the same number.
+ */
+const PER_MODE = 320;
+const BALANCE: Map<string, Question[]> = seeded(20261008, () => {
+    const out = new Map<string, Question[]>();
+    for (const type of Object.values(EnumQuestionType)) {
+        const range = QUESTION_TYPE_SETTING_PARAMS[type];
+        if (!BUILD[type] || !range.enabled) continue;
+        const ladder = ladderFor(type);
+        const cuts = [...new Set([0, Math.ceil(ladder.length / 2), ladder.length])];
+        const top = Math.min(range.maxNumOfPremises, range.minNumOfPremises + 4);
+        const configs = cuts.flatMap(cut => Array.from(
+            { length: top - range.minNumOfPremises + 1 },
+            (_, i) => ({ ctx: ctxFor(ladder.slice(0, cut)), n: range.minNumOfPremises + i })));
+        const qs: Question[] = [];
+        for (let k = 0; qs.length < PER_MODE && k < PER_MODE * 3; k++) {
+            const { ctx, n } = configs[k % configs.length];
+            try { qs.push(BUILD[type](ctx, n)); } catch { /* undrawable */ }
+        }
+        out.set(type, qs);
+    }
+    return out;
+});
+const byMode = () => BALANCE;
+
+const share = (part: number, whole: number) => Math.round(part / whole * 100);
+
+/**
+ * Off-centre by more than chance would put it: ten points, or three
+ * standard errors where the sample is too small for ten to mean anything.
+ */
+const leans = (pct: number, n: number, centre = 50) =>
+    Math.abs(pct - centre) > Math.max(10, 300 * Math.sqrt(0.25 / n));
+
+test("true and false come up about equally often", () => {
+    const faults: string[] = [];
+    for (const [type, qs] of byMode()) {
+        const judged = qs.filter(q => q.answerMode === "boolean");
+        if (judged.length < 30) continue;
+        const t = share(judged.filter(q => q.isValid).length, judged.length);
+        if (leans(t, judged.length)) faults.push(`${type}: true ${t}% of ${judged.length}`);
+    }
+    assert(!faults.length, "always answering one way beats these:\n  " + faults.join("\n  "));
+});
+
+test("in a choice of two, neither the place nor the length gives the answer", () => {
+    const faults: string[] = [];
+    for (const [type, qs] of byMode()) {
+        const pairs = qs.filter(q => q.answerMode === "choice" && q.choices.length === 2);
+        if (pairs.length < 30) continue;
+        const first = share(pairs.filter(q => q.correctChoice === 0).length, pairs.length);
+        if (leans(first, pairs.length)) faults.push(`${type}: the first option is right ${first}%`);
+
+        const sized = pairs.map(q => q.choices.map(c => plain(c).length))
+            .map((l, i) => ({ l, right: pairs[i].correctChoice }))
+            .filter(({ l }) => l[0] !== l[1]);
+        if (sized.length >= 30) {
+            const longer = share(sized.filter(({ l, right }) => l[right] > l[1 - right]).length, sized.length);
+            if (leans(longer, sized.length)) {
+                faults.push(`${type}: the ${longer > 50 ? "longer" : "shorter"} option is right `
+                    + `${Math.max(longer, 100 - longer)}% of ${sized.length}`);
+            }
+        }
+    }
+    assert(!faults.length, "picking by position or by length beats these:\n  " + faults.join("\n  "));
+});
+
+test("no one size of selection is nearly always the answer", () => {
+    const faults: string[] = [];
+    for (const [type, qs] of byMode()) {
+        if (SIZE_STATED.has(type)) continue;
+        const picks = qs.filter(q => q.answerMode === "select");
+        if (picks.length < 30) continue;
+        const sizes = new Map<number, number>();
+        for (const q of picks) sizes.set(q.selectAnswer.length, (sizes.get(q.selectAnswer.length) ?? 0) + 1);
+        const [size, count] = [...sizes].sort((a, b) => b[1] - a[1])[0];
+        if (share(count, picks.length) > 85) {
+            faults.push(`${type}: ${size} selected in ${share(count, picks.length)}% of ${picks.length}`);
+        }
+    }
+    assert(!faults.length, "selecting that many, whichever they are, is nearly always right:\n  "
+        + faults.join("\n  "));
+});

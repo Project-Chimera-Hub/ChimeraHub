@@ -93,7 +93,16 @@ export function createMinimalPremises(ctx: GeneratorContext, numOfPremises: numb
     const usable = ALL_SYSTEMS.filter(s => s.meaning.includes("chains")
         && !s.meaning.includes("does not chain"));
 
-    for (let attempt = 0; attempt < 300; attempt++) {
+    /*
+     * How many premises the answer is, decided before the draw.
+     *
+     * Left to the draw it was two nine times in ten — the shortest chain
+     * between two entities is usually one entity long — so "select two" was
+     * right without finding which two. Two or three, evenly.
+     */
+    const wantSize = Math.random() < 0.5 ? 2 : 3;
+
+    for (let attempt = 0; attempt < 2000; attempt++) {
         const system = pickUniqueItems(usable, 1).picked[0];
         const n = Math.min(system.maxN, 5);
         const words = getRandomSymbols(settings, n);
@@ -120,6 +129,7 @@ export function createMinimalPremises(ctx: GeneratorContext, numOfPremises: numb
         if (smallest.length !== 1) continue;            // "exactly one smallest set"
         const answer = smallest[0];
         if (answer.length >= facts.length) continue;    // nothing was spare
+        if (answer.length !== wantSize) continue;
 
         const word = INVENTED[Math.floor(Math.random() * INVENTED.length)];
         const line = (f: Fact) => f.holds

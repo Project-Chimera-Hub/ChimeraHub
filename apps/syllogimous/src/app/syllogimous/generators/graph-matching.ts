@@ -17,7 +17,17 @@ import {
     sameDegrees,
 } from "../utils/graphdist.utils";
 
-export function createGraphMatching(ctx: GeneratorContext, numOfPremises: number): Question {
+/*
+ * `want` is the answer, decided once and carried through every redraw.
+ *
+ * The base form flipped its coin afresh on each attempt, and only the "differ"
+ * side ever needed one: a draw that cannot be made to differ without a count
+ * giving it away is thrown back, and the retry flipped again. So every failure
+ * turned a false item into a coin flip, and the mode came out true 85% of the
+ * time — at two and three premises, every time. "Always true" was the best
+ * strategy there was.
+ */
+export function createGraphMatching(ctx: GeneratorContext, numOfPremises: number, want?: boolean): Question {
     ctx.logger.info("createGraphMatching");
 
     const type = EnumQuestionType.GraphMatching;
@@ -89,7 +99,7 @@ export function createGraphMatching(ctx: GeneratorContext, numOfPremises: number
     const edgeDiscrepancyCount = edgeList.length !== numOfPremises;
     const all3ElementsAre2Way = numOfEls === 3 && edgeList.every(([a, rel, b]) => rel === "↔");
     if (edgeDiscrepancyCount || all3ElementsAre2Way) {
-        return createGraphMatching(ctx, numOfPremises);
+        return createGraphMatching(ctx, numOfPremises, want);
     }
 
     const newWords = pickUniqueItems(symbols, numOfEls).picked;
@@ -99,7 +109,8 @@ export function createGraphMatching(ctx: GeneratorContext, numOfPremises: number
         newWords[words.indexOf(b)]
     ]));
 
-    question.isValid = coinFlip();
+    want = want ?? coinFlip();
+    question.isValid = want;
     if (!question.isValid) {
         /*
          * Made to differ without changing a single count.
@@ -125,7 +136,7 @@ export function createGraphMatching(ctx: GeneratorContext, numOfPremises: number
         // A draw that could not be made to differ without giving itself away is
         // abandoned rather than served with the shortcut in it.
         if (areGraphsIsomorphic(edgeList, edgeList2) || !sameDegrees(edgeList, edgeList2)) {
-            return createGraphMatching(ctx, numOfPremises);
+            return createGraphMatching(ctx, numOfPremises, want);
         }
     }
 
