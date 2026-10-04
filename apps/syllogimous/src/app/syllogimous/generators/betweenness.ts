@@ -93,6 +93,14 @@ export function createBetweenness(ctx: GeneratorContext, numOfPremises: number):
         if (available.length < numOfPremises) continue;
 
         const said = pickUniqueItems(available, numOfPremises).picked;
+        /*
+         * Everyone offered is someone the premises place. The candidates are
+         * every other name, so a name no premise mentions was on the menu and
+         * could never be forced between anything — dismissed without a
+         * thought. Found by the cross-mode sweep in `giveaways.test.ts`.
+         */
+        const placed = new Set(said.flatMap(t => [t.a, t.b, t.c]));
+        if (placed.size < n) continue;
         const fitting = rows.filter(place => holdsAll(place, said));
         if (!fitting.length) continue;              // cannot happen: truth is one
 

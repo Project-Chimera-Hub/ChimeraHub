@@ -206,6 +206,16 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
         }).find(w => !!w);
         if (!nearly) continue;
 
+        /*
+         * And everyone in it has an arrow. Two flips can take away an entity's
+         * only one, and that entity then appears in no premise while still
+         * named in the option — the group with a stranger in it, wrong on
+         * sight. Found by the cross-mode sweep in `giveaways.test.ts`.
+         */
+        const wired = (w: Web) => [...Array(w.n).keys()].every(v =>
+            w.adj[v].some(Boolean) || w.adj.some(row => row[v]));
+        if (!wired(nearly)) continue;
+
         const decoy = permuteWeb(nearly, randomPermutation(n));
 
         const shown = shuffle([

@@ -283,10 +283,18 @@ const minus = (a: number[], b: number[]) => a.map((v, i) => v - b[i]);
  *
  * Null when the two maps read the chain alike: that is not a wrong option at
  * all, and the caller draws again.
+ *
+ * Null too when either reading of a link is the link as the card already states
+ * it. The wrong reading is the right one altered, so it almost never leaves a
+ * link as it was — while the right one does whenever the change misses that
+ * link. "Pick the option the premises already say" then won every time it was
+ * offered, without applying anything. Found by the cross-mode sweep in
+ * `giveaways.test.ts`.
  */
-function disagreement(right: string[], other: string[]): [string, string] | null {
+function disagreement(right: string[], other: string[], before: string[]): [string, string] | null {
     const at = right.map((_, i) => i).filter(i => right[i] !== other[i]);
     if (!at.length) return null;
+    if (at.some(i => right[i] === before[i] || other[i] === before[i])) return null;
     const join = (lines: string[]) => lines.join(` ${hi("·")} `);
     return [join(at.map(i => right[i])), join(at.map(i => other[i]))];
 }
@@ -758,6 +766,7 @@ function buildGroups(
     };
 
     const truthLinks = render(asked.map);
+    const chainLines = premises.slice(premises.length - asked.chain.length);
     const fullTruth = truthLinks.join(` ${hi("·")} `);
 
     /*
@@ -829,12 +838,12 @@ function buildGroups(
     for (let i = 0; i < 200 && !pair; i++) {
         const near = nearMiss();
         if (!near) continue;
-        pair = disagreement(truthLinks, render(near));
+        pair = disagreement(truthLinks, render(near), chainLines);
     }
     for (let i = 0; i < 120 && !pair; i++) {
         const other = buildMap(axes, covered, feat.kinds, feat.count);
         if (!other) continue;
-        pair = disagreement(truthLinks, render(other));
+        pair = disagreement(truthLinks, render(other), chainLines);
     }
     if (!pair) return null;
 
@@ -898,7 +907,7 @@ function buildGroups(
             for (let i = 0; i < 200 && !shownPair; i++) {
                 const near = nearMiss();
                 if (!near) continue;
-                shownPair = disagreement(rightLinks, say(near));
+                shownPair = disagreement(rightLinks, say(near), lines);
             }
             if (!shownPair) return null;
 

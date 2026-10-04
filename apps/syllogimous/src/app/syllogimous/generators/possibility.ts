@@ -184,6 +184,15 @@ export function buildPossibility(
         ];
         if (drawn.length < Math.min(3, wanted)) continue;
         const stated = drawn.map(([a, b]) => ({ a, b, holds: system.holds(truth, a, b) }));
+        /*
+         * Both of the pair are in the premises. A pair one of whom nothing is
+         * said about is open for a reason that takes no reading — "Cartoon
+         * quells Weapon", Weapon in no premise, was select-everything on sight.
+         * Found by the cross-mode sweep in `giveaways.test.ts`, the same fault
+         * Missing Premise was reported for.
+         */
+        const named = new Set(stated.flatMap(f => [f.a, f.b]));
+        if (!named.has(x) || !named.has(y)) continue;
 
         const survivors = consistentStates(system, n, stated);
         if (!survivors.length) continue;          // cannot happen: truth is one

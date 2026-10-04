@@ -27,6 +27,7 @@ import "./answering.test";
 import "./verdict.test";
 import "./difficulty.test";
 import "./level-fit.test";
+import "./giveaways.test";
 import "./delay-line.test";
 import "./unscored.test";
 import "./history-view.test";
