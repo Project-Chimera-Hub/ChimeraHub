@@ -433,7 +433,7 @@ export function createPartialIsomorphism(ctx: GeneratorContext, numOfPremises: n
     numOfPremises = clampPremises(type, numOfPremises);
 
     /*
-     * Four a side at the floor, five above it.
+     * Four a side up to six premises, five above it.
      *
      * Five everywhere made the easiest item of this mode a card of ten entities,
      * sixteen arrow statements and a menu of ten to select from — which is the
@@ -457,7 +457,14 @@ export function createPartialIsomorphism(ctx: GeneratorContext, numOfPremises: n
      * "7p" beside an item that never changed — so the shared core's arrow count
      * is taken from the ask, and the two extra entities add to it from there.
      */
-    const core = Math.max(3, Math.min((n - 1) * (n - 2), numOfPremises - 2));
+    /*
+     * Down to two shared arrows. The floor was three, which put the mode's
+     * first item at six premises and thirteen statements — reported as no
+     * reason to start that high. Two arrows on three shared entities still has
+     * one pair that works and no other, which is checked below, not assumed;
+     * at four premises the card is about eleven statements.
+     */
+    const core = Math.max(2, Math.min((n - 1) * (n - 2), numOfPremises - 2));
 
     for (let attempt = 0; attempt < 300; attempt++) {
         const words = getRandomSymbols(settings, 2 * n);

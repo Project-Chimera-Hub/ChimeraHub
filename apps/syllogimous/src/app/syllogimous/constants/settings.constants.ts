@@ -386,7 +386,7 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
     },
     [EnumQuestionType.PartialIsomorphism]: {
         enabled: true,
-        minNumOfPremises: 6,
+        minNumOfPremises: 4,
         maxNumOfPremises: 10,
         basic: false
     },
