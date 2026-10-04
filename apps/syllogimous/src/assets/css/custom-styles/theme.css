@@ -682,8 +682,18 @@ app-card-dropdown {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
 }
+
+/*
+ * Centred by auto margins, not `justify-content: center`. Centring by
+ * alignment overflows both ways once the content is taller than the box, and
+ * a scroll box cannot scroll above its top: an item with more premises than
+ * the screen has room for lost its first several, with no way to reach them.
+ * Auto margins take only the space there is, so a long item starts at the top
+ * and scrolls, and a short one still sits in the middle.
+ */
+:root.focus-mode .playcard .playcard-body > :first-child { margin-block-start: auto; }
+:root.focus-mode .playcard .playcard-body > :last-child { margin-block-end: auto; }
 
 /* Bigger type, since there is nothing else to look at. */
 :root.focus-mode .playcard .subject { font-size: 1.05em; }

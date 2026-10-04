@@ -507,7 +507,7 @@
             <div class="small text-muted mb-2" *ngIf="game.question.choicePrompt">
                 {{ game.question.choicePrompt }}
             </div>
-            <div class="choices">
+            <div class="choices" [style.grid-template-columns]="choiceColumns">
                 <button *ngFor="let c of game.question.choices; let i = index"
                         class="btn choice" [class.active]="isSelected(i)"
                         [class.choice--focus]="choiceFocus === i"
@@ -527,7 +527,8 @@
 
         <!-- Choice: the question is which statement follows, so a True button
              would have nothing to refer to. -->
-        <div class="choices" *ngIf="game.question.answerMode === 'choice' && !game.question.choiceGrids?.length">
+        <div class="choices" [style.grid-template-columns]="choiceColumns"
+             *ngIf="game.question.answerMode === 'choice' && !game.question.choiceGrids?.length">
             <button *ngFor="let c of game.question.choices; let i = index"
                     class="btn choice" [class.choice--focus]="choiceFocus === i"
                     (click)="game.checkChoice(i)">

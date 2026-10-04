@@ -129,3 +129,51 @@ test("no mode offers more options than the card was measured against", () => {
         `${widestType} offers ${widest} options, past the thirteen the footer cap `
         + "was measured against — re-measure the card before shipping it");
 });
+
+/**
+ * Focus mode centres the item, and has to do it in a way that cannot overflow
+ * upward.
+ *
+ * It used `justify-content: center` on the scroll box. Centring by alignment
+ * splits the overflow between both ends, and a scroll box cannot scroll above
+ * its top, so Partial Isomorphism at ten premises — twenty-odd statements —
+ * lost its setup and first premises off the top of the screen with no way to
+ * reach them. Measured on the built app at 1920 x 1080: the item started 25px
+ * above the box, and more the longer it was.
+ */
+const THEME_CSS = readFileSync("src/assets/css/custom-styles/theme.css", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+
+test("focus mode does not centre the item by alignment, which hides a long one's top", () => {
+    const rules = THEME_CSS.split("}").filter(r => /focus-mode[^{]*playcard-body[^{]*\{/.test(r));
+    assert(rules.length > 0, "no focus-mode rule for the card body was found, so this checks nothing");
+    for (const r of rules) {
+        assert(!/justify-content:\s*center/.test(r) && !/align-content:\s*center/.test(r),
+            "focus mode centres the card body by alignment, so an item taller than the "
+            + "screen loses its first premises above the top, where no scroll reaches");
+    }
+    assert(/focus-mode[^{]*playcard-body\s*>\s*:first-child\s*\{[^}]*margin-block-start:\s*auto/.test(THEME_CSS),
+        "nothing centres the item in focus mode any more — a short item sits at the top");
+});
+
+/**
+ * Options that are names go in columns.
+ *
+ * A row per option is right for sentences and was wrong for names: Partial
+ * Isomorphism's ten one-word options at a row each filled the capped footer,
+ * which then scrolled, under premises that scrolled too. The columns are an
+ * inline binding because the component stylesheet is at its budget, so the
+ * binding is what has to be there, on both lists that show text options.
+ */
+const GAME_HTML = readFileSync("src/app/syllogimous/pages/game/game.component.html", "utf8")
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+test("short options are laid out in columns, in both select and choice lists", () => {
+    const lists = GAME_HTML.match(/<div class="choices"[^>]*>/g) ?? [];
+    assert(lists.length >= 2, "expected the select and the choice lists, found " + lists.length);
+    for (const l of lists) {
+        assert(/\[style\.grid-template-columns\]="choiceColumns"/.test(l),
+            "an option list is not bound to `choiceColumns`, so a menu of ten names "
+            + "takes ten rows of the footer: " + l);
+    }
+});

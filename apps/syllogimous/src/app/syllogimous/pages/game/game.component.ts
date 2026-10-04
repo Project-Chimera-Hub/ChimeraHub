@@ -678,6 +678,27 @@ export class GameComponent {
         this.game.checkSelection(this.selectPicks);
     }
 
+    /**
+     * Columns for a list of options that are names rather than sentences.
+     *
+     * The options are full-width rows because sentences of uneven length in a
+     * grid make the short one look like the odd one out. A name has no such
+     * problem, and a row per name is what made Partial Isomorphism unplayable
+     * on a desktop: eight one-word options at a row each filled the capped
+     * footer, scrolled inside it, and the premises scrolled above it, so
+     * neither half of the item was ever on screen whole. In columns the same
+     * eight are two rows.
+     *
+     * Bound as an inline style because `game.component.css` is at its budget.
+     * Null leaves the stylesheet's single column alone.
+     */
+    get choiceColumns(): string | null {
+        const choices = this.game.question.choices;
+        if (choices.length < 4) return null;
+        const short = choices.every(c => c.replace(/<[^>]*>/g, "").trim().length <= 18);
+        return short ? "repeat(auto-fill, minmax(min(100%, 9rem), 1fr))" : null;
+    }
+
     private resetPicks() {
         this.mapPicks = [];
         // Left standing, the last item's selection is an answer already given
