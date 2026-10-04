@@ -239,7 +239,9 @@ export const MODE_SCALE: Record<EnumQuestionType, ModeScale> = {
      * climb through the family as the structure asked about gets smaller and
      * less pointed at.
      */
-    [EnumQuestionType.StructureMatch]: { weight: 2.4, ceiling: 26 },
+    /* A Structure Match premise is one arrow stated in all three systems —
+       three lines — so it is priced as three, near the top of the family. */
+    [EnumQuestionType.StructureMatch]: { weight: 3.0, ceiling: 26 },
     [EnumQuestionType.MotifSearch]: { weight: 2.5, ceiling: 26 },
     [EnumQuestionType.PartialIsomorphism]: { weight: 2.6, ceiling: 27 },
     [EnumQuestionType.CommonSubsystem]: { weight: 2.8, ceiling: 28 },

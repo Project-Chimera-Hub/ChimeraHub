@@ -131,6 +131,14 @@ export const RUNG_COST: Record<string, number> = {
      */
     "dense-examples": 1.5,
     /*
+     * Structure Match. Matching degrees takes away the shortcut that settles
+     * most decoys, so it is the dearest; a fifth entity multiplies the
+     * matchings by five; turning a line round is a fixed cost per line.
+     */
+    "same-degrees": 1.5,
+    "five-entities": 1.2,
+    converse: 0.8,
+    /*
      * Mutual Moves. Each of these multiplies the space of rules the reader
      * has to rule out, and they are priced by how much: an operation or a
      * role doubles it outright, an axis only widens what each move is

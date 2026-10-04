@@ -584,7 +584,21 @@ export const RUNG_LADDERS: Record<string, string[]> = {
     "Interval Algebra":          [],
     "Odd Analogy":               [],
     "Projection":                [],
-    "Structure Match":          [],
+    /*
+     * Harder without more to read. The count is capped low — every arrow is
+     * stated three times, once per system, so a premise here is three lines —
+     * and these are what climb instead:
+     *
+     *   same-degrees   the decoy keeps every entity's arrows in and out, so
+     *                  tallying an entity's arrows matches it to nothing and
+     *                  the systems have to be lined up. The mode's own skill.
+     *   five-entities  a fifth entity at the same arrow count: five times as
+     *                  many matchings to rule out, and a sparser web with less
+     *                  to anchor them on.
+     *   converse       some arrows are stated from the far end ("B comes from
+     *                  A"), so each line is turned round before it is used.
+     */
+    "Structure Match":          ["same-degrees", "five-entities", "converse"],
     "Motif Search":             [],
     "Partial Isomorphism":      [],
     "Common Sub-System":        [],

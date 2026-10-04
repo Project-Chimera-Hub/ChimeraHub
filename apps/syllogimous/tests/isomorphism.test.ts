@@ -77,12 +77,14 @@ function itemsOf(
     return out;
 }
 
-/** Every premise as the one arrow it states. */
+/** Every premise as the one arrow it states, read from its tail to its head. */
 function arrows(q: Question): Array<[string, string]> {
     return q.premises.map(line => {
         const names = extractSubjects(line);
         equal(names.length, 2, `a premise is not one arrow: ${strip(line)}`);
-        return [names[0], names[1]] as [string, string];
+        // "B comes from A" is A's arrow to B, stated from the far end.
+        return (/ comes from /.test(strip(line))
+            ? [names[1], names[0]] : [names[0], names[1]]) as [string, string];
     });
 }
 
@@ -159,6 +161,111 @@ test("Structure Match candidates carry as many arrows as the reference", () => {
                 "a candidate has a different number of arrows from the reference, so "
                 + "counting them answers the item without comparing anything");
         }
+    }
+});
+
+/**
+ * Structure Match on its rungs.
+ *
+ * The premise count stopped being how this mode climbs — every arrow is
+ * printed three times, and ten premises came to thirty lines — so the rungs
+ * carry it now, and each has to deliver what it charges for. Read from the
+ * card, like everything above.
+ */
+function rungItems(rungs: string[], seed: number): Question[] {
+    const ctx = context();
+    const grant = (_t: string, r: string) => rungs.includes(r);
+    ctx.hasRung = grant;
+    (ctx.progressionService as unknown as { hasRung: typeof grant }).hasRung = grant;
+    const range = QUESTION_TYPE_SETTING_PARAMS[EnumQuestionType.StructureMatch];
+    const out: Question[] = [];
+    seeded(seed, () => {
+        for (let n = range.minNumOfPremises; n <= range.maxNumOfPremises; n++) {
+            for (let rep = 0; rep < 8; rep++) {
+                try { out.push(createStructureMatch(ctx, n)); } catch { /* undrawable */ }
+            }
+        }
+    });
+    assert(out.length > 15, `Structure Match on ${rungs.join(" + ") || "no rungs"}: `
+        + `only ${out.length} items were built`);
+    return out;
+}
+
+const RUNG_SETS = [[], ["same-degrees"], ["same-degrees", "five-entities"],
+    ["same-degrees", "five-entities", "converse"]];
+
+test("Structure Match prints three lines an arrow and no more, on every rung", () => {
+    const range = QUESTION_TYPE_SETTING_PARAMS[EnumQuestionType.StructureMatch];
+    assert(range.maxNumOfPremises <= 6,
+        `Structure Match goes to ${range.maxNumOfPremises} premises — `
+        + `${3 * range.maxNumOfPremises} lines; its rungs are meant to carry the climb`);
+    RUNG_SETS.forEach((rungs, k) => {
+        for (const q of rungItems(rungs, 20261005 + k)) {
+            const ref = edgesOf(webOf(q, extractSubjects(q.setup[0]))).length;
+            assert(q.premises.length <= 3 * ref,
+                `${q.premises.length} lines for ${ref} arrows a system`);
+            assert(ref >= range.minNumOfPremises && ref <= range.maxNumOfPremises,
+                `${ref} arrows, outside the ${range.minNumOfPremises}-${range.maxNumOfPremises} asked`);
+        }
+    });
+});
+
+test("Structure Match still marks the right group on every rung", () => {
+    RUNG_SETS.forEach((rungs, k) => {
+        for (const q of rungItems(rungs, 20261015 + k)) {
+            const ref = webOf(q, extractSubjects(q.setup[0]));
+            const groups = q.choices.map(groupOf);
+            assert(isomorphic(webOf(q, groups[q.correctChoice]), ref),
+                `on ${rungs.join(" + ")}: the marked group is not the reference renamed`);
+            assert(!isomorphic(webOf(q, groups[1 - q.correctChoice]), ref),
+                `on ${rungs.join(" + ")}: both groups are the reference renamed`);
+        }
+    });
+});
+
+/** Each entity's (out, in) tally, sorted: what counting can see. */
+const tallies = (w: Web) => [...Array(w.n).keys()]
+    .map(v => `${w.adj[v].filter(Boolean).length}/${w.adj.filter(r => r[v]).length}`)
+    .sort().join(" ");
+
+test("same-degrees: no entity's tally gives the decoy away", () => {
+    let plainCaught = 0, plain = 0;
+    for (const q of rungItems([], 20261025)) {
+        plain++;
+        const ref = webOf(q, extractSubjects(q.setup[0]));
+        const wrong = webOf(q, groupOf(q.choices[1 - q.correctChoice]));
+        if (tallies(wrong) !== tallies(ref)) plainCaught++;
+    }
+    for (const q of rungItems(["same-degrees"], 20261026)) {
+        const ref = webOf(q, extractSubjects(q.setup[0]));
+        const wrong = webOf(q, groupOf(q.choices[1 - q.correctChoice]));
+        equal(tallies(wrong), tallies(ref),
+            "the decoy's arrows in and out differ from the reference's, so tallying "
+            + "them answers an item that is charged for taking that away");
+    }
+    // Otherwise the rung is buying what the base already had.
+    assert(plainCaught > plain / 3,
+        `the plain decoy is told apart by tallies only ${plainCaught} of ${plain} times — `
+        + "the rung would be charging for nothing");
+});
+
+test("five-entities: five a side, at the same arrow counts", () => {
+    for (const q of rungItems(["same-degrees", "five-entities"], 20261027)) {
+        equal(extractSubjects(q.setup[0]).length, 5, "the reference is not five entities");
+        for (const c of q.choices) equal(groupOf(c).length, 5, "a candidate is not five entities");
+    }
+});
+
+test("converse: some arrows are stated from the far end, and the card says how to read them", () => {
+    for (const q of rungItems(["same-degrees", "five-entities", "converse"], 20261028)) {
+        assert(q.premises.some(l => / comes from /.test(strip(l))),
+            "no arrow is stated from the far end, so the rung is charged and not delivered");
+        assert(q.setup.some(l => /comes from[\s\S]*arrow from A to B/.test(strip(l))),
+            "the card does not say which way a reversed line runs");
+    }
+    for (const q of rungItems([], 20261029)) {
+        assert(!q.premises.some(l => / comes from /.test(strip(l))),
+            "a reversed line on an item that did not claim the rung");
     }
 });
 

@@ -366,10 +366,13 @@ export const QUESTION_TYPE_SETTING_PARAMS: Record<EnumQuestionType, ISettingPara
      * that is what makes two structures hard to line up. The floors are where a
      * web has enough shape for a decoy one arrow away to exist at all.
      */
+    /* Arrows per system, and exactly that many: printed three times over, so
+       six is eighteen lines. It went to ten — thirty lines — with nothing else
+       to climb; its rungs are what make it harder now. */
     [EnumQuestionType.StructureMatch]: {
         enabled: true,
-        minNumOfPremises: 6,
-        maxNumOfPremises: 10,
+        minNumOfPremises: 4,
+        maxNumOfPremises: 6,
         basic: false
     },
     /* Stops at eight because the host system caps at seven entities: asked for

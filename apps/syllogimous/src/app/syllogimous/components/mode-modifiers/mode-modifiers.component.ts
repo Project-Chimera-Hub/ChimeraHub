@@ -147,6 +147,11 @@ export class ModeModifiersComponent {
             "compose": "Two changes at once",
             "sequence": "Continue the sequence of changes",
 
+            /* --- structure match --- */
+            "same-degrees": "The wrong system has every entity's arrow counts, so counting cannot rule it out",
+            "five-entities": "Five entities a system, at the same number of arrows",
+            "converse": "Some arrows are stated from the far end",
+
             /* --- axis maps --- */
             "compose-2": "Two changes composed",
             "compose-3": "Three changes composed",

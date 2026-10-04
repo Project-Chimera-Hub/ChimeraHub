@@ -37,7 +37,7 @@ import { getRandomSymbols, pickUniqueItems, shuffle } from "../utils/question.ut
 import { EDGE_WORDS, hi, rel, subj } from "../utils/phrasing";
 import { orderPremises } from "../utils/premise-order.utils";
 import {
-    Web, cloneWeb, edgesOf, induced, isomorphic, largestCommon, motifSites, oddPairs,
+    Web, cloneWeb, edgesOf, induced, isomorphic, largestCommon, motifSites, nearMiss, oddPairs,
     permuteWeb, randomPermutation, randomWeb,
 } from "../utils/web.utils";
 import { GeneratorContext } from "./context";
@@ -141,16 +141,32 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
     if (!canGenerateQuestion(type, numOfPremises, settings)) throw new Error("Cannot generate.");
     numOfPremises = clampPremises(type, numOfPremises);
 
-    /* Four entities a side. Three has too few shapes for a decoy one arrow away
-       to exist at all; five triples the premises for the same question. */
-    const n = 4;
+    const has = (rung: string) => ctx.hasRung(type, rung);
+    const sameDegrees = has("same-degrees");
+    const converse = has("converse");
+
+    /*
+     * Four entities a side, or five on the rung. Three has too few shapes for
+     * a decoy one arrow away to exist at all.
+     *
+     * Five used to mean more premises for the same question, because the
+     * arrows were drawn at a density. The count is the arrows now, exactly, so
+     * a fifth entity is the same number of lines with five times as many ways
+     * to pair the names up — harder without being longer, which is the point.
+     */
+    const n = has("five-entities") ? 5 : 4;
 
     for (let attempt = 0; attempt < 300; attempt++) {
         const words = getRandomSymbols(settings, 3 * n);
         if (new Set(words).size !== 3 * n) continue;
         const [ref, same, off] = [words.slice(0, n), words.slice(n, 2 * n), words.slice(2 * n)];
 
-        const base = drawWeb(n, Math.max(3, numOfPremises - 2), numOfPremises);
+        /*
+         * Exactly the asked number of arrows. It was a band from two below the
+         * ask, at three lines an arrow — ten premises came to as many as thirty
+         * statements, which was the only way this mode had of getting harder.
+         */
+        const base = drawWeb(n, numOfPremises, numOfPremises);
         if (!base) continue;
 
         const twin = permuteWeb(base, randomPermutation(n));
@@ -162,7 +178,14 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
          * moving a second arrow the other way — and the result is checked not to
          * be the original after all, which a pair of changes can easily be.
          */
-        const nearly = oneArrowOff(base).map(w => {
+        /*
+         * On `same-degrees` the decoy is a two-swap instead — u1→v1 and u2→v2
+         * become u1→v2 and u2→v1 — so every entity keeps its arrows in and
+         * out. The plain decoy can usually be ruled out by finding one entity
+         * whose tally has no partner in the reference; this one cannot, and the
+         * only way left is to line the two systems up.
+         */
+        const nearly = sameDegrees ? nearMiss(base) : oneArrowOff(base).map(w => {
             for (const other of oneArrowOff(w)) {
                 /*
                  * Two conditions, and only two.
@@ -190,12 +213,23 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
             { names: off, web: decoy, right: false },
         ]);
 
+        /*
+         * On `converse`, about half the arrows are stated from the far end —
+         * "B comes from A" for A→B — so a line has to be turned round before it
+         * can be lined up with anything. At least one per card, or the rung is
+         * charged and not delivered.
+         */
+        const lines = (w: Web, names: string[]) => edgesOf(w).map(([i, j]) =>
+            converse && Math.random() < 0.5
+                ? `${subj(names[j])} ${rel(EDGE_WORDS["←"])} ${subj(names[i])}`
+                : arrow(names[i], names[j]));
+        const systems = [lines(base, ref), ...shown.map(c => lines(c.web, c.names))];
+        if (converse && !systems.flat().some(l => l.includes(EDGE_WORDS["←"]))) continue;
+
         const question = new Question(type);
         question.bucket = [...words];
-        question.premises = [
-            ...orderPremises(systemLines(base, ref), ctx.settingsOverrideService.scramble, ctx.mergeTarget()),
-            ...shown.flatMap(c => orderPremises(systemLines(c.web, c.names), ctx.settingsOverrideService.scramble, ctx.mergeTarget())),
-        ];
+        question.premises = systems.flatMap(sys =>
+            orderPremises(sys, ctx.settingsOverrideService.scramble, ctx.mergeTarget()));
         question.choices = shown.map(c => groupText(c.names));
         question.correctChoice = shown.findIndex(c => c.right);
         question.answerMode = "choice";
@@ -207,8 +241,16 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
             `${groupText(ref)} form one system. Two other groups form systems of `
             + "their own, stated in their own premises.",
             `Exactly ${hi("one")} of them is the first system with the names changed — `
-            + "the same arrows between the matching entities. The other is one arrow "
-            + "different, and has <b>as many arrows</b>, so counting them settles nothing.",
+            + "the same arrows between the matching entities. "
+            + (sameDegrees
+                ? "In the other, two arrows run between different pairs, and every entity "
+                  + "still has <b>as many arrows in and out</b> as one of the first "
+                  + "system's — so no count settles it."
+                : "The other is one arrow different, and has <b>as many arrows</b>, so "
+                  + "counting them settles nothing."),
+            ...(converse
+                ? [`"B ${rel(EDGE_WORDS["←"])} A" is the arrow from A to B.`]
+                : []),
         ];
 
         question.explanation = [
@@ -217,7 +259,10 @@ export function createStructureMatch(ctx: GeneratorContext, numOfPremises: numbe
             `${groupText(shown[question.correctChoice].names)}: every arrow lines up with `
             + "one of the first system's, under one matching of the names",
             `${groupText(shown[1 - question.correctChoice].names)}: no matching of the `
-            + "names lines all of them up — one arrow runs between the wrong pair",
+            + (sameDegrees
+                ? "names lines all of them up, though every entity's arrows in and out "
+                  + "match — two arrows run between the wrong pairs"
+                : "names lines all of them up — one arrow runs between the wrong pair"),
         ];
         return question;
     }
