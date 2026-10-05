@@ -128,6 +128,18 @@ counts page views, one per hub visit and one per trainer opened. No cookies and
 no personal data. The snippet is added by the build only, so the source, a
 local build and the APK make no outbound request at all.
 
+## The record format
+
+Every trainer submitted from now on writes its sessions in **the Chimera
+record format** — [shared/harness/FORMAT.md](shared/harness/FORMAT.md) — under
+`chimera.<app>.record.v1` in localStorage: a table of sessions, each with an
+optional table of trials, with fixed columns that may be left empty where a
+trainer does not measure something. The archive reads it with one general
+adapter (`readChimeraRecord`), and the meter, "Read this browser" and the
+gate's Firefox scan all find those keys by pattern, so a trainer that writes
+it is counted, archived and shareable without a line of hub code. The
+trainers already here keep their own adapters, which produce the same records.
+
 ## Sharing data
 
 The hub's **Share your data** card makes a file of every session this browser

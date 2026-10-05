@@ -112,6 +112,17 @@ var Today = (function () {
       take(readOne(JSON.stringify(wrap)));
     }
 
+    /* Every trainer that writes the Chimera record format, found by its key
+       rather than listed: a new trainer is counted the day it lands, with no
+       line here. The value is the record itself, which the archive's
+       `readChimeraRecord` recognises. */
+    try {
+      for (var c = 0; c < localStorage.length; c++) {
+        var ck = localStorage.key(c);
+        if (ck && /^chimera\.[a-z][a-z0-9-]*\.record\.v1$/.test(ck)) take(readOne(get(ck)));
+      }
+    } catch (e) { /* storage off */ }
+
     /* RNB keeps one record per profile, and a day's training may be spread
        across several of them. */
     try {

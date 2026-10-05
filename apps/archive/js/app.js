@@ -402,6 +402,22 @@ function importNeighbours() {
     }
   } catch (e) { /* storage off */ }
 
+  /* Any trainer writing the Chimera record format, by its key: one record
+     per trainer, read by `readChimeraRecord`, and never listed here. */
+  try {
+    var chimeraKeys = [];
+    for (var c = 0; c < localStorage.length; c++) {
+      var ck = localStorage.key(c);
+      if (ck && /^chimera\.[a-z][a-z0-9-]*\.record\.v1$/.test(ck)) chimeraKeys.push(ck);
+    }
+    for (var ci = 0; ci < chimeraKeys.length; ci++) {
+      var cv = localStorage.getItem(chimeraKeys[ci]);
+      if (!cv) continue;
+      importText(cv, chimeraKeys[ci].split(".")[1] + " (this browser)");
+      found++;
+    }
+  } catch (e) { /* storage off */ }
+
   try {
     var profiles = JSON.parse(localStorage.getItem("rnb.profiles.v1") || "null");
     var list = profiles && profiles.list ? profiles.list : [];

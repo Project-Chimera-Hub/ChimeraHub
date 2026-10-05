@@ -813,6 +813,113 @@ test("nothing in the archive rounds a corner behind the token's back", () => {
 
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * The Chimera record format                                           *
+ * ------------------------------------------------------------------ *
+ *
+ * What every new trainer writes, and the one thing that lets a trainer onto
+ * the meter without an adapter. Two copies of its reading exist — the
+ * validator in shared/harness/record.js and the archive's reader, which
+ * cannot import it — and these hold them to one answer.
+ */
+
+const CR = require("../shared/harness/record.js");
+const { readChimeraRecord } = require("../apps/archive/js/adapters.js");
+
+function chimeraRecord(app, sessions) {
+  const f = CR.create(app, "n", "1.0.0");
+  f.sessions = sessions;
+  return f;
+}
+
+test("a minimal Chimera record is valid, and every optional column may be empty", () => {
+  const f = chimeraRecord("probe", [{ id: "a", start: at(9), activeSeconds: 300 }]);
+  const v = CR.validate(f);
+  assert.ok(v.ok, v.errors.join("; "));
+  f.sessions[0].level = null; f.sessions[0].accuracy = null; f.sessions[0].trialLog = null;
+  assert.ok(CR.validate(f).ok, "nulls in optional columns were refused");
+});
+
+test("the validator refuses what would corrupt the record", () => {
+  const bad = (mut) => { const f = chimeraRecord("probe", [{ id: "a", start: at(9), activeSeconds: 60 }]); mut(f); return CR.validate(f); };
+  assert.ok(!bad((f) => { delete f.sessions[0].id; }).ok, "a session without an id passed");
+  assert.ok(!bad((f) => { f.sessions.push({ id: "a", start: at(10), activeSeconds: 1 }); }).ok, "a repeated id passed");
+  assert.ok(!bad((f) => { f.sessions[0].start = 1700000000; }).ok, "seconds where milliseconds belong passed");
+  assert.ok(!bad((f) => { f.sessions[0].accuracy = 80; }).ok, "a percentage where a fraction belongs passed");
+  assert.ok(!bad((f) => { f.units = {}; f.sessions[0].level = 3; }).ok, "a level with no unit passed");
+  assert.ok(!bad((f) => { f.app = "My Trainer"; }).ok, "an app id with spaces passed");
+  assert.ok(bad((f) => { f.sessions[0].colour = "red"; }).warnings.length, "an unknown column went unremarked");
+});
+
+test("the archive reads a Chimera record: a session per row, minutes by UTC day", () => {
+  const f = chimeraRecord("probe", [
+    { id: "a", start: at(9), activeSeconds: 600, level: 2, levelEnd: 3, trials: 20, correct: 15, mode: "dual",
+      trialLog: [{ i: 0, t: 0, correct: true, rtMs: 512 }] },
+    { id: "b", start: at(18), activeSeconds: 300, accuracy: 0.5 },
+  ]);
+  const r = readChimeraRecord(f);
+  assert.strictEqual(r.source, "probe");
+  assert.strictEqual(r.records.length, 2);
+  near(r.minutes[DAY], 15, "minutes on the day");
+  const a = r.records[0];
+  assert.strictEqual(a.difficulty, 3, "difficulty is where the session ended");
+  assert.strictEqual(a.unit, "probe-n", "the unit is not prefixed with the app");
+  near(a.correct, 0.75, "accuracy from correct/trials");
+  assert.strictEqual(a.label, "dual");
+  assert.strictEqual(a.raw.trialCount, 1, "the trial log was not counted");
+  assert.ok(!("trialLog" in a.raw), "the trial log went into raw");
+  assert.strictEqual(r.records[1].unit, null, "a session with no level was given a unit");
+  /* And by way of the dispatcher, which is what the meter and the gate call. */
+  assert.strictEqual(require("../apps/archive/js/adapters.js").readFile(JSON.stringify(f)).source, "probe");
+});
+
+test("a trainer writing the format is on the meter with no line of hub code", () => {
+  reset();
+  store[CR.key("probe")] = JSON.stringify(chimeraRecord("probe", [{ id: "a", start: at(9), activeSeconds: 900 }]));
+  near(Today.minutesOn(DAY).probe || 0, 15, "probe's minutes");
+  /* A key that only looks like one is not read. */
+  store["chimera.probe.record.v2"] = store[CR.key("probe")].replace('"probe"', '"other"');
+  assert.ok(!Today.minutesOn(DAY).other, "a v2 key was read as v1");
+  reset();
+});
+
+test("every record the validator passes, the archive reads, and the other way round", () => {
+  const good = chimeraRecord("probe", [{ id: "a", start: at(9), activeSeconds: 60 }]);
+  assert.ok(CR.validate(good).ok && readChimeraRecord(good), "a valid record was not read");
+  for (const broken of [
+    Object.assign({}, good, { format: "something-else" }),
+    Object.assign({}, good, { version: 2 }),
+    Object.assign({}, good, { app: "Not An Id" }),
+  ]) {
+    assert.ok(!CR.validate(broken).ok, "the validator passed " + JSON.stringify(broken).slice(0, 60));
+    assert.strictEqual(readChimeraRecord(broken), null, "the archive read what the validator refuses");
+  }
+});
+
+test("the record flattens to two tables with every column, empty where unsaid", () => {
+  const f = chimeraRecord("probe", [{ id: "a", start: at(9), activeSeconds: 60, mode: "x, y",
+    trialLog: [{ i: 0, correct: false }, { i: 1, rtMs: 400 }] }]);
+  const t = CR.toTables(f);
+  const sHead = t.sessions.split("\n")[0].split(",");
+  assert.strictEqual(sHead.length, CR.SESSION.length, "sessions table lost or gained a column");
+  assert.ok(t.sessions.includes('"x, y"'), "a comma in a cell was not quoted");
+  assert.strictEqual(t.trials.trim().split("\n").length, 3, "two trials and a header");
+  assert.ok(t.trials.split("\n")[1].startsWith("probe,a,0,"), "trials do not join to their session");
+});
+
+test("FORMAT.md documents every column, and its example is a valid record", () => {
+  const md = readFileSync(path.join(__dirname, "..", "shared", "harness", "FORMAT.md"), "utf8");
+  for (const col of CR.FILE.concat(CR.SESSION, CR.TRIAL)) {
+    assert.ok(md.includes("| `" + col.name + "` | " + col.type + " |"),
+      `FORMAT.md has no row for ${col.name} (${col.type})`);
+  }
+  const example = md.slice(md.indexOf("## A complete example"));
+  const json = example.slice(example.indexOf("```json") + 7, example.indexOf("```", example.indexOf("```json") + 7));
+  const v = CR.validate(JSON.parse(json));
+  assert.ok(v.ok && !v.warnings.length, "the example is not clean: " + v.errors.concat(v.warnings).join("; "));
+  assert.ok(readChimeraRecord(JSON.parse(json)), "the archive does not read the example");
+});
+
 for (const [name, fn] of cases) {
   try { fn(); passed++; console.log(`  ok  ${name}`); }
   catch (e) { console.error(`FAIL  ${name}\n      ${e.message}`); process.exitCode = 1; }

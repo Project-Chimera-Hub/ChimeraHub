@@ -501,6 +501,83 @@ function readPrepared(file) {
 }
 
 /* ------------------------------------------------------------------ *
+ * The Chimera record format — any trainer that writes it              *
+ * ------------------------------------------------------------------ */
+
+/**
+ * The format every new trainer on the hub writes (shared/harness/FORMAT.md),
+ * under `chimera.<app>.record.v1`. One reader for all of them: a trainer that
+ * writes this is in the archive, the meter, the gate and Share your data with
+ * no adapter of its own.
+ *
+ * Written out here rather than loaded from shared/harness/record.js because
+ * the archive is published as its own repository with no build step; the
+ * hub's suite holds the two to the same answers.
+ *
+ * One record per session. **The unit is prefixed with the app**, so that
+ * "n" from one trainer and "n" from another never land on one axis — the
+ * archive's rule that no two sources share a unit, kept by construction
+ * rather than by everybody choosing different words. The trial log stays out
+ * of `raw` (its length goes in instead): it is in the file you kept, and a
+ * trial-by-trial history in every record would fill the archive's storage.
+ */
+var CHIMERA_SESSION_FIELDS = ["end", "completed", "mode", "modalities", "level", "levelEnd",
+  "trials", "correct", "accuracy", "hits", "misses", "falseAlarms", "correctRejections",
+  "dPrime", "rtMeanMs", "rtMedianMs", "rtSdMs", "score", "input", "settings", "extra"];
+
+function readChimeraRecord(file) {
+  if (!file || file.format !== "chimera-record" || Number(file.version) !== 1) return null;
+  if (typeof file.app !== "string" || !/^[a-z][a-z0-9-]*$/.test(file.app)) return null;
+  if (!Array.isArray(file.sessions)) return null;
+
+  var app = file.app;
+  var units = file.units && typeof file.units === "object" ? file.units : {};
+  var records = [];
+  var minutes = {};
+
+  for (var i = 0; i < file.sessions.length; i++) {
+    var s = file.sessions[i];
+    if (!s || typeof s.id !== "string" || !(Number(s.start) > 0)) continue;
+    var seconds = Math.max(0, Number(s.activeSeconds) || 0);
+
+    var accuracy = typeof s.accuracy === "number" ? s.accuracy
+      : typeof s.correct === "number" && s.trials > 0 ? s.correct / s.trials : null;
+    var level = typeof s.levelEnd === "number" ? s.levelEnd
+      : typeof s.level === "number" ? s.level : null;
+    var unitName = s.levelUnit || units.level;
+    var unit = level != null && unitName ? app + "-" + unitName : null;
+
+    var raw = { appVersion: file.appVersion || null };
+    for (var f = 0; f < CHIMERA_SESSION_FIELDS.length; f++) {
+      var k = CHIMERA_SESSION_FIELDS[f];
+      if (s[k] !== undefined && s[k] !== null) raw[k] = s[k];
+    }
+    if (Array.isArray(s.trialLog)) raw.trialCount = s.trialLog.length;
+
+    var rec = _makeRecord({
+      source: app,
+      id: s.id,
+      at: Number(s.start),
+      kind: "session",
+      seconds: seconds,
+      correct: accuracy,
+      difficulty: level,
+      unit: unit,
+      label: s.mode || "",
+      raw: raw,
+    });
+    records.push(rec);
+    minutes[rec.day] = (minutes[rec.day] || 0) + seconds / 60;
+  }
+
+  /* An app with a record and no sessions yet is still that app; a reading
+     with nothing in it is the same as no reading, so null either way. */
+  if (!records.length) return null;
+  var state = file.state && typeof file.state === "object" ? file.state : null;
+  return { source: app, records: records, minutes: minutes, state: state };
+}
+
+/* ------------------------------------------------------------------ *
  * CCT — Cognitive Control Training                                    *
  * ------------------------------------------------------------------ */
 
@@ -1456,6 +1533,7 @@ var ADAPTERS = [
      else needs to be asked whether it recognises them. */
   { name: "archive", read: readArchiveExport },
   { name: "prepared", read: readPrepared },
+  { name: "chimera-record", read: readChimeraRecord },
   /* Before Syllogimous, though it does not have to be: the two write the same
      keys and each says no to the other's bag. Ordered this way so the cheaper
      answer is the one that reads as it looks. */
@@ -1531,6 +1609,7 @@ if (typeof module !== "undefined") {
     readRotation: readRotation,
     readSynth: readSynth,
     readPrepared: readPrepared,
+    readChimeraRecord: readChimeraRecord,
     readArchiveExport: readArchiveExport,
     MAX_ITEM_SECONDS: MAX_ITEM_SECONDS,
   };

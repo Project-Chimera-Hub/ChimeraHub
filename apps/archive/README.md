@@ -502,7 +502,15 @@ but not in the ability estimate.
 
 ## Adding a source
 
-Two ways, and the second is usually the right one.
+**A trainer you are writing** needs no adapter at all. Have it write the
+Chimera record format — `chimera.<app>.record.v1` in localStorage, specified
+in Chimera Hub's `shared/harness/FORMAT.md` — and `readChimeraRecord` reads it:
+one record per session, its unit prefixed with the app so no two trainers ever
+share one. "Read this browser" finds those keys by pattern, and so does
+`tools/firefox-storage.py`.
+
+**A trainer somebody else wrote**: two ways, and the second is usually the
+right one.
 
 **A JSON export you can read in the browser**: one function in `js/adapters.js`
 that takes the parsed file and returns `{ source, records, minutes }`, or `null`

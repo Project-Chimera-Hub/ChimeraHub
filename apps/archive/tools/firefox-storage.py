@@ -42,6 +42,7 @@ import datetime
 import glob
 import json
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -399,6 +400,30 @@ def precision_from(store):
     return {"nback-performance": raw}
 
 
+CHIMERA_KEY = re.compile(r"^chimera\.([a-z][a-z0-9-]*)\.record\.v1$")
+
+
+def chimera_records_from(store):
+    """(app, raw) for every key holding a Chimera-format record with sessions.
+
+    Found by pattern rather than listed, so a trainer added to the hub is in
+    the gate's count without a line here.
+    """
+    out = []
+    for key, raw in store.items():
+        m = CHIMERA_KEY.match(key)
+        if not m or not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            continue
+        if (isinstance(data, dict) and data.get("format") == "chimera-record"
+                and data.get("sessions")):
+            out.append((m.group(1), raw))
+    return out
+
+
 def rotation_from(store):
     """The molecule and stereochemistry trainer's ladder and session list.
 
@@ -583,6 +608,17 @@ def main():
                     json.dump(rot, fh)
                 hist = json.loads(rot["spatial-rotation.progress.v1"])["history"]
                 print("  rotation     %-52s %5d sessions" % (label, len(hist)))
+                written.append(path)
+
+            # Every trainer writing the Chimera record format, by its key. The
+            # value is the whole record and is written out as it is: the
+            # archive's readChimeraRecord recognises it with no wrapper.
+            for app, raw in chimera_records_from(store):
+                path = os.path.join(args.outdir, "chimera-%s-%s.json" % (app, safe))
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(raw)
+                print("  %-12s %-52s %5d sessions"
+                      % (app, label, len(json.loads(raw)["sessions"])))
                 written.append(path)
 
             for name, data in rnb_from(store):
