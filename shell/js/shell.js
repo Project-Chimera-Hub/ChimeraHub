@@ -642,20 +642,20 @@
      text readable on it with it. Without a picture of your own, it is
      whichever drawn one is chosen (applyBuiltin). */
   /* Which drawn picture is behind the hub when no picture of your own is:
-     the battle (the stylesheet's default) or the forest. Per browser, in
+     the lake (the stylesheet's default) or the forest. Per browser, in
      localStorage, because it is a preference and not a record. */
   var BUILTIN_KEY = "chimera.hub.background.v1";
 
   function builtin() {
-    try { return localStorage.getItem(BUILTIN_KEY) === "forest" ? "forest" : "battle"; }
-    catch (e) { return "battle"; }
+    try { return localStorage.getItem(BUILTIN_KEY) === "forest" ? "forest" : "lake"; }
+    catch (e) { return "lake"; }
   }
 
   function applyBuiltin() {
     var b = builtin();
     if (b === "forest") document.documentElement.style.setProperty("--bg-image", "var(--bg-forest)");
     else document.documentElement.style.removeProperty("--bg-image");
-    $("bg-battle").setAttribute("aria-pressed", String(b === "battle" && !bgUrl));
+    $("bg-lake").setAttribute("aria-pressed", String(b === "lake" && !bgUrl));
     $("bg-forest").setAttribute("aria-pressed", String(b === "forest" && !bgUrl));
   }
 
@@ -669,7 +669,7 @@
     } else {
       applyBuiltin();
     }
-    bgNote(name === "forest" ? "The forest." : "The battle.");
+    bgNote(name === "forest" ? "The forest." : "The lake.");
   }
 
   function applyBg(blob) {
@@ -680,7 +680,7 @@
     }
     bgUrl = URL.createObjectURL(blob);
     document.documentElement.style.setProperty("--bg-image", 'url("' + bgUrl + '")');
-    $("bg-battle").setAttribute("aria-pressed", "false");
+    $("bg-lake").setAttribute("aria-pressed", "false");
     $("bg-forest").setAttribute("aria-pressed", "false");
   }
 
@@ -823,7 +823,7 @@
     e.target.value = "";
   });
   $("bg-clear").addEventListener("click", bgClear);
-  $("bg-battle").addEventListener("click", function () { chooseBuiltin("battle"); });
+  $("bg-lake").addEventListener("click", function () { chooseBuiltin("lake"); });
   $("bg-forest").addEventListener("click", function () { chooseBuiltin("forest"); });
   applyBuiltin();
   bgLoad();

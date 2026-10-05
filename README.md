@@ -273,14 +273,14 @@ out to `.3em`, not because it is a different colour from the paragraph under it
 — which is why the background can be swapped for any photograph at all without
 the page falling apart.
 
-**Appearance → Background** offers the two drawn pictures — **Battle**, the
+**Appearance → Background** offers the two drawn pictures — **Lake**, the
 default, and **Forest** — or **Choose image** for a picture of your own, and it
-is the one setting here. Battle is two lions rampant, reared on their hind legs
-and striking at each other on a rock ledge under the moon, drawn by
-`tools/backgrounds/battle.py` into `shell/backgrounds/battle.svg`, and into
-`battle-tall.svg` framed for a phone held upright; change a
-number there and run it again to redraw it. The archive keeps the forest, as it
-cannot load the hub's files. The picture is downscaled to 2560px, re-encoded, and kept in
+is the one setting here. Lake is a large moon low over still water, its light
+broken across it, with mountains, fog, dark shores and firs; it is drawn by
+`tools/backgrounds/lake.py` into `shell/backgrounds/lake.svg`, and into
+`lake-tall.svg` framed for a phone held upright. Change a number there and run
+it again to redraw it. The archive keeps the forest, as it cannot load the
+hub's files. The picture is downscaled to 2560px, re-encoded, and kept in
 **IndexedDB** — deliberately not in localStorage, because that is where every
 trainer's history lives and the quota there is shared between all of them. A
 couple of megabytes of wallpaper is exactly what would push a long training
