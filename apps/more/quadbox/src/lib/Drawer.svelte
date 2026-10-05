@@ -181,7 +181,7 @@ onMount(() => {
       <div class="my-10"></div>
     </nav>
 
-    <div class="relative w-screen h-full transition-transform duration-150 dark:bg-[#232323] bg-[#FBFBFB]">
+    <div class="relative w-screen h-full transition-transform duration-150 dark:bg-[#0a0906] bg-[#FBFBFB]">
       <slot />
     </div>
   </div>

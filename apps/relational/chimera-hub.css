@@ -1,0 +1,55 @@
+/*
+ * Chimera Hub's look, for Relational N-back as the hub serves it.
+ *
+ * Loaded last, so it wins without touching the app's own stylesheet: it
+ * reassigns Relational N-back's own colour, type and corner variables to the hub's —
+ * old gold on near-black, one monospace face, square corners — and squares
+ * the controls and panels that set a radius directly. Colours that carry
+ * meaning in the task (right and wrong, stimulus hues) are left as the app
+ * chose them. Remove this one <link> and the app is exactly what it was.
+ *
+ * No webfont: the face is whatever monospace the machine has, so the page
+ * makes no request to anybody and runs offline, as the hub and its APK do.
+ */
+
+:root {
+  --bg: #0a0906;
+  --panel: #18140b;
+  --panel-2: #221c10;
+  --line: #40351a;
+  --text: #eadfc2;
+  --muted: #a48f60;
+  --accent: #d4af37;
+  --accent-soft: rgba(212,175,55,.12);
+  --warn: #f0d27a;
+  --radius: 0;
+  font-family: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+
+/* Controls and containers with a radius of their own. Circles drawn as
+   stimuli are not in this list and stay round. */
+button, input:not([type="radio"]):not([type="range"]), select, textarea, dialog,
+[class*="card"],
+[class*="btn"],
+[class*="panel"],
+[class*="pill"],
+[class*="modal"],
+[class*="chip"] { border-radius: 0 !important; }
+
+/* Relational N-back spells most of its surfaces as literal greys and every
+   corner as a literal radius, rather than through the variables above, so
+   they are restated here: the hub's warm darks for its greys, and no radius
+   anywhere — none of its shapes is a drawn circle. */
+* { border-radius: 0 !important; }
+.segmented label span { background: #221c10; color: #a48f60; }
+.field, .stream-toggle, .shape-toggle, .progress-track { background: #1c170d; }
+.field input[type="number"] { background: #0a0906; }
+.stream-toggle b, .relation-art, .relation-entry .worked, .symbol-tile, .sheet-tile { background: #0f0c07; }
+.relation-entry .worked { color: #d6c9a6; }
+.quiet-btn, .secondary-btn { background: #1f1a0e; color: #a48f60; }
+.quiet-btn:hover, .secondary-btn:hover { background: #2a2312; color: #eadfc2; }
+.grid-cell, .solo-cell { background: #120f09; border-color: #241e10; }
+.grid-cell.active, .solo-cell.active { background: #221c10; border-color: #40351a; }
+.response-btn { background: #2a2312; }
+.pause-overlay { background: rgba(10, 9, 6, .88); }
+.inline-warning { background: #2a1712; }

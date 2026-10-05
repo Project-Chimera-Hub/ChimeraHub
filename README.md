@@ -293,6 +293,19 @@ They are the same hues as the segments in the day's bar, and that pairing is
 the only thing tying a card to its share of the day. They are data, not
 decoration.
 
+**Every trainer wears it as well**, without being rewritten. The plain-page
+trainers (Running Order, CCT, Relational N-back, eWMT, Chimera, Attention
+Training, Earshot) each carry a `chimera-hub.css`, linked last in their
+`<head>`, that reassigns the app's own colour, type and corner variables to
+the hub's and squares its controls; colours that carry meaning in the task —
+right, wrong, a stimulus's hue — are left as each app chose them. Delete the
+one `<link>` and the app is what it was. Syllogimous defaults to its "Chimera
+Hub" theme (a saved theme is kept), Quad Box's dark theme is re-coloured in
+its `app.css`, and Relation Streams, Threshold N-back and the archive were
+already in it. None of them fetches a font, an icon set or a script: Syllogimous
+used to, and a webfont `@import` that failed offline left its entire
+stylesheet unapplied. `test/run.js` checks every trainer's page for both.
+
 The archive wears this theme too — the same palette, the same type, the same
 drawing behind it. It cannot import the stylesheet, because it is published as
 its own repository with no build step, so the theme is a copy and `test/run.js`

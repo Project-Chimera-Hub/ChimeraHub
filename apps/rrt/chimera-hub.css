@@ -1,0 +1,54 @@
+/*
+ * Chimera Hub's look, for Running Order as the hub serves it.
+ *
+ * Loaded last, so it wins without touching the app's own stylesheet: it
+ * reassigns Running Order's own colour, type and corner variables to the hub's —
+ * old gold on near-black, one monospace face, square corners — and squares
+ * the controls and panels that set a radius directly. Colours that carry
+ * meaning in the task (right and wrong, stimulus hues) are left as the app
+ * chose them. Remove this one <link> and the app is exactly what it was.
+ *
+ * No webfont: the face is whatever monospace the machine has, so the page
+ * makes no request to anybody and runs offline, as the hub and its APK do.
+ */
+
+:root {
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --sans: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+
+/* Controls and containers with a radius of their own. Circles drawn as
+   stimuli are not in this list and stay round. */
+button, input:not([type="radio"]):not([type="range"]), select, textarea, dialog,
+.card,
+[class*="btn"],
+[class*="pill"],
+[class*="modal"],
+[class*="box"],
+[class*="panel"] { border-radius: 0 !important; }
+:root:not([data-theme="light"]) {
+  --bg: #0a0906;
+  --surface: #18140b;
+  --surface2: #221c10;
+  --surface3: #2a2312;
+  --border: #40351a;
+  --border2: #5c4c24;
+  --text: #eadfc2;
+  --text-dim: #a48f60;
+  --text-faint: #6e603f;
+  --accent: #d4af37;
+  --accent-dim: rgba(212,175,55,.12);
+  --accent-glow: rgba(212,175,55,.22);
+}
+
+/* Monospace is wider than the sans this page was laid out in, and on a phone
+   the fixed Start bar ran past the right edge with Start half off-screen. The
+   "Settings auto-saved" note gives way first; Start keeps its full width. */
+@media (max-width: 560px) {
+  .sticky-start-bar { padding: .6rem .75rem; gap: .5rem; }
+  .sticky-start-bar > div > span { display: none; }
+  .sticky-start-bar .btn { white-space: nowrap; }
+}

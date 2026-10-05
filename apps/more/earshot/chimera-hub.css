@@ -1,0 +1,44 @@
+/*
+ * Chimera Hub's look, for Earshot as the hub serves it.
+ *
+ * Loaded last, so it wins without touching the app's own stylesheet: it
+ * reassigns Earshot's own colour, type and corner variables to the hub's —
+ * old gold on near-black, one monospace face, square corners — and squares
+ * the controls and panels that set a radius directly. Colours that carry
+ * meaning in the task (right and wrong, stimulus hues) are left as the app
+ * chose them. Remove this one <link> and the app is exactly what it was.
+ *
+ * No webfont: the face is whatever monospace the machine has, so the page
+ * makes no request to anybody and runs offline, as the hub and its APK do.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0906;
+  --bg-raised: #18140b;
+  --field: #14110a;
+  --field-alt: #221c10;
+  --line: #40351a;
+  --line-strong: #5c4c24;
+  --ink: #eadfc2;
+  --ink-soft: #a48f60;
+  --focus: #f0d27a;
+  --target: #d4af37;
+  --target-soft: rgba(212,175,55,.3);
+  --on-target: #0a0906;
+  --on-wrong: #0a0906;
+  --overlay: rgba(10,9,6,.9);
+  --shade: rgba(10,9,6,.55);
+  --radius-sm: 0;
+  --radius: 0;
+  --font-ui: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --font-display: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+
+/* Controls and containers with a radius of their own. Circles drawn as
+   stimuli are not in this list and stay round. */
+button, input:not([type="radio"]):not([type="range"]), select, textarea, dialog,
+[class*="card"],
+[class*="btn"],
+[class*="panel"],
+[class*="modal"] { border-radius: 0 !important; }

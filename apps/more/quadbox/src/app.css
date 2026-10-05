@@ -4,6 +4,30 @@
   themes: black --dark, bumblebee --light;
 }
 
+/*
+ * Chimera Hub's look on the dark theme: daisyUI's `black`, re-coloured to the
+ * hub's old gold on near-black. Only the colours change — `black` is already
+ * square, flat and borderline-only, which is the hub's form. Right, wrong and
+ * late keep their own colours below, because they mean things.
+ */
+@plugin "daisyui/theme" {
+  name: "black";
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #0a0906;
+  --color-base-200: #18140b;
+  --color-base-300: #2a2312;
+  --color-base-content: #eadfc2;
+  --color-primary: #d4af37;
+  --color-primary-content: #0a0906;
+  --color-secondary: #2a2312;
+  --color-secondary-content: #eadfc2;
+  --color-accent: #f0d27a;
+  --color-accent-content: #0a0906;
+  --color-neutral: #221c10;
+  --color-neutral-content: #eadfc2;
+}
+
 @custom-variant dark (&:where([data-theme=black], [data-theme=black] *));
 @custom-variant light (&:where([data-theme=bumblebee], [data-theme=bumblebee] *));
 
@@ -29,7 +53,7 @@
 }
 
 html, body {
-  background-color: #222;
+  background-color: #0a0906;
   overscroll-behavior-y: contain;
   touch-action: pan-x pan-y;
 }
@@ -39,7 +63,9 @@ html {
 }
 
 body {
-  font-family: 'Go Mono', monospace;
+  /* The hub's one face: whatever monospace the machine has. */
+  font-family: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular,
+               Menlo, Consolas, "DejaVu Sans Mono", monospace;
   margin: 0;
   min-width: 320px;
   min-height: 100svh;

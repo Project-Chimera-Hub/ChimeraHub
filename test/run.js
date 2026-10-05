@@ -451,6 +451,49 @@ test("every counted trainer is a source an adapter reports", () => {
   }
 });
 
+test("no trainer's page loads anything from the network", () => {
+  /* The hub and its APK run with the network off, and a stylesheet that
+     @imports a webfont is worse than slow offline: Chrome fires `error` on it,
+     and Syllogimous's whole stylesheet stayed media=print because of exactly
+     that. Pages and the stylesheets they ship, as written in the repository. */
+  const fs = require("fs");
+  const remote = /<(script|link)\b[^>]*\s(src|href)=["'](https?:)?\/\/|@import\s+url\(\s*["']?https?:|googletagmanager|gtag\(/i;
+  const pages = [];
+  for (const t of CATALOG.trainers) {
+    const dir = path.join(__dirname, "..", "apps", t.path);
+    for (const f of ["index.html", "src/index.html", "chimera-hub.css", "styles.css", "src/app.css",
+                     "src/assets/css/thickstrap.css"]) {
+      const file = path.join(dir, f);
+      if (fs.existsSync(file)) pages.push(file);
+    }
+  }
+  assert.ok(pages.length >= 11, `only ${pages.length} pages found`);
+  for (const file of pages) {
+    const lines = fs.readFileSync(file, "utf8").split("\n");
+    lines.forEach((line, i) => {
+      assert.ok(!remote.test(line), `${path.relative(path.join(__dirname, ".."), file)}:${i + 1} loads from the network: ${line.trim().slice(0, 100)}`);
+    });
+  }
+});
+
+test("every plain-page trainer wears the hub's look", () => {
+  /* The ones whose own stylesheet is not the hub's carry chimera-hub.css,
+     linked last so it wins. Syllogimous, Threshold N-back, Relation Streams
+     and Quad Box are themed in their own source instead. */
+  const fs = require("fs");
+  for (const id of ["rrt", "cct", "relational", "ewmt", "chimera", "att", "earshot"]) {
+    const t = CATALOG.trainers.find((x) => x.id === id);
+    const dir = path.join(__dirname, "..", "apps", t.path);
+    assert.ok(fs.existsSync(path.join(dir, "chimera-hub.css")), `${id} has no chimera-hub.css`);
+    const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
+    const at = html.indexOf('href="chimera-hub.css"');
+    assert.ok(at > 0, `${id}'s page does not link chimera-hub.css`);
+    assert.ok(!/<link[^>]+rel="stylesheet"/i.test(html.slice(at + 30, html.indexOf("</head>"))) &&
+              !/<style\b/i.test(html.slice(at, html.indexOf("</head>"))),
+      `${id} loads a stylesheet after chimera-hub.css, which then loses`);
+  }
+});
+
 test("the catalog is consistent: ids, categories and colours", () => {
   const cats = new Set(CATALOG.categories.map((c) => c.id));
   assert.strictEqual(cats.size, CATALOG.categories.length, "two categories share an id");

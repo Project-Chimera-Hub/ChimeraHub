@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CCT – Cognitive Control Training</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:#0d0e11;--surface:#161820;--surface2:#1e2029;--surface3:#252836;
@@ -300,10 +298,20 @@
     .anim-in{animation:fadeUp .3s ease both}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
     @media(max-width:480px){h1{font-size:1.65rem}.timer-display{font-size:2rem}.stimulus-number{font-size:4rem}}
+    /* Portrait. The top bar's five buttons ran 300px off the right edge of a
+       phone, putting Wipe, Default settings and the theme switch where no
+       finger could reach them. Running Order, built from the same template,
+       had this already. */
+    @media(max-width:560px){
+      .topbar{flex-wrap:wrap;gap:6px;padding:.6rem .75rem}
+      .topbar-actions{flex-wrap:wrap;justify-content:flex-end}
+    }
     ::-webkit-scrollbar{width:5px}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
     hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
   </style>
+  <!-- Chimera Hub's look, loaded last; see chimera-hub.css. -->
+  <link rel="stylesheet" href="chimera-hub.css">
 </head>
 <body>
 

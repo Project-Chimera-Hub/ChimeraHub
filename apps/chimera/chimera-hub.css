@@ -1,0 +1,39 @@
+/*
+ * Chimera Hub's look, for Chimera as the hub serves it.
+ *
+ * Loaded last, so it wins without touching the app's own stylesheet: it
+ * reassigns Chimera's own colour, type and corner variables to the hub's —
+ * old gold on near-black, one monospace face, square corners — and squares
+ * the controls and panels that set a radius directly. Colours that carry
+ * meaning in the task (right and wrong, stimulus hues) are left as the app
+ * chose them. Remove this one <link> and the app is exactly what it was.
+ *
+ * No webfont: the face is whatever monospace the machine has, so the page
+ * makes no request to anybody and runs offline, as the hub and its APK do.
+ */
+
+:root {
+  --bg: #0a0906;
+  --panel: #18140b;
+  --panel-recessed: #14110a;
+  --border: #40351a;
+  --border-soft: #241e10;
+  --text: #eadfc2;
+  --text-muted: #a48f60;
+  --amber: #d4af37;
+  --amber-hover: #f0d27a;
+  --radius: 0;
+  --font-sans: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --font-mono: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+
+/* Controls and containers with a radius of their own. Circles drawn as
+   stimuli are not in this list and stay round. */
+button, input:not([type="radio"]):not([type="range"]), select, textarea, dialog,
+[class*="card"],
+[class*="btn"],
+[class*="panel"],
+[class*="pill"],
+[class*="modal"],
+[class*="chip"],
+[class*="seg"] { border-radius: 0 !important; }
