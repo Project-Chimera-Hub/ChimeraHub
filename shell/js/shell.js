@@ -197,18 +197,36 @@
       el.appendChild(span);
     }
 
-    /* Cards carry their own share, so the grid answers "what have I neglected"
-       without a second pass over the page. */
+    /* Icons carry their own share, and folders the sum of what is in them, so
+       the home screen answers "what have I neglected" without opening
+       anything. */
+    paintToday(q);
+  }
+
+  function todayHtml(t, q) {
+    var m = q.counted[t.id] || 0, was = q.raw[t.id] || 0;
+    return was <= 0 ? "—"
+      : m < was - 0.5
+        ? "<b>" + fmt(m) + "</b> of " + fmt(was) + " min"
+        : "<b>" + fmt(m) + " min</b>";
+  }
+
+  /* By attribute, not id: an icon can be on the home screen and in an open
+     folder at once. */
+  function paintToday(q) {
+    q = q || currentCount();
     TRAINERS.forEach(function (t) {
-      var m = q.counted[t.id] || 0, was = q.raw[t.id] || 0;
-      var html = was <= 0 ? "—"
-        : m < was - 0.5
-          ? "<b>" + fmt(m) + " min</b> counted of " + fmt(was)
-          : "<b>" + fmt(m) + " min</b> today";
-      /* By attribute, not id: a trainer in two categories has two cards. */
       var els = document.querySelectorAll('[data-today="' + t.id + '"]');
-      for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
+      for (var i = 0; i < els.length; i++) els[i].innerHTML = todayHtml(t, q);
     });
+    var fs = document.querySelectorAll("[data-folder-today]");
+    for (var j = 0; j < fs.length; j++) {
+      var sum = 0;
+      inside(fs[j].getAttribute("data-folder-today")).forEach(function (t) {
+        sum += q.counted[t.id] || 0;
+      });
+      fs[j].innerHTML = sum > 0 ? "<b>" + fmt(sum) + " min</b>" : "";
+    }
   }
 
   /* The field, its buttons and the sentence under them. Rendered rather than
@@ -237,72 +255,149 @@
     setGoal(Math.min(1440, n));
   }
 
-  function card(t) {
+  /* ---------------------------------------------------------------- *
+   * The home screen                                                  *
+   * ---------------------------------------------------------------- *
+   *
+   * Laid out like a phone's. Every category is a folder on the home
+   * screen; opening one shows its trainers as icons, and folders can hold
+   * folders (catalog.js `folders`). A trainer sits in one place only: its
+   * first category, or the folder it names. Empty folders stay, with a way
+   * to submit a trainer for them.
+   *
+   * Counting is told on the icon: minutes today under a counted trainer,
+   * "Not counted" and a dashed edge under one the meter cannot read.
+   */
+
+  var NODES = {};
+  CATALOG.categories.forEach(function (c) {
+    NODES[c.id] = { id: c.id, name: c.name, full: c.full, about: c.about, parent: null };
+  });
+  (CATALOG.folders || []).forEach(function (f) {
+    NODES[f.id] = { id: f.id, name: f.name, full: f.name, about: f.about, parent: f.parent };
+  });
+
+  function childFolders(id) {
+    return (CATALOG.folders || []).filter(function (f) { return f.parent === id; })
+      .map(function (f) { return NODES[f.id]; });
+  }
+  function childTrainers(id) {
+    return ALL.filter(function (t) { return (t.folder || t.categories[0]) === id; });
+  }
+  /** Every trainer in a folder and the folders inside it. */
+  function inside(id) {
+    var out = childTrainers(id);
+    childFolders(id).forEach(function (f) { out = out.concat(inside(f.id)); });
+    return out;
+  }
+
+  /* Two letters for an icon: a short name whole ("CCT", "eWMT"), else the
+     initials of its first two words, else its first two letters. */
+  function mark(name) {
+    var words = name.split(/\s+/);
+    if (words.length === 1) return name.length <= 4 ? name : name.slice(0, 2);
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
+  function trainerIcon(t) {
     var a = document.createElement("a");
-    a.className = "card" + (t.counted ? "" : " card--uncounted");
+    a.className = "icon" + (t.counted ? "" : " icon--uncounted");
     a.href = "#/" + t.id;
-    a.innerHTML =
-      '<span class="card__name"><span class="card__dot"></span>' + t.name + "</span>" +
-      '<div class="card__what"></div>' +
-      (t.counted
-        ? '<div class="card__today" data-today="' + t.id + '">—</div>'
-        : '<div class="card__today" title="No adapter reads this trainer\'s records, '
-          + 'so its time is not counted toward today or the quota.">Not counted</div>') +
-      '<span class="card__enter">Enter →</span>';
-    a.querySelector(".card__dot").style.background = t.colour;
-    a.querySelector(".card__what").textContent = t.what;
+    a.title = t.what;
+    a.innerHTML = '<span class="icon__tile"><span class="icon__mark"></span></span>'
+      + '<span class="icon__name"></span>'
+      + (t.counted ? '<span class="icon__today" data-today="' + t.id + '"></span>'
+                   : '<span class="icon__today" title="Its time is not counted toward today.">Not counted</span>');
+    a.querySelector(".icon__tile").style.setProperty("--c", t.colour);
+    a.querySelector(".icon__mark").textContent = mark(t.name);
+    a.querySelector(".icon__name").textContent = t.name;
     return a;
   }
 
-  /* One box per category, in the catalog's order, each holding every trainer
-     that lists it. Empty ones stay on the page, closed, with a way to submit
-     a trainer for them — an empty shelf says what the hub is looking for.
+  function folderIcon(node) {
+    var b = document.createElement("button");
+    var all = inside(node.id);
+    b.type = "button";
+    b.className = "icon icon--folder" + (all.length ? "" : " icon--empty");
+    b.setAttribute("data-folder", node.id);
+    b.setAttribute("aria-label", node.full + (all.length ? ", " + all.length + " trainers" : ", empty"));
+    b.innerHTML = '<span class="icon__tile folder"></span><span class="icon__name"></span>'
+      + '<span class="icon__today" data-folder-today="' + node.id + '"></span>';
+    /* A preview of what is inside, as a phone draws a folder: up to four, a
+       folder inside shown as a folder. */
+    var tile = b.querySelector(".folder");
+    childFolders(node.id).concat(childTrainers(node.id)).slice(0, 4).forEach(function (x) {
+      var mini = document.createElement("span");
+      mini.className = "folder__mini" + (NODES[x.id] && !x.colour ? " folder__mini--folder" : "");
+      if (x.colour) mini.style.background = x.colour;
+      tile.appendChild(mini);
+    });
+    b.querySelector(".icon__name").textContent = node.name;
+    b.addEventListener("click", function () { openFolder(node.id, b); });
+    return b;
+  }
 
-     Counting is no longer told apart by which box a card sits in but by the
-     card itself: "Not counted" where the minutes would be, and a dashed edge,
-     the same dash the uncounted box used to have. */
   function renderGrid() {
     var root = $("cats");
     root.textContent = "";
-    CATALOG.categories.forEach(function (c) {
-      var members = ALL.filter(function (t) { return t.categories.indexOf(c.id) >= 0; });
-
-      var box = document.createElement("details");
-      box.className = "cat" + (members.length ? "" : " cat--empty");
-      box.id = "cat-" + c.id;
-      box.open = members.length > 0;
-
-      var head = document.createElement("summary");
-      head.className = "cat__head";
-      head.innerHTML = '<span class="cat__name"></span><span class="cat__full"></span>'
-        + '<span class="cat__count"></span>';
-      head.querySelector(".cat__name").textContent = c.name;
-      head.querySelector(".cat__full").textContent = c.full !== c.name ? c.full : "";
-      head.querySelector(".cat__count").textContent = members.length ? String(members.length) : "empty";
-      box.appendChild(head);
-
-      var about = document.createElement("p");
-      about.className = "cat__about";
-      about.textContent = c.about + " ";
-      if (!members.length) {
-        var link = document.createElement("a");
-        link.href = CATALOG.submit;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = "Empty — submit a trainer ↗";
-        about.appendChild(link);
-      }
-      box.appendChild(about);
-
-      if (members.length) {
-        var grid = document.createElement("div");
-        grid.className = "grid";
-        members.forEach(function (t) { grid.appendChild(card(t)); });
-        box.appendChild(grid);
-      }
-      root.appendChild(box);
-    });
+    CATALOG.categories.forEach(function (c) { root.appendChild(folderIcon(NODES[c.id])); });
+    if (openPath.length) renderFolder();
+    paintToday();
   }
+
+  /* ---- an open folder: a panel over the home screen ---- */
+
+  var openPath = [];       // folder ids, outermost first
+  var openedFrom = null;   // the home-screen icon to give focus back to
+
+  function openFolder(id, from) {
+    if (!openPath.length) openedFrom = from || null;
+    openPath.push(id);
+    renderFolder();
+  }
+
+  function closeFolder() {
+    openPath = [];
+    $("folder").hidden = true;
+    document.body.classList.remove("folder-open");
+    if (openedFrom) openedFrom.focus();
+  }
+
+  function upFolder() {
+    openPath.pop();
+    if (openPath.length) renderFolder(); else closeFolder();
+  }
+
+  function renderFolder() {
+    var node = NODES[openPath[openPath.length - 1]];
+    var panel = $("folder-panel");
+    $("folder-back").hidden = openPath.length < 2;
+    $("folder-title").textContent = openPath.map(function (id) { return NODES[id].name; }).join(" › ");
+    $("folder-about").textContent = (node.full !== node.name ? node.full + ". " : "") + node.about;
+
+    var grid = $("folder-grid");
+    grid.textContent = "";
+    childFolders(node.id).forEach(function (f) { grid.appendChild(folderIcon(f)); });
+    childTrainers(node.id).forEach(function (t) { grid.appendChild(trainerIcon(t)); });
+
+    var empty = $("folder-empty");
+    empty.hidden = inside(node.id).length > 0;
+
+    $("folder").hidden = false;
+    document.body.classList.add("folder-open");
+    paintToday();
+    var first = grid.querySelector(".icon") || panel.querySelector("a, button");
+    if (first) first.focus();
+  }
+
+  $("folder-close").addEventListener("click", closeFolder);
+  $("folder-back").addEventListener("click", upFolder);
+  /* A click on the dimmed home screen around the panel closes it, as on a
+     phone; a click inside it does not. */
+  $("folder").addEventListener("click", function (e) { if (e.target === $("folder")) closeFolder(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && openPath.length && !$("hub").hidden) { e.preventDefault(); upFolder(); }
+  });
 
   /* ---------------------------------------------------------------- *
    * The stage                                                        *

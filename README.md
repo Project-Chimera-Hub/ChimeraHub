@@ -24,24 +24,24 @@ test/       the hub's tests
 
 ## Categories
 
-The menu sorts trainers by what they train, from `shell/js/catalog.js` — the
-one list of every trainer and category on the hub. A trainer has a main
-category and can be listed under more; a category can be empty, and an empty
-one stays on the menu, folded, with a link to submit a trainer for it.
+The hub's trainers are laid out like apps on a phone. Each category is a
+folder on the home screen, showing a preview of what is inside; tapping one
+opens it, and folders can hold folders. Every trainer sits in one place: its
+first category, or a folder inside it. All of it comes from
+`shell/js/catalog.js`, the one list of trainers, categories and folders.
 
-| Category | | Trainers |
+| Folder | | Inside |
 |---|---|---|
-| RRT | relational reasoning training | Syllogimous, Running Order, Relation Streams, Relational N-back |
-| N-back | | Relation Streams, Relational N-back, eWMT, Threshold N-back, N-back Constant Change, Chimera |
+| RRT | relational reasoning training | Syllogimous, Running Order, and the **Relational N-back** folder: Relation Streams, Relational N-back |
+| N-back | | eWMT, Threshold N-back, N-back Constant Change |
 | CCT | cognitive control training | CCT, Chimera |
 | ATT | attention training technique | Attention Training |
 | MOT | multiple object tracking | Earshot |
-| Posner | Posner cueing | — |
-| Spatial | mental rotation and spatial reasoning | — |
-| Imagery | mental imagery | — |
-| Inhibition | inhibition and task switching | — |
-| Speed | processing speed and useful field of view | — |
-| Other | | — |
+| Posner, Spatial, Imagery, Inhibition, Speed, Other | | empty, with a link to submit a trainer |
+
+A trainer's other categories (Relation Streams and Relational N-back are
+n-backs too, Chimera has n-back modes) stay in the catalog for the data and
+the submission check, without a second copy on the screen.
 
 ## The trainers
 

@@ -514,6 +514,35 @@ test("the catalog is consistent: ids, categories and colours", () => {
   }
 });
 
+test("the home screen is a tree every trainer is in, once", () => {
+  /* Folders, like a phone's: each category is one, folders sit in a category
+     or another folder, and a trainer sits in its first category or the folder
+     it names. A folder whose parent does not exist, or a cycle, would leave
+     trainers that no tap reaches. */
+  const cats = new Set(CATALOG.categories.map((c) => c.id));
+  const folders = CATALOG.folders || [];
+  const nodes = new Set([...cats, ...folders.map((f) => f.id)]);
+  assert.strictEqual(nodes.size, cats.size + folders.length, "a folder shares an id with a category or another folder");
+  for (const f of folders) {
+    assert.ok(nodes.has(f.parent) && f.parent !== f.id, `folder ${f.id} has no parent ${f.parent}`);
+    let at = f.parent, hops = 0;
+    while (!cats.has(at)) { at = folders.find((x) => x.id === at).parent; assert.ok(++hops < 20, `folder ${f.id} is in a cycle`); }
+  }
+  for (const t of CATALOG.trainers) {
+    const home = t.folder || t.categories[0];
+    assert.ok(nodes.has(home), `${t.id} sits in ${home}, which is not a folder`);
+    if (t.folder) {
+      let at = t.folder;
+      while (!cats.has(at)) at = folders.find((x) => x.id === at).parent;
+      assert.ok(t.categories.includes(at), `${t.id}'s folder is under ${at}, a category it does not list`);
+    }
+  }
+  const rnf = folders.find((f) => f.id === "relational-nback");
+  assert.ok(rnf, "the Relational N-back folder is gone");
+  assert.deepStrictEqual(CATALOG.trainers.filter((t) => t.folder === "relational-nback").map((t) => t.id).sort(),
+    ["relational", "rnb"]);
+});
+
 test("the page loads the catalog before the shell", () => {
   const html = readFileSync(path.join(__dirname, "..", "shell", "index.html"), "utf8");
   assert.ok(html.includes("js/catalog.js"), "shell/index.html does not load catalog.js");

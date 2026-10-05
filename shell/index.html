@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chimera Hub</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=14">
+<link rel="stylesheet" href="css/shell.css?v=15">
 </head>
 <body data-base="%BASE%">
 
@@ -33,9 +33,27 @@
   </section>
 
   <h2 id="today-h">Trainers</h2>
-  <!-- By category, from shell/js/catalog.js. A trainer whose time is not
-       counted toward the day says so on its own card, with a dashed edge. -->
-  <div class="cats" id="cats"></div>
+  <!-- A home screen, like a phone's: one folder per category, from
+       shell/js/catalog.js, and folders inside folders. -->
+  <div class="home" id="cats"></div>
+
+  <!-- An open folder, over the home screen. Inside #hub, so it hides with
+       it while a trainer is open and is still open on the way back. -->
+  <div class="folder-veil" id="folder" hidden>
+    <div class="folder-panel" id="folder-panel" role="dialog" aria-modal="true" aria-labelledby="folder-title">
+      <div class="folder-panel__head">
+        <button class="btn ghost btn--icon" type="button" id="folder-back" aria-label="Back" hidden>←</button>
+        <h3 class="folder-panel__title" id="folder-title"></h3>
+        <button class="btn ghost btn--icon" type="button" id="folder-close" aria-label="Close">✕</button>
+      </div>
+      <p class="folder-panel__about" id="folder-about"></p>
+      <div class="home home--folder" id="folder-grid"></div>
+      <p class="folder-panel__empty" id="folder-empty" hidden>
+        Nothing here yet. <a href="https://github.com/Project-Chimera-Hub/ChimeraHub/issues/new?template=submit-trainer.yml"
+           target="_blank" rel="noopener">Submit a trainer ↗</a>
+      </p>
+    </div>
+  </div>
 
   <h2>The record</h2>
   <div class="aside-card">
@@ -118,7 +136,7 @@
 <script src="shared/share-kit/share-kit.js?v=1"></script>
 <script src="js/share.js?v=4"></script>
 <script src="js/pause.js?v=1"></script>
-<script src="js/catalog.js?v=1"></script>
-<script src="js/shell.js?v=14"></script>
+<script src="js/catalog.js?v=2"></script>
+<script src="js/shell.js?v=15"></script>
 </body>
 </html>

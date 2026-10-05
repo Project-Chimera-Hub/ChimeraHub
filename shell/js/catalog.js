@@ -13,9 +13,16 @@
 
    ── Categories ──
 
-   Listed in the order the menu shows them. A category can be empty; it still
-   shows, with a way to submit a trainer for it, because an empty shelf says
-   what the hub is looking for better than a missing one does.
+   The hub's home screen is laid out like a phone's: each category is a
+   folder, in this order, and opening one shows the trainers inside as icons.
+   A category can be empty; its folder still shows, with a way to submit a
+   trainer for it, because an empty shelf says what the hub is looking for.
+
+   ── Folders ──
+
+   Folders inside a category's folder, boxes within boxes, for trainers that
+   are variants of one idea. `parent` is the category (or another folder) it
+   sits in.
 
    ── Trainers ──
 
@@ -23,9 +30,12 @@
                 trainer's minutes, so it never changes once a trainer has
                 history, even when the name on the card does (Threshold
                 N-back is `precision`).
-   `categories` the first is where it belongs; any after it are where else a
-                player would reasonably look for it, and it is listed there
-                too.
+   `categories` what it trains. The first is its home: the folder it sits in
+                on the hub, like an app on a phone, in one place only. Any
+                after it say what else it trains, for the submission check
+                and the data, and do not put a second copy on the screen.
+   `folder`     optional: a folder inside its home category to sit in
+                instead (see `folders`), for trainers that belong together.
    `counted`    true when an adapter reads its storage, so its time counts
                 toward the day and the quota. False shows it on the menu with
                 "Not counted" and a dashed edge. A trainer that writes the
@@ -61,6 +71,11 @@ var CATALOG = {
       about: "Anything else." },
   ],
 
+  folders: [
+    { id: "relational-nback", name: "Relational N-back", parent: "rrt",
+      about: "N-back over relations: streams of them, held n steps back." },
+  ],
+
   trainers: [
     { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#d29922",
       categories: ["rrt"], counted: true,
@@ -69,10 +84,10 @@ var CATALOG = {
       categories: ["rrt"], counted: true,
       what: "Place each symbol, then name its rank" },
     { id: "rnb", name: "Relation Streams", path: "rnb/", colour: "#f778ba",
-      categories: ["rrt", "nback"], counted: true,
+      categories: ["rrt", "nback"], folder: "relational-nback", counted: true,
       what: "N-back over relations, with a ladder" },
     { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
-      categories: ["rrt", "nback"], counted: true,
+      categories: ["rrt", "nback"], folder: "relational-nback", counted: true,
       what: "Four streams of relations, n back" },
     { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
       categories: ["nback"], counted: true,

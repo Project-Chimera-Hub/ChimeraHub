@@ -356,50 +356,133 @@ h2::after {
  * A box within the page, dashed like the archive's card because it says the
  * same thing — here, but not training the day can see. Its own grid inside,
  * ruled like the one above so the cards still read as a menu. */
-/* ---- categories ----
-   One box per category, the trainers in it as cards. Empty categories stay
-   on the page, closed and quieter, because an empty shelf is an invitation. */
+/* ---- the home screen ----
+   Laid out like a phone's: square tiles in rows, a label under each, folders
+   that open into a panel and can hold folders. Square, like everything else
+   here; the trainer's colour is the only colour on its tile. */
 
-.cats { display: flex; flex-direction: column; gap: .9rem; }
+.home {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 1.4rem .8rem;
+  padding: .4rem 0 .6rem;
+}
 
-.cat {
-  padding: 1rem 1.2rem 1.2rem;
-  background: var(--panel);
+.icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .45rem;
+  min-width: 0;
+  padding: .3rem .2rem;
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+.icon__tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 68px;
+  height: 68px;
+  background: var(--panel-hi);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--line), inset 0 -3px 0 var(--c, var(--accent));
+  transition: box-shadow .14s, transform .14s;
 }
-.cat--empty { padding-bottom: 1rem; background: transparent; border-style: dashed; }
-.cat__head {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: .3rem .8rem;
-  cursor: pointer;
-  list-style: none;
-  font-size: .78rem;
-  letter-spacing: .24em;
-  text-transform: uppercase;
-  color: var(--dim);
+.icon__mark {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--c, var(--accent));
 }
-.cat__head::-webkit-details-marker { display: none; }
-.cat__head::before { content: "▸"; transition: transform .14s; }
-.cat[open] > .cat__head::before { transform: rotate(90deg); }
-.cat__head:hover { color: var(--ink); }
-.cat__name { color: var(--ink-strong); }
-.cat__full { letter-spacing: .14em; }
-.cat__count { margin-left: auto; color: var(--accent); letter-spacing: .1em; }
-.cat--empty .cat__count { color: var(--dim); }
-.cat__about { margin: .7rem 0 1rem; font-size: .82rem; color: var(--dim); }
-.cat--empty .cat__about { margin-bottom: 0; }
-.cat__about a { color: var(--accent-2); }
-.cat .card { background: transparent; }
-.cat .card:hover, .cat .card:focus-visible { background: var(--panel-hi); }
+.icon__name {
+  max-width: 100%;
+  font-size: .72rem;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.icon__today { min-height: 1em; font-size: .66rem; color: var(--dim); }
+.icon__today b { color: var(--ok); font-weight: 600; }
+.icon:hover .icon__tile, .icon:focus-visible .icon__tile {
+  box-shadow: 0 0 0 1px var(--accent), inset 0 -3px 0 var(--c, var(--accent));
+}
+.icon:focus-visible { outline: none; }
+.icon:active .icon__tile { transform: scale(.96); }
 
-/* Not counted toward the day: said on the card, and drawn with the dashed
-   edge the uncounted box used to have, so the meter's rule stays visible. */
-.card--uncounted { border: 1px dashed var(--line); box-shadow: none; }
+/* Not counted toward the day: the dashed edge the uncounted box used to have. */
+.icon--uncounted .icon__tile { box-shadow: none; outline: 1px dashed var(--line); outline-offset: 0; }
+.icon--uncounted:hover .icon__tile { outline-color: var(--accent); }
+
+/* A folder: a preview of up to four things inside, in their colours. */
+.icon__tile.folder {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 5px;
+  padding: 9px;
+  place-items: stretch;
+  background: rgba(var(--accent-rgb), .07);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.folder__mini { background: var(--accent); opacity: .85; }
+.folder__mini--folder { background: none; box-shadow: inset 0 0 0 1px var(--accent); opacity: 1; }
+.icon--empty .icon__tile.folder { background: none; box-shadow: none; outline: 1px dashed var(--line); }
+.icon--empty .icon__name { color: var(--dim); }
+
+/* ---- an open folder ---- */
+
+.folder-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 9, 6, .78);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.folder-veil[hidden] { display: none; }
+body.folder-open { overflow: hidden; }
+.folder-panel {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 1.1rem 1.3rem 1.4rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.folder-panel__head { display: flex; align-items: center; gap: .6rem; }
+.folder-panel__head .btn[hidden] { display: none; }
+.folder-panel__title {
+  flex: 1;
+  margin: 0;
+  font-size: .82rem;
+  font-weight: 500;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.folder-panel__about { margin: .6rem 0 1rem; font-size: .8rem; color: var(--dim); }
+.folder-panel__empty { margin: 0; font-size: .82rem; color: var(--dim); }
+.folder-panel__empty a { color: var(--accent-2); }
+.home--folder { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+
+@media (max-width: 520px) {
+  .home { grid-template-columns: repeat(4, 1fr); gap: 1.1rem .3rem; }
+  .icon__tile { width: 58px; height: 58px; }
+  .icon__tile.folder { padding: 7px; gap: 4px; }
+  .home--folder { grid-template-columns: repeat(3, 1fr); }
+}
 
 /* ---- the appearance row ---- */
 
@@ -579,7 +662,7 @@ h2::after {
 /* A machine that cannot blur what is behind a panel gets an opaque one
    instead, because the alternative is gold text directly on a photograph. */
 @media (prefers-reduced-transparency: reduce) {
-  .today, .card, .aside-card, .cat, .settings {
+  .today, .card, .aside-card, .icon__tile, .settings {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: #110e08;
