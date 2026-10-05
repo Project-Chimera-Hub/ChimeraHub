@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chimera Hub</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="css/shell.css?v=15">
+<link rel="stylesheet" href="css/shell.css?v=16">
 </head>
 <body data-base="%BASE%">
 
@@ -94,6 +94,9 @@
   <h2>Appearance</h2>
   <div class="settings">
     <span class="settings__label">Background</span>
+    <!-- The two drawn pictures. aria-pressed says which is chosen. -->
+    <button class="btn ghost" type="button" id="bg-battle" aria-pressed="true">Battle</button>
+    <button class="btn ghost" type="button" id="bg-forest" aria-pressed="false">Forest</button>
     <!-- A button rather than a styled <label for>, because a label is not
          keyboard-operable: it takes a click but not Enter or Space. -->
     <button class="btn" type="button" id="bg-pick">Choose image</button>
@@ -137,6 +140,6 @@
 <script src="js/share.js?v=4"></script>
 <script src="js/pause.js?v=1"></script>
 <script src="js/catalog.js?v=2"></script>
-<script src="js/shell.js?v=15"></script>
+<script src="js/shell.js?v=16"></script>
 </body>
 </html>

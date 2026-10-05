@@ -639,16 +639,49 @@
 
   /* The picture rides on <html> and the darkening on <body>, so setting this
      one property swaps the background without taking the overlay that keeps
-     text readable on it with it. Removing the property falls back to the drawn
-     forest in the stylesheet. */
+     text readable on it with it. Without a picture of your own, it is
+     whichever drawn one is chosen (applyBuiltin). */
+  /* Which drawn picture is behind the hub when no picture of your own is:
+     the battle (the stylesheet's default) or the forest. Per browser, in
+     localStorage, because it is a preference and not a record. */
+  var BUILTIN_KEY = "chimera.hub.background.v1";
+
+  function builtin() {
+    try { return localStorage.getItem(BUILTIN_KEY) === "forest" ? "forest" : "battle"; }
+    catch (e) { return "battle"; }
+  }
+
+  function applyBuiltin() {
+    var b = builtin();
+    if (b === "forest") document.documentElement.style.setProperty("--bg-image", "var(--bg-forest)");
+    else document.documentElement.style.removeProperty("--bg-image");
+    $("bg-battle").setAttribute("aria-pressed", String(b === "battle" && !bgUrl));
+    $("bg-forest").setAttribute("aria-pressed", String(b === "forest" && !bgUrl));
+  }
+
+  /* Choosing a drawn picture also lets go of a picture of your own: the
+     choice is what you see, not a setting hidden underneath one. */
+  function chooseBuiltin(name) {
+    try { localStorage.setItem(BUILTIN_KEY, name); } catch (e) { /* storage off: this visit only */ }
+    if (bgUrl) {
+      applyBg(null);
+      withStore("readwrite", function (st) { st["delete"](BG_KEY); });
+    } else {
+      applyBuiltin();
+    }
+    bgNote(name === "forest" ? "The forest." : "The battle.");
+  }
+
   function applyBg(blob) {
     if (bgUrl) { URL.revokeObjectURL(bgUrl); bgUrl = null; }
     if (!blob) {
-      document.documentElement.style.removeProperty("--bg-image");
+      applyBuiltin();
       return;
     }
     bgUrl = URL.createObjectURL(blob);
     document.documentElement.style.setProperty("--bg-image", 'url("' + bgUrl + '")');
+    $("bg-battle").setAttribute("aria-pressed", "false");
+    $("bg-forest").setAttribute("aria-pressed", "false");
   }
 
   /* Downscaled before it is stored. A phone photograph is 4000px across and
@@ -790,6 +823,9 @@
     e.target.value = "";
   });
   $("bg-clear").addEventListener("click", bgClear);
+  $("bg-battle").addEventListener("click", function () { chooseBuiltin("battle"); });
+  $("bg-forest").addEventListener("click", function () { chooseBuiltin("forest"); });
+  applyBuiltin();
   bgLoad();
 
 })();

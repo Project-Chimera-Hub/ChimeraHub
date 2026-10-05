@@ -273,8 +273,13 @@ out to `.3em`, not because it is a different colour from the paragraph under it
 — which is why the background can be swapped for any photograph at all without
 the page falling apart.
 
-**Appearance → Background → Choose image** does exactly that, and it is the one
-setting here. The picture is downscaled to 2560px, re-encoded, and kept in
+**Appearance → Background** offers the two drawn pictures — **Battle**, the
+default, and **Forest** — or **Choose image** for a picture of your own, and it
+is the one setting here. Battle is two red deer stags locked at the antlers on
+a crest under the moon, with two eagles at each other's talons above, drawn by
+`tools/backgrounds/battle.py` into `shell/backgrounds/battle.svg`; change a
+number there and run it again to redraw it. The archive keeps the forest, as it
+cannot load the hub's files. The picture is downscaled to 2560px, re-encoded, and kept in
 **IndexedDB** — deliberately not in localStorage, because that is where every
 trainer's history lives and the quota there is shared between all of them. A
 couple of megabytes of wallpaper is exactly what would push a long training

@@ -839,7 +839,7 @@ function rootTokens(file) {
 /* Same name on both sides, and the same value. */
 const SHARED = [
   "--bg", "--accent", "--accent-2", "--accent-rgb", "--ok", "--bad",
-  "--radius", "--shadow", "--font-display", "--font-body", "--bg-image",
+  "--radius", "--shadow", "--font-display", "--font-body",
 ];
 
 /* Different name, same value: the archive's own vocabulary over the hub's. */
@@ -849,6 +849,8 @@ const RENAMED = {
   "--text-primary": "--ink-strong",
   "--text-secondary": "--ink",
   "--text-muted": "--dim",
+  /* The forest is the hub's second picture now and the archive's only one. */
+  "--bg-image": "--bg-forest",
 };
 
 test("the archive's theme is the hub's, value for value", () => {
