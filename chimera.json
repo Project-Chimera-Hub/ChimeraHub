@@ -1,0 +1,13 @@
+{
+  "id": "posner-demo",
+  "name": "Posner Demo",
+  "what": "Covert orienting: say which side the star was on",
+  "categories": [
+    "posner"
+  ],
+  "unit": "target-ms",
+  "license": "MIT",
+  "maintainer": "Gagafutzi",
+  "repository": "https://github.com/Project-Chimera-Hub/ChimeraHub",
+  "build": null
+}
