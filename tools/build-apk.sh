@@ -54,6 +54,8 @@ npm install --no-audit --no-fund --silent
 [ -d android ] || npx --yes cap add android
 npx --yes cap sync android
 
+# tools/apk/assets/{icon,splash}.png are rendered from shell/favicon.svg by
+# tools/apk/make-assets.mjs; capacitor-assets cuts every Android size from them.
 echo "── [4/5] icon and splash, from shell/favicon.svg"
 npx --yes capacitor-assets generate --android
 
