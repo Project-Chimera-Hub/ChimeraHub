@@ -20,6 +20,7 @@
     { "prefix": "apps/more/att",     "owner": "projectchimera-dot", "repo": "ATT",                    "branch": "main" },
     { "prefix": "apps/more/earshot", "owner": "projectchimera-dot", "repo": "earshot",                "branch": "main" },
     { "prefix": "apps/more/quadbox", "owner": "projectchimera-dot", "repo": "N-back-Constant-change", "branch": "main" },
+    { "prefix": "apps/posner-demo", "owner": "Project-Chimera-Hub", "repo": "ChimeraHub", "branch": "demo/posner-trainer" },
     { "prefix": "apps/archive",      "owner": "Gagafutzi",          "repo": "training-archive",       "branch": "main" }
   ]
 }

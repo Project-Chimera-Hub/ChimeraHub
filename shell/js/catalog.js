@@ -95,6 +95,9 @@ var CATALOG = {
     { id: "earshot", name: "Earshot", path: "more/earshot/", colour: "#56d4dd",
       categories: ["mot"], counted: false,
       what: "Track moving sounds by ear — 3D object tracking, for the ears" },
+    { id: "posner-demo", name: "Posner Demo", path: "posner-demo/", colour: "#79c0ff",
+      categories: ["posner"], counted: true,
+      what: "Covert orienting: say which side the star was on" },
   ],
 
   /* Where "submit one" goes. A link the player follows, not a request the
