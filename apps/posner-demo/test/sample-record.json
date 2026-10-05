@@ -1,0 +1,305 @@
+{
+ "format": "chimera-record",
+ "version": 1,
+ "app": "posner-demo",
+ "units": {
+  "level": "target-ms"
+ },
+ "sessions": [
+  {
+   "id": "1791176768118-a90hf4",
+   "start": 1791176768118,
+   "end": 1791176786910,
+   "activeSeconds": 17.2,
+   "completed": true,
+   "input": "keyboard",
+   "mode": "exogenous",
+   "level": 300,
+   "trials": 16,
+   "correct": 15,
+   "accuracy": 0.9375,
+   "hits": 16,
+   "misses": 0,
+   "falseAlarms": 0,
+   "correctRejections": 0,
+   "rtMeanMs": 11,
+   "rtMedianMs": 10,
+   "rtSdMs": 9,
+   "settings": {
+    "trials": 16,
+    "validity": 0.8,
+    "cue": "exogenous",
+    "soa": 100,
+    "sound": false
+   },
+   "extra": {
+    "validityEffectMs": -2,
+    "soa": 100,
+    "validity": 0.8
+   },
+   "trialLog": [
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 10,
+     "extra": {
+      "valid": true
+     },
+     "i": 0,
+     "t": 793
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "left"
+     },
+     "target": true,
+     "response": "left",
+     "correct": true,
+     "rtMs": 17,
+     "extra": {
+      "valid": true
+     },
+     "i": 1,
+     "t": 1804
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 17,
+     "extra": {
+      "valid": true
+     },
+     "i": 2,
+     "t": 2787
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 39,
+     "extra": {
+      "valid": true
+     },
+     "i": 3,
+     "t": 3888
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "left"
+     },
+     "target": true,
+     "response": "left",
+     "correct": true,
+     "rtMs": 11,
+     "extra": {
+      "valid": true
+     },
+     "i": 4,
+     "t": 5154
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "left"
+     },
+     "target": true,
+     "response": "right",
+     "correct": false,
+     "rtMs": 16,
+     "extra": {
+      "valid": true
+     },
+     "i": 5,
+     "t": 6266
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 6,
+     "extra": {
+      "valid": true
+     },
+     "i": 6,
+     "t": 7560
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 8,
+     "extra": {
+      "valid": false
+     },
+     "i": 7,
+     "t": 8566
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 3,
+     "extra": {
+      "valid": true
+     },
+     "i": 8,
+     "t": 9685
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "left"
+     },
+     "target": true,
+     "response": "left",
+     "correct": true,
+     "rtMs": 11,
+     "extra": {
+      "valid": true
+     },
+     "i": 9,
+     "t": 10623
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 2,
+     "extra": {
+      "valid": false
+     },
+     "i": 10,
+     "t": 11697
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "left",
+      "target": "left"
+     },
+     "target": true,
+     "response": "left",
+     "correct": true,
+     "rtMs": 2,
+     "extra": {
+      "valid": true
+     },
+     "i": 11,
+     "t": 12793
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "left"
+     },
+     "target": true,
+     "response": "left",
+     "correct": true,
+     "rtMs": 8,
+     "extra": {
+      "valid": false
+     },
+     "i": 12,
+     "t": 14071
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 2,
+     "extra": {
+      "valid": true
+     },
+     "i": 13,
+     "t": 15065
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 13,
+     "extra": {
+      "valid": true
+     },
+     "i": 14,
+     "t": 15991
+    },
+    {
+     "level": 300,
+     "stimulus": {
+      "cue": "right",
+      "target": "right"
+     },
+     "target": true,
+     "response": "right",
+     "correct": true,
+     "rtMs": 9,
+     "extra": {
+      "valid": true
+     },
+     "i": 15,
+     "t": 16918
+    }
+   ],
+   "levelEnd": 255
+  }
+ ],
+ "appVersion": "0.1.0",
+ "state": {
+  "level": 255
+ }
+}
