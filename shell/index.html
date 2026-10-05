@@ -15,7 +15,7 @@
     <h1>Chimera Hub</h1>
     <a class="btn ghost discord" href="https://discord.com/invite/chmr" target="_blank" rel="noopener">Discord ↗</a>
   </div>
-  <p class="dim">Eleven trainers in eleven categories, one record, one day's total.</p>
+  <p class="dim">Eleven trainers, one record, one daily total.</p>
 
   <section class="today" aria-labelledby="today-h">
     <div class="today__head">
@@ -24,7 +24,7 @@
         <!-- Every minute in any page here, nothing taken off. Shown, never
              read: the quota and the bar stay on the figure above. -->
         <div class="today__wall" id="wall"
-             title="All time with a trainer or the archive open today, nothing deducted. For reference only — the quota uses the figure beside it."></div>
+             title="Total time open today, nothing deducted. Goals use the main figure."></div>
       </div>
       <div class="dim" id="streak"></div>
     </div>
@@ -40,10 +40,8 @@
   <h2>The record</h2>
   <div class="aside-card">
     <p>
-      The archive is the file, and this page is not it. Nothing here is kept
-      anywhere that survives clearing site data — sort the record, write notes,
-      and <b>download the file</b>. Time spent in here is not training and does
-      not count toward the quota.
+      Your full training history. Clearing site data erases it, so
+      <b>download the file</b>. Time spent here isn't counted as training.
     </p>
     <a class="btn" id="archive-link" href="archive/">Open archive</a>
   </div>
@@ -53,18 +51,13 @@
   <h2>Share your data</h2>
   <div class="aside-card share">
     <p>
-      Optional, and it helps tune the trainers: how difficulty grows, where
-      people stall, whether one trainer carries over to another. The file holds,
-      for every answer in Syllogimous and every session in Relation Streams,
-      CCT, Chimera, Relational N-back, Earshot and Quad Box (and any
-      retired trainer this browser still remembers),
-      <b>the mode, its difficulty, how well it went and how long it took</b>, the
-      day, and a random participant id. No settings, nothing typed, no time of
-      day. eWMT and Attention Training keep no sessions, so they have nothing to
-      add. Quote the id in an issue on the repository to have your files deleted.
+      Optional; it helps tune the trainers. For each session the file holds
+      <b>the mode, difficulty, result and duration</b>, the day, and a random
+      participant ID. No settings, typed text or time of day. To have your
+      files deleted, quote the ID in an issue.
     </p>
     <label class="share__ok"><input type="checkbox" id="share-ok">
-      I agree to share this file for research on these trainers.</label>
+      I agree to share this file for research.</label>
     <button class="btn" type="button" id="share-make" disabled>Create my data file</button>
     <a class="btn" href="https://mega.nz/filerequest/F-2QAaKjCMY" target="_blank" rel="noopener">Upload ↗</a>
     <span class="settings__note" id="share-note"></span>

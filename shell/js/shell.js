@@ -224,9 +224,8 @@
     $("goal-clear").disabled = !n;
 
     $("goal-note").textContent = n
-      ? "Aiming at " + fmt(n) + " min a day. Kept in this browser, on this device."
-      : "No goal set. The day is counted either way — a goal only gives it "
-        + "something to be measured against.";
+      ? "Aiming at " + fmt(n) + " min a day. Saved on this device."
+      : "No goal set. Today is counted either way.";
   }
 
   /* Read out of the field and applied. Anything that is not a number above zero
@@ -290,7 +289,7 @@
         link.href = CATALOG.submit;
         link.target = "_blank";
         link.rel = "noopener";
-        link.textContent = "No trainer here yet — submit one ↗";
+        link.textContent = "Empty — submit a trainer ↗";
         about.appendChild(link);
       }
       box.appendChild(about);
@@ -524,11 +523,11 @@
     try {
       rq = indexedDB.open(BG_DB, 1);
     } catch (e) {
-      bgNote("This browser will not keep a background.");
+      bgNote("This browser can't keep a background.");
       return;
     }
     rq.onupgradeneeded = function () { rq.result.createObjectStore(BG_STORE); };
-    rq.onerror = function () { bgNote("This browser will not keep a background."); };
+    rq.onerror = function () { bgNote("This browser can't keep a background."); };
     rq.onsuccess = function () {
       var db = rq.result;
       try {
@@ -570,7 +569,7 @@
     var img = new Image();
     img.onerror = function () {
       URL.revokeObjectURL(src);
-      bgNote("That is not an image this browser can read.");
+      bgNote("That image can't be read.");
     };
     img.onload = function () {
       URL.revokeObjectURL(src);
@@ -583,7 +582,7 @@
         if (!blob) { bgNote("That image could not be converted."); return; }
         applyBg(blob);
         withStore("readwrite", function (st) { st.put(blob, BG_KEY); });
-        bgNote("Set. It stays in this browser, on this machine.");
+        bgNote("Set. Saved on this device only.");
       }, "image/jpeg", 0.86);
     };
     img.src = src;

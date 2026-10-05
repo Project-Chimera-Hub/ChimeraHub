@@ -81,9 +81,8 @@
 <header class="page-header">
   <h2>Training archive</h2>
   <p>
-    One record across every trainer. The <b>file is the archive</b> — this page only
-    maintains it. Nothing a browser holds survives clearing site data, so the copy
-    that matters is the one you download and keep.
+    One record across every trainer. The <b>file is the archive</b>: clearing site
+    data erases this page, so download and keep it.
   </p>
 </header>
 
@@ -109,22 +108,14 @@
   <details class="about">
     <summary>How this is read</summary>
     <p>
-      Where the whole record stands, on six bands of roughly similar proficiency
-      &mdash; &alpha; to &zeta;, from the <b>Guanxinandu S11</b> benchmark, which is
-      used here for its calibration rather than its test protocol: it says what
-      "about this good" looks like in five trainers' own units, and nothing else
-      supplies that. Each trainer is read against its own anchor, in its own units;
-      nothing averages one app's difficulty with another's.
+      Your level on six bands, &alpha; to &zeta;, calibrated against the
+      <b>Guanxinandu S11</b> benchmark. Each trainer is read in its own units;
+      none is averaged with another.
     </p>
     <p>
-      <b>Where a trainer keeps its own ability estimate, that is what is read</b> —
-      RNB's best cleared load, Syllogimous's ability posterior, eWMT's best n. Each
-      has already applied its own target accuracy and its own chance correction, and
-      those differ: RNB scores a block so that never pressing is 0 and perfect is 1,
-      where about 0.5 is four answers in five. So accuracy is not second-guessed
-      here, and there is no bar to clear. A thin reading is reported thin and
-      weighed light; it is never withheld, and no one trainer's settings can
-      suppress the rest.
+      <b>Where a trainer keeps its own ability estimate, that is what is read</b>
+      (RNB's best load, Syllogimous's ability, eWMT's best n). Thin evidence is
+      shown and weighted lightly, never hidden.
     </p>
   </details>
   <div id="abilityParts" class="modes"></div>
@@ -142,11 +133,8 @@
 <section id="year" class="panel">
   <div class="panel-head"><h2>The year</h2></div>
   <p class="dim">
-    One square per day. A <b>filled</b> square is a day with training; an
-    <b>empty</b> one is a rest day inside a stretch some export vouched for; a
-    <b>hatched</b> one is a day nobody has evidence about — usually because site
-    data was cleared before a backup was taken. Drawing the last two alike would
-    claim you rested through exactly the weeks the record was lost.
+    One square per day: <b>filled</b> for training, <b>empty</b> for a known rest
+    day, <b>hatched</b> where there is no record (often lost site data).
   </p>
   <div id="heatmap" class="heatmap"></div>
   <div class="legend" aria-hidden="true">
@@ -159,11 +147,8 @@
 <section id="over-time" class="panel">
   <div class="panel-head"><h2>Over time</h2></div>
   <p class="dim">
-    Minutes as bars, <b>difficulty</b> as the line &mdash; because an adaptive
-    trainer holds accuracy at a target and moves the difficulty until it gets
-    there. A flat accuracy line means the controller is working and says nothing
-    about whether you improved; what improved is whatever had to rise to keep it
-    flat. Accuracy is in each day's tooltip, where it belongs.
+    Minutes as bars, <b>difficulty</b> as the line. Adaptive trainers hold accuracy
+    steady, so progress shows in difficulty. Accuracy is in each day's tooltip.
   </p>
   <div id="charts" class="charts"></div>
 </section>
@@ -176,10 +161,8 @@
 <section id="overlap" class="panel">
   <div class="panel-head"><h2>Overlap</h2></div>
   <p class="dim">
-    Comparing two trainers needs weeks in which both were played. Until there are
-    enough, this counts them and says nothing else — with a handful of days, the
-    strongest correlation between two <em>unrelated</em> measures still looks
-    convincing, so a number here would mislead exactly when it was least earned.
+    Comparing two trainers needs weeks where both were played. Until then this
+    only counts them, since a few days give misleading correlations.
   </p>
   <div id="overlapCards" class="cards"></div>
 </section>
@@ -201,11 +184,8 @@
 <section id="notes" class="panel">
   <div class="panel-head"><h2>Notes</h2></div>
   <p class="dim">
-    Everything the trainers cannot tell you &mdash; a test score, an illness, a
-    change of dose, a month you felt slow. None of it is in any export, and all
-    of it is what makes a two-year series readable. Notes live in the archive
-    file with the records, and in <b>no export anywhere</b>: this file or
-    nowhere.
+    What the trainers can't record: a test score, an illness, a change of dose.
+    Notes are saved <b>only in this archive file</b>.
   </p>
 
   <form id="noteForm" class="noteform">
@@ -253,10 +233,8 @@
 <section id="anecdote" class="panel">
   <div class="panel-head"><h2>Anecdote</h2></div>
   <p class="dim">
-    A test before training and the same test after, with everything done in
-    between: total time, days trained, each trainer's difficulty from start to
-    end. The two scores come from your notes &mdash; add a note with a
-    <b>measure</b> (say <code>JCTI</code>, <code>118</code>, <code>IQ</code>) for each sitting.
+    A test before training and after, with what happened in between. The scores
+    come from notes with a <b>measure</b> (e.g. <code>JCTI</code>, <code>118</code>).
   </p>
   <p id="anecEmpty" class="dim" hidden></p>
   <div id="anecControls" class="anecform">
