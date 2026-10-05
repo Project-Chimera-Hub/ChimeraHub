@@ -427,7 +427,7 @@ test("every counted trainer is a source an adapter reports", () => {
   const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
   const block = src.slice(src.indexOf("var TRAINERS = ["), src.indexOf("];", src.indexOf("var TRAINERS = [")));
   const ids = [...block.matchAll(/id: "([^"]+)"/g)].map((m) => m[1]);
-  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "relational", "rnb", "syllogimous"]);
+  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "precision", "relational", "rnb", "rrt", "syllogimous"]);
   const adapters = readFileSync(path.join(__dirname, "..", "apps", "archive", "js", "adapters.js"), "utf8");
   for (const id of ids) {
     /* Syllogimous's reader is shared with Isomorph's and takes the source as

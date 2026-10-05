@@ -1,0 +1,2739 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Running Order – Relational Reasoning Training</title>
+  <!-- No webfont: DM Mono and Outfit are used when the machine has them and the
+       stacks below fall back to its own monospace and sans-serif when not. The
+       hub makes no request to anybody, and neither does a trainer on it. -->
+  <style>
+    :root {
+      --bg:#0d0e11;--surface:#161820;--surface2:#1e2029;--surface3:#252836;
+      --border:#2a2d3a;--border2:#363a4d;
+      --text:#e8eaf0;--text-dim:#7a7f96;--text-faint:#42465a;
+      --accent:#4fffb0;--accent-dim:rgba(79,255,176,0.10);--accent-glow:rgba(79,255,176,0.22);
+      --danger:#ff4d6d;--danger-dim:rgba(255,77,109,0.12);
+      --warn:#ffb347;--warn-dim:rgba(255,179,71,0.13);
+      /* One hue per axis, for the cue that says which rank to report. Kept off
+         --accent (the new symbol), --danger (wrong) and the feedback band, so a
+         colour never means two things at once. */
+      --ax-0:#6aa6ff;--ax-1:#b98cff;--ax-2:#5ad8d0;--ax-3:#ffc46b;
+      --info:#5ba4ff;--info-dim:rgba(91,164,255,0.12);
+      --radius-sm:6px;--radius-md:12px;--radius-lg:18px;
+      --mono:'DM Mono',monospace;--sans:'Outfit',sans-serif;
+      --t:200ms cubic-bezier(0.4,0,0.2,1);
+    }
+    [data-theme="light"]{
+      --bg:#f0f2f8;--surface:#fff;--surface2:#eceef5;--surface3:#e4e7f2;
+      --border:#dde0ec;--border2:#c8cce0;
+      --text:#1a1c28;--text-dim:#5a5f78;--text-faint:#a0a5be;
+      --accent:#008f58;--accent-dim:rgba(0,143,88,0.08);--accent-glow:rgba(0,143,88,0.18);
+      --danger:#d62048;--danger-dim:rgba(214,32,72,0.10);
+      --warn:#b05500;--warn-dim:rgba(176,85,0,0.10);
+      --ax-0:#2563c9;--ax-1:#7c3aed;--ax-2:#0d7a72;--ax-3:#a35a00;
+      --info:#1a6fe0;--info-dim:rgba(26,111,224,0.10);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+    .page{display:none;flex-direction:column;min-height:100vh}
+    .page.active{display:flex}
+    .shell{max-width:740px;width:calc(100% - 2rem);margin:0 auto;padding:2rem 0 5rem;flex:1}
+
+    /* Topbar */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:50}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent-glow);flex-shrink:0}
+    .brand-name{font-family:var(--mono);font-size:0.95rem;font-weight:500;letter-spacing:0.04em}
+    .brand-tag{font-family:var(--mono);font-size:0.62rem;color:var(--text-faint);letter-spacing:0.06em}
+    .topbar-actions{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--t)}
+    .icon-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .icon-btn svg{width:15px;height:15px}
+
+    /* Section labels */
+    .section-label{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint);padding:1.4rem 0 0.5rem;display:flex;align-items:center;gap:0.75rem}
+    .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* Cards */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:0.75rem;transition:border-color var(--t)}
+    .card:hover{border-color:var(--border2)}
+    .card-head{padding:0.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2)}
+    .card-title{font-size:0.7rem;font-family:var(--mono);color:var(--text-dim);letter-spacing:0.09em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+    .card-icon{width:18px;height:18px;background:var(--accent-dim);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+    .card-icon svg{width:10px;height:10px}
+    .card-body{padding:1.25rem}
+
+    /* Typography */
+    h1{font-size:2rem;font-weight:700;line-height:1.15}
+    h2{font-size:1.35rem;font-weight:600}
+    p{line-height:1.7;color:var(--text-dim);font-size:0.9rem}
+    strong{color:var(--text)}
+
+    /* Pills */
+    .pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:0.67rem;padding:2px 9px;border-radius:99px;background:var(--accent-dim);color:var(--accent);letter-spacing:0.05em;border:1px solid rgba(79,255,176,0.18)}
+    [data-theme="light"] .pill{border-color:rgba(0,143,88,0.2)}
+    .pill-danger{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,77,109,0.2)}
+    .pill-info{background:var(--info-dim);color:var(--info);border-color:rgba(91,164,255,0.2)}
+    .pill-warn{background:var(--warn-dim);color:var(--warn);border-color:rgba(255,179,71,0.2)}
+
+    /* Callouts */
+    .callout{border-left:2px solid var(--accent);background:var(--accent-dim);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:0.85rem 1.1rem;margin:0.75rem 0}
+    .callout p{color:var(--text);font-size:0.875rem}
+    .callout-warn{border-left-color:var(--warn);background:var(--warn-dim)}
+
+    /* Form */
+    .field{margin-bottom:1.1rem}
+    .field:last-child{margin-bottom:0}
+    .label{display:block;font-size:0.7rem;font-family:var(--mono);color:var(--text-dim);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.45rem}
+    .hint-fold summary{cursor:pointer;list-style:none;display:block}
+    .hint-fold summary::-webkit-details-marker{display:none}
+    .hint-fold summary::after{content:' \25b8';opacity:.55}
+    .hint-fold[open] summary::after{content:' \25be'}
+    .hint-fold summary:hover{color:var(--text-dim)}
+    .hint-fold > div{margin-top:.4rem}
+    .hint{font-size:0.72rem;color:var(--text-faint);margin-top:0.3rem;line-height:1.5}
+    .row{display:flex;align-items:center;gap:0.875rem;flex-wrap:wrap}
+    /* Selects were the browser's own, which on every platform is a different
+       shape, a different font and a different grey from everything around it.
+       Same surface, border and mono face as the number inputs, with the arrow
+       drawn rather than left to the platform. */
+    select{-webkit-appearance:none;appearance:none;background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:.85rem;
+      padding:.5rem 2rem .5rem .7rem;outline:none;cursor:pointer;transition:all var(--t);
+      background-image:linear-gradient(45deg,transparent 50%,var(--text-dim) 50%),linear-gradient(135deg,var(--text-dim) 50%,transparent 50%);
+      background-position:calc(100% - 15px) calc(50% + 1px),calc(100% - 10px) calc(50% + 1px);
+      background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+    select:hover{border-color:var(--border2)}
+    select:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+    select option{background:var(--surface2);color:var(--text)}
+    /* Radios and checkboxes keep the platform control but take the accent, so a
+       chosen option reads as chosen in this app's colour rather than the OS's. */
+    input[type=radio],input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+
+    /* A settings card folds from its head. The body is what scrolls past; the
+       heads are the map, and a map you can see is the whole point. */
+    .card.collapsible > .card-head{cursor:pointer;user-select:none}
+    .card.collapsible > .card-head::after{content:'\25be';color:var(--text-faint);font-size:.8rem;margin-left:.6rem;transition:transform var(--t)}
+    .card.collapsed > .card-head::after{transform:rotate(-90deg)}
+    .card.collapsed > .card-head{border-bottom:none}
+    .card.collapsed > .card-body{display:none}
+    .num-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:1rem;padding:0.45rem 0.7rem;width:80px;outline:none;transition:all var(--t)}
+    .num-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+
+    /* Sliders */
+    .slider-row{display:flex;align-items:center;gap:0.75rem}
+    .slider{-webkit-appearance:none;appearance:none;background:var(--surface3);height:5px;border-radius:99px;outline:none;width:100%;cursor:pointer;border:1px solid var(--border)}
+    .slider::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 0 2px var(--accent-dim),0 2px 5px rgba(0,0,0,.3);transition:transform var(--t),box-shadow var(--t);cursor:grab}
+    .slider::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 0 0 4px var(--accent-dim),0 2px 8px rgba(0,0,0,.35)}
+    .slider::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.05)}
+    .slider::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:grab}
+    .slider-val{font-family:var(--mono);font-size:0.85rem;color:var(--accent);min-width:60px;text-align:right;flex-shrink:0}
+    /* Ticks */
+    .tick-row{position:absolute;bottom:0;left:0;right:0;pointer-events:none;height:18px}
+    .tick{display:flex;flex-direction:column;align-items:center;gap:2px;position:absolute;transform:translateX(-50%)}
+    .tick:first-child{transform:translateX(0)}
+    .tick:last-child{transform:translateX(-100%)}
+    .tick-mark{width:1px;height:5px;background:var(--border2);border-radius:1px;flex-shrink:0}
+    .tick-label{font-family:var(--mono);font-size:0.48rem;color:var(--text-faint);white-space:nowrap;line-height:1}
+    .slider-wrap{flex:1;position:relative;padding-bottom:24px;overflow:visible}
+
+    /* Toggle */
+    .toggle-row{display:flex;align-items:flex-start;gap:10px}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;margin-top:2px}
+    .toggle input{opacity:0;width:0;height:0}
+    .toggle-track{position:absolute;inset:0;background:var(--surface3);border:1px solid var(--border2);border-radius:99px;cursor:pointer;transition:background var(--t),border-color var(--t)}
+    .toggle input:checked+.toggle-track{background:var(--accent);border-color:var(--accent)}
+    .toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform var(--t);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle input:checked+.toggle-track::after{transform:translateX(17px)}
+    .toggle-label{font-size:0.875rem;color:var(--text-dim);cursor:pointer;line-height:1.45}
+    .sub-opts{display:none;margin-top:0.75rem;padding:0.9rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md)}
+    .sub-opts.open{display:block}
+
+    /* Tabs */
+    .tab-bar{display:flex;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px}
+    .tab-btn{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.05em;padding:5px 14px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--text-faint);cursor:pointer;transition:all var(--t)}
+    .tab-btn.active{background:var(--surface);color:var(--accent);border-color:var(--border)}
+    .tab-panel{display:none;padding-top:0.875rem}
+    .tab-panel.active{display:block}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-weight:500;font-size:0.875rem;padding:0.62rem 1.35rem;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;transition:all var(--t);white-space:nowrap}
+    .btn-primary{background:var(--accent);color:#000;border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow);font-weight:600}
+    .btn-primary:hover{filter:brightness(1.08);box-shadow:0 0 26px var(--accent-glow);transform:translateY(-1px)}
+    .btn-ghost{background:transparent;color:var(--text-dim);border-color:var(--border)}
+    .btn-ghost:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .btn-reset{background:transparent;color:var(--danger);border-color:var(--danger-dim);font-size:0.72rem;font-family:var(--mono);letter-spacing:0.05em;padding:0 10px;height:34px;gap:5px}
+    .btn-reset:hover{background:var(--danger-dim);border-color:var(--danger)}
+    .btn-sm{font-size:0.8rem;padding:0.45rem 0.9rem}
+    .btn svg{width:14px;height:14px;flex-shrink:0}
+
+    /* Home hero */
+    .home-hero{padding:2.5rem 0 1.5rem;display:flex;flex-direction:column;gap:0.6rem}
+    .home-kicker{font-family:var(--mono);font-size:0.67rem;letter-spacing:0.14em;color:var(--accent);text-transform:uppercase}
+    .home-title span{color:var(--accent)}
+    .home-subtitle{font-size:0.95rem;color:var(--text-dim);max-width:540px}
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    @media(max-width:540px){.settings-grid{grid-template-columns:1fr}}
+    .action-row{display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem;flex-wrap:wrap;gap:0.75rem}
+
+    /* Training */
+    .train-layout{flex:1;display:flex;flex-direction:column;max-width:min(880px,100%);width:calc(100% - 2rem);margin:0 auto;padding:1.25rem 0 1.25rem;gap:1rem}
+    .status-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.8rem 0.9rem;display:flex;flex-direction:column;gap:3px}
+    .stat-tile-label{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase}
+    .stat-tile-val{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--text)}
+    .stat-tile-val.accent{color:var(--accent)}
+    .timer-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .timer-display{font-family:var(--mono);font-size:1.7rem;font-weight:300;letter-spacing:0.03em}
+    .timer-label{font-family:var(--mono);font-size:0.6rem;color:var(--text-faint);letter-spacing:0.08em;text-transform:uppercase}
+    .speed-badge{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+    .speed-val{font-family:var(--mono);font-size:1.05rem;color:var(--accent)}
+    .progress-track{height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px}
+    .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .6s ease;box-shadow:0 0 8px var(--accent-glow)}
+
+    .stimulus-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.25rem 1rem;gap:1rem;position:relative;overflow:hidden;min-height:170px}
+    /* On the training screen the card takes the height the rest of the column
+       does not want, so the stage above has something to grow into. */
+    #pageTrain .stimulus-box{flex:1}
+    /* Decoration, and it fills the whole box: without this it takes the taps
+       meant for the rank pad, which shares the box with it. */
+    .stimulus-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--accent-dim) 0%,transparent 65%);opacity:0;transition:opacity .35s;pointer-events:none}
+    .stimulus-box.pulse .stimulus-bg{opacity:1}
+    .coyote-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,var(--warn-dim) 0%,transparent 65%);opacity:0;transition:opacity .3s;pointer-events:none}
+    .stimulus-box.coyote-active .coyote-bg{opacity:1}
+    .stimulus-instruction{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;color:var(--text-faint);text-transform:uppercase}
+    .stimulus-number{font-family:var(--mono);font-size:5rem;font-weight:300;color:var(--accent);line-height:1;letter-spacing:-0.02em;text-shadow:0 0 40px var(--accent-glow);transition:transform .12s,color .15s}
+    .stimulus-number.flash{transform:scale(1.08)}
+    .stimulus-number.hidden-num{color:var(--text-faint);text-shadow:none;font-size:2.75rem}
+    .last-seen{font-family:var(--mono);font-size:0.78rem;color:var(--text-faint)}
+    .last-seen span{color:var(--text-dim)}
+
+    .feedback-band{height:6px;border-radius:99px;background:var(--border);transition:background .15s,box-shadow .15s}
+    .feedback-band.correct{background:var(--accent);box-shadow:0 0 14px var(--accent-glow),0 0 30px var(--accent-dim)}
+    .feedback-band.wrong{background:var(--danger);box-shadow:0 0 14px rgba(255,77,109,.35)}
+    .feedback-band.coyote{background:var(--warn);box-shadow:0 0 14px rgba(255,179,71,.35)}
+
+    .answer-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+    .answer-input.correct{border-color:var(--accent);border-width:2px;box-shadow:0 0 0 4px var(--accent-dim),0 0 18px var(--accent-glow)}
+    .answer-input.wrong{border-color:var(--danger);border-width:2px;box-shadow:0 0 0 4px var(--danger-dim),0 0 18px rgba(255,77,109,.2)}
+    .answer-input.coyote{border-color:var(--warn);border-width:2px;box-shadow:0 0 0 4px var(--warn-dim)}
+
+    /* Stimulus box flash on answer */
+    .stimulus-box.flash-correct{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent-dim)}
+    .stimulus-box.flash-wrong{border-color:var(--danger)!important;box-shadow:0 0 0 2px var(--danger-dim)}
+
+    .answer-section{display:flex;flex-direction:column;gap:0.6rem}
+    .answer-input{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text);font-family:var(--mono);font-size:1.5rem;font-weight:300;text-align:center;padding:0.85rem;width:100%;outline:none;transition:border-color var(--t),box-shadow var(--t),border-width var(--t)}
+    .input-hint{text-align:center;font-family:var(--mono);font-size:0.63rem;color:var(--text-faint);letter-spacing:0.04em}
+
+    .numpad{display:none;grid-template-columns:repeat(6,1fr);gap:5px}
+    .numpad.visible{display:grid}
+    .numpad-btn{aspect-ratio:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:.92rem;cursor:pointer;transition:all var(--t)}
+    .numpad-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+    .numpad-btn.selected{background:var(--accent);color:#000;border-color:var(--accent)}
+    .numpad-btn.wrong-sel{background:var(--danger-dim);border-color:var(--danger);color:var(--danger)}
+    .badges-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+    /* Results */
+    .results-layout{max-width:740px;width:calc(100% - 2rem);margin:0 auto;padding:1.5rem 0 4rem;display:flex;flex-direction:column;gap:0.75rem}
+    .stat-grid{display:grid;gap:6px}
+    .stat-grid-3{grid-template-columns:repeat(3,1fr)}
+    .stat-grid-4{grid-template-columns:repeat(4,1fr)}
+    @media(max-width:540px){.stat-grid-3,.stat-grid-4{grid-template-columns:repeat(2,1fr)}}
+    .stat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.1rem}
+    .stat-block-label{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase;margin-bottom:.4rem}
+    .stat-block-val{font-family:var(--mono);font-size:1.65rem;font-weight:400;color:var(--text)}
+    .stat-block-val.accent-val{color:var(--accent)}
+    .acc-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+    .acc-bar-fill{height:100%;border-radius:99px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);transition:width 1s cubic-bezier(.4,0,.2,1)}
+    .trial-log{display:flex;flex-direction:column;gap:2px;max-height:230px;overflow-y:auto}
+    .trial-log::-webkit-scrollbar{width:4px}
+    .trial-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    .trial-entry{display:flex;align-items:center;justify-content:space-between;padding:.45rem .7rem;border-radius:var(--radius-sm);background:var(--surface2);font-family:var(--mono);font-size:.76rem;color:var(--text-dim);gap:.5rem}
+    .trial-entry .t-correct{color:var(--accent)}
+    .trial-entry .t-wrong{color:var(--danger)}
+    .trial-entry .t-coyote{color:var(--warn)}
+    .trial-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .trial-dot.ok{background:var(--accent);box-shadow:0 0 4px var(--accent-glow)}
+    .trial-dot.err{background:var(--danger)}
+    .trial-dot.coyote{background:var(--warn)}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--t)}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;max-width:400px;width:calc(100% - 2rem);transform:scale(.95);transition:transform var(--t)}
+    .modal-overlay.open .modal-box{transform:scale(1)}
+    .modal-title{font-size:1rem;font-weight:600;margin-bottom:.5rem}
+    .modal-body{font-size:.875rem;color:var(--text-dim);margin-bottom:1.25rem;line-height:1.6}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+    /* ICT inhibit state */
+    .ict-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(192,132,252,0.12) 0%,transparent 65%);opacity:0;transition:opacity .3s}
+    .stimulus-box.ict-active .ict-bg{opacity:1}
+    .stimulus-box.ict-active{border-color:#c084fc!important}
+    [data-theme="light"] .stimulus-box.ict-active{border-color:#7c3aed!important}
+    .feedback-band.inhibit{background:#c084fc;box-shadow:0 0 6px rgba(192,132,252,0.3)}
+    [data-theme="light"] .feedback-band.inhibit{background:#7c3aed}
+    .answer-input.input-hidden{color:transparent;caret-color:var(--text-faint)}
+    .answer-input.input-hidden::placeholder{color:transparent}
+    .answer-input.inhibit{border-color:#c084fc;box-shadow:0 0 0 3px rgba(192,132,252,0.12)}
+    [data-theme="light"] .answer-input.inhibit{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.12)}
+    .trial-dot.inhibit{background:#c084fc;box-shadow:0 0 4px rgba(192,132,252,0.3)}
+    .trial-entry .t-inhibit{color:#c084fc}
+    [data-theme="light"] .trial-entry .t-inhibit{color:#7c3aed}
+    .pill-ict{background:rgba(192,132,252,0.12);color:#c084fc;border-color:rgba(192,132,252,0.25)}
+    [data-theme="light"] .pill-ict{background:rgba(124,58,237,0.10);color:#7c3aed;border-color:rgba(124,58,237,0.25)}
+    /* ── Error feedback flash ──────────────────────────────────────
+       When "Error flash" is enabled and the player gives a wrong answer
+       or times out, the stimulus box background flashes red briefly.
+       This is a div layered inside .stimulus-box using position:absolute.
+    ── */
+    .stimulus-error-flash{
+      position:absolute;inset:0;z-index:5;
+      background:rgba(255,60,80,0.45);
+      border-radius:inherit;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .06s;
+    }
+    .stimulus-error-flash.active{opacity:1}
+    /* Settings profiles dropdown */
+    .profiles-wrap{position:relative}
+    .profiles-panel{
+      display:none;position:absolute;top:calc(100% + 6px);right:0;
+      background:var(--surface);border:1px solid var(--border2);
+      border-radius:var(--radius-md);min-width:280px;max-width:340px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:200;overflow:hidden
+    }
+    .profiles-panel.open{display:block}
+    .profiles-panel-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:.6rem .9rem;background:var(--surface2);border-bottom:1px solid var(--border)
+    }
+    .profiles-panel-title{font-family:var(--mono);font-size:.68rem;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+    .profiles-panel-body{padding:.5rem .9rem .7rem;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
+    .profile-row{display:flex;align-items:center;gap:5px;padding:.3rem .4rem;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border)}
+    .profile-row-name{flex:1;font-family:var(--mono);font-size:.72rem;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* Sticky start bar — fixed to viewport bottom, only visible on home screen */
+    .sticky-start-bar{
+      position:fixed;bottom:0;left:0;right:0;
+      background:var(--bg);border-top:1px solid var(--border);
+      padding:.75rem 1.5rem;display:flex;align-items:center;
+      justify-content:space-between;gap:.75rem;z-index:200;
+      backdrop-filter:blur(6px);
+    }
+    /* Add bottom padding to home page content so sticky bar doesn't cover it */
+    #pageHome .shell{ padding-bottom:5rem; }
+
+    /* Equation stream — live scroll below playing area */
+    .eq-stream{
+      max-height:120px;overflow-y:auto;display:flex;flex-direction:column-reverse;
+      gap:2px;font-family:var(--mono);font-size:.7rem;padding:.4rem .5rem;
+      background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);
+    }
+    .eq-stream::-webkit-scrollbar{width:3px}
+    .eq-stream::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    .eq-entry{display:flex;align-items:center;gap:.4rem;padding:1px 0}
+    .eq-entry.eq-ok{color:var(--accent)}
+    .eq-entry.eq-wrong{color:var(--danger)}
+    .eq-entry.eq-miss{color:var(--text-faint)}
+    .anim-in{animation:fadeUp .3s ease both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+    @media(max-width:480px){h1{font-size:1.65rem}.timer-display{font-size:2rem}.stimulus-number{font-size:4rem}}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+    hr.div{border:none;border-top:1px solid var(--border);margin:1rem 0}
+
+    /* ── Running Order ─────────────────────────────────────────────── */
+    /* The stage was pinned at 300px however much room there was, which on a
+       desktop left a small square adrift in a tall empty card. It now takes the
+       smaller of the height and the width available, still square, still capped
+       so it cannot outgrow a big monitor. */
+    /* The Symbol size setting scales the whole card — symbols, grid and board
+       together, so a bigger symbol never crowds its neighbour out of a cell —
+       up to the width of the screen. */
+    .stage-wrap{position:relative;width:min(calc(clamp(200px,min(48vh,52vw),520px) * var(--stage-scale,1)),94vw,1000px);aspect-ratio:1}
+    .stage{width:100%;height:100%;display:block;position:relative;z-index:2}
+    /* The box the new symbol lands on a corner of. Faint, because it is the
+       frame the reading is made against and not a thing to look at. */
+    .box-edge{stroke:var(--text-faint);stroke-width:1.4;opacity:.55;vector-effect:non-scaling-stroke}
+    /* Where the symbol stands on the floor, and the drop to it. Both are depth
+       and height read off the box rather than off the symbol's own size, which
+       belongs to the fourth axis. */
+    .box-shadow{fill:var(--text-faint);opacity:.5}
+    .size-tag{fill:var(--ax-3);font-family:var(--mono);font-size:13px;font-weight:600}
+    .board-num{fill:var(--text-faint);font-family:var(--mono);font-size:11px}
+    .board-tag{fill:var(--text-dim);font-family:var(--mono);font-size:12px}
+    .photo-ring{fill:none;stroke:var(--accent);stroke-width:3;vector-effect:non-scaling-stroke}
+    .photo.mask{opacity:.35}
+    .photo-mini{border-radius:14%;object-fit:cover;display:block}
+    .photo-mini.new{box-shadow:0 0 0 2px var(--accent)}
+    .box-drop{stroke:var(--text-faint);stroke-width:1.2;opacity:.45;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+    .probe-arrow{stroke:var(--text-dim);stroke-width:2;vector-effect:non-scaling-stroke}
+    .probe-head{fill:var(--text-dim)}
+    .probe-pip{fill:var(--text-dim)}
+    .probe-rule{stroke:var(--border2);stroke-width:1.5;vector-effect:non-scaling-stroke}
+    .probe-axis{font-family:var(--mono);font-size:26px;font-weight:600;text-anchor:middle}
+    .rank-pad.probe{gap:14px}
+    .rank-btn.probe-btn{flex-direction:column;gap:1px;min-width:calc(4.6rem * var(--pad-scale,1));padding:calc(.3rem * var(--pad-scale,1)) calc(.6rem * var(--pad-scale,1))}
+    .pb-glyph{font-size:calc(1.35rem * var(--pad-scale,1));line-height:1}
+    .pb-word{font-size:calc(.62rem * var(--pad-scale,1));letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+    .rank-btn.probe-btn.hit .pb-word,.rank-btn.probe-btn.miss .pb-word{color:inherit}
+    .glyph{fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+    .glyph.new{stroke:var(--accent)}
+    .glyph.ref{stroke:var(--text)}
+    .glyph.mask{stroke:var(--text-faint);stroke-width:3}
+    /* Animal stimuli: filled silhouettes, so they take the same colours the
+       stroked marks do — accent for the new one, text for the one you hold. */
+    .pic{stroke:none}
+    .pic.new{fill:var(--accent)}
+    .pic.ref{fill:var(--text)}
+    .pic.mask{fill:var(--text-faint);opacity:.5}
+    /* Which rank to report, as a watermark behind the card rather than a line
+       of small print under it.
+
+       With two or three axes in play every card states all of them at once and
+       only the QUESTION changes, so this is the one thing that varies trial to
+       trial — and it used to be the smallest type on the screen, under the
+       stage, below the symbols the eye was already on. Drawn large and central
+       it is read without being looked for; drawn faint it cannot be mistaken
+       for part of the card. The colour is the same signal again, so the axis is
+       legible from the edge of vision before the words resolve. */
+    .axis-ghost{
+      position:absolute;inset:0;z-index:0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15em;
+      font-family:var(--mono);text-align:center;line-height:1.05;
+      color:var(--ax,var(--text-dim));
+      pointer-events:none;user-select:none;-webkit-user-select:none;
+    }
+    .axis-ghost:empty{display:none}
+    /* The alpha is on the two parts, not on the container. Opacity on a parent
+       composites the whole subtree, so the line at the foot could only ever be
+       fainter than the word and went down with it every time the word did —
+       and that line is the functional half of the cue, the one saying which end
+       rank 1 counts from. */
+    .axis-ghost .ag-main{opacity:.13;font-size:clamp(1.7rem,7.4vh,4.5rem);font-weight:600;letter-spacing:.04em;white-space:nowrap}
+    .axis-ghost .ag-main b{font-weight:500;font-size:1.15em}
+    /* Which end rank 1 counts from — needed, and unreadable where the word is,
+       since that band is the one the box occupies. It goes to the foot of the
+       card instead, which had nothing in it. */
+    .axis-ghost .ag-sub{position:absolute;left:0;right:0;bottom:3%;
+      font-size:clamp(.7rem,1.7vh,1rem);letter-spacing:.14em;text-transform:uppercase;opacity:.62}
+    /* Above the watermark, which fills the box behind it. */
+    .arena{display:flex;flex-direction:column;align-items:center;gap:.9rem;max-width:100%;position:relative;z-index:2}
+    /* Wrapping is the safety net under the size setting: the keys hold their row
+       (or their column, beside the stage) while they fit, and fold onto a second
+       line rather than off the screen when they are scaled past it. */
+    .arena.side{flex-direction:row;justify-content:center;flex-wrap:wrap}
+    .rank-pad{display:flex;gap:6px;justify-content:center;align-items:stretch;flex-wrap:wrap;max-width:100%}
+    .rank-pad.vertical{flex-direction:column}
+    /* Latitude runs into the picture, so its keys climb the way the box does
+       rather than sitting in the flat row longitude already owns. */
+    .rank-pad.depth{align-items:flex-end}
+    .rank-pad.depth .rank-btn:nth-child(1){transform:translateY(22%)}
+    .rank-pad.depth .rank-btn:nth-child(2){transform:translateY(11%)}
+    .rank-pad.depth .rank-btn:nth-child(4){transform:translateY(-11%)}
+    .rank-pad.depth .rank-btn:nth-child(5){transform:translateY(-22%)}
+    .rank-pad.depth .rank-btn:nth-child(6){transform:translateY(-33%)}
+    /* --pad-scale is the Button size setting. One multiplier on the footprint and
+       the type, so a key stays the same shape at every size. */
+    .rank-btn{min-width:calc(3.1rem * var(--pad-scale,1));min-height:calc(2.7rem * var(--pad-scale,1));padding:0 calc(.35rem * var(--pad-scale,1));display:flex;align-items:center;justify-content:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:calc(1rem * var(--pad-scale,1));cursor:pointer;transition:all var(--t);touch-action:manipulation}
+    .rank-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+    .rank-btn:disabled{opacity:.25;cursor:default}
+    .rank-btn.hit{background:var(--accent);color:#000;border-color:var(--accent)}
+    .rank-btn.miss{background:var(--danger-dim);border-color:var(--danger);color:var(--danger)}
+    .rank-btn.truth{outline:2px solid var(--accent);outline-offset:2px}
+    .rank-dot{display:inline-block;border-radius:50%;background:currentColor;opacity:.7}
+    .example{display:flex;gap:1.25rem;flex-wrap:wrap;align-items:flex-start;margin-top:.6rem}
+    .example-step{font-family:var(--mono);font-size:.78rem;color:var(--text-dim);line-height:1.6}
+    .example-step strong{color:var(--text)}
+    .level-pill{font-family:var(--mono)}
+    /* The walkthrough's before/after pictures of the order being held. */
+    .strip{display:flex;gap:.9rem;align-items:flex-start;flex-wrap:wrap}
+    .strip-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:.65rem .75rem}
+    .strip-cap{font-family:var(--mono);font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);margin-bottom:.45rem}
+    .strip-grid{display:grid;gap:3px;align-items:center;justify-items:center}
+    .strip-cell{width:44px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--radius-sm)}
+    .strip-cell.is-new{background:var(--accent-dim);outline:1px solid var(--accent)}
+    .strip-cell.is-ref{outline:1px dashed var(--border2)}
+    .strip-cell.is-gone{opacity:.4}
+    .strip-lab{font-family:var(--mono);font-size:.62rem;color:var(--text-faint);min-width:14px;text-align:center}
+    .strip-tag{font-family:var(--mono);font-size:.52rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-top:2px}
+    .glyph.mini{stroke-width:3}
+    .tut-actions{display:flex;gap:.75rem;justify-content:flex-end;align-items:center}
+    /* Portrait. The top bar's buttons ran off the right edge of a phone, which
+       put the settings reset and the theme switch somewhere no finger could
+       reach; and in training the gutters were sized for a page of settings,
+       where they are room the stage and the rank keys could be using — which
+       is what the size setting is there to spend. */
+    @media(max-width:560px){
+      .topbar{flex-wrap:wrap;gap:6px;padding:.6rem .75rem}
+      .topbar-actions{flex-wrap:wrap;justify-content:flex-end}
+      #pageTrain .train-layout{width:calc(100% - 1rem);padding:.7rem 0 1.2rem;gap:.6rem}
+      #pageTrain .stimulus-box{min-height:0;padding:1rem .5rem;gap:.6rem}
+      #pageTrain .stat-tile{padding:.45rem .55rem}
+      #pageTrain .timer-display{font-size:1.6rem}
+    }
+    /* A fingertip is about 9mm across, and every one of these is something it
+       has to hit. The slider especially: a 17px thumb on a 5px rail is a
+       desktop control. */
+    @media(pointer:coarse){
+      .btn,.icon-btn,.tab-btn{min-height:44px}
+      .rank-btn{min-height:max(44px, calc(2.7rem * var(--pad-scale,1)))}
+      .btn,.icon-btn,.tab-btn,.rank-btn,.toggle-track{touch-action:manipulation}
+      .slider{height:8px}
+      .slider::-webkit-slider-thumb{width:28px;height:28px}
+      .slider::-moz-range-thumb{width:28px;height:28px}
+      .toggle{width:46px;height:26px}
+      .toggle-track::after{width:18px;height:18px}
+      .toggle input:checked+.toggle-track::after{transform:translateX(20px)}
+    }
+  </style>
+</head>
+<body>
+
+<!-- HOME SCREEN -->
+<div class="page active" id="pageHome">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">Running Order</div>
+        <div class="brand-tag">Relational Reasoning Training</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-reset" id="resetAppBtn"
+        style="background:var(--danger-dim);border-color:var(--danger);color:var(--danger);font-weight:600"
+        title="Delete this trainer's history, level and settings — other trainers are not touched">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Wipe data
+      </button>
+      <button class="btn btn-reset" id="resetBtn" title="Reset settings to their defaults — history and level are kept">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Default settings
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle Light/Dark mode" style="width:auto;padding:0 10px;gap:5px;font-size:0.72rem;font-family:var(--mono);letter-spacing:0.04em;color:var(--text-dim)">
+        <svg id="themeBtnIcon" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0"></svg>
+        <span id="themeBtnLabel">Dark</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="shell anim-in">
+    <div class="home-hero">
+      <h1 class="home-title">Running Order<br><span>Relational Reasoning Training</span></h1>
+      <p class="home-subtitle" style="margin-top:.5rem">Learn a board of symbols, one per slot. Each card puts a new symbol a few steps from one you hold; it takes that slot and the symbol there leaves. Nothing else moves. Answer where the new one stands — before the next card arrives. Speed and load adapt to you.</p>
+    </div>
+
+    <div class="callout" id="firstRun" style="display:none;border-color:var(--accent)">
+      <p><strong>First time here?</strong> The rules are short but they do not read well on paper. The walkthrough shows the order changing, one card at a time, with nothing timed.</p>
+      <div style="display:flex;gap:8px;margin-top:.6rem">
+        <button class="btn btn-primary btn-sm" id="firstRunBtn">Take the walkthrough</button>
+        <button class="btn btn-ghost btn-sm" id="firstRunDismiss">No thanks</button>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p id="cardHowText"></p>
+      <div class="example" id="cardExample"></div>
+      <p class="hint" style="margin-top:.6rem">Past one dimension every card places the symbol on every axis at once, and the card says which rank to report: <b>↕ height</b>, <b>↔ longitude</b>, <b>╱ latitude</b> or <b>● size</b>. Keep all of them — the next card may ask any. The first three are one drawn box, height up, longitude across and latitude into it; size is the fourth and sits outside the box, which is why depth is never shown by drawing a symbol smaller.</p>
+    </div>
+
+    <div class="section-label">What you train</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 20h4v-6H3zM10 20h4V9h-4zM17 20h4V4h-4z"/></svg></span>
+          Symbols and dimensions
+        </span>
+        <span class="pill level-pill" id="savedLevelPill"></span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Symbols</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="stimsetRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="glyphs" style="accent-color:var(--accent)"> Generated marks</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="animals" style="accent-color:var(--accent)"> Animals · easier to encode</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="stimset" value="pictures" style="accent-color:var(--accent)"> Pictures · photos, easiest</label>
+          </div>
+          <p class="hint"><strong>Generated marks</strong> never repeat, so nothing about a symbol can be learned in place of the order. That is the default and the honest measurement. <strong>Animals</strong> are a fixed pool of <span id="animalCount">34</span> drawings with names, so one lands in your head in a word and almost the whole beat goes on the order instead of on taking the symbol in — easier, and the way in if the marks are the part that defeats you. It also means the stimuli recur, and a fixed set is what automatises, so bits per second is not comparable between the two: sessions are tagged with the set they used and the best-ever figure is kept per set. <strong>Pictures</strong> go further: <span id="pictureCount">56</span> colour photographs of everyday things — fruit, animals, vehicles, objects — each with a name you already know.</p>
+          <div class="toggle-row" style="margin-top:.6rem">
+            <label class="toggle"><input type="checkbox" id="speakToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Speak the names</strong> — say each symbol's name aloud as it appears</span>
+          </div>
+          <p class="hint">The whole board at the start, then every new one. Only animals and
+            pictures have names; the generated marks stay silent. Hearing the word as well
+            as seeing the picture is a second way in, so a spoken session keeps its own
+            best score.</p>
+          <details class="hint" style="margin-top:.35rem;color:var(--text-faint);display:none" id="photoCreditsBox"><summary style="cursor:pointer">Photo credits</summary><div id="photoCredits" style="margin-top:.3rem;line-height:1.5"></div></details>
+          <p class="hint" style="margin-top:.35rem;color:var(--text-faint)">Animal drawings by Delapouite, Lorc, Skoll and Caro Asercion, from <a href="https://game-icons.net" target="_blank" rel="noopener" style="color:inherit">game-icons.net</a>, used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener" style="color:inherit">CC BY 3.0</a>.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Forget after</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="memorySlider"></div><span class="slider-val" id="memoryVal"></span></div>
+          <p class="hint">A cap on how far back you are asked to remember. Once this many newer
+            symbols have arrived, a symbol is forgotten: no card is placed against it and no
+            conclusion asks about it, and its slot is free — new symbols land on forgotten
+            slots, so a symbol you are still holding is never overwritten. In 2D and up a
+            forgotten symbol leaves the board, and a new one lands on any empty cell. Off,
+            a symbol stays in play for as long as nobody lands on its slot — on a board of
+            five that is twenty cards about one time in a hundred. A capped session keeps
+            its own best score, one per cap.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Conclusion beats</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="probeRateSlider"></div><span class="slider-val" id="probeRateVal"></span></div>
+          <div class="slider-row" id="probeMixRow"><div class="slider-wrap"><input type="range" class="slider" id="probeMixSlider"></div><span class="slider-val" id="probeMixVal"></span></div>
+          <p class="hint">Some beats ask a question instead of dealing a card, and nothing is
+            placed — the board does not change, so a conclusion beat is the one that only
+            asks whether the board is still there. Both kinds are answered
+            <b>↑ true</b> or <b>↓ false</b>.
+            A <strong>relation</strong> asks whether one symbol really is that many steps
+            from another; an <strong>analogy</strong> asks whether the step between one pair
+            is the same as the step between a second. The mix is the share of conclusion
+            beats that are analogies, so either slider at one end gives you only the other
+            kind. An analogy needs a board of four — on three the only two pairs with the
+            same step share a symbol, which is a chain and not an analogy — so below four
+            every conclusion is a relation. Answering from two options is not the same trial
+            as answering from as many as the board is wide, so bits per second is not
+            comparable with a session of cards alone and the best-ever figure is kept
+            apart.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Dimensions</label>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap" id="maxDRow">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="1" style="accent-color:var(--accent)"> 1D · height</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="2" style="accent-color:var(--accent)"> 2D · + longitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="3" style="accent-color:var(--accent)"> 3D · + latitude</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.875rem;color:var(--text-dim)"><input type="radio" name="maxD" value="4" style="accent-color:var(--accent)"> 4D · + size</label>
+          </div>
+          <div class="toggle-row" style="margin-top:.6rem">
+            <label class="toggle"><input type="checkbox" id="climbToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Climb from 1D</strong> — treat this as a ceiling rather than the dimension you play</span>
+          </div>
+          <p class="hint">Off, the dimension you pick is the dimension you get: the ladder is
+            that one's spans and nothing else, and the span is what rises and falls. On, it
+            is a ceiling instead and the ladder starts at 1D with three symbols and climbs
+            through every dimension below it — the teaching order, and what this setting
+            used to do whether or not it looked like it. The whole ladder is 1D with 3–7
+            symbols, then 2D with 3–5, then 3D with 3–5, then 4D with 3–5, ordered by how
+            much you carry, so every step up is more; adding a dimension drops the span back
+            to three.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="resumeToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Continue from last level</strong> — start where the previous session ended</span>
+          </div>
+        </div>
+        <div class="field" style="margin-top:.9rem" id="startLevelField">
+          <label class="label">Starting level</label>
+          <select class="num-input" id="startLevelSelect" style="width:auto;padding:0 .5rem"></select>
+          <p class="hint">Used when "continue" is off, or when there is no previous session.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">How fast</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+          Session mode
+        </span>
+        <div class="tab-bar" id="modeTabBar">
+          <button class="tab-btn active" data-tab="standard">Standard</button>
+          <button class="tab-btn" data-tab="custom">Custom</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="tab-panel active" id="tab-standard">
+          <p style="font-size:.85rem">15 minutes. Cards start 3 s apart and are visible for 0.4 s, each wiped by a masking screen the moment it goes; an episode opens with its first symbol alone for 1.5 s. The pace moves on every answer toward 80% above chance, between 0.8 s and 6 s. When the pace is at 0.8 s and you are still above target, the level rises and the pace relaxes; when it is at 6 s and you are still below, the level falls.</p>
+        </div>
+        <div class="tab-panel" id="tab-custom">
+          <div class="settings-grid">
+            <div class="field">
+              <label class="label">Duration</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="durationSlider"></div><span class="slider-val" id="durationVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Starting interval</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="startISISlider"></div><span class="slider-val" id="startISIVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Fastest interval (floor)</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="floorSlider"></div><span class="slider-val" id="floorVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Slowest interval (ceiling)</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="ceilSlider"></div><span class="slider-val" id="ceilVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Target accuracy above chance</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="targetSlider"></div><span class="slider-val" id="targetVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Card visible for</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="exposureSlider"></div><span class="slider-val" id="exposureVal"></span></div>
+            </div>
+            <div class="field">
+              <label class="label">Encoding period</label>
+              <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="encodingSlider"></div><span class="slider-val" id="encodingVal"></span></div>
+            </div>
+          </div>
+          <p class="hint">Accuracy above chance: 0% is guessing, 100% is perfect — so the target means the same at every size. The card is never shown for more than half the interval. The floor is where speed stops and the level takes over.</p>
+          <p class="hint" style="margin-top:.35rem">The <strong>encoding period</strong> is how long the board is shown at the start of an episode, <em>per symbol on it</em> — a board of five gets five times this. It is never shorter than one interval, and the board goes at 85% of it, so there is a real gap before the first card.</p>
+          <hr class="div">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="adaptLevelToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Adaptive level</strong> — raise or lower the level when the pace reaches its floor or ceiling</span>
+          </div>
+          <p class="hint">Off: the level stays where it starts and only the pace adapts.</p>
+          <hr class="div">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="maskToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Masking screen</strong> — a scatter of symbols over the card the moment it goes</span>
+          </div>
+          <p class="hint">On, the card is wiped by a scatter of the same kind of symbols, so the image does not linger on the retina and the order has to be in your head rather than in your eyes. Off, the card simply goes and a short afterimage is yours to use — easier, and a session run that way is not comparable with one that was masked.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Size on screen</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h7v7H4zM13 13h7v7h-7z"/></svg></span>Symbol and key size</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="label">Symbol size</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="stageScaleSlider"></div><span class="slider-val" id="stageScaleVal"></span></div>
+          <p class="hint">Scales the card and everything on it — the symbols, the grid they
+            stand in and the board at the start — so a photo or a mark can be as big as you
+            need it to take in at a glance. It stops at the width of the screen; past the
+            room beside the card, the rank keys move underneath it.</p>
+        </div>
+        <div class="field" style="margin-top:.9rem">
+          <label class="label">Button size</label>
+          <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="padScaleSlider"></div><span class="slider-val" id="padScaleVal"></span></div>
+          <p class="hint">Scales the rank keys. On a phone held upright the default keys are
+            smaller than the fingertip aiming at them, and the neighbour of the key you
+            meant is the rank next to the one you meant — the one mistake the task cannot
+            tell from a real error.</p>
+          <p class="hint" style="margin-top:.35rem">A size that does not fit is given as much
+            as does fit: the pad is the key times the number of keys, so a level with more
+            symbols gets smaller keys than one with fewer, and on the height axis — where the
+            keys stand in a column beside the card — it is the strip of width the card leaves
+            over that decides. Keys are never made smaller than they were.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Feedback</div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title"><span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5 6 9H3v6h3l5 4zM16 9a5 5 0 0 1 0 6"/></svg></span>After a wrong answer</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="truthToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Show the right rank</strong> after a wrong answer</span>
+          </div>
+          <p class="hint">Lets you repair your picture of the order instead of carrying the error forward.</p>
+        </div>
+        <div class="field" style="margin-top:.875rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="beepToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Error beep</strong> on wrong answers and misses</span>
+          </div>
+        </div>
+        <div class="sub-opts" id="beepOpts">
+          <div class="field">
+            <label class="label">Volume</label>
+            <div class="slider-row"><div class="slider-wrap"><input type="range" class="slider" id="beepVolSlider"></div><span class="slider-val" id="beepVolVal"></span></div>
+          </div>
+          <div class="field" style="margin-top:.75rem">
+            <label class="label">Beep sound</label>
+            <div id="beepTypeList" style="display:flex;flex-direction:column;gap:5px;margin-top:.3rem"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:.875rem">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="flashToggle"><div class="toggle-track"></div></label>
+            <span class="toggle-label"><strong>Error flash</strong> on wrong answers and misses</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sticky-start-bar" id="stickyStartBar">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:.72rem;color:var(--text-faint);font-family:var(--mono)">Settings auto-saved</span>
+    <button class="btn btn-ghost btn-sm" id="tutorialBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      How it works
+    </button>
+  </div>
+  <button class="btn btn-primary" id="startBtn">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    Start Training
+  </button>
+</div>
+
+<!-- WALKTHROUGH -->
+<div class="page" id="pageTutorial">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><div class="brand-name">Walkthrough</div><div class="brand-tag" id="tutProgress"></div></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" id="tutExitBtn">Close</button>
+    </div>
+  </nav>
+  <div class="train-layout">
+    <div class="card">
+      <div class="card-head"><span class="card-title" id="tutTitle"></span></div>
+      <div class="card-body"><div id="tutText" style="font-size:.9rem;line-height:1.65;color:var(--text-dim)"></div></div>
+    </div>
+    <div class="stimulus-box" id="tutBox">
+      <div class="stimulus-bg"></div>
+      <div class="stimulus-instruction" id="tutHint" style="position:relative;z-index:2"></div>
+      <div class="axis-ghost" id="tutCue"></div>
+      <div class="arena" id="tutArena">
+        <div>
+          <div class="stage-wrap"><svg class="stage" id="tutStage" viewBox="0 0 300 300"></svg></div>
+        </div>
+        <div class="rank-pad" id="tutPad"></div>
+      </div>
+    </div>
+    <div class="strip" id="tutStrips"></div>
+    <div class="callout" id="tutNote" style="display:none"></div>
+    <div class="tut-actions">
+      <button class="btn btn-ghost btn-sm" id="tutBackBtn">Back</button>
+      <button class="btn btn-primary" id="tutNextBtn">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRAINING SCREEN -->
+<div class="page" id="pageTrain">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name" id="trainStatus">Running</div>
+        <div class="brand-tag" id="trainSubStatus"></div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint);letter-spacing:.05em">ESC to exit</span>
+      <button class="btn btn-sm" id="stopBtn" title="End session (Esc)" style="background:var(--danger-dim);color:var(--danger);border-color:var(--danger);gap:6px">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+        Exit
+      </button>
+    </div>
+  </nav>
+  <div class="train-layout">
+    <div class="status-bar">
+      <div class="stat-tile"><div class="stat-tile-label">Correct</div><div class="stat-tile-val accent" id="tCorrect">0</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Total</div><div class="stat-tile-val" id="tTotal">0</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Above chance</div><div class="stat-tile-val" id="tAccuracy">–</div></div>
+    </div>
+    <div>
+      <div class="timer-row">
+        <div><div class="timer-label">Time remaining</div><div class="timer-display" id="timerDisplay">15:00</div></div>
+        <div class="speed-badge"><div class="timer-label">Level</div><div class="speed-val" id="levelDisplay">1D · 3</div></div>
+        <div class="speed-badge"><div class="timer-label">Interval</div><div class="speed-val" id="isiDisplay">3000 ms</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:100%"></div></div>
+    </div>
+    <div class="stimulus-box" id="stimulusBox">
+      <div class="stimulus-bg"></div>
+      <div class="stimulus-error-flash" id="errorFlash"></div>
+      <div class="stimulus-instruction" id="stimInstruction" style="position:relative;z-index:2">Get ready…</div>
+      <div class="axis-ghost" id="cue"></div>
+      <div class="arena" id="arena">
+        <div>
+          <div class="stage-wrap"><svg class="stage" id="stage" viewBox="0 0 300 300"></svg></div>
+        </div>
+        <div class="rank-pad" id="rankPad"></div>
+      </div>
+    </div>
+    <div class="feedback-band" id="feedbackBand"></div>
+    <div class="badges-row">
+      <span class="pill" id="streakPill">🔥 Streak: 0</span>
+      <span class="pill pill-info" id="bitsPill">0.00 bits/s</span>
+      <span class="pill" id="levelMovePill" style="display:none"></span>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS SCREEN -->
+<div class="page" id="pageResults">
+  <nav class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div><div class="brand-name">Results</div><div class="brand-tag">Session Summary</div></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" id="restartBtn">New Session</button>
+    </div>
+  </nav>
+  <div class="results-layout">
+    <div style="display:flex;gap:.75rem;justify-content:center;padding-top:.5rem">
+      <button class="btn btn-ghost" id="backToSettingsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Settings
+      </button>
+      <button class="btn btn-primary" id="restartBtn2">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        New Session
+      </button>
+    </div>
+    <h2>Your Performance</h2>
+    <div class="stat-grid stat-grid-3" id="resultMainStats"></div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Accuracy above chance</span></div>
+      <div class="card-body">
+        <div class="acc-bar"><div class="acc-bar-fill" id="accBarFill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px">
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint)">chance</span>
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--accent)" id="accBarPct">0%</span>
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-faint)">perfect</span>
+        </div>
+        <p class="hint">Bits per second is what you carried, discounted for guessing, over the time it took. It rises with speed, symbols and dimensions alike, so it is the number to watch across levels.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Overall Progress (all sessions)</span></div>
+      <div class="card-body"><div class="stat-grid stat-grid-4" id="resultCumStats"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Session History</span><span class="pill" id="sessionHistCount"></span></div>
+      <div class="card-body"><div class="trial-log" id="sessionHistLog" style="max-height:280px"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Trial Log</span><span class="pill" id="logCount"></span></div>
+      <div class="card-body"><div class="trial-log" id="trialLog"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="modalCancel">Cancel</button>
+      <button class="btn btn-sm" id="modalConfirm" style="background:var(--danger);color:#fff;border-color:var(--danger)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="animals.js"></script>
+<script src="pictures/pictures.js"></script>
+<script src="model.js"></script>
+<script>
+"use strict";
+const R = window.RunningOrder;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const setPage = n => {
+  ['pageHome', 'pageTrain', 'pageResults', 'pageTutorial'].forEach(p => $(p).classList.toggle('active', p === n));
+  $('stickyStartBar').style.display = n === 'pageHome' ? 'flex' : 'none';
+};
+const fmtTime = s => {
+  const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60;
+  const mm = String(m).padStart(2, '0'), ss = String(sec).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${String(Math.floor(s / 60)).padStart(2, '0')}:${ss}`;
+};
+const fmtDuration = v => v < 60 ? v + ' min' : (v % 60 ? `${Math.floor(v / 60)}h ${v % 60}m` : `${v / 60}h`);
+const fmtMs = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 ? 2 : 0).replace(/0$/, '') + ' s' : v + ' ms';
+const levelName = l => `${l.d}D · ${l.s}`;
+
+/* ══ STORAGE ══════════════════════════════════════════════════════════
+   Everything under rrt_*. This page shares its origin with every other
+   trainer in mindbuild, so nothing here may touch a key it does not own —
+   which is why "Wipe data" removes these three and not localStorage. */
+const KEYS = { prog: 'rrt_prog', sett: 'rrt_sett', theme: 'rrt_theme', seen: 'rrt_seen' };
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const loadProgress = () => { try { return JSON.parse(store.get(KEYS.prog)) || {}; } catch { return {}; } };
+const saveProgress = p => store.set(KEYS.prog, JSON.stringify(p));
+/* The best peak throughput on one stimulus set. Records from before the sets
+   existed were all generated marks, which is where `bestBits` came from. */
+const bestFor = (prog, set) => Math.max(
+  (prog.best && prog.best[set]) || 0, set === 'glyphs' ? (prog.bestBits || 0) : 0);
+
+/* Standard mode is these, fixed. Custom mode is whatever the sliders say. */
+const STANDARD = { duration: 15, startISI: 3000, isiFloor: 800, isiCeil: 6000, targetAcc: 80, exposure: 400, encoding: 1500, mask: true, adaptLevel: true };
+/* `probeRate` is deliberately NOT in STANDARD. What is asked is a property of
+   the task like the dimension count and the stimulus set, not of the pace, so
+   it applies in both session modes rather than being overridden by one. */
+const DEFAULTS = Object.assign({
+  mode: 'standard', maxD: 4, stimset: 'glyphs', resumeLevel: true, startD: 1, startS: 3,
+  probeRate: 0, probeMix: 0.5, climb: false, memory: 0,
+  showTruth: true, beepEnabled: true, beepVol: 0.5, beepType: 'sine', flashEnabled: false,
+  padScale: 1, stageScale: 1, speak: false,
+}, STANDARD);
+
+function loadSettings() {
+  try { return Object.assign({}, DEFAULTS, JSON.parse(store.get(KEYS.sett)) || {}); }
+  catch { return Object.assign({}, DEFAULTS); }
+}
+let settings = loadSettings();
+const saveSettings = () => store.set(KEYS.sett, JSON.stringify(settings));
+const eff = k => (settings.mode === 'standard' && k in STANDARD) ? STANDARD[k] : settings[k];
+
+/* ══ THEME ══ */
+const sunIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z"/>`;
+const moonIcon = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>`;
+let theme = store.get(KEYS.theme) || 'dark';
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  store.set(KEYS.theme, t);
+  $('themeBtnIcon').innerHTML = t === 'dark' ? moonIcon : sunIcon;
+  $('themeBtnLabel').textContent = t === 'dark' ? 'Dark' : 'Light';
+}
+applyTheme(theme);
+$('themeBtn').addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(theme); });
+
+/* ══ BEEPS — CCT's five, unchanged ══ */
+const BEEP_TYPES = [
+  { id: 'sine', label: 'Sine (soft)' }, { id: 'square', label: 'Square (harsh)' },
+  { id: 'buzz', label: 'Buzz (low)' }, { id: 'blip', label: 'Blip (short)' }, { id: 'drop', label: 'Drop (falling)' },
+];
+let audioCtx = null;
+function playBeepType(type, vol) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtx, t = ctx.currentTime, v = vol == null ? 0.5 : vol;
+    const gain = ctx.createGain(); gain.connect(ctx.destination);
+    const o = ctx.createOscillator(); o.connect(gain);
+    const spec = {
+      square: ['square', 440, 0.3, 0.25], buzz: ['sawtooth', 120, 0.4, 0.3],
+      blip: ['sine', 880, 0.5, 0.07], drop: ['sine', 600, 0.5, 0.35], sine: ['sine', 480, 0.45, 0.22],
+    }[type] || ['sine', 480, 0.45, 0.22];
+    o.type = spec[0];
+    o.frequency.setValueAtTime(spec[1], t);
+    if (type === 'drop') o.frequency.exponentialRampToValueAtTime(150, t + 0.3);
+    gain.gain.setValueAtTime(v * spec[2], t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + spec[3]);
+    o.start(); o.stop(t + spec[3]);
+  } catch (e) {}
+}
+function signalError() {
+  if (settings.beepEnabled) playBeepType(settings.beepType, settings.beepVol);
+  if (settings.flashEnabled) {
+    $('errorFlash').classList.add('active');
+    setTimeout(() => $('errorFlash').classList.remove('active'), 200);
+  }
+}
+
+/* ══ SETTINGS UI ══ */
+function wireSlider(id, valId, key, min, max, step, fmt, after) {
+  const sl = $(id), out = $(valId);
+  sl.min = min; sl.max = max; sl.step = step;
+  const paint = () => { sl.value = settings[key]; out.textContent = fmt(+settings[key]); if (after) after(); };
+  paint();
+  sl.addEventListener('input', () => {
+    settings[key] = +sl.value; out.textContent = fmt(+sl.value); saveSettings(); if (after) after();
+  });
+  return paint;
+}
+
+/* The pad's size lives in CSS; this is the one place the setting reaches it.
+   Called on every paint, so a reset to defaults lands on the keys too — and on
+   a pad that is already up, so the slider can be judged against real keys
+   rather than a number. */
+/* The card's size, the same way: one custom property, and the keys refitted to
+   the room the card now leaves them. */
+function applyStageScale() {
+  document.documentElement.style.setProperty('--stage-scale', settings.stageScale || 1);
+  /* The first call comes while the page is loading, before the session code
+     below has declared `active`. */
+  try { if (active) renderPad(); } catch { /* not yet */ }
+}
+function applyPadScale() {
+  document.documentElement.style.setProperty('--pad-scale', settings.padScale || 1);
+  const pad = document.getElementById('rankPad');
+  if (pad && pad.children.length) {
+    pad.style.setProperty('--pad-scale',
+      fitPadScale(pad.classList.contains('vertical') ? 0 : 1, pad.children.length, pad));
+  }
+}
+function wireToggle(id, key, subId, after) {
+  const el = $(id);
+  const paint = () => { el.checked = !!settings[key]; if (subId) $(subId).classList.toggle('open', el.checked); };
+  paint();
+  el.addEventListener('change', () => { settings[key] = el.checked; paint(); saveSettings(); if (after) after(); });
+  return paint;
+}
+
+const painters = [
+  wireSlider('durationSlider', 'durationVal', 'duration', 1, 300, 1, fmtDuration),
+  wireSlider('startISISlider', 'startISIVal', 'startISI', 500, 8000, 100, fmtMs),
+  wireSlider('floorSlider', 'floorVal', 'isiFloor', 200, 3000, 50, fmtMs),
+  wireSlider('ceilSlider', 'ceilVal', 'isiCeil', 1000, 10000, 250, fmtMs),
+  wireSlider('targetSlider', 'targetVal', 'targetAcc', 50, 95, 1, v => v + '%'),
+  wireSlider('exposureSlider', 'exposureVal', 'exposure', 100, 1500, 50, fmtMs),
+  wireSlider('encodingSlider', 'encodingVal', 'encoding', 500, 6000, 100, fmtMs),
+  wireSlider('beepVolSlider', 'beepVolVal', 'beepVol', 0, 1, 0.05, v => Math.round(v * 100) + '%'),
+  wireSlider('stageScaleSlider', 'stageScaleVal', 'stageScale', 0.7, 2.0, 0.1, v => v.toFixed(1) + '\u00d7', applyStageScale),
+  wireSlider('padScaleSlider', 'padScaleVal', 'padScale', 0.8, 2.4, 0.1, v => v.toFixed(1) + '\u00d7', applyPadScale),
+  wireToggle('adaptLevelToggle', 'adaptLevel'),
+  wireToggle('maskToggle', 'mask'),
+  wireSlider('probeRateSlider', 'probeRateVal', 'probeRate', 0, 0.5, 0.05,
+             v => v === 0 ? 'none' : Math.round(v * 100) + '% of beats', paintProbeMix),
+  wireSlider('probeMixSlider', 'probeMixVal', 'probeMix', 0, 1, 0.1,
+             v => v === 0 ? 'all relations' : v === 1 ? 'all analogies'
+                                            : Math.round(v * 100) + '% analogies'),
+  wireSlider('memorySlider', 'memoryVal', 'memory', 0, 30, 1,
+             v => v === 0 ? 'never' : v + ' newer symbol' + (v === 1 ? '' : 's')),
+  wireToggle('climbToggle', 'climb', null, paintLevel),
+  wireToggle('resumeToggle', 'resumeLevel', null, paintLevel),
+  wireToggle('truthToggle', 'showTruth'),
+  wireToggle('beepToggle', 'beepEnabled', 'beepOpts'),
+  wireToggle('flashToggle', 'flashEnabled'),
+  wireToggle('speakToggle', 'speak', null, () => { if (settings.speak) say('names on'); }),
+];
+
+function paintMode() {
+  document.querySelectorAll('#modeTabBar .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === settings.mode));
+  $('tab-standard').classList.toggle('active', settings.mode === 'standard');
+  $('tab-custom').classList.toggle('active', settings.mode === 'custom');
+}
+document.querySelectorAll('#modeTabBar .tab-btn').forEach(b => b.addEventListener('click', () => {
+  settings.mode = b.dataset.tab; saveSettings(); paintMode();
+}));
+
+document.querySelectorAll('input[name="probeRate"]').forEach(r => r.addEventListener('change', () => {
+  settings.probeRate = +r.value; saveSettings(); paintLevel();
+}));
+document.querySelectorAll('input[name="maxD"]').forEach(r => r.addEventListener('change', () => {
+  settings.maxD = +r.value; saveSettings(); paintLevel();
+}));
+document.querySelectorAll('input[name="stimset"]').forEach(r => r.addEventListener('change', () => {
+  settings.stimset = R.stimulusSet(r.value).id; saveSettings(); paintStimset();
+}));
+$('startLevelSelect').addEventListener('change', () => {
+  const [d, s] = $('startLevelSelect').value.split('-').map(Number);
+  settings.startD = d; settings.startS = s; saveSettings();
+});
+
+/** The level the next session starts at, after the dimension cap. */
+/* The rungs this configuration actually offers. `climb` off means the chosen
+   dimension is the floor as well as the ceiling. */
+function playLadder() {
+  return R.ladder(settings.maxD, settings.climb ? 1 : settings.maxD);
+}
+
+function startingLevel() {
+  const levels = playLadder();
+  const saved = loadProgress().level;
+  const want = settings.resumeLevel && saved ? saved : { d: settings.startD, s: settings.startS };
+  return levels[R.levelIndex(levels, want)];
+}
+
+/* The mix only means something once some beats are conclusions. */
+function paintProbeMix() {
+  const row = $('probeMixRow');
+  if (row) row.style.display = (settings.probeRate || 0) > 0 ? '' : 'none';
+}
+
+function paintLevel() {
+  document.querySelectorAll('input[name="maxD"]').forEach(r => { r.checked = +r.value === settings.maxD; });
+  const sel = $('startLevelSelect');
+  sel.innerHTML = '';
+  playLadder().forEach(l => {
+    const o = document.createElement('option');
+    o.value = `${l.d}-${l.s}`;
+    o.textContent = `${l.d}D · ${l.s} symbols  (${R.carriedBits(l.d, l.s).toFixed(2)} bits)`;
+    sel.appendChild(o);
+  });
+  const levels = playLadder();
+  sel.value = (l => `${l.d}-${l.s}`)(levels[R.levelIndex(levels, { d: settings.startD, s: settings.startS })]);
+  const saved = loadProgress().level;
+  $('savedLevelPill').textContent = 'next: ' + levelName(startingLevel()) + (saved && settings.resumeLevel ? ' (resumed)' : '');
+}
+
+/**
+ * The worked example on the home page, dealt from the set that is actually in
+ * play. Written out in fixed symbols it would be a picture of a game nobody
+ * plays: the marks are generated per card and the animals come from a pool, so
+ * the only honest example is a real one.
+ *
+ * The order it shows is the one in the README: holding three, the new symbol
+ * lands two above the third, which is the first slot, the symbol there leaves,
+ * and the answer is 1.
+ */
+function exampleStep(caption, cells) {
+  const box = document.createElement('div');
+  box.className = 'example-step';
+  const cap = document.createElement('div');
+  cap.innerHTML = caption;
+  box.appendChild(cap);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:.45rem;align-items:flex-start;margin-top:.35rem';
+  cells.forEach(c => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:1px';
+    if (c.faded) cell.style.opacity = '.4';
+    cell.appendChild(stimMini(c.stim, 30, c.cls || 'ref'));
+    if (c.tag) {
+      const t = document.createElement('div');
+      t.className = 'strip-tag';
+      if (c.tagColor) t.style.color = c.tagColor;
+      t.textContent = c.tag;
+      cell.appendChild(t);
+    }
+    row.appendChild(cell);
+  });
+  box.appendChild(row);
+  return box;
+}
+
+/* Every photograph with its author, licence and source, as the licences ask. */
+function paintPhotoCredits() {
+  const box = $('photoCredits');
+  if (!box || box.childElementCount || !R.PICTURES.length) return;
+  $('photoCreditsBox').style.display = '';
+  R.PICTURES.forEach(p => {
+    const row = document.createElement('div');
+    const a = document.createElement('a');
+    a.href = p.source; a.target = '_blank'; a.rel = 'noopener';
+    a.style.color = 'inherit';
+    a.textContent = p.name;
+    row.append(a, ` — ${p.author}, ${p.licence}`);
+    box.appendChild(row);
+  });
+}
+
+function paintStimset() {
+  const set = R.stimulusSet(settings.stimset);
+  $('animalCount').textContent = R.ANIMALS.length;
+  $('pictureCount').textContent = R.PICTURES.length;
+  paintPhotoCredits();
+  if (set.id === 'pictures') warmPhotos();
+  document.querySelectorAll('input[name="stimset"]').forEach(r => { r.checked = r.value === set.id; });
+
+  const a = set.next([], Math.random), b = set.next([a], Math.random);
+  const c = set.next([a, b], Math.random), x = set.next([a, b, c], Math.random);
+  const mark = set.id === 'pictures'
+    ? 'the one in the <span style="color:var(--accent)">frame</span> is new. They are photographs of things you can name at a glance, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    : set.id === 'animals'
+    ? 'the <span style="color:var(--accent)">coloured</span> one is new. They are a fixed pool of animals you can put a name to, which is the point of this set: the beat goes on the order rather than on taking the symbol in.'
+    : 'the <span style="color:var(--accent)">coloured</span> one is new. Every mark is generated on the spot and never comes back, so there is nothing about it to learn — only where it goes.';
+  $('cardHowText').innerHTML = `<strong>How a card works.</strong> An episode opens with the whole board: every symbol in its own slot. After that, every card shows two symbols: the plain one is one you already hold, and ${mark}`
+    + ` The card is a small grid, and the new symbol is as many cells from the plain one as it has steps to go — up or down, and in higher levels also left or right, back or front, and bigger or smaller.`
+    + ` It takes that slot, and the symbol that was there leaves. <strong>Nothing else moves.</strong>`
+    + ` Press the new symbol's rank with the number keys (1 = top, left, back, or biggest) or tap it.`;
+
+  $('cardExample').replaceChildren(
+    exampleStep('Holding (top → bottom)', [
+      { stim: a, tag: '1' }, { stim: b, tag: '2' }, { stim: c, tag: '3' },
+    ]),
+    exampleStep('Card: the new one <strong>two above</strong> the 3rd', [
+      { stim: x, cls: 'new', tag: 'new', tagColor: 'var(--accent)' }, { stim: c, tag: '3rd' },
+    ]),
+    exampleStep('3 − 2 = slot 1; the one there leaves', [
+      { stim: a, faded: true, tag: 'left' }, { stim: x, cls: 'new' },
+    ]),
+    exampleStep('Now holding — so the answer is <strong style="color:var(--accent)">1</strong>', [
+      { stim: x, cls: 'new', tag: '1', tagColor: 'var(--accent)' }, { stim: b, tag: '2' }, { stim: c, tag: '3' },
+    ]),
+  );
+}
+
+function buildBeepTypeList() {
+  const list = $('beepTypeList'); list.innerHTML = '';
+  BEEP_TYPES.forEach(bt => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px';
+    const rb = document.createElement('input');
+    rb.type = 'radio'; rb.name = 'beepType'; rb.id = 'beep_' + bt.id; rb.style.accentColor = 'var(--accent)';
+    rb.checked = settings.beepType === bt.id;
+    rb.addEventListener('change', () => { settings.beepType = bt.id; saveSettings(); });
+    const lbl = document.createElement('label');
+    lbl.htmlFor = rb.id; lbl.textContent = bt.label;
+    lbl.style.cssText = 'font-size:.85rem;color:var(--text-dim);flex:1;cursor:pointer';
+    const prev = document.createElement('button');
+    prev.className = 'btn btn-ghost btn-sm'; prev.style.cssText = 'font-size:.68rem;padding:2px 9px';
+    prev.textContent = '▶ Preview';
+    prev.addEventListener('click', () => playBeepType(bt.id, settings.beepVol));
+    row.append(rb, lbl, prev);
+    list.appendChild(row);
+  });
+}
+
+function paintAll() { painters.forEach(p => p()); paintMode(); paintLevel(); paintStimset(); buildBeepTypeList(); }
+/* Called from the tail of the file: the worked example is drawn with the same
+   helpers the cards use, and those are defined below. */
+
+/* ══ MODAL ══ */
+function openModal(title, body, onConfirm, confirmLabel, danger = true) {
+  $('modalTitle').textContent = title; $('modalBody').textContent = body;
+  const c = $('modalConfirm');
+  c.textContent = confirmLabel;
+  c.style.background = c.style.borderColor = danger ? 'var(--danger)' : 'var(--accent)';
+  c.style.color = danger ? '#fff' : '#000';
+  c.onclick = () => { closeModal(); onConfirm(); };
+  $('confirmModal').classList.add('open');
+}
+function closeModal() { $('confirmModal').classList.remove('open'); }
+$('modalCancel').addEventListener('click', closeModal);
+$('confirmModal').addEventListener('click', e => { if (e.target === $('confirmModal')) closeModal(); });
+
+$('resetAppBtn').addEventListener('click', () => openModal(
+  'Wipe Running Order data?',
+  'Deletes this trainer\'s session history, saved level and settings. Other trainers are not touched. This cannot be undone.',
+  () => { Object.values(KEYS).forEach(store.del); location.reload(); }, 'Wipe'));
+$('resetBtn').addEventListener('click', () => openModal(
+  'Reset settings to defaults?', 'History and saved level are kept.',
+  () => { settings = Object.assign({}, DEFAULTS); saveSettings(); paintAll(); }, 'Reset'));
+
+/* ══ DRAWING ══════════════════════════════════════════════════════════ */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const STAGE = 300, MID = 150, BASE = 64, BIG = 92, SMALL = 40;
+/*
+ * How far one step goes. Flat while the card is a plane; shorter once latitude
+ * is in play, because the oblique step has to fit beside the other two without
+ * anything leaving the stage: 150 + 64 + 34 + 46 = 294 of 300 at the largest
+ * symbol a 4D card can draw.
+ */
+const MASK_MS = 100;
+
+function glyphEl(glyph, cx, cy, size, cls) {
+  const p = document.createElementNS(SVGNS, 'path');
+  p.setAttribute('d', R.glyphPath(glyph));
+  p.setAttribute('transform', `translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 2})`);
+  p.setAttribute('class', 'glyph ' + cls);
+  return p;
+}
+
+/* An animal: its silhouette, drawn on a 512 grid, scaled to the size the card
+   asks for and centred on the same point a mark would be. The set is drawn to a
+   consistent margin — every figure fills 89–95% of its grid and sits within 3%
+   of the centre — so the grid alone is enough to make "bigger than that one"
+   mean what it says, without normalising each drawing to its own box. */
+const PIC_GRID = 512;
+function picEl(stim, cx, cy, size, cls) {
+  const p = document.createElementNS(SVGNS, 'path');
+  p.setAttribute('d', stim.path);
+  const k = size / PIC_GRID;
+  p.setAttribute('transform', `translate(${cx - size / 2} ${cy - size / 2}) scale(${k})`);
+  p.setAttribute('class', 'pic ' + cls);
+  return p;
+}
+
+/*
+ * A picture: a photograph, square, with rounded corners. It brings its own
+ * colours, so the page cannot tint it to say which one is new — the new one
+ * stands in an accent frame instead, and a mask is the same photos faded.
+ */
+let photoClip = 0;
+function photoEl(stim, cx, cy, size, cls) {
+  /* A photo fills its square where a mark leaves air round its strokes, so
+     it reads small at a mark's size; a quarter bigger still sits in its cell. */
+  size *= 1.25;
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('class', 'photo ' + cls);
+  const x = cx - size / 2, y = cy - size / 2, r = size * 0.14;
+  const id = 'pc' + (++photoClip);
+  const clip = svgEl('clipPath', { id });
+  clip.appendChild(svgEl('rect', { x, y, width: size, height: size, rx: r }));
+  g.appendChild(clip);
+  const img = svgEl('image', { x, y, width: size, height: size, href: stim.image,
+                               'clip-path': `url(#${id})`, preserveAspectRatio: 'xMidYMid slice' });
+  g.appendChild(img);
+  if (cls === 'new') {
+    const pad = size * 0.09;
+    g.appendChild(svgEl('rect', { x: x - pad, y: y - pad, width: size + 2 * pad, height: size + 2 * pad,
+                                  rx: r + pad, class: 'photo-ring' }));
+  }
+  return g;
+}
+
+/* The photos, loaded before they are needed, so a card never lands as an
+   empty frame while its picture is still on its way off the disk. */
+let photosWarm = false;
+function warmPhotos() {
+  if (photosWarm || !R.PICTURES.length) return;
+  photosWarm = true;
+  R.PICTURES.forEach(p => { const i = new Image(); i.src = p.image; });
+}
+
+/* The one place that knows the difference: a generated mark is an array of
+   stroke indices, an animal is an object with a path, a picture one with an
+   image. Everything above this draws cards without caring which set is in
+   play. */
+const isPic = stim => !Array.isArray(stim);
+const isPhoto = stim => !!(stim && stim.image);
+function stimEl(stim, cx, cy, size, cls) {
+  if (isPhoto(stim)) return photoEl(stim, cx, cy, size, cls);
+  return isPic(stim) ? picEl(stim, cx, cy, size, cls) : glyphEl(stim, cx, cy, size, cls);
+}
+function clearStage(el) { (el || $('stage')).replaceChildren(); }
+
+/*
+ * A card is drawn as a small lattice: along every axis, one cell more than the
+ * steps between the two symbols, with the reference in one corner cell and the
+ * new symbol in the opposite one. Counting the cells is reading the distance,
+ * and it reads the same way on every axis and in every dimension.
+ *
+ * The board an episode opens with is the same lattice at full size: `s` cells
+ * on every axis, every symbol in its slot.
+ */
+const CELL_MAX = 92, FLAT_SPAN = 250;
+
+function flatFrame(rows, cols) {
+  const cell = Math.min(CELL_MAX, FLAT_SPAN / Math.max(rows, cols));
+  const x0 = MID - cols * cell / 2, y0 = MID - rows * cell / 2;
+  return {
+    cell, x0, y0, rows, cols,
+    at: (r, c) => [x0 + (c + 0.5) * cell, y0 + (r + 0.5) * cell],
+  };
+}
+
+function flatLattice(f) {
+  const parts = [];
+  for (let r = 0; r <= f.rows; r++) {
+    parts.push(svgEl('line', { x1: f.x0, y1: f.y0 + r * f.cell, x2: f.x0 + f.cols * f.cell,
+                               y2: f.y0 + r * f.cell, class: 'box-edge' }));
+  }
+  for (let c = 0; c <= f.cols; c++) {
+    parts.push(svgEl('line', { x1: f.x0 + c * f.cell, y1: f.y0, x2: f.x0 + c * f.cell,
+                               y2: f.y0 + f.rows * f.cell, class: 'box-edge' }));
+  }
+  return parts;
+}
+
+const BOX_W = 78, BOX_DX = 48, BOX_DY = 26;
+/*
+ * Symbols in the box are sized to its cells, so that one sits inside a cell
+ * rather than spilling across the wall into the next. The stage renders far
+ * larger than its 300-unit viewBox, so small here is not small on the screen.
+ */
+const BOX_BASE = 44;
+
+/* Lattice coordinates to the stage, in oblique projection. `w` is depth, and
+   -1 is the back: up and to the right.
+
+   Depth is deliberately not at 45°. At equal x and y it runs down the same
+   diagonal a combined height-and-longitude step makes, which is the one angle
+   that cannot be told from those two moving together. Shallower, it reads as
+   its own direction. */
+const boxPt = (u, v, w) => [
+  MID + u * BOX_W - w * BOX_DX,
+  MID + v * BOX_W + w * BOX_DY,
+];
+
+const svgEl = (name, attrs) => {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+};
+
+/* The walls between cells, `nu` across, `nv` down and `nw` deep. */
+function boxLattice(nu, nv, nw) {
+  const ticks = n => Array.from({ length: n + 1 }, (_, i) => -1 + (2 * i) / n);
+  const line = (a, b) => svgEl('line', {
+    x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: 'box-edge',
+  });
+  const parts = [];
+  for (const v of ticks(nv)) for (const w of ticks(nw)) parts.push(line(boxPt(-1, v, w), boxPt(1, v, w)));
+  for (const u of ticks(nu)) for (const w of ticks(nw)) parts.push(line(boxPt(u, -1, w), boxPt(u, 1, w)));
+  for (const u of ticks(nu)) for (const v of ticks(nv)) parts.push(line(boxPt(u, v, -1), boxPt(u, v, 1)));
+  return parts;
+}
+
+/* The centre of cell `i` of `n` along one axis of the box. */
+const cellMid = (i, n) => -1 + (2 * i + 1) / n;
+
+/* How big a symbol is drawn `step` size ranks from the middle: rank 0 is the
+   biggest. Clamped so a long step still fits its cell — the number beside the
+   symbol says how many steps, the drawing only which way. */
+const sizeFactor = step => Math.min(1.6, Math.max(0.5, Math.pow(1.25, -step)));
+
+/*
+ * A symbol standing in the box: the shape itself, a shadow on the floor under
+ * it, and the drop between them.
+ *
+ * Depth cannot be drawn by scale — scale is the fourth axis — so it is carried
+ * by the two cues that cost no channel. The shadow sits at the symbol's own
+ * place on the floor, so its position states longitude and latitude while the
+ * length of the drop states height. And a symbol is drawn either side of the
+ * lattice depending which half of the box it is in, so the wires cross a
+ * symbol at the back and are crossed by one at the front.
+ */
+function standing(stim, c, cls) {
+  const [x, y] = boxPt(c.u, c.v, c.w);
+  const [fx, fy] = boxPt(c.u, 1, c.w);
+  return [
+    svgEl('ellipse', { cx: fx, cy: fy, rx: c.size * 0.40, ry: c.size * 0.15,
+                       class: 'box-shadow' }),
+    svgEl('line', { x1: x, y1: y + c.size * 0.42, x2: fx, y2: fy, class: 'box-drop' }),
+    stimEl(stim, x, y, c.size, cls),
+  ];
+}
+
+/* The size steps on a 4D card, beside the new symbol: "+2" is two ranks
+   bigger than the reference, "−1" one smaller. */
+function sizeTag(x, y, text) {
+  const t = svgEl('text', { x, y, class: 'size-tag', 'text-anchor': 'middle' });
+  t.textContent = text;
+  return t;
+}
+
+/* Symbols in a box, back to front, with the lattice between the halves. */
+function boxScene(entries, lattice) {
+  entries.sort((a, b) => a.c.w - b.c.w);
+  const back = entries.filter(e => e.c.w < 0), front = entries.filter(e => e.c.w >= 0);
+  const draw = e => {
+    const out = standing(e.stim, e.c, e.cls);
+    if (e.tag != null) {
+      const [x, y] = boxPt(e.c.u, e.c.v, e.c.w);
+      out.push(sizeTag(x + e.c.size * 0.8, y - e.c.size * 0.45, e.tag));
+    }
+    return out;
+  };
+  return [...back.flatMap(draw), ...lattice, ...front.flatMap(draw)];
+}
+
+/*
+ * One card: the reference and the new symbol, `dist[a]` steps apart on axis
+ * `a`. Negative is toward rank 1 — up, left, back, bigger.
+ */
+/*
+ * A conclusion, drawn: the pairs it is about, the step it claims, and the axis
+ * it claims it on — the axis in the middle, between the two relations it
+ * joins, because that is where it belongs both to the eye and to the sense.
+ * Set beside the card it would be a label on the question; set between the
+ * rows it is the thing the two rows are being compared along.
+ *
+ * No lattice and no placement. Where the symbols stand is the whole of what is
+ * being asked, so drawing any of it would answer the question. None of them is
+ * coloured as new either — all are already held, and the accent means "this
+ * one is arriving".
+ */
+const PROBE_ROW = { S: 52, xL: 62, xR: 238 };
+
+/* An arrow from the left symbol to the right one, with the claimed step as
+   pips under it when there is a step being claimed. Never a numeral: the card
+   counts cells and this counts dots, and neither has to be read as a word. */
+function probeRow(y, step) {
+  const { xL, xR } = PROBE_ROW;
+  const x1 = xL + 36, x2 = xR - 46;
+  const out = [
+    svgEl('line', { x1, y1: y, x2, y2: y, class: 'probe-arrow' }),
+    svgEl('polygon', { points: `${x2 - 12},${y - 6} ${x2},${y} ${x2 - 12},${y + 6}`,
+                       class: 'probe-head' }),
+  ];
+  if (step != null) {
+    const n = step, mid = (x1 + x2) / 2, gap = 11;
+    for (let i = 0; i < n; i++) {
+      out.push(svgEl('circle', {
+        cx: mid + (i - (n - 1) / 2) * gap, cy: y + 15, r: 3.2, class: 'probe-pip',
+      }));
+    }
+  }
+  return out;
+}
+
+/* The axis, between the rows. Its glyph and its colour, at the size of a thing
+   you read rather than a thing you decode. */
+function probeAxis(axis, y) {
+  const a = AXIS_CUE[axis];
+  if (!a) return [];
+  const g = svgEl('text', { x: MID, y: y + 7, class: 'probe-axis' });
+  g.textContent = a.glyph;
+  g.setAttribute('fill', `var(--ax-${axis})`);
+  const rule = (x1, x2) => svgEl('line', { x1, y1: y, x2, y2: y, class: 'probe-rule' });
+  return [rule(PROBE_ROW.xL, MID - 18), rule(MID + 18, PROBE_ROW.xR), g];
+}
+
+function drawProbe(el, q) {
+  const { S, xL, xR } = PROBE_ROW;
+  const yA = 84, yB = 216;
+  if (q.kind === 'relation') {
+    /* One relation, so the axis heads it rather than dividing it, and the pair
+       sits under the rule where the analogy's second row would begin. The
+       group stays centred; an axis marooned under a single row read as a
+       footnote to it rather than as what it is being claimed along. */
+    const y = MID + 26;
+    /* Always a forward arrow. A backward one and a count is two things to
+       decode where the order of the two symbols already says the direction:
+       a claim of −3 is drawn as the other one first, three steps along. */
+    const back = q.claim < 0;
+    const first = back ? q.pair[1] : q.pair[0];
+    const last = back ? q.pair[0] : q.pair[1];
+    el.replaceChildren(
+      ...probeAxis(q.axis, MID - 52),
+      stimEl(first.glyph, xL, y, S, 'ref'),
+      ...probeRow(y, Math.abs(q.claim)),
+      stimEl(last.glyph, xR, y, S, 'ref'));
+    return;
+  }
+  el.replaceChildren(
+    stimEl(q.pair[0].glyph, xL, yA, S, 'ref'), ...probeRow(yA, null),
+    stimEl(q.pair[1].glyph, xR, yA, S, 'ref'),
+    ...probeAxis(q.axis, MID),
+    stimEl(q.mate[0].glyph, xL, yB, S, 'ref'), ...probeRow(yB, null),
+    stimEl(q.mate[1].glyph, xR, yB, S, 'ref'));
+}
+
+function drawCard(el, glyph, refGlyph, dist, d) {
+  const n = a => Math.abs(dist[a]) + 1;
+  /* Along one axis: the new symbol's cell and the reference's. */
+  const ends = a => (dist[a] < 0 ? [0, n(a) - 1] : [n(a) - 1, 0]);
+  if (d < 3) {
+    const f = flatFrame(n(0), d >= 2 ? n(1) : 1);
+    const [nr, rr] = ends(0);
+    const [nc, rc] = d >= 2 ? ends(1) : [0, 0];
+    const size = Math.min(BASE, f.cell * 0.72);
+    const [rx, ry] = f.at(rr, rc), [nx, ny] = f.at(nr, nc);
+    el.replaceChildren(...flatLattice(f),
+                       stimEl(refGlyph, rx, ry, size, 'ref'),
+                       stimEl(glyph, nx, ny, size, 'new'));
+    return;
+  }
+  const nu = n(1), nv = n(0), nw = n(2);
+  const base = Math.min(BOX_BASE, 0.75 * 2 * BOX_W / Math.max(nu, nv));
+  const place = (pick, size) => ({
+    u: cellMid(ends(1)[pick], nu), v: cellMid(ends(0)[pick], nv), w: cellMid(ends(2)[pick], nw), size,
+  });
+  const ref = { stim: refGlyph, cls: 'ref', c: place(1, base) };
+  const now = { stim: glyph, cls: 'new', c: place(0, d >= 4 ? base * sizeFactor(dist[3]) : base) };
+  if (d >= 4) now.tag = dist[3] === 0 ? '±0' : (dist[3] < 0 ? '+' : '−') + Math.abs(dist[3]);
+  el.replaceChildren(...boxScene([ref, now], boxLattice(nu, nv, nw)));
+}
+
+/*
+ * The whole board, to be learnt before the first card: every symbol in its
+ * slot, rows by height and columns by width, with the ranks numbered along the
+ * edges. It stays flat in every dimension — a box of sixty-four cells with five
+ * symbols in it hides them behind one another, and this is the one screen
+ * whose only job is to be read. Depth is a tag under each symbol, and size is
+ * drawn as size and tagged as well, because a few pixels is not a rank.
+ */
+function drawBoard(el, items, d, s) {
+  const f = flatFrame(s, d >= 2 ? s : 1);
+  const size = Math.min(BASE, f.cell * (d >= 3 ? 0.46 : 0.72));
+  const parts = flatLattice(f);
+  const label = (x, y, text, cls) => {
+    const t = svgEl('text', { x, y, class: cls, 'text-anchor': 'middle' });
+    t.textContent = text;
+    return t;
+  };
+  for (let r = 0; r < s; r++) {
+    parts.push(label(f.x0 - 10, f.at(r, 0)[1] + 4, String(r + 1), 'board-num'));
+    if (d >= 2) parts.push(label(f.at(0, r)[0], f.y0 - 6, String(r + 1), 'board-num'));
+  }
+  items.forEach(it => {
+    let [x, y] = f.at(it.ranks[0], d >= 2 ? it.ranks[1] : 0);
+    if (d >= 3) y -= f.cell * 0.12;
+    const k = d >= 4 ? sizeFactor(it.ranks[3] - (s - 1) / 2) : 1;
+    parts.push(stimEl(it.glyph, x, y, Math.min(size * k, f.cell * 0.54), 'ref'));
+    if (d >= 3) {
+      const tags = [AXIS_CUE[2].glyph + (it.ranks[2] + 1)];
+      if (d >= 4) tags.push(AXIS_CUE[3].glyph + (it.ranks[3] + 1));
+      parts.push(label(x, y + f.cell * 0.44, tags.join(' '), 'board-tag'));
+    }
+  });
+  el.replaceChildren(...parts);
+}
+
+/* A backward mask: scattered stimuli of the same kind over the whole card, so
+   the image does not linger on the retina after the card has gone. Strokes for
+   strokes and animals for animals — a mask has to be made of what it masks. */
+function drawMask(el, setId) {
+  const set = R.stimulusSet(setId);
+  const parts = [];
+  for (let i = 0; i < 9; i++) {
+    const stim = set.id === 'glyphs' ? R.makeGlyph(Math.random) : set.next([], Math.random);
+    parts.push(stimEl(stim, 40 + Math.random() * 220, 40 + Math.random() * 220, 50 + Math.random() * 40, 'mask'));
+  }
+  el.replaceChildren(...parts);
+}
+
+const AXIS_CUE = [
+  { glyph: '↕', word: 'height',    sub: 'rank from the top' },
+  { glyph: '↔', word: 'longitude', sub: 'rank from the left' },
+  { glyph: '╱', word: 'latitude',  sub: 'rank from the back' },
+  { glyph: '●', word: 'size',      sub: 'rank from the biggest' },
+];
+
+/* The watermark that says which rank to report. `axis` null clears it. */
+function setAxisCue(el, axis, sub) {
+  if (!el) return;
+  const box = el.closest('.stimulus-box');
+  if (axis == null || !AXIS_CUE[axis]) {
+    el.replaceChildren();
+    if (box) box.style.removeProperty('--ax');
+    return;
+  }
+  const a = AXIS_CUE[axis];
+  el.innerHTML = `<span class="ag-main"><b>${a.glyph}</b> ${a.word}</span>`
+               + `<span class="ag-sub">${sub || a.sub}</span>`;
+  if (box) box.style.setProperty('--ax', `var(--ax-${axis})`);
+}
+
+/* What the Button size setting comes to on THIS pad, which is the size asked
+   for capped by the room there is for it.
+
+   The cap is needed because the pad's footprint is the key times the number of
+   keys, and the number of keys is the level: the size that fits a 3-key pad puts
+   a 7-key column off the bottom of a phone. Asking and not getting is better
+   than a key that cannot be reached — and the keys stay the size they were the
+   moment the level rises, rather than the pad silently growing past the screen.
+
+   Down a column the budget is the height beside the stage; across a row it is
+   the width, less the gaps. Both are deliberately shy of the whole thing: the
+   cue and the stage are in the same box. */
+function fitPadScale(axis, keys, pad) {
+  const asked = settings.padScale || 1;
+  const n = Math.max(1, keys);
+  const gaps = 6 * n;
+  let fit;
+  if (axis === 0) {
+    /* A column, standing beside the stage: bounded by the height it has, and
+       by the strip of width the stage leaves it — a key wider than that strip
+       folds the column under the stage, which costs far more height than the
+       bigger key was worth. */
+    /* This pad's own stage, not the first one in the document — the walkthrough
+       has a stage of its own and it is on a hidden page, where it measures 0. */
+    const stage = pad && pad.closest('.arena') && pad.closest('.arena').querySelector('.stage-wrap');
+    const stageW = (stage && stage.getBoundingClientRect().width)
+      || Math.min(300, window.innerWidth * 0.72);
+    /* The room beside it, measured off the box the two of them share rather
+       than off the window — a couple of pixels either way decides whether the
+       column stays beside the stage or folds under it. */
+    const box = pad && pad.closest('.stimulus-box');
+    const cs = box && getComputedStyle(box);
+    const inner = box
+      ? box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      : window.innerWidth * 0.9;
+    const beside = inner - stageW - 16;
+    fit = Math.min(
+      (window.innerHeight * 0.42 - gaps) / n / (2.7 * 16),
+      beside / (3.1 * 16),
+    );
+  } else {
+    fit = (window.innerWidth * 0.92 - gaps) / n / (3.1 * 16);
+  }
+  /* The cap never takes a key below the size it has always been: that size fits
+     by construction, and this setting exists to make keys bigger, not smaller.
+     A player who asks for smaller still gets it. */
+  return Math.min(asked, Math.max(1, fit)).toFixed(2);
+}
+
+/* The pad takes the shape of the asked axis — a column for height, a row for
+   width, shrinking dots for size — so pressing a rank is pointing at a place. */
+const PROBE_KEYS = [{ rank: 1, glyph: '\u2191', word: 'true' },
+                   { rank: 2, glyph: '\u2193', word: 'false' }];
+
+function buildPad(pad, arena, o) {
+  pad.replaceChildren();
+  /* A probe is answered with a claim, not a place, so its pad keeps none of the
+     axis's shape — two keys, up for true and down for false. */
+  if (o.probe) {
+    pad.className = 'rank-pad probe';
+    if (arena) arena.classList.remove('side');
+    pad.style.setProperty('--pad-scale', fitPadScale(1, 2, pad));
+    PROBE_KEYS.forEach(key => {
+      const b = document.createElement('button');
+      b.className = 'rank-btn probe-btn';
+      b.dataset.rank = key.rank;
+      b.disabled = !o.enabled;
+      b.innerHTML = `<span class="pb-glyph">${key.glyph}</span><span class="pb-word">${key.word}</span>`;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); o.onPick(key.rank); });
+      pad.appendChild(b);
+    });
+    return;
+  }
+  pad.className = 'rank-pad' + (o.axis === 0 ? ' vertical' : o.axis === 2 ? ' depth' : '');
+  if (arena) arena.classList.toggle('side', o.axis === 0);
+  pad.style.setProperty('--pad-scale', fitPadScale(o.axis, o.s, pad));
+  for (let r = 1; r <= o.s; r++) {
+    const b = document.createElement('button');
+    b.className = 'rank-btn';
+    b.dataset.rank = r;
+    b.disabled = !o.enabled || r > o.k;
+    if (o.axis === 3) {
+      const dot = document.createElement('span');
+      const px = Math.round(18 - (r - 1) * (12 / Math.max(1, o.s - 1)));
+      dot.className = 'rank-dot';
+      /* Through the same multiplier as the key, so the size axis stays readable
+         at every button size — and in calc(), so a pad already on screen follows
+         the slider without being rebuilt. */
+      dot.style.width = dot.style.height = `calc(${px}px * var(--pad-scale, 1))`;
+      b.append(dot);
+    }
+    b.append(String(r));
+    b.addEventListener('pointerdown', e => { e.preventDefault(); o.onPick(r); });
+    pad.appendChild(b);
+  }
+}
+function renderPad() {
+  const lvl = ctrl.levels[ctrl.level];
+  buildPad($('rankPad'), $('arena'), {
+    s: lvl.s, k: cur ? cur.k : 0, axis: cur ? cur.axis : 0,
+    probe: !!(cur && cur.probe),
+    enabled: !!cur && !cur.done, onPick: answer,
+  });
+}
+function padButton(pad, r) { return pad.querySelector(`[data-rank="${r}"]`); }
+/* The cap above is read off the window, so it has to be taken again when the
+   window changes — a rotation is the common one. Debounced: a phone fires this
+   continuously while its address bar slides. */
+let padFitTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(padFitTimer);
+  padFitTimer = setTimeout(() => { if (active) renderPad(); }, 160);
+});
+
+/* ══ SPEECH ══════════════════════════════════════════════════════════
+   Names said aloud, for the sets that have names. In the Android app the
+   page runs in a WebView, which has no speechSynthesis of its own, so the
+   app carries Capacitor's native text-to-speech plugin and that is tried
+   first — on this page's window, and on the hub's, since the trainer runs in
+   a frame of it. In a browser the Web Speech API does the same job. Where
+   neither exists, nothing is said and nothing breaks.
+
+   Every call cuts off whatever was still being said: the newest symbol is the
+   one that matters, and a queue of stale names would run behind the cards.
+═══════════════════════════════════════════════════════════════════════ */
+function nativeSpeech() {
+  for (const w of [window, window.parent, window.top]) {
+    try {
+      const cap = w && w.Capacitor;
+      if (cap && cap.isPluginAvailable && cap.isPluginAvailable('TextToSpeech')) return cap.Plugins.TextToSpeech;
+    } catch { /* a frame of another origin: not ours to ask */ }
+  }
+  return null;
+}
+
+function say(text) {
+  const tts = nativeSpeech();
+  /* The plugin's speak already flushes the queue, so it needs no stop first. */
+  if (tts) { Promise.resolve(tts.speak({ text, lang: 'en-GB', rate: 1.1 })).catch(() => {}); return; }
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-GB';
+    u.rate = 1.1;
+    speechSynthesis.speak(u);
+  } catch { /* no voice here */ }
+}
+
+function stopSpeech() {
+  const tts = nativeSpeech();
+  if (tts) { Promise.resolve(tts.stop()).catch(() => {}); return; }
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch { /* nothing to stop */ }
+}
+
+/* Whether this session speaks: the setting, and a set with names to say. */
+const speaks = () => !!settings.speak && !!R.stimulusSet(sessionSet).named;
+
+/* The board in reading order, a row at a time; or one new symbol. */
+function sayStims(stims) {
+  if (!speaks() || !stims.length) return;
+  say(stims.map(x => x.name).join(', '));
+}
+function sayBoard(items) {
+  sayStims(items.slice().sort((a, b) => a.ranks[0] - b.ranks[0] || (a.ranks[1] || 0) - (b.ranks[1] || 0))
+    .map(it => it.glyph));
+}
+
+/* ══ SESSION ══════════════════════════════════════════════════════════ */
+let active = false, ctrl = null, model = null, cur = null, trials = [];
+/* Which stimuli the cards are made of. Fixed when a session or the walkthrough
+   starts, not read live, so a record always says what it was earned on. */
+let sessionSet = 'glyphs';
+/* Fixed with it: a spoken session is kept apart in the records. */
+let sessionSpoken = false;
+let sessionProbed = false;
+/* The forgetting horizon this session plays with, fixed at its start like the
+   set: changing it mid-session would change what the best score was earned
+   with. 0 is never. */
+let sessionMemory = 0;
+const nextStim = avoid => R.stimulusSet(sessionSet).next(avoid, Math.random);
+/* Set while the walkthrough is running its practice beats: a session with the
+   pace pinned, a beat budget instead of a clock, and no record kept. */
+let practice = null;
+let needEpisode = true, recentlyGone = [], peakLevel = 0, streak = 0;
+let beatTimer = null, stageTimers = [], clockTimer = null;
+let timerSec = 0, sessionDuration = 0;
+
+function later(fn, ms) { stageTimers.push(setTimeout(fn, ms)); }
+function clearStageTimers() { stageTimers.forEach(clearTimeout); stageTimers = []; }
+
+/* ---- Pausing ----
+   A hidden page is not being trained in front of. The shell hides this trainer
+   in a frame when you go back to the hub menu and delivers the browser's own
+   `visibilitychange` — the same signal a real tab switch sends — so both are
+   handled here and neither needs to know the other exists.
+
+   What stops is the clock and the pace. The card on screen stays, and the beat
+   it belongs to resumes with the time it had left rather than starting over,
+   so an interruption costs the interruption and not a card.
+
+   **The reaction time is corrected rather than left to absorb the pause.**
+   `cur.t0` is a `performance.now()` stamp and `rt` is the difference, so a
+   thirty-second visit to the hub would be recorded as thirty seconds of
+   thinking about whichever card was up — a number that is not wrong by a
+   little, and one that would go into the adaptive pace and drag the level
+   down. Shifting the stamp forward by exactly the paused span leaves the
+   measurement of what the player actually did.
+
+   The mask and clear-stage timers are dropped rather than resumed. They are
+   sub-steps of the beat already in progress, worth a few hundred milliseconds
+   each, and re-arming them out of order would show the mask after the card had
+   gone. The cost is that the paused card is not masked, which favours the
+   player slightly; the alternative favours nobody and looks broken. */
+let paused = false, pausedAt = 0, beatLeft = 0;
+
+function pauseSession() {
+  if (!active || paused) return;
+  paused = true;
+  pausedAt = performance.now();
+  /* What the beat had left, so resuming does not hand back a whole one. */
+  beatLeft = Math.max(50, beatDueAt - performance.now());
+  clearInterval(clockTimer); clockTimer = null;
+  clearTimeout(beatTimer); beatTimer = null;
+  clearStageTimers();
+  stopSpeech();
+}
+
+function resumeSession() {
+  if (!paused) return;
+  paused = false;
+  if (!active) return;
+  const away = performance.now() - pausedAt;
+  /* The card was on screen for the whole interruption and was not being
+     looked at. Move its clock, not the player's. */
+  if (cur && !cur.done) cur.t0 += away;
+  armClock();
+  armBeat(beatLeft);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseSession(); else resumeSession();
+});
+
+/* The countdown on its own, so resuming can put it back. `startSession`
+   reassigns `timerSec`, so it is the wrong thing to call when a session is
+   being continued rather than begun. */
+function armClock() {
+  clearInterval(clockTimer);
+  clockTimer = setInterval(() => {
+    if (!active || paused) return;
+    timerSec--;
+    if (!practice) {
+      $('timerDisplay').textContent = fmtTime(Math.max(0, timerSec));
+      $('progressFill').style.width = (timerSec / sessionDuration * 100) + '%';
+    }
+    if (timerSec <= 0) endSession();
+  }, 1000);
+}
+
+/* When the next beat is due, so a pause can work out what is left of it.
+   Written at every arming site through `armBeat`, because a beat scheduled
+   without it would resume with the previous beat's remainder. */
+let beatDueAt = 0;
+function armBeat(ms) {
+  beatDueAt = performance.now() + ms;
+  clearTimeout(beatTimer);
+  beatTimer = setTimeout(beat, ms);
+}
+
+function resetFeedback() {
+  $('feedbackBand').className = 'feedback-band';
+  $('stimulusBox').classList.remove('flash-correct', 'flash-wrong');
+}
+
+function levelMoved(move) {
+  needEpisode = true;
+  peakLevel = Math.max(peakLevel, ctrl.level);
+  const pill = $('levelMovePill');
+  pill.style.display = '';
+  pill.className = 'pill ' + (move === 'up' ? 'pill-info' : 'pill-warn');
+  pill.textContent = (move === 'up' ? '▲ ' : '▼ ') + levelName(ctrl.levels[ctrl.level]);
+}
+
+/* One trial resolved, by an answer or by running out of time. Every card is
+   dealt on a full board, so every trial drives the controller; `full` is kept
+   because records from before fixed slots have trials where it is false. */
+function resolve(t) {
+  trials.push(t);
+  if (t.ok) streak++; else streak = 0;
+  if (t.full) {
+    const move = R.update(ctrl, t.ok);
+    if (move) levelMoved(move);
+  }
+  paintStats();
+  /* Long enough after the feedback to be read, not so long that the next card
+     has already landed on top of it. */
+  if (practice && scoredTrials().length >= practice.beats) setTimeout(endSession, 650);
+}
+
+function scoredTrials() { return trials.filter(t => t.k >= 2); }
+
+function beat() {
+  if (!active) return;
+  clearStageTimers();
+
+  /* The trial that just ended without an answer is a miss. Its feedback is set
+     after the reset and not before it, so it stays up over the card that
+     follows — which is the only place left to show it. */
+  resetFeedback();
+  if (cur && cur.given == null && !cur.done) {
+    cur.done = true;
+    $('feedbackBand').className = 'feedback-band wrong';
+    signalError();
+    resolve(cur);
+  }
+
+  const lvl = ctrl.levels[ctrl.level];
+  const interval = ctrl.interval;
+  $('levelDisplay').textContent = levelName(lvl);
+  $('isiDisplay').textContent = interval + ' ms';
+
+  /* A new episode: a fresh board, shown whole. A new level always starts one,
+     so no symbol has to be carried across a change in the rules. */
+  if (needEpisode) {
+    needEpisode = false;
+    model = R.createModel(lvl.d, lvl.s, sessionMemory);
+    recentlyGone = [];
+    const fresh = [];
+    for (let i = 0; i < lvl.s; i++) fresh.push(nextStim(fresh));
+    R.fill(model, fresh, Math.random);
+    cur = null;
+    drawBoard($('stage'), model.items, lvl.d, lvl.s);
+    sayBoard(model.items);
+    $('stimInstruction').textContent = `${levelName(lvl)} · learn the board`;
+    setAxisCue($('cue'), null);
+    renderPad();
+    /* The encoding period is per symbol, since a board of seven takes longer
+       to learn than a board of three. Never shorter than one interval, and the
+       board goes at 85% of it, so the gap before the first card is real. */
+    const hold = Math.max(eff('encoding') * lvl.s, interval);
+    later(() => clearStage($('stage')), hold * 0.85);
+    armBeat(hold);
+    return;
+  }
+
+  /* A probe instead of a card, some of the time. Nothing is placed and the
+     board does not change: this beat asks whether the board is held, where
+     every other beat adds to it. `planAnalogy` returns null on a board too
+     small to state one, and an ordinary card is dealt instead. */
+  /* Which kind, by the mix — and an analogy that the board is too small to
+     state falls back to a relation rather than to a card, so the conclusion
+     rate is the rate whatever the span. */
+  let probeQ = null;
+  if (Math.random() < eff('probeRate')) {
+    const wantAnalogy = Math.random() < eff('probeMix');
+    probeQ = (wantAnalogy ? R.planAnalogy(model, Math.random) : null)
+          || R.planRelation(model, Math.random);
+  }
+  if (probeQ) {
+    cur = {
+      k: 2, d: lvl.d, s: lvl.s, level: ctrl.level, axis: probeQ.axis,
+      probe: true, probeKind: probeQ.kind,
+      answer: probeQ.truth ? 1 : 2,
+      /* Two options is the answer's width, not the load's: the same board has
+         to be held either way, so the trial is worth what the board is worth,
+         and `credit` does the guessing correction from `k`. */
+      bits: R.carriedBits(lvl.d, lvl.s),
+      given: null, ok: false, interval, full: true,
+      t0: performance.now(), rt: null, done: false,
+    };
+    drawProbe($('stage'), probeQ);
+    $('stimInstruction').textContent = 'is this true?';
+    /* The axis is drawn on the card now, between the rows it joins, so the
+       watermark behind it would be the same thing said twice. */
+    setAxisCue($('cue'), null);
+    renderPad();
+    later(() => {
+      if (!eff('mask')) { clearStage($('stage')); return; }
+      drawMask($('stage'), sessionSet);
+      later(() => clearStage($('stage')), MASK_MS);
+    }, Math.min(eff('exposure'), interval * 0.5));
+    armBeat(interval);
+    return;
+  }
+
+  const plan = R.planCard(model, Math.random);
+  const refGlyph = plan.ref.glyph;
+  const glyph = nextStim(model.items.map(it => it.glyph).concat(recentlyGone));
+  const res = R.apply(model, plan, glyph);
+  res.gone.forEach(it => recentlyGone.push(it.glyph));
+  while (recentlyGone.length > 3) recentlyGone.shift();
+  /* The board's width, not how many symbols are on it: in two dimensions and
+     up with a horizon only the held ones are. */
+  const k = lvl.s;
+  cur = {
+    k, d: lvl.d, s: lvl.s, level: ctrl.level, axis: plan.axis, dist: plan.dist,
+    answer: res.answer, given: null, ok: false, interval, full: true,
+    t0: performance.now(), rt: null, done: false,
+  };
+
+  drawCard($('stage'), glyph, refGlyph, plan.dist, lvl.d);
+  sayStims([glyph]);
+  $('stimInstruction').textContent = 'where is it now?';
+  setAxisCue($('cue'), lvl.d > 1 ? plan.axis : null);
+  renderPad();
+
+  const exposure = Math.min(eff('exposure'), interval * 0.5);
+  /* Masked, the card is overwritten by the scatter and then cleared; unmasked,
+     it simply goes and whatever the eye keeps of it is the reader's to use. */
+  later(() => {
+    if (!eff('mask')) { clearStage($('stage')); return; }
+    drawMask($('stage'), sessionSet);
+    later(() => clearStage($('stage')), MASK_MS);
+  }, exposure);
+  armBeat(interval);
+}
+
+function answer(rank) {
+  if (!active || !cur || cur.done || rank > cur.k) return;
+  cur.done = true;
+  cur.given = rank;
+  cur.rt = Math.round(performance.now() - cur.t0);
+  cur.ok = rank === cur.answer;
+  const btn = padButton($('rankPad'), rank);
+  if (cur.ok) {
+    if (btn) btn.classList.add('hit');
+    $('feedbackBand').className = 'feedback-band correct';
+    $('stimulusBox').classList.add('flash-correct');
+  } else {
+    if (btn) btn.classList.add('miss');
+    if (settings.showTruth) { const t = padButton($('rankPad'), cur.answer); if (t) t.classList.add('truth'); }
+    $('feedbackBand').className = 'feedback-band wrong';
+    $('stimulusBox').classList.add('flash-wrong');
+    signalError();
+  }
+  $('rankPad').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  resolve(cur);
+}
+
+function paintStats() {
+  const scored = scoredTrials();
+  if (practice) {
+    const left = Math.max(0, practice.beats - scored.length);
+    $('timerDisplay').textContent = left + ' left';
+    $('progressFill').style.width = (left / practice.beats * 100) + '%';
+  }
+  const correct = scored.filter(t => t.ok).length;
+  $('tCorrect').textContent = correct;
+  $('tTotal').textContent = scored.length;
+  $('tAccuracy').textContent = scored.length ? Math.round(aboveChance(scored) * 100) + '%' : '–';
+  $('streakPill').textContent = `🔥 Streak: ${streak}`;
+  $('bitsPill').textContent = R.throughput(scored.slice(-20)).toFixed(2) + ' bits/s';
+}
+
+/* Mean guessing-corrected credit: 0 at chance, 1 when perfect. */
+function aboveChance(ts) {
+  return ts.length ? Math.max(0, ts.reduce((a, t) => a + R.credit(t), 0) / ts.length) : 0;
+}
+
+function onKey(e) {
+  if (!active) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    openModal('End training session?', 'This session will still be saved.', endSession, 'Exit');
+    return;
+  }
+  if (cur && cur.probe && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault(); answer(e.key === 'ArrowUp' ? 1 : 2); return;
+  }
+  if (/^[1-9]$/.test(e.key)) { e.preventDefault(); answer(+e.key); }
+}
+
+function startSession(opts) {
+  practice = (opts && opts.beats) ? opts : null;
+  const level = practice ? practice.level : startingLevel();
+  const pace = practice ? practice.interval : null;
+  ctrl = R.createController({
+    maxD: Math.max(settings.maxD, level.d), level,
+    start: pace || eff('startISI'),
+    floor: pace || eff('isiFloor'),
+    ceil: pace || eff('isiCeil'),
+    target: eff('targetAcc') / 100, adaptLevel: practice ? false : eff('adaptLevel'),
+  });
+  active = true;
+  sessionSet = R.stimulusSet(settings.stimset).id;
+  sessionSpoken = speaks();
+  sessionProbed = eff('probeRate') > 0;
+  sessionMemory = practice ? 0 : (settings.memory | 0);
+  if (sessionSet === 'pictures') warmPhotos();
+  trials = []; cur = null; model = null; needEpisode = true; streak = 0;
+  peakLevel = ctrl.level;
+  /* The practice run ends on its beat budget; the clock is only a backstop. */
+  sessionDuration = practice ? Math.ceil(practice.beats * practice.interval / 1000) + 60 : eff('duration') * 60;
+  timerSec = sessionDuration;
+
+  $('trainSubStatus').textContent = practice ? 'walkthrough · practice run'
+    : (eff('adaptLevel') ? 'adaptive pace · adaptive level' : 'adaptive pace · fixed level');
+  $('levelMovePill').style.display = 'none';
+  $('timerDisplay').textContent = fmtTime(timerSec);
+  $('progressFill').style.width = '100%';
+  $('stimInstruction').textContent = 'Get ready…';
+  setAxisCue($('cue'), null);
+  clearStage($('stage')); resetFeedback(); renderPad(); paintStats();
+  setPage('pageTrain');
+
+  armClock();
+  document.addEventListener('keydown', onKey);
+  armBeat(900);
+}
+
+function endSession() {
+  if (!active) return;
+  active = false;
+  /* Cleared here as well: a session that ends while the page is hidden would
+     otherwise leave the flag set, and the next one's clock would tick into a
+     `return` on every beat. */
+  paused = false;
+  clearInterval(clockTimer); clearTimeout(beatTimer); clearStageTimers();
+  stopSpeech();
+  document.removeEventListener('keydown', onKey);
+  closeModal();
+  if (practice) { const done = practice.onDone; practice = null; done(); return; }
+  showResults();
+}
+
+$('startBtn').addEventListener('click', startSession);
+$('stopBtn').addEventListener('click', () => openModal('End training session?', 'This session will still be saved.', endSession, 'Exit'));
+$('restartBtn').addEventListener('click', () => { paintLevel(); setPage('pageHome'); });
+$('restartBtn2').addEventListener('click', () => { paintLevel(); setPage('pageHome'); });
+$('backToSettingsBtn').addEventListener('click', () => { paintLevel(); setPage('pageHome'); });
+
+/* ══ RESULTS ══════════════════════════════════════════════════════════ */
+function mkStat(label, val, cls = '') {
+  return `<div class="stat-block"><div class="stat-block-label">${label}</div><div class="stat-block-val ${cls}">${val}</div></div>`;
+}
+
+/* One pair per axis, toward rank 1 first: up, left, back, bigger. */
+const DIR_GLYPHS = [['↑', '↓'], ['←', '→'], ['↗', '↙'], ['+', '−']];
+const AXIS_GLYPHS = ['↕', '↔', '╱', '●'];
+
+function showResults() {
+  const scored = trials.filter(t => t.k >= 2);
+  const total = scored.length, correct = scored.filter(t => t.ok).length;
+  const corrected = aboveChance(scored);
+  const bits = R.throughput(scored), peakBits = R.peakThroughput(scored, 20);
+  const fullIntervals = scored.filter(t => t.full).map(t => t.interval);
+  const lowestISI = fullIntervals.length ? Math.min(...fullIntervals) : null;
+  const endLevel = ctrl.levels[ctrl.level], topLevel = ctrl.levels[peakLevel];
+  const durationSec = sessionDuration - Math.max(0, timerSec);
+
+  /* Spoken sessions keep their own best: the name heard as well as seen is a
+     second way in, and a record should say what it was earned with. */
+  /* A probed session keeps its own best too. A probe is answered from two
+     options where a card is answered from `s`, so the two are not the same
+     trial at all, and the record should say which it was earned with. */
+  const bestKey = sessionSet + (sessionSpoken ? '+spoken' : '')
+                + (sessionProbed ? '+analogy' : '')
+                /* Forgetting caps how far back a card can reach, which is most of
+                   what makes a long episode hard, so each cap is its own record. */
+                + (sessionMemory ? '+forget' + sessionMemory : '');
+  const prog = loadProgress();
+  if (total > 0) {
+    prog.sessions = (prog.sessions || 0) + 1;
+    prog.totalQ = (prog.totalQ || 0) + total;
+    prog.totalCorrect = (prog.totalCorrect || 0) + correct;
+    /* Bits per second is not comparable across stimulus sets — a named animal
+       is encoded in a word — so the record is kept per set. `bestBits` stays
+       the generated-marks record, which is what the archive already reads. */
+    prog.best = prog.best || {};
+    prog.best[bestKey] = Math.max(bestFor(prog, bestKey), peakBits);
+    if (bestKey === 'glyphs') prog.bestBits = prog.best.glyphs;
+    const today = new Date().toDateString();
+    if (prog.lastDate !== today) {
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      prog.streak = prog.lastDate === yesterday ? (prog.streak || 0) + 1 : 1;
+    }
+    prog.longestStreak = Math.max(prog.longestStreak || 0, prog.streak || 1);
+    prog.lastDate = today;
+    prog.level = { d: endLevel.d, s: endLevel.s };
+    prog.history = prog.history || [];
+    prog.history.unshift({
+      ts: Date.now(), durationSec, total, correct,
+      acc: Math.round(correct / total * 100),
+      corrected: Math.round(corrected * 1000) / 1000,
+      bits: Math.round(bits * 1000) / 1000,
+      peakBits: Math.round(peakBits * 1000) / 1000,
+      lowestISI, d: endLevel.d, s: endLevel.s, peakD: topLevel.d, peakS: topLevel.s,
+      set: sessionSet, spoken: sessionSpoken,
+      ...(sessionMemory ? { forgetAfter: sessionMemory } : {}),
+    });
+    if (prog.history.length > 1000) prog.history.length = 1000;
+    saveProgress(prog);
+  }
+
+  const pct = Math.round(corrected * 100);
+  $('resultMainStats').innerHTML =
+    mkStat('Correct', `${correct} / ${total}`) +
+    mkStat('Above chance', pct + '%', 'accent-val') +
+    mkStat('Bits / s', bits.toFixed(2)) +
+    mkStat('Peak bits / s', peakBits.toFixed(2), 'accent-val') +
+    mkStat('Top level', levelName(topLevel)) +
+    mkStat('Fastest full-size interval', lowestISI ? lowestISI + ' ms' : '–');
+  const hist = prog.history || [];
+  const lifetimeAcc = prog.totalQ ? Math.round(prog.totalCorrect / prog.totalQ * 100) : 0;
+  $('resultCumStats').innerHTML =
+    mkStat('Sessions', prog.sessions || 0) +
+    mkStat('Total trials', (prog.totalQ || 0).toLocaleString('en')) +
+    mkStat('Raw accuracy', lifetimeAcc + '%') +
+    mkStat('Best peak bits / s' + (sessionSet === 'glyphs' ? '' : ' · ' + R.stimulusSet(sessionSet).label.toLowerCase())
+      + (sessionSpoken ? ' · spoken' : ''),
+      bestFor(prog, bestKey).toFixed(2), 'accent-val');
+
+  $('accBarFill').style.width = '0%'; $('accBarPct').textContent = pct + '%';
+  setTimeout(() => { $('accBarFill').style.width = pct + '%'; }, 120);
+
+  const histLog = $('sessionHistLog');
+  histLog.innerHTML = '';
+  $('sessionHistCount').textContent = hist.length + ' sessions';
+  hist.slice(0, 200).forEach((s, i) => {
+    const d = new Date(s.ts);
+    const when = d.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+    const mins = Math.round((s.durationSec || 0) / 60);
+    const el = document.createElement('div');
+    el.className = 'trial-entry';
+    el.innerHTML = `
+      <span style="color:var(--text-faint);min-width:30px;font-size:.65rem">#${hist.length - i}</span>
+      <span style="flex:1;font-size:.72rem">${when}${i === 0 && total > 0 ? ' <span style="color:var(--accent);font-size:.6rem">← this session</span>' : ''}</span>
+      <span style="color:var(--text-dim);font-size:.7rem">${mins ? mins + 'min' : ''}</span>
+      <span style="color:var(--text-dim);font-size:.7rem;min-width:52px;text-align:right">${s.peakD}D·${s.peakS}</span>
+      <span style="color:var(--text-faint);font-size:.6rem;min-width:46px;text-align:right">${s.set && s.set !== 'glyphs' ? s.set : ''}${s.spoken ? ' 🔊' : ''}</span>
+      <span style="color:var(--accent);min-width:64px;text-align:right">${(s.peakBits || 0).toFixed(2)} b/s</span>
+      <span style="color:var(--text-faint);font-size:.65rem;min-width:52px;text-align:right">${s.correct}/${s.total}</span>`;
+    histLog.appendChild(el);
+  });
+
+  const log = $('trialLog');
+  log.innerHTML = '';
+  $('logCount').textContent = scored.length + ' trials · ' + R.stimulusSet(sessionSet).label.toLowerCase();
+  scored.forEach((t, i) => {
+    const steps = t.dist.map((v, a) => DIR_GLYPHS[a][v < 0 ? 0 : 1] + Math.abs(v)).join(' ');
+    const el = document.createElement('div');
+    el.className = 'trial-entry';
+    el.innerHTML = `<span style="color:var(--text-faint);min-width:34px">#${i + 1}</span>`
+      + `<span style="flex:1">${t.d}D·${t.s} · placed ${steps} · ask ${AXIS_GLYPHS[t.axis]} → <strong>${t.answer}</strong></span>`
+      + `<span style="color:var(--text-faint);font-size:.65rem;min-width:56px;text-align:right">${t.interval} ms</span>`
+      + `<span class="${t.ok ? 't-correct' : 't-wrong'}" style="min-width:34px;text-align:right">${t.given == null ? '–' : t.given}</span>`
+      + `<div class="trial-dot ${t.ok ? 'ok' : 'err'}"></div>`;
+    log.appendChild(el);
+  });
+  setPage('pageResults');
+}
+
+/* ══ WALKTHROUGH ══════════════════════════════════════════════════════
+   The rules are three sentences long and still do not read well on paper,
+   because what they describe is a thing that changes. So the walkthrough
+   shows the order changing: the same cards the session uses, untimed, with
+   the list drawn before and after — visible while the idea is new, then
+   taken away, which is the task itself.
+═══════════════════════════════════════════════════════════════════════ */
+
+const ORD = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - n % 10 !== 10) * (n % 10)] || 'th');
+const PLACED = [['above', 'below'], ['left of', 'right of'],
+                ['behind', 'in front of'], ['bigger than', 'smaller than']];
+const AXIS_NAME = ['height, top to bottom', 'longitude, left to right',
+                   'latitude, back to front', 'size, biggest first'];
+
+const TUT = [
+  { kind: 'setup', d: 1, s: 4 },
+  { kind: 'say', title: 'What you carry', strip: 'before',
+    html: `An episode opens with a <strong>board</strong>: one symbol in every slot, numbered from the top. Here it is. That board is the whole of what has to be in your head.` },
+  { kind: 'demo', title: 'A card places a new symbol',
+    html: `Every card shows two symbols on a small grid. The plain one is already on your board. The <span style="color:var(--accent)">coloured</span> one is new, and the grid says how far from the plain one it goes: <strong>count the cells</strong>. It takes that slot, and the symbol that was there leaves. Nothing else moves.` },
+  { kind: 'ask', title: 'Your turn, with the board in view', reveal: true,
+    html: `Now you answer: press the slot the new symbol lands in. The board stays on screen this time — find the plain one, then count.` },
+  { kind: 'ask', title: 'Now from memory', reveal: false,
+    html: `Same kind of card, but the board is gone. This is the real task: the card is on screen, the board is in your head — including the symbol that just arrived.` },
+  { kind: 'practice', beats: 8, interval: 2600, level: { d: 1, s: 3 }, title: 'Now the clock',
+    html: `That is the entire rule. What makes it hard is the pace: the session shows you a board, then cards arrive on their own, answered or not. Eight of them, one every 2.6 seconds — slower than the real thing, and nothing is recorded.` },
+  { kind: 'setup', d: 2, s: 3 },
+  { kind: 'demo', title: 'A second direction',
+    html: `Further up the ladder the board is a grid: every symbol has a row <em>and</em> a column. A card now counts steps both ways — up or down, and left or right.` },
+  { kind: 'ask', title: 'Two orders, board in view', reveal: true,
+    html: `Rows are height, columns are width. Answer the rank for the axis the label under the card asks for.` },
+  { kind: 'ask', title: 'Two orders, from memory', reveal: false,
+    html: `The same, unseen. It can ask for either axis, so the new symbol's row and column both have to be kept — not just the one you were asked about.` },
+  { kind: 'setup', d: 3, s: 3 },
+  { kind: 'demo', title: 'A third: depth',
+    html: `In 3D the grid becomes a box, and the new symbol can also be <strong>behind or in front of</strong> the plain one. Rank 1 on that axis is the back.` },
+  { kind: 'ask', title: 'Three orders', reveal: true,
+    html: `With the board in view: rows are height, columns are width, and the tag under each symbol (╱) is its depth, 1 at the back.` },
+  { kind: 'end', title: 'That is all of it',
+    html: `The rest is the ladder. Speed adapts to your accuracy on every answer; when it has nowhere left to go, the level does instead — more symbols first, then another dimension, and last of all size, where rank 1 is the biggest. You do not pick any of it, and you are meant to be wrong about one answer in five.` },
+];
+
+const tutSteps = TUT.filter(t => t.kind !== 'setup');
+let tutAt = 0, tutModel = null, tutPhase = 'main', tutInfo = null;
+
+/* A frozen copy: the strips have to keep showing what was true before the card
+   was applied, and the model itself moves on. */
+function snapshot(m) {
+  return { d: m.d, s: m.s, items: m.items.map(it => ({ id: it.id, glyph: it.glyph, ranks: it.ranks.slice(), born: it.born })) };
+}
+
+function glyphMini(glyph, px, cls) {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', '-0.4 -0.4 2.8 2.8');
+  svg.setAttribute('width', px); svg.setAttribute('height', px);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('d', R.glyphPath(glyph));
+  path.setAttribute('class', 'glyph mini ' + (cls || 'ref'));
+  svg.appendChild(path);
+  return svg;
+}
+
+/* The small version, for the strips and the worked example on the home page. */
+function stimMini(stim, px, cls) {
+  if (!isPic(stim)) return glyphMini(stim, px, cls);
+  if (isPhoto(stim)) {
+    const el = document.createElement('img');
+    el.className = 'photo-mini' + (cls === 'new' ? ' new' : '');
+    el.src = stim.image;
+    el.alt = el.title = stim.name;
+    el.width = el.height = px;
+    return el;
+  }
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${PIC_GRID} ${PIC_GRID}`);
+  svg.setAttribute('width', px); svg.setAttribute('height', px);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('d', stim.path);
+  path.setAttribute('class', 'pic ' + (cls || 'ref'));
+  svg.appendChild(path);
+  const title = document.createElementNS(SVGNS, 'title');
+  title.textContent = stim.name;
+  svg.appendChild(title);
+  return svg;
+}
+
+/**
+ * The list as a picture: a column in 1D, a grid of rows against columns in 2D,
+ * and in 3D the same grid with each symbol drawn at its size rank. One function
+ * for all three, so the step from one dimension to the next looks like what it
+ * is — the same picture with another axis in it.
+ */
+function drawStrip(snap, opts) {
+  opts = opts || {};
+  const box = document.createElement('div');
+  box.className = 'strip-box';
+  const cap = document.createElement('div');
+  cap.className = 'strip-cap';
+  cap.textContent = opts.caption || '';
+  box.appendChild(cap);
+
+  const n = snap.s, d = snap.d;
+  const cols = d >= 2 ? n : 1;
+  const grid = document.createElement('div');
+  grid.className = 'strip-grid';
+  grid.style.gridTemplateColumns = `auto repeat(${cols}, auto)`;
+
+  const lab = text => {
+    const el = document.createElement('div');
+    el.className = 'strip-lab';
+    el.textContent = text;
+    return el;
+  };
+  grid.appendChild(lab(d >= 2 ? '↕↔' : '↕'));
+  for (let c = 0; c < cols; c++) grid.appendChild(lab(d >= 2 ? String(c + 1) : ''));
+
+  for (let r = 0; r < n; r++) {
+    grid.appendChild(lab(String(r + 1)));
+    for (let c = 0; c < cols; c++) {
+      const item = snap.items.find(it => it.ranks[0] === r && (d < 2 || it.ranks[1] === c));
+      const cell = document.createElement('div');
+      cell.className = 'strip-cell';
+      if (item) {
+        if (item.id === opts.newId) cell.classList.add('is-new');
+        if (item.id === opts.refId) cell.classList.add('is-ref');
+        /* Depth has no place on a flat picture, so it is a tag; size is
+           drawn as size, and tagged too, because a few pixels is not a rank. */
+        const px = d >= 4 ? 36 - item.ranks[3] * 5 : 32;
+        cell.appendChild(stimMini(item.glyph, px, item.id === opts.newId ? 'new' : 'ref'));
+        const tags = [];
+        if (d >= 3) tags.push(AXIS_CUE[2].glyph + (item.ranks[2] + 1));
+        if (d >= 4) tags.push(AXIS_CUE[3].glyph + (item.ranks[3] + 1));
+        if (tags.length) {
+          const tag = document.createElement('div');
+          tag.className = 'strip-tag';
+          tag.textContent = tags.join(' ');
+          cell.appendChild(tag);
+        }
+      }
+      grid.appendChild(cell);
+    }
+  }
+  box.appendChild(grid);
+
+  if (opts.gone) {
+    const out = document.createElement('div');
+    out.className = 'strip-cell is-gone';
+    out.appendChild(stimMini(opts.gone.glyph, 30, 'ref'));
+    const tag = document.createElement('div');
+    tag.className = 'strip-tag';
+    tag.textContent = 'left';
+    out.appendChild(tag);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:center;margin-top:.4rem;border-top:1px solid var(--border);padding-top:.4rem';
+    row.appendChild(out);
+    box.appendChild(row);
+  }
+  return box;
+}
+
+function tutSetup(st) {
+  tutModel = R.createModel(st.d, st.s);
+  const fresh = [];
+  for (let i = 0; i < st.s; i++) fresh.push(nextStim(fresh));
+  R.fill(tutModel, fresh, Math.random);
+}
+
+/** One card, applied, with everything the explanation needs kept alongside. */
+function tutDealCard() {
+  const before = snapshot(tutModel);
+  const plan = R.planCard(tutModel, Math.random);
+  const refRank = plan.ref.ranks[plan.axis] + 1;
+  const refGlyph = plan.ref.glyph;
+  const refId = plan.ref.id;
+  const res = R.apply(tutModel, plan, nextStim(tutModel.items.map(it => it.glyph)));
+  return {
+    before, after: snapshot(tutModel), plan, refRank, refId, refGlyph,
+    newId: res.item.id, glyph: res.item.glyph, answer: res.answer,
+    gone: res.removed, given: null,
+  };
+}
+
+function tutSentence(i) {
+  const axis = i.plan.axis;
+  const step = i.plan.dist[axis];
+  const word = PLACED[axis][step < 0 ? 0 : 1];
+  const n = Math.abs(step);
+  const head = tutModel.d > 1 ? `The card asks for the rank by <strong>${AXIS_NAME[axis]}</strong>. ` : '';
+  return `${head}The new symbol went <strong>${n === 1 ? 'one step' : n + ' steps'} ${word}</strong> the dashed one, which was ${ORD(i.refRank)}: `
+    + `${i.refRank} ${step < 0 ? '−' : '+'} ${n} = <strong>${i.answer}</strong>. The symbol that was in that slot left, and nothing else moved.`;
+}
+
+function tutStrips(parts) { $('tutStrips').replaceChildren(...parts); }
+
+function tutShowExplanation(st) {
+  const i = tutInfo;
+  tutStrips([
+    drawStrip(i.before, { caption: 'before · dashed = the one on the card', refId: i.refId }),
+    drawStrip(i.after, { caption: 'after · the new symbol, and the one it replaced', newId: i.newId, gone: i.gone }),
+  ]);
+  const note = $('tutNote');
+  note.style.display = '';
+  const verdict = i.given == null ? '' :
+    (i.given === i.answer ? '<strong style="color:var(--accent)">Right.</strong> ' : `<strong style="color:var(--danger)">Not quite — it was ${i.answer}.</strong> `);
+  note.innerHTML = `<p>${verdict}${tutSentence(i)}</p>`;
+}
+
+function renderTut() {
+  while (TUT[tutAt] && TUT[tutAt].kind === 'setup') { tutSetup(TUT[tutAt]); tutAt++; }
+  const st = TUT[tutAt];
+  if (!st) { tutFinish(); return; }
+
+  $('tutTitle').textContent = st.title;
+  $('tutText').innerHTML = st.html;
+  $('tutProgress').textContent = `step ${tutSteps.indexOf(st) + 1} of ${tutSteps.length}`;
+  $('tutNote').style.display = 'none';
+  $('tutStrips').replaceChildren();
+  setAxisCue($('tutCue'), null);
+  $('tutBackBtn').style.visibility = tutAt > 0 ? '' : 'hidden';
+  $('tutNextBtn').textContent = 'Continue';
+  $('tutNextBtn').style.display = '';
+  clearStage($('tutStage'));
+  $('tutPad').replaceChildren();
+  $('tutBox').style.display = (st.kind === 'say' || st.kind === 'practice' || st.kind === 'end') ? 'none' : '';
+  $('tutHint').textContent = '';
+
+  if (st.kind === 'say') {
+    if (st.strip) tutStrips([drawStrip(snapshot(tutModel), { caption: 'what you are holding' })]);
+    return;
+  }
+  if (st.kind === 'practice') {
+    $('tutNextBtn').textContent = 'Start the practice run';
+    return;
+  }
+  if (st.kind === 'end') {
+    $('tutNextBtn').textContent = 'Start training';
+    return;
+  }
+
+  /* demo and ask both deal a card; only ask hands over the pad. */
+  tutInfo = tutDealCard();
+  tutPhase = 'card';
+  drawCard($('tutStage'), tutInfo.glyph, tutInfo.refGlyph, tutInfo.plan.dist, tutModel.d);
+  sayStims([tutInfo.glyph]);
+  setAxisCue($('tutCue'), tutModel.d > 1 ? tutInfo.plan.axis : null);
+  buildPad($('tutPad'), $('tutArena'), {
+    s: tutModel.s, k: tutModel.s, axis: tutInfo.plan.axis,
+    enabled: st.kind === 'ask', onPick: tutPick,
+  });
+  if (st.kind === 'ask') {
+    $('tutHint').textContent = 'press the rank';
+    $('tutNextBtn').style.display = 'none';
+    if (st.reveal) tutStrips([drawStrip(tutInfo.before, { caption: 'what you are holding · dashed = the one on the card', refId: tutInfo.refId })]);
+  } else {
+    $('tutHint').textContent = 'count the cells';
+  }
+}
+
+function tutPick(rank) {
+  if (tutPhase !== 'card') return;
+  tutPhase = 'done';
+  tutInfo.given = rank;
+  const hit = rank === tutInfo.answer;
+  const btn = padButton($('tutPad'), rank);
+  if (btn) btn.classList.add(hit ? 'hit' : 'miss');
+  if (!hit) { const t = padButton($('tutPad'), tutInfo.answer); if (t) t.classList.add('truth'); }
+  $('tutPad').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  $('tutHint').textContent = hit ? '✓' : '✗';
+  tutShowExplanation(TUT[tutAt]);
+  $('tutNextBtn').style.display = '';
+}
+
+function tutNext() {
+  const st = TUT[tutAt];
+  if (!st) { tutFinish(); return; }
+  if (st.kind === 'demo' && tutPhase === 'card') { tutPhase = 'done'; tutShowExplanation(st); return; }
+  if (st.kind === 'practice') {
+    startSession({
+      beats: st.beats, interval: st.interval, level: st.level,
+      onDone: () => { tutAt++; setPage('pageTutorial'); renderTut(); },
+    });
+    return;
+  }
+  if (st.kind === 'end') { tutFinish(true); return; }
+  tutAt++;
+  renderTut();
+}
+
+function tutFinish(startTraining) {
+  store.set(KEYS.seen, '1');
+  paintFirstRun();
+  if (startTraining) { paintLevel(); startSession(); return; }
+  paintLevel();
+  setPage('pageHome');
+}
+
+function openTutorial() {
+  sessionSet = R.stimulusSet(settings.stimset).id;
+  tutAt = 0; tutModel = null; tutInfo = null;
+  setPage('pageTutorial');
+  renderTut();
+}
+
+$('tutNextBtn').addEventListener('click', tutNext);
+$('tutBackBtn').addEventListener('click', () => {
+  let back = tutAt - 1;
+  while (back > 0 && TUT[back].kind === 'setup') back--;
+  if (back < 0) return;
+  /* The model has moved on since that step ran, so the stretch it belongs to is
+     built again from its setup — with new symbols, which costs nothing here and
+     keeps the strips honest. */
+  let from = back;
+  while (from >= 0 && TUT[from].kind !== 'setup') from--;
+  if (from >= 0) tutSetup(TUT[from]);
+  tutAt = back;
+  renderTut();
+});
+$('tutExitBtn').addEventListener('click', () => tutFinish(false));
+$('tutorialBtn').addEventListener('click', openTutorial);
+$('firstRunBtn').addEventListener('click', openTutorial);
+$('firstRunDismiss').addEventListener('click', () => { store.set(KEYS.seen, '1'); paintFirstRun(); });
+
+/*
+ * Long explanations fold.
+ *
+ * Every setting here is argued for, which is right, and it left the settings
+ * page three thousand pixels of prose with the controls scattered through it
+ * as small islands. Folding is done to the rendered page rather than to the
+ * markup so that not one word has to be cut or moved: the first line stays
+ * visible as the summary, and the rest is a click away.
+ */
+/*
+ * The settings cards fold from their heads, and remember it.
+ *
+ * Only the cards under a section label, and only on the home page: the results
+ * and training screens have cards that are the content rather than a setting.
+ * Clicks on a control inside a head — the session-mode tabs live there — are
+ * left alone, or the tab would close the card it belongs to.
+ */
+const COLLAPSE_KEY = 'ro_shut';
+function shutCards() {
+  try { return new Set(JSON.parse(store.get(COLLAPSE_KEY)) || []); } catch { return new Set(); }
+}
+function makeCardsCollapsible() {
+  const shut = shutCards();
+  [...document.querySelectorAll('.section-label')].forEach(lab => {
+    const card = lab.nextElementSibling;
+    if (!card || !card.classList.contains('card')) return;
+    const head = card.querySelector('.card-head');
+    if (!head) return;
+    const name = lab.textContent.trim();
+    card.classList.add('collapsible');
+    card.classList.toggle('collapsed', shut.has(name));
+    head.addEventListener('click', e => {
+      if (e.target.closest('button, input, select, a, label')) return;
+      card.classList.toggle('collapsed');
+      const now = shutCards();
+      card.classList.contains('collapsed') ? now.add(name) : now.delete(name);
+      store.set(COLLAPSE_KEY, JSON.stringify([...now]));
+    });
+  });
+}
+makeCardsCollapsible();
+
+function foldLongHints() {
+  document.querySelectorAll('.hint').forEach(h => {
+    if (h.dataset.folded || h.closest('details')) return;
+    const text = h.textContent.trim();
+    if (text.length < 220) return;
+    h.dataset.folded = '1';
+    const d = document.createElement('details');
+    d.className = 'hint-fold';
+    const sum = document.createElement('summary');
+    /* Cut at a word, so the teaser never ends mid-syllable. */
+    sum.textContent = text.slice(0, 74).replace(/\s+\S*$/, '') + '\u2026';
+    const body = document.createElement('div');
+    while (h.firstChild) body.appendChild(h.firstChild);
+    d.append(sum, body);
+    h.appendChild(d);
+  });
+}
+foldLongHints();
+
+/* The nudge shows until it has been taken or waved off, and never again once a
+   session has been recorded. */
+function paintFirstRun() {
+  const fresh = !store.get(KEYS.seen) && !(loadProgress().history || []).length;
+  $('firstRun').style.display = fresh ? '' : 'none';
+}
+
+paintAll();
+paintFirstRun();
+</script>
+</body>
+</html>

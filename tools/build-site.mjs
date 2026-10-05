@@ -106,7 +106,7 @@ fs.mkdirSync(DIST, { recursive: true });
 /* The trainers that are pages, and the archive. They are already a website and use
    relative paths throughout — checked, not assumed — so they run at whatever
    depth they are put, and they are copied rather than built. */
-for (const name of ["rnb", "cct", "chimera", "ewmt", "relational", "archive"]) {
+for (const name of ["rnb", "rrt", "cct", "chimera", "ewmt", "relational", "archive"]) {
   log(`[copy] ${name}`);
   copyDir(path.join(ROOT, "apps", name), path.join(DIST, name));
 }
@@ -124,6 +124,18 @@ log("[build] syllogimous (angular)");
      page is how a project site fakes history-mode routing. */
   fs.copyFileSync(path.join(DIST, "syllogimous", "index.html"),
                   path.join(DIST, "syllogimous", "404.html"));
+}
+
+/* Threshold N-back (source `precision`) is a React app, and Vite builds it. A
+   relative base, as for Quad Box below: the same output then runs at the Pages
+   path, under open/ and inside the APK. Its Tailwind, Tone.js and Chart.js are
+   built and bundled rather than fetched from CDNs, so it too runs offline. */
+log("[build] precision (vite)");
+{
+  const dir = path.join(ROOT, "apps", "precision");
+  ensureDeps(dir);
+  run("npx", ["vite", "build", "--base", "./",
+    "--outDir", path.join(DIST, "precision"), "--emptyOutDir"], dir);
 }
 
 /* The additional exercises under apps/more: offered by the hub in their own

@@ -37,6 +37,12 @@
       what: "Affective n-back: position, colour and voice" },
     { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
       what: "Four streams of relations, n back" },
+    { id: "rrt", name: "Running Order", path: "rrt/", colour: "#c2e07a",
+      what: "Relational reasoning at CCT's pace: place each symbol, name its rank" },
+    /* Precision N-back on the source, which is the archive's name for it and
+       the key its history is under; Threshold N-back on the card. */
+    { id: "precision", name: "Threshold N-back", path: "precision/", colour: "#e6edf3",
+      what: "N-back at your perceptual threshold, for sound and position" },
   ];
 
   /* Stageable, but never a trainer.

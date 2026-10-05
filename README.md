@@ -1,6 +1,6 @@
 # Chimera Hub
 
-Six trainers and three more exercises, one record, one day's total — and a
+Eight trainers and three more exercises, one record, one day's total — and a
 quota the desktop enforces.
 
 **Live:** <https://project-chimera-hub.github.io/ChimeraHub/> ·
@@ -29,8 +29,10 @@ test/       the hub's tests
 | Chimera | add the digits you hear, judge the number you see — with n-back, eWMT, CCT and dichotic modes stacked on top |
 | eWMT | the Affective N-Back: position, colour and voice, n steps back |
 | Relational N-back | four streams of relations, n back |
+| Running Order | relational reasoning at CCT's pace: each card places a symbol, you name its rank |
+| Threshold N-back | n-back at your perceptual threshold for sound and position, held there by a staircase (React, Vite) |
 
-And three **additional exercises**, which run here like the six but are not
+And three **additional exercises**, which run here like the eight but are not
 counted toward the day:
 
 | Exercise | What it trains |
@@ -39,9 +41,10 @@ counted toward the day:
 | Earshot | tracking moving sounds by ear — 3D multiple object tracking for the ears |
 | N-back Constant Change | Quad Box's 3D quad n-back, with modalities and variant that keep changing (Vite) |
 
-Syllogimous and Relation Streams come from
-[Gagafutzi](https://github.com/Gagafutzi); the other seven from
-[projectchimera-dot](https://github.com/projectchimera-dot).
+Syllogimous, Relation Streams, Running Order and Threshold N-back come from
+[Gagafutzi](https://github.com/Gagafutzi) — the last three by way of
+[mindbuild](https://github.com/Gagafutzi/mindbuild), this hub's predecessor —
+and the other seven from [projectchimera-dot](https://github.com/projectchimera-dot).
 The **Training archive** sits beside them: not a trainer, the record.
 
 ## A shell, not a rewrite
@@ -110,7 +113,8 @@ The hub's **Share your data** card makes a file of every session this browser
 holds and leaves the upload to the player: the hub itself still sends nothing.
 It reads:
 
-- **Syllogimous, Relation Streams, CCT, Chimera and Relational N-back**
+- **Syllogimous, Relation Streams, CCT, Chimera, Relational N-back, Running
+  Order and Threshold N-back**
   through the archive's adapters, the same readings the meter counts
   from (`Today.readings()`), along with any retired trainer still in the
   browser. Syllogimous (and Isomorph, if it was ever played) go in answer by
@@ -231,8 +235,7 @@ like two applications is the thing a shared look exists to prevent.
 
 ## Retired trainers, and what removing them kept
 
-Isomorph, Precision N-back, 3D
-Rotation, Synaesthesia colours, Running Order, the Attentional Shield eWMT,
+Isomorph, 3D Rotation, Synaesthesia colours, the Attentional Shield eWMT,
 DorsalFlow and Controlled Hallucination all used to be here. They are gone
 from the hub; their history is in this repository's log.
 
@@ -244,8 +247,17 @@ months of their training and still reads. A record that stops being readable
 when an app is retired is not a record.
 
 The meter reads them too, for the streak — a day trained is a day trained —
-but counts only the six trainers on the hub toward today and the quota:
+but counts only the eight trainers on the hub toward today and the quota:
 `TRAINERS` in `shell/js/shell.js` is the filter.
+
+**Running Order and Precision N-back came back** from mindbuild, where work on
+both carried on after they left. Precision N-back is **Threshold N-back** on
+the hub — the name says what it does: a staircase holds every modality at the
+edge of what you can tell apart. Its source is still `precision` and its
+history is still under `nback-performance`, so the archive's adapter never
+noticed the rename. It loaded Tailwind, Tone.js and Chart.js from CDNs and so
+did not start offline; they are built and bundled now. Running Order's webfont
+went for the same reason.
 
 Two names carried over. **eWMT** is the Affective N-Back now, under the source
 name the Attentional Shield had, because it is the same slot and a day of

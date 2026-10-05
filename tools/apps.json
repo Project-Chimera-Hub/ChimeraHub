@@ -11,6 +11,7 @@
   ],
   "apps": [
     { "prefix": "apps/syllogimous",  "owner": "Gagafutzi",          "repo": "LooshSyllogimous",       "branch": "main" },
+    { "prefix": "apps/precision",    "owner": "Gagafutzi",          "repo": "Precision-N-back",       "branch": "main" },
     { "prefix": "apps/rnb",          "owner": "Gagafutzi",          "repo": "relationalNback---intuitive-progression", "branch": "main" },
     { "prefix": "apps/cct",          "owner": "projectchimera-dot", "repo": "CCT",                    "branch": "main" },
     { "prefix": "apps/chimera",      "owner": "projectchimera-dot", "repo": "Chimera",                "branch": "main" },
