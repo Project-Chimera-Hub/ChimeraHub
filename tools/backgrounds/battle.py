@@ -1,14 +1,14 @@
-"""Chimera Hub's 'Battle' background: two red deer stags locked at the antlers
-on a rocky crest, two eagles at each other's talons above, under a large moon,
-with mountains, fog and firs — in the hub's gold on near-black.
+"""Chimera Hub's 'Battle' background: two lions rampant, reared on their hind
+legs and striking at each other on a rock ledge under a large moon, with
+mountains, fog and firs — in the hub's gold on near-black.
 
-    python3 tools/backgrounds/battle.py shell/backgrounds/battle.svg
+    python3 tools/backgrounds/battle.py shell/backgrounds/battle.svg shell/backgrounds/battle-tall.svg
 
 Drawn in code rather than painted, for the reason the forest was: no request to
 anybody, nothing to license, and it can be changed by changing a number. The
 animals are silhouettes built from simple shapes in one fill, so overlaps merge
 into one outline, and a blurred gold copy behind them makes the rim light. One
-stag (and one eagle) is drawn and mirrored, which is also why the scene reads
+lion is drawn and mirrored, which is also why the scene reads
 as heraldic."""
 import math, random, sys
 
@@ -48,7 +48,7 @@ def smooth(pts, n=6):
 
 
 def taper(pts, w0, w1, bulge=None):
-    """A limb, antler or tine: a filled outline along a smoothed centreline,
+    """A limb, tail or claw: a filled outline along a smoothed centreline,
     its width falling from w0 to w1. `bulge` adds width at joints, as
     (fraction along, extra width)."""
     c = smooth(pts)
@@ -75,77 +75,58 @@ def ell(cx, cy, rx, ry, rot=0):
     return f'<ellipse cx="{f(cx)}" cy="{f(cy)}" rx="{f(rx)}" ry="{f(ry)}" transform="rotate({f(rot)} {f(cx)} {f(cy)})"/>'
 
 
-def stag():
-    """A red deer stag facing +x in the rut: head down, antlers thrust forward,
-    forelegs braced, hinds driving. Origin mid-barrel; hooves at y=185."""
-    p = []
-    # barrel, rump, chest, withers
-    p.append(ell(0, 0, 92, 44, 4))
-    p.append(ell(-72, -4, 46, 47, 0))
-    p.append(ell(60, 8, 46, 50, 0))
-    p.append(ell(30, -36, 46, 16, -6))
-    # neck: thick with the rut, running forward and down to a low head
-    p.append(f'<path d="{poly([(20,-48),(70,-50),(112,-26),(150,12),(166,40),(150,66),(118,54),(92,46),(60,40)])}"/>')
-    # shaggy mane under the throat
-    p.append(f'<path d="{poly([(88,44),(96,72),(106,52),(114,78),(124,56),(132,80),(140,58),(150,66)])}"/>')
-    # head: skull, long face angled down, muzzle
-    p.append(ell(160, 44, 26, 19, 30))
-    p.append(f'<path d="{poly([(150,38),(176,40),(196,78),(190,92),(176,92),(160,64)])}"/>')
-    p.append(ell(186, 88, 11, 9, 0))
-    # ears, laid back on the neck
-    p.append(f'<path d="{poly([(148,30),(122,16),(130,30),(146,40)])}"/>')
-    # tail
-    p.append(f'<path d="{poly([(-112,-24),(-126,-8),(-118,-2),(-106,-14)])}"/>')
-    # forelegs, braced forward: forearm, knee, cannon, hoof
-    p.append(taper([(76, 30), (86, 70), (96, 104), (108, 140), (126, 182)], 30, 8, [(0.48, 7)]))
-    p.append(taper([(48, 36), (54, 76), (62, 110), (70, 144), (82, 182)], 27, 8, [(0.48, 6)]))
-    # hindlegs, driving back: thigh, hock, cannon
-    p.append(taper([(-80, 10), (-74, 56), (-80, 92), (-100, 120), (-118, 150), (-132, 182)], 46, 8, [(0.45, 8)]))
-    p.append(taper([(-58, 20), (-52, 62), (-58, 96), (-74, 124), (-88, 152), (-100, 182)], 38, 8, [(0.45, 7)]))
-    for x in (126, 82, -132, -100):
-        p.append(f'<path d="{poly([(x-8,178),(x+10,178),(x+12,188),(x-10,188)])}"/>')
-    # antlers: beams sweeping up then forward from the crown, toward the rival
-    a = []
-    for k, (dx, dy) in enumerate([(0, 0), (-12, -8)]):
-        bx, by = 156 + dx, 30 + dy
-        beam = [(bx, by), (166 + dx, 0 + dy), (186 + dx, -26 + dy), (214 + dx, -40 + dy),
-                (246 + dx, -38 + dy), (268 + dx, -24 + dy), (282 + dx, -4 + dy)]
-        a.append(taper(beam, 10, 4))
-        a.append(taper([(162 + dx, 16 + dy), (190 + dx, 14 + dy), (210 + dx, 26 + dy)], 6.5, 3.5))   # brow
-        a.append(taper([(174 + dx, -12 + dy), (204 + dx, -6 + dy), (222 + dx, 6 + dy)], 6, 3))        # bez
-        a.append(taper([(206 + dx, -38 + dy), (212 + dx, -66 + dy), (206 + dx, -84 + dy)], 6, 3))     # trez
-        a.append(taper([(240 + dx, -38 + dy), (254 + dx, -64 + dy)], 5, 2.5))                           # crown
-        a.append(taper([(262 + dx, -28 + dy), (286 + dx, -44 + dy)], 4.5, 2.5))
-        a.append(taper([(282 + dx, -4 + dy), (296 + dx, 12 + dy)], 4, 2.5))
-    return "".join(p), "".join(a)
+def jagged(cx, cy, r, n, depth, seed, squash=1.0, start=0.0, sweep=360.0):
+    """A ragged ring: a mane, a tuft. Alternating long and short radii."""
+    rnd = random.Random(seed)
+    pts = []
+    for i in range(n + 1):
+        a = math.radians(start + sweep * i / n)
+        rr = r * (1 + (depth if i % 2 == 0 else -depth * 0.4) * (0.6 + 0.8 * rnd.random()))
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a) * squash))
+    return pts
 
 
-def eagle():
-    """An eagle facing +x, wings raised in a broad V, talons thrust forward."""
+def lion():
+    """A lion rampant facing +x: reared on its hind legs and leaning in, one
+    forepaw raised high to strike and one reaching, mane up, jaws open in a
+    roar. Feet on y=0; about 440 tall."""
     p = []
-    p.append(ell(0, 0, 50, 24, -28))                                     # body
-    p.append(ell(44, -30, 19, 15, -18))                                  # head
-    p.append(f'<path d="{poly([(58,-38),(80,-30),(74,-20),(64,-24),(58,-20)])}"/>')  # hooked beak
-    # tail fan
-    p.append(f'<path d="{poly([(-40,14),(-100,40),(-96,52),(-84,46),(-80,58),(-68,48),(-58,56),(-34,26)])}"/>')
-    # near wing: broad, wrist high, primaries spread like fingers
-    near = [(-4, -14), (-24, -64), (-46, -116), (-70, -164), (-96, -196),
-            (-112, -210), (-108, -190), (-132, -212), (-124, -186), (-150, -204), (-138, -176),
-            (-166, -188), (-150, -158), (-178, -164), (-156, -134), (-176, -130), (-146, -108),
-            (-112, -76), (-82, -40), (-40, -2)]
-    p.append(f'<path d="{poly(near)}"/>')
-    # far wing, behind: shorter, narrower in perspective
-    far = [(12, -18), (18, -74), (22, -128), (24, -170), (34, -184), (34, -160), (48, -182),
-           (46, -154), (62, -170), (56, -140), (72, -150), (62, -118), (56, -70), (34, -12)]
-    p.append(f'<path d="{poly(far)}"/>')
-    # legs and talons
-    p.append(taper([(18, 12), (44, 36), (72, 42)], 13, 6))
-    p.append(taper([(6, 18), (32, 48), (62, 58)], 12, 5))
-    for (x, y) in ((72, 42), (62, 58)):
-        for ang in (-50, -10, 30):
-            r = math.radians(ang)
-            p.append(taper([(x, y), (x + 15 * math.cos(r), y + 15 * math.sin(r)),
-                            (x + 20 * math.cos(r + 1.0), y + 20 * math.sin(r + 1.0))], 4, 2))
+    # hind legs: heavy thighs, hocks back, paws flat on the ground
+    p.append(taper([(-40, -150), (-6, -98), (-30, -52), (-22, -10)], 60, 20, [(0.35, 14)]))
+    p.append(taper([(-10, -150), (30, -102), (8, -54), (18, -10)], 66, 22, [(0.35, 16)]))
+    for x in (-16, 24):
+        p.append(ell(x + 6, -8, 26, 10, 0))
+    # torso, rising and leaning in from the hips to a deep chest
+    p.append(taper([(-30, -122), (-2, -188), (38, -246), (80, -290)], 100, 116, [(0.45, -22)]))
+    p.append(ell(-26, -134, 52, 46, -30))                       # haunch
+    p.append(ell(84, -288, 60, 66, -36))                        # chest and shoulder
+    # tail: low, then an S up behind, ending in a tuft
+    p.append(taper([(-60, -112), (-110, -86), (-150, -108), (-160, -160), (-146, -204)], 15, 7))
+    p.append(ell(-142, -214, 9, 17, 20))
+    # the far foreleg, raised high to strike
+    p.append(taper([(92, -330), (124, -390), (158, -428), (196, -448)], 40, 20, [(0.5, 6)]))
+    # the near foreleg, reaching forward
+    p.append(taper([(108, -292), (156, -310), (198, -316), (232, -330)], 46, 22, [(0.5, 6)]))
+    for (x, y, a) in ((196, -448, -30), (232, -330, -12)):
+        p.append(ell(x + 3, y, 19, 14, a))
+        for k in (-34, -12, 10, 32):
+            r = math.radians(a + k)
+            p.append(taper([(x + 12 * math.cos(r), y + 12 * math.sin(r)),
+                            (x + 24 * math.cos(r - .1), y + 24 * math.sin(r - .1)),
+                            (x + 33 * math.cos(r + .25), y + 33 * math.sin(r + .25))], 5.5, 1.2))
+    # the mane: a shaggy mass behind the head, with locks falling down the neck
+    p.append(f'<path d="{poly(jagged(86, -380, 74, 44, .16, 7, 1.12))}"/>')
+    for i, (x0, y0) in enumerate([(54, -330), (70, -316), (88, -306), (106, -300), (40, -350)]):
+        p.append(taper([(x0, y0), (x0 - 6 + i * 2, y0 + 30), (x0 - 2 + i * 3, y0 + 52)], 22, 3))
+    for (x0, y0, x1, y1) in [(40, -430, 20, -462), (70, -448, 62, -484), (104, -446, 112, -480), (24, -400, -8, -416)]:
+        p.append(taper([(x0, y0), ((x0 + x1) / 2 + 4, (y0 + y1) / 2), (x1, y1)], 24, 3))
+    # head, out in front of the mane: brow, long muzzle, jaws open
+    p.append(ell(150, -392, 34, 30, -14))
+    p.append(f'<path d="{poly([(150,-418),(186,-418),(214,-406),(226,-396),(222,-384),(196,-382),(162,-376)])}"/>')  # upper jaw
+    p.append(f'<path d="{poly([(166,-370),(212,-360),(218,-350),(196,-344),(160,-350)])}"/>')                      # lower jaw
+    p.append(f'<path d="{poly([(214,-386),(218,-372),(209,-376)])}"/>')                                               # fang
+    p.append(f'<path d="{poly([(196,-370),(199,-361),(192,-364)])}"/>')                                               # fang
+    p.append(f'<path d="{poly([(140,-418),(130,-444),(154,-428)])}"/>')                                               # ear
     return "".join(p)
 
 
@@ -188,8 +169,15 @@ def ridge(y0, amp, step, seed):
     return poly(pts)
 
 
-def build():
-    cx, ground = 860, 762
+def build(portrait=False):
+    """The scene, wide (1600x1000, for screens wider than tall) or tall
+    (900x1600, for phones held upright), with the lions framed for each."""
+    global W, H
+    W, H = (900, 1600) if portrait else (1600, 1000)
+    cx = W / 2 if portrait else 860
+    ground = 1150 if portrait else 762
+    X = lambda x: x - 860 + cx          # the wide layout's x, moved to this cx
+    Y = lambda y: y + ground - 762      # and its y, to this ground
     crest_rocks = []
     out = [f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {W} {H}' preserveAspectRatio='xMidYMid slice'>"]
     out.append("""<defs>
@@ -201,70 +189,73 @@ def build():
 <filter id='glow' x='-20%' y='-20%' width='140%' height='140%'><feGaussianBlur stdDeviation='5'/></filter>
 </defs>""")
     out.append(f"<rect width='{W}' height='{H}' fill='url(#sky)'/>")
-    # stars, sparse
+    # stars, sparse, in the sky above the mountains
     rnd = random.Random(3)
-    stars = "".join(f"<circle cx='{f(rnd.uniform(0,W))}' cy='{f(rnd.uniform(0,430))}' r='{f(rnd.uniform(.6,1.6))}'/>" for _ in range(90))
+    stars = "".join(f"<circle cx='{f(rnd.uniform(0,W))}' cy='{f(rnd.uniform(0,Y(430)))}' r='{f(rnd.uniform(.6,1.6))}'/>"
+                    for _ in range(int(90 * W * Y(430) / (1600 * 430))))
     out.append(f"<g fill='#e8d9ae' opacity='.5'>{stars}</g>")
-    # the moon, behind where the antlers lock
-    mx, my, mr = cx, 470, 230
-    out.append(f"<circle cx='{mx}' cy='{my}' r='{mr*2.3:.0f}' fill='url(#halo)'/>")
+    # the moon, behind where the lions meet
+    mx, my, mr = cx, Y(470), 230
+    out.append(f"<circle cx='{f(mx)}' cy='{f(my)}' r='{mr*2.3:.0f}' fill='url(#halo)'/>")
     # dimmed so labels the hub sets over it stay readable
-    out.append(f"<circle cx='{mx}' cy='{my}' r='{mr}' fill='url(#moon)' opacity='.62'/>")
-    # craters, faint
+    out.append(f"<circle cx='{f(mx)}' cy='{f(my)}' r='{mr}' fill='url(#moon)' opacity='.62'/>")
     out.append("<g fill='#b8963c' opacity='.18'>" + "".join(
         f"<circle cx='{f(mx + dx)}' cy='{f(my + dy)}' r='{r}'/>" for dx, dy, r in
         [(-80, -60, 34), (60, -90, 22), (90, 40, 40), (-40, 80, 26), (-120, 30, 16), (20, -10, 14)]) + "</g>")
     # far mountains, then fog
-    out.append(f"<path d='{ridge(600, 70, 60, 5)}' fill='#2a2212' opacity='.75'/>")
-    out.append(f"<rect y='520' width='{W}' height='220' fill='url(#fog)' opacity='.22'/>")
-    out.append(f"<path d='{ridge(680, 40, 45, 9)}' fill='#1a150b' opacity='.9'/>")
-    # firs at the sides, two layers
+    out.append(f"<path d='{ridge(Y(600), 70, 60, 5)}' fill='#2a2212' opacity='.75'/>")
+    out.append(f"<rect y='{f(Y(520))}' width='{W}' height='220' fill='url(#fog)' opacity='.22'/>")
+    out.append(f"<path d='{ridge(Y(680), 40, 45, 9)}' fill='#1a150b' opacity='.9'/>")
+    # firs at the sides, two layers; the near one stays clear of the lions
+    if portrait:
+        ranges = [((-60, 150), (W - 150, W + 60)), ((-90, -10), (W + 10, W + 90))]
+    else:
+        ranges = [((-60, 470), (1130, 1660)), ((-80, 300), (1420, 1680))]
     trees = []
     rnd = random.Random(21)
-    for layer, (n, base, hmin, hmax, op, col) in enumerate([(26, 760, 130, 230, .85, "#151108"), (16, 860, 230, 380, 1, INK)]):
+    for layer, (n, base, hmin, hmax, op, col) in enumerate([(26, Y(760), 130, 230, .85, "#151108"),
+                                                             (16, Y(860), 230, 380, 1, INK)]):
+        lo, hi = ranges[layer]
         paths = []
         for i in range(n):
-            side = -1 if i % 2 == 0 else 1
-            # the near layer stays clear of the stags, out at the edges
-            lo, hi = ((-60, 470), (1130, 1660)) if layer == 0 else ((-80, 300), (1420, 1680))
-            x = rnd.uniform(*lo) if side < 0 else rnd.uniform(*hi)
+            x = rnd.uniform(*lo) if i % 2 == 0 else rnd.uniform(*hi)
             h = rnd.uniform(hmin, hmax)
             paths.append(fir(x, base + rnd.uniform(-20, 30), h, h * 0.42))
         trees.append(f"<path d='{''.join(paths)}' fill='{col}' opacity='{op}'/>")
     out.append(trees[0])
-    out.append(f"<rect y='640' width='{W}' height='200' fill='url(#fog)' opacity='.16'/>")
-    # the crest the stags fight on
-    crest = [(250, H + 10), (330, 900), (372, 846), (430, 820), (470, 792), (520, 776), (560, ground + 6),
-             (610, ground - 2), (660, ground + 4), (720, ground - 4), (780, ground + 2), (840, ground - 6),
-             (900, ground + 3), (960, ground - 3), (1020, ground + 4), (1080, ground - 2), (1130, ground + 6),
-             (1180, 774), (1230, 792), (1268, 816), (1320, 846), (1366, 896), (1440, H + 10)]
-    # rocks breaking the crest's edge
-    for (rx, ry, rw, rh) in [(520, 772, 40, 22), (1170, 770, 46, 26), (430, 818, 30, 16), (1250, 800, 34, 18)]:
+    out.append(f"<rect y='{f(Y(640))}' width='{W}' height='200' fill='url(#fog)' opacity='.16'/>")
+    # the ledge the lions fight on: flat where they stand, so every paw is on rock
+    crest = [(X(250), H + 10), (X(300), Y(900)), (X(350), Y(852)), (X(400), Y(818)), (X(452), ground + 30),
+             (X(500), ground + 12), (X(548), ground + 2)]
+    x = 560
+    rnd2 = random.Random(31)
+    while x < 1160:
+        crest.append((X(x), ground + rnd2.uniform(-1.5, 1.5)))
+        x += 34
+    crest += [(X(1172), ground + 2), (X(1220), ground + 12), (X(1268), ground + 30), (X(1320), Y(818)),
+              (X(1370), Y(852)), (X(1420), Y(900)), (X(1470), H + 10)]
+    for (rx, ry, rw, rh) in [(470, ground + 18, 40, 22), (1250, ground + 20, 46, 26),
+                             (380, Y(820), 30, 16), (1340, Y(812), 34, 18)]:
+        rx = X(rx)
         crest_rocks.append(poly([(rx - rw, ry + rh * .4), (rx - rw * .4, ry - rh * .6), (rx + rw * .3, ry - rh),
                                  (rx + rw, ry), (rx + rw * .6, ry + rh * .5)]))
-    # the fighters: one stag, and its mirror, antlers interlocked at cx
-    body, antlers = stag()
-    s = 1.32
-    sx = cx - 262 * s      # beam tips reach just past cx, into the rival's
-    sy = ground - 186 * s
-    stag_a = place(body + antlers, sx, sy, s)
-    stags = stag_a + mirror(stag_a, cx)
-    # eagles, clashing high on the left
-    e = eagle()
-    ex, ey, es = 370, 290, 0.95
-    eagle_a = place(e, ex - 74 * es, ey, es)
-    eagles = f"<g transform='rotate(-8 {ex} {ey})'>{eagle_a}{mirror(eagle_a, ex)}</g>"
-    figures = f"<path d='{poly(crest)}{''.join(crest_rocks)}'/>" + stags + eagles
+    # the fighters: one lion, and its mirror, forepaws meeting at cx
+    s = 0.98 if portrait else 1.12
+    lion_a = place(lion(), cx - 252 * s, ground + 2, s)     # paws sink a hair into the rock
+    lions = lion_a + mirror(lion_a, cx)
+    figures = f"<path d='{poly(crest)}{''.join(crest_rocks)}'/>" + lions
     # gold rim: the same shapes, blurred, behind
     out.append(f"<g fill='#d4af37' stroke='#d4af37' opacity='.55' filter='url(#glow)'>{figures}</g>")
     out.append(f"<g fill='{INK}' stroke='{INK}'>{figures}</g>")
     out.append(trees[1])
-    out.append(f"<rect y='800' width='{W}' height='200' fill='url(#floor)'/>")
+    out.append(f"<rect y='{f(Y(800))}' width='{W}' height='{f(H - Y(800))}' fill='url(#floor)'/>")
     out.append("</svg>")
     return "".join(out)
 
 
 if __name__ == "__main__":
-    svg = build()
-    open(sys.argv[1], "w").write(svg)
-    print(len(svg), "bytes")
+    # python3 tools/backgrounds/battle.py <wide.svg> [<tall.svg>]
+    for path, tall in zip(sys.argv[1:3], (False, True)):
+        svg = build(tall)
+        open(path, "w").write(svg)
+        print(path, len(svg), "bytes")
