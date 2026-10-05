@@ -169,7 +169,13 @@ body {
  * ------------------------------------------------------------------ */
 
 .btn {
-    border-radius: 999px !important;
+    /* A pill under any theme with rounded corners, and square under one with
+       none: radius 0 is the Chimera Hub look's whole form, and a pill there
+       was the one rounded thing on the page. */
+    border-radius: calc(var(--th-radius) * 999) !important;
+    /* thickstrap's offset drop shadow, which reads as a blue smear under a
+       dark theme. The hover glow below is the theme's own. */
+    box-shadow: none;
     border: var(--th-border);
     /* Enough fill to read as a surface. At 0.07 a button was indistinguishable
        from the card behind it until you hovered. */
@@ -332,16 +338,19 @@ input[type="range"] {
     cursor: pointer;
 }
 
+/* Rounded ends here and below are `calc(var(--th-radius) * 999)`: a full
+   pill under a theme with any corner radius, square under radius 0 (Chimera
+   Hub), so one theme knob decides every corner on the page. */
 input[type="range"]::-webkit-slider-runnable-track {
     block-size: 5px;
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: rgba(var(--th-accent-rgb), 0.14);
     border: 1px solid rgba(var(--th-accent-rgb), 0.2);
 }
 
 input[type="range"]::-moz-range-track {
     block-size: 5px;
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: rgba(var(--th-accent-rgb), 0.14);
     border: 1px solid rgba(var(--th-accent-rgb), 0.2);
 }
@@ -349,7 +358,7 @@ input[type="range"]::-moz-range-track {
 /* Filled portion, so the value reads at a glance. Firefox only. */
 input[type="range"]::-moz-range-progress {
     block-size: 5px;
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: var(--th-accent);
 }
 
@@ -534,11 +543,11 @@ app-card-dropdown {
  * Misc chrome                                                         *
  * ------------------------------------------------------------------ */
 
-.badge { border-radius: 999px; background: rgba(var(--th-accent-rgb), .15) !important; color: var(--th-accent) !important; }
-.progress { background: rgba(255,255,255,.05); border-radius: 999px; }
+.badge { border-radius: calc(var(--th-radius, 14px) * 999); background: rgba(var(--th-accent-rgb), .15) !important; color: var(--th-accent) !important; }
+.progress { background: rgba(255,255,255,.05); border-radius: calc(var(--th-radius, 14px) * 999); }
 .progress-bar { background: var(--th-accent); }
 .nav-link { color: var(--th-text-dim); }
-.nav-link.active { color: var(--th-accent) !important; background: rgba(var(--th-accent-rgb), .1) !important; border-radius: 999px; }
+.nav-link.active { color: var(--th-accent) !important; background: rgba(var(--th-accent-rgb), .1) !important; border-radius: calc(var(--th-radius, 14px) * 999); }
 
 /* ------------------------------------------------------------------ *
  * Tabs and the panel under them                                       *
@@ -626,7 +635,7 @@ app-card-dropdown {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
     background: rgba(var(--th-accent-rgb), .28);
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(var(--th-accent-rgb), .5); }
 ::selection { background: rgba(var(--th-accent-rgb), .3); color: #fff; }

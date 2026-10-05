@@ -1,4 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Playpen+Sans:wght@100..800&display=swap');
+/*
+ * No webfont @import here. It was the first line of this file, and Chrome
+ * fires `error` rather than `load` on a stylesheet whose @import fails — so
+ * offline, in the APK, or behind anything that blocks Google Fonts, Angular's
+ * `onload="this.media='all'"` never ran and the whole app stylesheet stayed
+ * media=print: light cards, faint text, and the "More" menu spilled open as
+ * bare buttons. The face it fetched (Playpen Sans) is under a monospace theme
+ * anyway; the stack below falls back to the machine's own.
+ */
 
 :root {
     /* PALETTE */

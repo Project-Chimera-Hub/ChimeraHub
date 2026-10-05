@@ -18,7 +18,7 @@
     display: grid;
     place-items: center;
     border: 1px solid rgba(var(--accent-rgb), 0.35);
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: color-mix(in srgb, var(--th-panel, #0d1420) 70%, transparent);
     -webkit-backdrop-filter: blur(var(--th-blur, 14px));
     backdrop-filter: blur(var(--th-blur, 14px));
@@ -246,7 +246,7 @@
 
 .goal__track {
     block-size: 5px;
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: rgba(var(--accent-rgb), 0.12);
     overflow: hidden;
 }
@@ -271,7 +271,7 @@
     display: grid;
     place-items: center;
     border: 1px solid rgba(var(--accent-rgb), 0.35);
-    border-radius: 999px;
+    border-radius: calc(var(--th-radius, 14px) * 999);
     background: color-mix(in srgb, var(--th-panel, #0d1420) 70%, transparent);
     -webkit-backdrop-filter: blur(var(--th-blur, 14px));
     backdrop-filter: blur(var(--th-blur, 14px));

@@ -92,7 +92,7 @@ const MOONLIT: Theme = {
 
 /** Presets are plain data — each is just a partial override of the default. */
 export const THEME_PRESETS: Record<string, Theme> = {
-    "Moonlit (default)": MOONLIT,
+    "Moonlit": MOONLIT,
     /*
      * The hub's look, for anyone who reaches this app through Chimera Hub.
      *
@@ -115,7 +115,7 @@ export const THEME_PRESETS: Record<string, Theme> = {
      * the palette and is held apart from the gold on hue and on lightness, so
      * the pair survives a glance under time pressure.
      */
-    "Chimera Hub": {
+    "Chimera Hub (default)": {
         ...MOONLIT,
         bg: "#0a0906", bg2: "#14110a", panel: "#18140b",
         accent: "#d4af37", accent2: "#f0d27a",
@@ -284,9 +284,17 @@ const LS_THEME = "syllogimous-theme";
 /** Resolved CSS declarations, replayed by the boot script in index.html. */
 const LS_THEME_VARS = "syllogimous-theme-vars";
 
+/*
+ * What a player with no saved theme sees: the hub's look, because this copy of
+ * Syllogimous is the one Chimera Hub serves, and two palettes either side of
+ * the frame's edge read as two applications. A theme somebody saved is theirs
+ * and is kept, whatever it is; Moonlit is still a preset.
+ */
+const DEFAULT_PRESET = "Chimera Hub (default)";
+
 @Injectable({ providedIn: "root" })
 export class ThemeService {
-    theme: Theme = { ...MOONLIT };
+    theme: Theme = { ...THEME_PRESETS[DEFAULT_PRESET] };
 
     constructor() {
         this.load();
@@ -457,7 +465,7 @@ export class ThemeService {
         this.save();
     }
 
-    reset() { this.usePreset("Moonlit (default)"); }
+    reset() { this.usePreset(DEFAULT_PRESET); }
 
     save() {
         try { localStorage.setItem(LS_THEME, JSON.stringify(this.theme)); } catch { /* private mode */ }
@@ -469,7 +477,7 @@ export class ThemeService {
             // Merge onto the default so themes saved before a new knob existed
             // still pick up a sane value for it.
             if (raw) this.theme = { ...MOONLIT, ...JSON.parse(raw) };
-        } catch { this.theme = { ...MOONLIT }; }
+        } catch { this.theme = { ...THEME_PRESETS[DEFAULT_PRESET] }; }
     }
 
     exportJson() { return JSON.stringify(this.theme, null, 2); }

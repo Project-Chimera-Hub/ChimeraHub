@@ -1,15 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XX6PV4G4TX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-XX6PV4G4TX');
-  </script>
   <meta charset="utf-8">
   <script>
     /*
@@ -42,7 +33,9 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
+  <!-- Nothing here is fetched from anywhere: no analytics, no icon CDN. The
+       three Font Awesome icons the app used are Bootstrap Icons now, which
+       are bundled (angular.json). It runs offline, as the hub and its APK do. -->
 </head>
 <body>
   <app-root></app-root>
