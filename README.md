@@ -19,6 +19,27 @@ sketches/   probes rather than trainers: one page, one question, a number
 test/       the hub's tests
 ```
 
+## Categories
+
+The menu sorts trainers by what they train, from `shell/js/catalog.js` — the
+one list of every trainer and category on the hub. A trainer has a main
+category and can be listed under more; a category can be empty, and an empty
+one stays on the menu, folded, with a link to submit a trainer for it.
+
+| Category | | Trainers |
+|---|---|---|
+| RRT | relational reasoning training | Syllogimous, Running Order, Relation Streams, Relational N-back |
+| N-back | | Relation Streams, Relational N-back, eWMT, Threshold N-back, N-back Constant Change, Chimera |
+| CCT | cognitive control training | CCT, Chimera |
+| ATT | attention training technique | Attention Training |
+| MOT | multiple object tracking | Earshot |
+| Posner | Posner cueing | — |
+| Spatial | mental rotation and spatial reasoning | — |
+| Imagery | mental imagery | — |
+| Inhibition | inhibition and task switching | — |
+| Speed | processing speed and useful field of view | — |
+| Other | | — |
+
 ## The trainers
 
 | Trainer | What it trains |
@@ -276,10 +297,12 @@ quota that will be.
 
 ## Additional exercises, not counted
 
-`apps/more/` holds exercises the hub opens like any other but keeps in a box
-of their own, below the trainers: none has an adapter, so the meter cannot see
-them and their minutes do not count toward the day or the quota. Writing one
-an adapter is what moves it up into `TRAINERS` in `shell/js/shell.js`.
+`apps/more/` holds exercises the hub opens like any other but does not count:
+none has an adapter, so the meter cannot see them and their minutes do not
+count toward the day or the quota. On the menu they sit in their categories
+beside the counted trainers, with "Not counted" where the minutes would be and
+a dashed edge. Writing one an adapter — or having it write the Chimera record
+format — is what sets `counted: true` on it in `shell/js/catalog.js`.
 
 - `att/` — Attention Training: selective attention, rapid switching and divided
   attention over a set of environmental sounds, one page with its sounds beside

@@ -20,30 +20,13 @@
 
   var BASE = document.body.dataset.base || "/";
 
-  /* Colour is per source and used twice: the segment in the day's bar and the
-     dot on the card. Chosen to stay apart on a dark ground and to survive the
-     common colour-blindness. The id is the archive's source name, which is
-     how the meter finds a trainer's minutes. */
-  var TRAINERS = [
-    { id: "syllogimous", name: "Syllogimous", path: "syllogimous/", colour: "#d29922",
-      what: "Relational and syllogistic reasoning" },
-    { id: "rnb", name: "Relation Streams", path: "rnb/", colour: "#f778ba",
-      what: "N-back over relations, with a ladder" },
-    { id: "cct", name: "CCT", path: "cct/", colour: "#a371f7",
-      what: "Spoken arithmetic against the clock" },
-    { id: "chimera", name: "Chimera", path: "chimera/", colour: "#58a6ff",
-      what: "Add the digits you hear, judge the number you see" },
-    { id: "ewmt", name: "eWMT", path: "ewmt/", colour: "#ff7b72",
-      what: "Affective n-back: position, colour and voice" },
-    { id: "relational", name: "Relational N-back", path: "relational/", colour: "#56d364",
-      what: "Four streams of relations, n back" },
-    { id: "rrt", name: "Running Order", path: "rrt/", colour: "#c2e07a",
-      what: "Relational reasoning at CCT's pace: place each symbol, name its rank" },
-    /* Precision N-back on the source, which is the archive's name for it and
-       the key its history is under; Threshold N-back on the card. */
-    { id: "precision", name: "Threshold N-back", path: "precision/", colour: "#e6edf3",
-      what: "N-back at your perceptual threshold, for sound and position" },
-  ];
+  /* Every trainer and every category is in catalog.js. TRAINERS is the counted
+     ones — what the meter sums, the bar draws and the quota is applied to —
+     and the rest are openable from the menu but kept off the day, because no
+     adapter reads their storage. Colour is per source and used twice: the
+     segment in the day's bar and the dot on the card. */
+  var ALL = CATALOG.trainers;
+  var TRAINERS = ALL.filter(function (t) { return t.counted; });
 
   /* Stageable, but never a trainer.
    *
@@ -59,22 +42,8 @@
   var ARCHIVE = { id: "archive", name: "Training archive", path: "archive/",
                   colour: "var(--dim)", what: "The record. Not training." };
 
-  /* Openable and on the menu, but kept out of TRAINERS for the archive's
-   * reason: TRAINERS is what the meter sums, and none of these has an
-   * adapter yet, so the day cannot see them. They sit in their own box on the
-   * hub and their own directory in the repository, apps/more/. Giving one an
-   * adapter is what moves it up into the list above. */
-  var MORE = [
-    { id: "att", name: "Attention Training", path: "more/att/", colour: "#db6d9d",
-      what: "Selective, switching and divided attention, over a soundscape" },
-    { id: "earshot", name: "Earshot", path: "more/earshot/", colour: "#56d4dd",
-      what: "Track moving sounds by ear — 3D object tracking, for the ears" },
-    { id: "quadbox", name: "N-back Constant Change", path: "more/quadbox/", colour: "#ffa657",
-      what: "Quad n-back whose modalities and variant keep changing" },
-  ];
-
   var byId = {};
-  TRAINERS.concat(MORE, [ARCHIVE]).forEach(function (t) { byId[t.id] = t; });
+  ALL.concat([ARCHIVE]).forEach(function (t) { byId[t.id] = t; });
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -231,13 +200,14 @@
     /* Cards carry their own share, so the grid answers "what have I neglected"
        without a second pass over the page. */
     TRAINERS.forEach(function (t) {
-      var el = document.getElementById("today-" + t.id);
-      if (!el) return;
       var m = q.counted[t.id] || 0, was = q.raw[t.id] || 0;
-      el.innerHTML = was <= 0 ? "—"
+      var html = was <= 0 ? "—"
         : m < was - 0.5
           ? "<b>" + fmt(m) + " min</b> counted of " + fmt(was)
           : "<b>" + fmt(m) + " min</b> today";
+      /* By attribute, not id: a trainer in two categories has two cards. */
+      var els = document.querySelectorAll('[data-today="' + t.id + '"]');
+      for (var i = 0; i < els.length; i++) els[i].innerHTML = html;
     });
   }
 
@@ -268,32 +238,71 @@
     setGoal(Math.min(1440, n));
   }
 
-  function card(t, counted) {
+  function card(t) {
     var a = document.createElement("a");
-    a.className = "card";
+    a.className = "card" + (t.counted ? "" : " card--uncounted");
     a.href = "#/" + t.id;
     a.innerHTML =
       '<span class="card__name"><span class="card__dot"></span>' + t.name + "</span>" +
       '<div class="card__what"></div>' +
-      (counted
-        ? '<div class="card__today" id="today-' + t.id + '">—</div>'
-        : '<div class="card__today">Not counted</div>') +
+      (t.counted
+        ? '<div class="card__today" data-today="' + t.id + '">—</div>'
+        : '<div class="card__today" title="No adapter reads this trainer\'s records, '
+          + 'so its time is not counted toward today or the quota.">Not counted</div>') +
       '<span class="card__enter">Enter →</span>';
     a.querySelector(".card__dot").style.background = t.colour;
     a.querySelector(".card__what").textContent = t.what;
     return a;
   }
 
-  function renderGrid() {
-    var grid = $("grid");
-    grid.textContent = "";
-    TRAINERS.forEach(function (t) { grid.appendChild(card(t, true)); });
+  /* One box per category, in the catalog's order, each holding every trainer
+     that lists it. Empty ones stay on the page, closed, with a way to submit
+     a trainer for them — an empty shelf says what the hub is looking for.
 
-    var more = $("grid-more");
-    if (!more) return;
-    more.textContent = "";
-    MORE.forEach(function (t) { more.appendChild(card(t, false)); });
-    $("more-count").textContent = String(MORE.length);
+     Counting is no longer told apart by which box a card sits in but by the
+     card itself: "Not counted" where the minutes would be, and a dashed edge,
+     the same dash the uncounted box used to have. */
+  function renderGrid() {
+    var root = $("cats");
+    root.textContent = "";
+    CATALOG.categories.forEach(function (c) {
+      var members = ALL.filter(function (t) { return t.categories.indexOf(c.id) >= 0; });
+
+      var box = document.createElement("details");
+      box.className = "cat" + (members.length ? "" : " cat--empty");
+      box.id = "cat-" + c.id;
+      box.open = members.length > 0;
+
+      var head = document.createElement("summary");
+      head.className = "cat__head";
+      head.innerHTML = '<span class="cat__name"></span><span class="cat__full"></span>'
+        + '<span class="cat__count"></span>';
+      head.querySelector(".cat__name").textContent = c.name;
+      head.querySelector(".cat__full").textContent = c.full !== c.name ? c.full : "";
+      head.querySelector(".cat__count").textContent = members.length ? String(members.length) : "empty";
+      box.appendChild(head);
+
+      var about = document.createElement("p");
+      about.className = "cat__about";
+      about.textContent = c.about + " ";
+      if (!members.length) {
+        var link = document.createElement("a");
+        link.href = CATALOG.submit;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "No trainer here yet — submit one ↗";
+        about.appendChild(link);
+      }
+      box.appendChild(about);
+
+      if (members.length) {
+        var grid = document.createElement("div");
+        grid.className = "grid";
+        members.forEach(function (t) { grid.appendChild(card(t)); });
+        box.appendChild(grid);
+      }
+      root.appendChild(box);
+    });
   }
 
   /* ---------------------------------------------------------------- *

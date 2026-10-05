@@ -133,7 +133,7 @@ test("eWMT's one day of milliseconds reaches the meter", () => {
 });
 
 /* Retired trainers. The hub no longer offers them and the meter does not count
-   them toward the day — `TRAINERS` in shell.js is the filter — but their
+   them toward the day — `counted` in shell/js/catalog.js is the filter — but their
    records are still read, because a streak is history and history does not
    stop being true when an app leaves. */
 
@@ -405,13 +405,14 @@ test("every key the shell watches is one an adapter recognises", () => {
   }
 });
 
+const CATALOG = require("../shell/js/catalog.js");
+
 test("every card on the hub opens an app that is in the repository", () => {
   /* Paths are relative to the site, and the build puts each app at the path
      its directory under apps/ has — so a card whose directory is missing is
      a card that opens a 404 inside the frame. */
-  const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
-  const paths = [...src.matchAll(/path: "([^"]+)"/g)].map((m) => m[1]);
-  assert.ok(paths.length >= 8, `only ${paths.length} cards found — the pattern no longer matches`);
+  const paths = CATALOG.trainers.map((t) => t.path);
+  assert.ok(paths.length >= 11, `only ${paths.length} trainers in the catalog`);
   for (const p of paths) {
     /* Syllogimous is Angular, and its page is built from src/. */
     const dir = path.join(__dirname, "..", "apps", p);
@@ -424,10 +425,9 @@ test("every card on the hub opens an app that is in the repository", () => {
 test("every counted trainer is a source an adapter reports", () => {
   /* The meter finds a trainer's minutes by its id. A card whose id no adapter
      uses is a trainer the day can never see, shown as if it could. */
-  const src = readFileSync(path.join(__dirname, "..", "shell", "js", "shell.js"), "utf8");
-  const block = src.slice(src.indexOf("var TRAINERS = ["), src.indexOf("];", src.indexOf("var TRAINERS = [")));
-  const ids = [...block.matchAll(/id: "([^"]+)"/g)].map((m) => m[1]);
-  assert.deepStrictEqual(ids.sort(), ["cct", "chimera", "ewmt", "precision", "relational", "rnb", "rrt", "syllogimous"]);
+  const ids = CATALOG.trainers.filter((t) => t.counted).map((t) => t.id);
+  assert.deepStrictEqual(ids.slice().sort(),
+    ["cct", "chimera", "ewmt", "precision", "relational", "rnb", "rrt", "syllogimous"]);
   const adapters = readFileSync(path.join(__dirname, "..", "apps", "archive", "js", "adapters.js"), "utf8");
   for (const id of ids) {
     /* Syllogimous's reader is shared with Isomorph's and takes the source as
@@ -435,6 +435,33 @@ test("every counted trainer is a source an adapter reports", () => {
     assert.ok(adapters.includes(`source: "${id}"`) || adapters.includes(`Shaped(data, "${id}"`),
       `no adapter reports source "${id}"`);
   }
+});
+
+test("the catalog is consistent: ids, categories and colours", () => {
+  const cats = new Set(CATALOG.categories.map((c) => c.id));
+  assert.strictEqual(cats.size, CATALOG.categories.length, "two categories share an id");
+  for (const want of ["rrt", "nback", "cct", "att", "mot", "posner"]) {
+    assert.ok(cats.has(want), `the ${want} category is missing`);
+  }
+  const ids = new Set(), colours = new Set();
+  for (const t of CATALOG.trainers) {
+    assert.ok(/^[a-z][a-z0-9-]*$/.test(t.id), `${t.id}: ids are lower-case and dashed`);
+    assert.ok(!ids.has(t.id), `${t.id} is in the catalog twice`);
+    ids.add(t.id);
+    assert.ok(!colours.has(t.colour), `${t.id} shares its colour with another trainer`);
+    colours.add(t.colour);
+    assert.ok(Array.isArray(t.categories) && t.categories.length, `${t.id} has no category`);
+    for (const c of t.categories) assert.ok(cats.has(c), `${t.id}: no category called ${c}`);
+    assert.strictEqual(typeof t.counted, "boolean", `${t.id}: counted is not a boolean`);
+    assert.ok(t.name && t.what && t.path.endsWith("/"), `${t.id}: name, what or path missing`);
+  }
+});
+
+test("the page loads the catalog before the shell", () => {
+  const html = readFileSync(path.join(__dirname, "..", "shell", "index.html"), "utf8");
+  assert.ok(html.includes("js/catalog.js"), "shell/index.html does not load catalog.js");
+  assert.ok(html.indexOf("js/catalog.js") < html.indexOf("js/shell.js"),
+    "catalog.js loads after shell.js, so `CATALOG` is undefined when the shell runs");
 });
 
 /* ------------------------------------------------------------------ *

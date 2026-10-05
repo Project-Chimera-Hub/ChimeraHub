@@ -194,7 +194,7 @@ var Share = (function () {
     cct: "CCT", chimera: "Chimera", relational: "Relational N-back",
     earshot: "Earshot", quadbox: "Quad Box",
     isomorph: "Isomorph", rrt: "Running Order",
-    synth: "Synth", precision: "Precision N-back", rotation: "3D Rotation", ewmt: "eWMT",
+    synth: "Synth", precision: "Threshold N-back", rotation: "3D Rotation", ewmt: "eWMT",
   };
 
   function summary(file) {
