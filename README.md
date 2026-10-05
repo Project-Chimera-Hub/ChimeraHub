@@ -13,8 +13,11 @@ apps/more/  the additional exercises, in their own box, not counted toward
             the day
 shell/      the hub: a menu, a frame to run a trainer in, and the meter
 gate/       the quota, and the window that holds you to it
-shared/     code that belongs to the hub and the gate but to no one app
-tools/      the build, the APK, and the upstream sync
+shared/     code that belongs to the hub and the gate but to no one app,
+            including harness/: the trainer harness and the record format
+templates/  the trainer a new one starts from
+tools/      the build, the APK, the upstream sync, and the tools a trainer
+            is made, checked and accepted with
 sketches/   probes rather than trainers: one page, one question, a number
 test/       the hub's tests
 ```
@@ -128,6 +131,35 @@ counts page views, one per hub visit and one per trainer opened. No cookies and
 no personal data. The snippet is added by the build only, so the source, a
 local build and the APK make no outbound request at all.
 
+## Adding a trainer
+
+Anyone can build a trainer and submit it; the hub's leaders approve what goes
+on. [CONTRIBUTING-TRAINERS.md](CONTRIBUTING-TRAINERS.md) is the whole of it
+for a developer — the criteria, and how to submit. In short:
+
+- **Build it on the harness.** `node tools/new-trainer.mjs <id> --category …`
+  writes a complete trainer (Posner cueing) on `shared/harness/`, which gives
+  every trainer the same screens, look, pausing, timing, settings, level and
+  record, and runs on its own with nothing fetched.
+- **Check it.** `node tools/check-trainer.mjs <dir> --browser` tests every
+  criterion a program can: the record format and a real sample of it, no
+  network, pausing, staying in its frame, phone width, license, README, size.
+- **Submit it** with the *Submit a trainer* issue form. The **Trainer
+  submission** workflow (`.github/workflows/trainer-submission.yml`) runs the
+  check on the repository and reports on the issue. A leader's `approved`
+  label grafts it into `apps/<id>/` with its history, adds it to the catalog
+  (`tools/add-trainer.mjs`) and opens a pull request; `CODEOWNERS` makes a
+  leader's review of that pull request the second approval, and merging it
+  deploys the trainer.
+
+`tools/build-site.mjs` builds or copies every catalog trainer that has a
+`chimera.json`, so accepting one never means editing the build.
+
+For the approval to be enforced, **Settings → Branches** needs a rule on
+`main` requiring a pull request with review from Code Owners. A repository
+secret `SUBMISSIONS_TOKEN` (fine-grained, contents and pull requests: write)
+lets the import pull request start the tests by itself.
+
 ## The record format
 
 Every trainer submitted from now on writes its sessions in **the Chimera
@@ -202,7 +234,8 @@ not enough for the Play Store.
 ## Test
 
 ```bash
-node test/run.js                 # the shell's meter
+node test/run.js                 # the shell's meter, the catalog, the record
+                                 # format, the harness and the submission tools
 node apps/archive/test/run.js    # the archive's merge
 python3 gate/test_gate.py        # the gate's decisions, with no display
 ```

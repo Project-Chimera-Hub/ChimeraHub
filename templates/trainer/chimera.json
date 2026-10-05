@@ -1,0 +1,11 @@
+{
+  "id": "__ID__",
+  "name": "__NAME__",
+  "what": "__WHAT__",
+  "categories": ["__CATEGORY__"],
+  "unit": "target-ms",
+  "license": "MIT",
+  "maintainer": "__MAINTAINER__",
+  "repository": "https://github.com/__MAINTAINER__/__ID__",
+  "build": null
+}

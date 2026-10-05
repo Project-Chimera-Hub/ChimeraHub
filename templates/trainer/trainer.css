@@ -1,0 +1,28 @@
+/* Only what this trainer draws. The screens, buttons and pause are the
+   harness's (harness/harness.css). */
+
+.pc-field { position: relative; width: min(92vw, 560px); height: 180px; }
+.pc-box {
+  position: absolute;
+  top: 40px;
+  width: 100px;
+  height: 100px;
+  border: 1px solid var(--h-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: var(--h-ink-strong);
+}
+.pc-box.left { left: 4%; }
+.pc-box.right { right: 4%; }
+.pc-box.cued { border: 3px solid var(--h-accent-2); }
+.pc-fix {
+  position: absolute;
+  left: 50%;
+  top: 90px;
+  transform: translate(-50%, -50%);
+  font-size: 1.6rem;
+  color: var(--h-dim);
+}
+@media (max-width: 420px) { .pc-box { width: 76px; height: 76px; top: 52px; } }

@@ -1,0 +1,84 @@
+name: Submit a trainer
+description: Put a trainer you built on Chimera Hub. A check runs on your repository and a hub leader reviews it.
+title: "Submit trainer: "
+labels: ["trainer-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for building a trainer. Before submitting, read
+        [CONTRIBUTING-TRAINERS.md](https://github.com/Project-Chimera-Hub/ChimeraHub/blob/main/CONTRIBUTING-TRAINERS.md)
+        and run `node tools/check-trainer.mjs <your-trainer> --browser` from a
+        clone of this repository; that's the same check that runs here.
+
+        When you submit, the check runs on your repository and posts its report
+        below. Fix anything it flags, then edit this issue or comment `/recheck`.
+        Once it passes, a hub leader plays the trainer and reviews it. Their
+        `approved` label imports it into a pull request, with its history, and
+        merging that puts it on the hub.
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      description: The public GitHub repository the trainer lives in. Its root has chimera.json.
+      placeholder: https://github.com/your-name/your-trainer
+    validations:
+      required: true
+  - type: input
+    id: ref
+    attributes:
+      label: Branch or tag
+      description: What to import. A tag is best, so the reviewed version is exactly the imported one.
+      placeholder: main
+      value: main
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Main category
+      description: Where it goes on the menu. chimera.json can list more.
+      options:
+        - RRT — relational reasoning training
+        - N-back
+        - CCT — cognitive control training
+        - ATT — attention training technique
+        - MOT — multiple object tracking
+        - Posner — Posner cueing
+        - Spatial — mental rotation and spatial reasoning
+        - Imagery — mental imagery
+        - Inhibition — inhibition and task switching
+        - Speed — processing speed and useful field of view
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What it trains, and why it should work
+      description: The ability, the paradigm, and the research it rests on, with references.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything a reviewer should know
+      description: How to get to the hard levels quickly, known limits, what you'd like feedback on.
+  - type: checkboxes
+    id: criteria
+    attributes:
+      label: The criteria
+      description: Each of these is in CONTRIBUTING-TRAINERS.md.
+      options:
+        - label: It writes its sessions in the Chimera record format, and test/sample-record.json comes from a real session.
+          required: true
+        - label: It loads nothing from the network, and has no analytics or trackers.
+          required: true
+        - label: It pauses, and stops counting time, when the page is hidden.
+          required: true
+        - label: It works on a phone (touch, 360px wide) and at a desk (keyboard).
+          required: true
+        - label: It's licensed so the hub can ship it, assets included, and I have the right to submit it.
+          required: true
+        - label: I'll maintain it, or say so here if I can't.
+          required: true

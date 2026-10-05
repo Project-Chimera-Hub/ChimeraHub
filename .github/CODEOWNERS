@@ -1,0 +1,20 @@
+# Who approves what reaches the hub.
+#
+# With branch protection on `main` set to "Require review from Code Owners",
+# nothing merges without one of these approving it. That is the approval in
+# the submission process (CONTRIBUTING-TRAINERS.md): a trainer is imported as
+# a pull request, and a leader's review of that pull request is what puts it on
+# the hub.
+#
+# The hub's leaders are the repository's admins today. When the organisation
+# makes a team for them, replace both names on every line with that team
+# (for example @Project-Chimera-Hub/leaders).
+
+*                       @Gagafutzi @projectchimera-dot
+
+# The catalog is the list of what is on the hub; the workflows and tools are
+# what imports into it. Named on their own so this stays true if the default
+# above is ever widened.
+/shell/js/catalog.js    @Gagafutzi @projectchimera-dot
+/.github/               @Gagafutzi @projectchimera-dot
+/tools/                 @Gagafutzi @projectchimera-dot

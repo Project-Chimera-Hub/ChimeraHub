@@ -1,0 +1,212 @@
+name: Trainer submission
+
+# The submission process in CONTRIBUTING-TRAINERS.md, run by GitHub:
+#
+#   1. Someone opens a "Submit a trainer" issue. `check` clones the repository
+#      it names, runs tools/check-trainer.mjs on it, and posts the report on
+#      the issue, labelled `ready-for-review` or `needs-changes`. Editing the
+#      issue, or commenting `/recheck`, runs it again.
+#   2. A leader plays the trainer and adds the `approved` label. `import`
+#      grafts the repository into apps/<id>/ with its history, puts it in the
+#      catalog with tools/add-trainer.mjs, runs the tests, and opens a pull
+#      request.
+#   3. A leader reviews and merges that pull request (CODEOWNERS requires it),
+#      and the site deploys with the new trainer on it.
+#
+# Everything from the issue (its body, the repository it names) is somebody
+# else's text. It reaches the shell only through environment variables, is
+# parsed by tools/parse-submission.mjs into a repository name and a ref, and
+# the submitted code is never built or run here except as a page in a
+# headless browser.
+#
+# Pull requests opened with the default token do not start other workflows,
+# so the import PR's tests would not run on their own. Set a repository secret
+# SUBMISSIONS_TOKEN (a fine-grained token with contents and pull-requests
+# write on this repository) and they will; without it, the PR is still
+# opened, and pushing to it or closing and reopening it starts them.
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: trainer-submission-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'trainer-submission') &&
+      !github.event.issue.pull_request &&
+      (
+        (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'edited')) ||
+        (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/recheck'))
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Read the submission
+        id: sub
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: node tools/parse-submission.mjs
+
+      - name: Clone it
+        if: steps.sub.outcome == 'success'
+        env:
+          URL: ${{ steps.sub.outputs.url }}
+          REF: ${{ steps.sub.outputs.ref }}
+        run: git clone --depth 1 --branch "$REF" -- "$URL" submission
+
+      - name: Install a browser for the check
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Check it
+        id: check
+        env:
+          OUTCOME: ${{ steps.sub.outcome }}
+        run: |
+          set +e
+          if [ -d submission ]; then
+            node tools/check-trainer.mjs submission --browser --markdown > report.md
+            echo "status=$?" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "### ❌ The submission could not be read"
+              echo
+              echo "The **Repository** field has to be a public https://github.com/<owner>/<repo> address and **Branch or tag** a branch or tag that exists in it. Edit the issue to fix them, and the check runs again."
+            } > report.md
+            echo "status=1" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+
+      - name: Report on the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          STATUS: ${{ steps.check.outputs.status }}
+        run: |
+          gh label create trainer-submission --color 0e8a16 --description "A trainer submitted for the hub" 2>/dev/null || true
+          gh label create ready-for-review --color d4af37 --description "Passes the check; waiting for a leader" 2>/dev/null || true
+          gh label create needs-changes --color 8c4a4a --description "The check found something to fix" 2>/dev/null || true
+          gh label create approved --color 1f6feb --description "A leader approved it: import into a pull request" 2>/dev/null || true
+          printf '\n\n---\n_Checked by the Trainer submission workflow._\n' >> report.md
+          gh issue comment "$ISSUE" --body-file report.md
+          if [ "$STATUS" = "0" ]; then
+            gh issue edit "$ISSUE" --add-label ready-for-review --remove-label needs-changes
+          else
+            gh issue edit "$ISSUE" --add-label needs-changes --remove-label ready-for-review
+          fi
+
+  import:
+    if: >-
+      github.event_name == 'issues' && github.event.action == 'labeled' &&
+      github.event.label.name == 'approved' &&
+      contains(github.event.issue.labels.*.name, 'trainer-submission')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Only a leader approves
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTOR: ${{ github.event.sender.login }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          perm=$(gh api "repos/$GH_REPO/collaborators/$ACTOR/permission" --jq .permission)
+          if [ "$perm" != "admin" ] && [ "$perm" != "maintain" ]; then
+            gh issue edit "$ISSUE" --remove-label approved
+            gh issue comment "$ISSUE" --body "The \`approved\` label imports a trainer, so only a maintainer or admin of this repository can add it. Removed."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SUBMISSIONS_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Read the submission
+        id: sub
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: node tools/parse-submission.mjs
+
+      - name: Check it again, as it is now
+        env:
+          URL: ${{ steps.sub.outputs.url }}
+          REF: ${{ steps.sub.outputs.ref }}
+        run: |
+          git clone --depth 1 --branch "$REF" -- "$URL" "$RUNNER_TEMP/submission"
+          node tools/check-trainer.mjs "$RUNNER_TEMP/submission"
+          id=$(node -e 'console.log(require(process.argv[1]).id)' "$RUNNER_TEMP/submission/chimera.json")
+          # The name goes into $GITHUB_ENV, a commit message and a PR title,
+          # so it is cut down to letters, digits and plain punctuation first:
+          # a newline in it would otherwise set any variable it liked.
+          name=$(node -e 'const n = String(require(process.argv[1]).name || "");
+            console.log(n.replace(/[^\p{L}\p{N} ()&.,+-]/gu, "").trim().slice(0, 60) || "Unnamed trainer")' \
+            "$RUNNER_TEMP/submission/chimera.json")
+          # The whole string, not line by line as grep would.
+          [[ "$id" =~ ^[a-z][a-z0-9-]*$ ]] || { echo "chimera.json has no usable id"; exit 1; }
+          [ ! -e "apps/$id" ] || { echo "apps/$id already exists"; exit 1; }
+          echo "ID=$id" >> "$GITHUB_ENV"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Graft it in, with its history
+        env:
+          URL: ${{ steps.sub.outputs.url }}
+          REF: ${{ steps.sub.outputs.ref }}
+          OWNER: ${{ steps.sub.outputs.owner }}
+          REPO: ${{ steps.sub.outputs.repo }}
+        run: |
+          git config user.name "Chimera Hub submissions"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "submission/$ID"
+          # No --squash: every app here was grafted unsquashed, and mixing the
+          # two makes a subtree that tools/sync.sh can no longer split.
+          git subtree add --prefix="apps/$ID" "$URL" "$REF" -m "Graft $NAME in from $OWNER/$REPO, history intact"
+          node tools/add-trainer.mjs "$ID" --owner "$OWNER" --repo "$REPO" --branch "$REF"
+          node test/run.js
+          node apps/archive/test/run.js
+          git add shell/js/catalog.js tools/apps.json
+          git commit -m "Hub: $NAME, from $OWNER/$REPO"
+          git push -u origin "submission/$ID"
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.SUBMISSIONS_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          URL: ${{ steps.sub.outputs.url }}
+          REF: ${{ steps.sub.outputs.ref }}
+        run: |
+          {
+            echo "Imports **$NAME** from $URL at \`$REF\`, approved in #$ISSUE."
+            echo
+            echo "- \`apps/$ID/\`: the trainer, grafted with \`git subtree add\` so its history is intact"
+            echo "- \`shell/js/catalog.js\`: its card, in the categories its chimera.json names"
+            echo "- \`tools/apps.json\`: where it came from, for \`tools/sync.sh\`"
+            echo
+            echo "The check passed again at import. Merging puts it on the hub."
+            echo
+            echo "Closes #$ISSUE"
+          } > body.md
+          pr=$(gh pr create --base main --head "submission/$ID" --title "Hub: $NAME" --body-file body.md)
+          gh issue comment "$ISSUE" --body "Imported into $pr. Merging it puts **$NAME** on the hub."

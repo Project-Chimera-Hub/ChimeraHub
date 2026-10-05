@@ -17,6 +17,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -160,6 +161,35 @@ log("[build] more/quadbox (vite)");
   ensureDeps(dir);
   run("npx", ["vite", "build", "--base", "./",
     "--outDir", path.join(DIST, "more", "quadbox"), "--emptyOutDir"], dir);
+}
+
+/* Every other trainer in the catalog: the ones that came in through a
+   submission, each with a chimera.json saying how it is built. Nothing here
+   names them, so accepting a trainer never means editing this file. A
+   trainer with no build is a set of pages and is copied; one with
+   `build: { command, output }` is installed with npm ci, built, and its
+   output copied. The criteria require a relative base, so the same output
+   runs at every depth the hub puts it. */
+{
+  const CATALOG = createRequire(import.meta.url)(path.join(ROOT, "shell", "js", "catalog.js"));
+  const HANDLED = new Set(["syllogimous", "rnb", "rrt", "cct", "chimera", "ewmt", "relational",
+    "precision", "att", "earshot", "quadbox"]);
+  for (const t of CATALOG.trainers) {
+    if (HANDLED.has(t.id)) continue;
+    const dir = path.join(ROOT, "apps", t.path);
+    const mf = path.join(dir, "chimera.json");
+    if (!fs.existsSync(mf)) throw new Error(`${t.id} is in the catalog with no ${path.relative(ROOT, mf)}`);
+    const m = JSON.parse(fs.readFileSync(mf, "utf8"));
+    if (m.build) {
+      log(`[build] ${t.id} (${m.build.command})`);
+      ensureDeps(dir);
+      run("sh", ["-c", m.build.command], dir);
+      copyDir(path.join(dir, m.build.output), path.join(DIST, t.path));
+    } else {
+      log(`[copy] ${t.id}`);
+      copyDir(dir, path.join(DIST, t.path));
+    }
+  }
 }
 
 /* The record, hoisted where the shell can reach it. The archive remains the

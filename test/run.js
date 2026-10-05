@@ -424,16 +424,30 @@ test("every card on the hub opens an app that is in the repository", () => {
 
 test("every counted trainer is a source an adapter reports", () => {
   /* The meter finds a trainer's minutes by its id. A card whose id no adapter
-     uses is a trainer the day can never see, shown as if it could. */
+     uses is a trainer the day can never see, shown as if it could.
+
+     Two ways to be read: the trainers that were here before the record format
+     each have an adapter of their own; every trainer since writes the format,
+     ships a sample of it, and is read by `readChimeraRecord`. */
+  const LEGACY = ["cct", "chimera", "ewmt", "precision", "relational", "rnb", "rrt", "syllogimous"];
   const ids = CATALOG.trainers.filter((t) => t.counted).map((t) => t.id);
-  assert.deepStrictEqual(ids.slice().sort(),
-    ["cct", "chimera", "ewmt", "precision", "relational", "rnb", "rrt", "syllogimous"]);
   const adapters = readFileSync(path.join(__dirname, "..", "apps", "archive", "js", "adapters.js"), "utf8");
+  for (const id of LEGACY) assert.ok(ids.includes(id), `${id} is no longer counted`);
   for (const id of ids) {
-    /* Syllogimous's reader is shared with Isomorph's and takes the source as
-       an argument rather than spelling it out. */
-    assert.ok(adapters.includes(`source: "${id}"`) || adapters.includes(`Shaped(data, "${id}"`),
-      `no adapter reports source "${id}"`);
+    if (LEGACY.includes(id)) {
+      /* Syllogimous's reader is shared with Isomorph's and takes the source as
+         an argument rather than spelling it out. */
+      assert.ok(adapters.includes(`source: "${id}"`) || adapters.includes(`Shaped(data, "${id}"`),
+        `no adapter reports source "${id}"`);
+      continue;
+    }
+    const dir = path.join(__dirname, "..", "apps", id);
+    const sample = path.join(dir, "test", "sample-record.json");
+    assert.ok(require("fs").existsSync(path.join(dir, "chimera.json")), `${id} has no chimera.json`);
+    assert.ok(require("fs").existsSync(sample), `${id} has no test/sample-record.json`);
+    const reading = require("../apps/archive/js/adapters.js").readFile(readFileSync(sample, "utf8"));
+    assert.ok(reading && !reading.error && reading.source === id,
+      `${id}'s sample record is not read as ${id}: ${reading && (reading.error || reading.source)}`);
   }
 });
 
@@ -918,6 +932,109 @@ test("FORMAT.md documents every column, and its example is a valid record", () =
   const v = CR.validate(JSON.parse(json));
   assert.ok(v.ok && !v.warnings.length, "the example is not clean: " + v.errors.concat(v.warnings).join("; "));
   assert.ok(readChimeraRecord(JSON.parse(json)), "the archive does not read the example");
+});
+
+/* ------------------------------------------------------------------ *
+ * Reading a submission issue                                          *
+ * ------------------------------------------------------------------ */
+
+function parseSubmission(body) {
+  try {
+    const out = require("child_process").execFileSync(process.execPath,
+      [path.join(__dirname, "..", "tools", "parse-submission.mjs")],
+      { env: { ISSUE_BODY: body }, stdio: ["ignore", "pipe", "pipe"] }).toString();
+    return Object.fromEntries(out.trim().split("\n").map((l) => l.split(/=(.*)/s).slice(0, 2)));
+  } catch (e) { return null; }
+}
+const issue = (repo, ref) => `### Repository\n\n${repo}\n\n### Branch or tag\n\n${ref}\n\n### Main category\n\nPosner — Posner cueing\n`;
+
+test("a submission issue gives a repository and a ref, and nothing else", () => {
+  assert.deepStrictEqual(parseSubmission(issue("https://github.com/someone/stroop-switch/", "v1.0.0")),
+    { owner: "someone", repo: "stroop-switch", url: "https://github.com/someone/stroop-switch", ref: "v1.0.0" });
+  assert.strictEqual(parseSubmission(issue("https://github.com/a/b.git", "_No response_")).ref, "main",
+    "an empty ref is main");
+  for (const [repo, ref] of [
+    ["https://gitlab.com/a/b", "main"],
+    ["https://github.com/a/b; rm -rf /", "main"],
+    ["https://github.com/a/b", "main; curl evil"],
+    ["https://github.com/a/b", "--upload-pack=touch /tmp/x"],
+    ["https://github.com/a/b", "../../etc"],
+    ["https://github.com/a/b\nhttps://github.com/c/d", "main"],
+  ]) {
+    assert.strictEqual(parseSubmission(issue(repo, ref)), null, `accepted ${repo} @ ${ref}`);
+  }
+});
+
+test("the issue form offers exactly the catalog's categories", () => {
+  const form = readFileSync(path.join(__dirname, "..", ".github", "ISSUE_TEMPLATE", "submit-trainer.yml"), "utf8");
+  const offered = form.slice(form.indexOf("id: category"), form.indexOf("validations", form.indexOf("id: category")))
+    .split("\n").filter((l) => /^\s+- /.test(l)).map((l) => l.replace(/^\s+- /, "").split(" — ")[0].trim());
+  assert.deepStrictEqual(offered, CATALOG.categories.map((c) => c.name));
+});
+
+/* ------------------------------------------------------------------ *
+ * The harness and the tools a trainer is made and checked with        *
+ * ------------------------------------------------------------------ */
+
+const Harness = require("../shared/harness/harness.js");
+
+test("the harness summarises a trial log into the record's columns", () => {
+  const log = [
+    { i: 0, target: true, response: "m", correct: true, rtMs: 400 },
+    { i: 1, target: true, response: null, correct: false },
+    { i: 2, target: false, response: null, correct: true },
+    { i: 3, target: false, response: "m", correct: false, rtMs: 600 },
+    { i: 4, target: true, response: "m", correct: true, rtMs: 500 },
+  ];
+  const s = Harness.summarize(log);
+  assert.deepStrictEqual([s.trials, s.correct, s.hits, s.misses, s.falseAlarms, s.correctRejections],
+    [5, 3, 2, 1, 1, 1]);
+  near(s.accuracy, 0.6, "accuracy");
+  assert.strictEqual(s.rtMedianMs, 500);
+  assert.strictEqual(s.rtMeanMs, 500);
+  assert.ok(typeof s.dPrime === "number" && isFinite(s.dPrime), "no d' from a log with targets and foils");
+  near(Harness.probit(0.975), 1.95996, "probit");
+  assert.deepStrictEqual(Harness.summarize([]), {}, "an empty log should say nothing, not zero");
+});
+
+test("the default level rule climbs, holds and falls, inside its bounds", () => {
+  const cfg = { level: { min: 1, max: 3 } };
+  assert.strictEqual(Harness.staircase({ accuracy: 0.9 }, 2, cfg), 3);
+  assert.strictEqual(Harness.staircase({ accuracy: 0.9 }, 3, cfg), 3, "climbed past max");
+  assert.strictEqual(Harness.staircase({ accuracy: 0.7 }, 2, cfg), 2);
+  assert.strictEqual(Harness.staircase({ accuracy: 0.4 }, 1, cfg), 1, "fell past min");
+  assert.strictEqual(Harness.staircase({}, 2, cfg), 2, "moved with no accuracy to go on");
+});
+
+test("a trainer made by new-trainer.mjs, with a played session, passes check-trainer", () => {
+  const os = require("os"), fs = require("fs"), cp = require("child_process");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "chimera-trainer-"));
+  const out = path.join(dir, "probe-trainer");
+  const tool = (name, args) => cp.spawnSync(process.execPath, [path.join(__dirname, "..", "tools", name), ...args],
+    { encoding: "utf8" });
+  try {
+    let r = tool("new-trainer.mjs", ["probe-trainer", "--category", "posner", "--maintainer", "someone", "--out", out]);
+    assert.strictEqual(r.status, 0, r.stderr);
+    r = tool("check-trainer.mjs", [out]);
+    assert.strictEqual(r.status, 1, "passed with no sample record");
+    assert.ok(/no test\/sample-record\.json/.test(r.stdout), "did not say what was missing");
+
+    const rec = CR.create("probe-trainer", "target-ms", "0.1.0");
+    rec.sessions.push({ id: "1-a", start: at(9), activeSeconds: 120, level: 300, levelEnd: 255,
+      trials: 2, correct: 2, accuracy: 1, trialLog: [{ i: 0, correct: true, rtMs: 300 }, { i: 1, correct: true, rtMs: 320 }] });
+    fs.mkdirSync(path.join(out, "test"));
+    fs.writeFileSync(path.join(out, "test", "sample-record.json"), JSON.stringify(rec));
+    r = tool("check-trainer.mjs", [out]);
+    assert.strictEqual(r.status, 0, r.stdout);
+
+    /* And it refuses what it exists to refuse. */
+    fs.appendFileSync(path.join(out, "index.html"), '<script src="https://cdn.example.com/x.js"></script>\n');
+    r = tool("check-trainer.mjs", [out]);
+    assert.strictEqual(r.status, 1, "a CDN script passed");
+    assert.ok(r.stdout.includes("cdn.example.com"), "the CDN line was not named");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 for (const [name, fn] of cases) {
