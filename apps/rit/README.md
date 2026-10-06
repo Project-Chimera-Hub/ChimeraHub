@@ -23,7 +23,7 @@ clock.
 ## How difficulty is measured
 
 - **Depth (n)** is the level in the hub's record, in units of `n`. You set it,
-  from 1 to 5.
+  from 1 to 10.
 - **Speed** adapts after every round. Display and blank times move by a
   percentage looked up from your correct answers out of 20, from −4% (slower)
   at 10 or fewer to +10% (faster) at 20. The steps can be edited in Configure.
@@ -62,6 +62,12 @@ Dark's code is otherwise unchanged; each change is marked `Chimera Hub` in
   counts out of 20 applied to any number of trials.
 - **Fix: range ladder.** It stops at 1–99, the last number with a recording.
 - **Keyboard keys** added for Match and Different.
+- **No emoji** in the interface. The text symbols ✓, ✗, ▲ and ▼ stay.
+- **Wider on a computer:** at 900 px wide and up, the menus widen, the
+  settings run in two columns, and the round is scaled to the window's height.
+  Phones are unchanged. `chimera-hub.css` also adds about 20 Tailwind classes
+  the app uses but its compiled CSS left out (`flex-1`, `col-span-2`, …), which
+  had squashed the voice buttons and the range grid in every theme.
 - **Look:** a "Chimera Hub – Gold" theme (`chimera-hub.css`) is the default.
   Dark's Cyan and Dark themes are still in the theme menu.
 

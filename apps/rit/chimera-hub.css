@@ -65,3 +65,69 @@
 /* The round's progress bar: bright gold, not the dark gold of the buttons,
    which would vanish against its track. */
 [data-theme="chimera"] [class~="h-full"][class~="bg-[#008080]"] { background-color: #d4af37 !important; }
+
+/* ── Utilities the app uses that its compiled Tailwind left out ──
+   Without these the voice buttons collapse to their text, the 1-5 range
+   button and the adaptive one don't span the grid, and the number tester's
+   list doesn't wrap. Plain Tailwind values; they fix every theme. */
+.block { display: block; }
+.flex-1 { flex: 1 1 0%; }
+.flex-wrap { flex-wrap: wrap; }
+.shrink-0 { flex-shrink: 0; }
+.col-span-2 { grid-column: span 2 / span 2; }
+.-mt-2 { margin-top: -0.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.pt-2 { padding-top: 0.5rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-8 { padding-left: 2rem; padding-right: 2rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.h-9 { height: 2.25rem; }
+.w-9 { width: 2.25rem; }
+.max-h-40 { max-height: 10rem; }
+.overflow-y-auto { overflow-y: auto; }
+.space-y-2 > :not(:last-child) { margin-bottom: 0.5rem; }
+.opacity-40 { opacity: .4; }
+.text-right { text-align: right; }
+.underline { text-decoration-line: underline; }
+
+/* ── The rest of the theme: selected states and inline colours ── */
+[data-theme="chimera"] [class~="bg-green-600"] { background-color: #6b5414 !important; border: 1px solid #d4af37 !important; }
+[data-theme="chimera"] [class~="bg-[#78baba]/40"],
+[data-theme="chimera"] [class~="bg-[#90cccc]/50"] { background-color: rgb(34 28 16) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#70aaaa]"]:hover,
+[data-theme="chimera"] [class~="hover:bg-[#78baba]"]:hover,
+[data-theme="chimera"] [class~="hover:bg-gray-600"]:hover { background-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="hover:text-[#006060]"]:hover { color: #d4af37 !important; }
+[data-theme="chimera"] [class~="text-[#e8f8f8]"] { color: #eadfc2 !important; }
+[data-theme="chimera"] [class~="border-[#009090]/40"] { border-color: rgb(212 175 55 / 40%) !important; }
+/* Set as inline styles in the app, which React writes out as rgb(): the
+   adaptive-range button, the range ladder's example box and its dots. */
+[data-theme="chimera"] [style*="rgb(124, 58, 237)"] { background: #6b5414 !important; border: 1px solid #d4af37 !important; box-shadow: none !important; }
+[data-theme="chimera"] [style*="rgba(144, 204, 204, 0.6)"] { background: rgb(34 28 16) !important; color: #c9b88f !important; border-color: rgb(212 175 55 / 40%) !important; }
+[data-theme="chimera"] [style*="rgba(120, 186, 186, 0.35)"] { background: rgb(34 28 16) !important; border-radius: 0 !important; }
+[data-theme="chimera"] [style*="rgb(0, 144, 144)"] { background: #6b5414 !important; }
+[data-theme="chimera"] [style*="rgb(0, 90, 138)"] { color: #f0d27a !important; }
+
+/* ── A wider window on a computer ──
+   The app is laid out for a phone: one 28rem column. On a wide screen the
+   menus get room, the settings run in two columns, and the round itself is
+   scaled up to the height available (the numbers are placed in pixels around
+   the circle, so it grows as a whole rather than being re-laid out). Phones
+   and narrow windows are unchanged. */
+@media (min-width: 900px) {
+  .rit-welcome { max-width: 40rem; }
+  .rit-initial { max-width: 52rem; }
+  .rit-results { max-width: 52rem; }
+  .rit-settings { max-width: 76rem; }
+  .rit-settings > div > .space-y-6 { column-count: 2; column-gap: 2.5rem; }
+  .rit-settings > div > .space-y-6 > * { break-inside: avoid; margin: 0 0 1.5rem !important; }
+  .rit-welcome h1, .rit-results h2 { font-size: 2.6rem; line-height: 1.15; }
+  /* Kept at the bottom for thumbs on a phone; centred on a screen. */
+  .rit-initial { justify-content: center !important; }
+}
+@media (min-width: 900px) and (min-height: 820px) { .rit-game { zoom: 1.15; } }
+@media (min-width: 900px) and (min-height: 900px) { .rit-game { zoom: 1.25; } }
+@media (min-width: 1000px) and (min-height: 1000px) { .rit-game { zoom: 1.4; } }
+@media (min-width: 1100px) and (min-height: 1150px) { .rit-game { zoom: 1.6; } }
