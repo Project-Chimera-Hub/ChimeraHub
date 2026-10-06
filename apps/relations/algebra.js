@@ -824,6 +824,75 @@
   }
   function cTermTok(G, name, chain) { return join([obj(name)].concat(chain.map(function (c) { return codeTok(G, c); }))); }
   function cHeader(G) { return MODS[G.name] ? "mod " + MODS[G.name] : null; }
+  /* ------------------------------------------------------------------ *
+   * The ear code: compact notation as it is spoken                      *
+   * ------------------------------------------------------------------ */
+  /*
+   * Made to be held by ear with the eyes closed: every word one or two
+   * syllables, and no word with two meanings. It is a word-for-word reading
+   * of the compact code, so each spoken line stands for exactly one written
+   * one (test/algebra.test.js reads every spoken line back).
+   *
+   *   objects    Red Blue Green Gold Violet White
+   *   =          is
+   *   marks      Fox Jar Key Lamp Moon Nest Oak Pond Rope Sun Tent Cup Drum
+   *              Hat Kite, for P S T U X Y Z A C E F J K L N; "big" in front
+   *              for each doubling (PP is "big Fox")
+   *   space      keypad digits as words; a run of two is "double", three
+   *              "triple", four "quad", more "<n> times": "666944" is
+   *              "triple six nine double four"
+   *   @k         face <digit>; then front, back, left, right, with runs as
+   *              above: "@4vvv>>>" is "face four triple back triple right"
+   *   +n −n      up n, down n
+   *   q Q h      right, left, half (quarter turns and a half turn)
+   *   m M d D    mirror, flip, rise, fall
+   *   questions  "R=B6?" is "Is Red Blue six?"; "∃?" "Possible?";
+   *              "|R−B|₁?" "Red to Blue, grid?" (∞ king; numbers none);
+   *              "≡3?" "Same as 3 back?"; "≅3?" "Same as 3 back, any turn?";
+   *              "⊢1/3" "Hold, 1 of 3"
+   */
+  var EAR_OBJ = { R: "Red", B: "Blue", G: "Green", O: "Gold", V: "Violet", W: "White" };
+  var EAR_MARK = ["Fox", "Jar", "Key", "Lamp", "Moon", "Nest", "Oak", "Pond", "Rope", "Sun", "Tent", "Cup", "Drum", "Hat", "Kite"];
+  var EAR_OP = { q: "right", Q: "left", h: "half", m: "mirror", M: "flip", d: "rise", D: "fall" };
+  var EAR_DIR = { "^": "front", v: "back", "<": "left", ">": "right" };
+  var EAR_RUN = ["", "", "double", "triple", "quad"];
+  function earRuns(words) {
+    var out = [];
+    for (var i = 0; i < words.length;) {
+      var j = i; while (j < words.length && words[j] === words[i]) j++;
+      var n = j - i;
+      out.push(n === 1 ? words[i] : (EAR_RUN[n] || DIGIT[n] || String(n)) + (n > 4 ? " times " : " ") + words[i]);
+      i = j;
+    }
+    return out.join(" ");
+  }
+  /** One side of a premise, "W1166" or "PP99" or "O+1−5", as spoken. */
+  function earTerm(t) {
+    var m = t.match(/^([RBGOVW]|([PSTUXYZACEFJKLN])\2*)(.*)$/);
+    if (!m) throw new Error("not a term: " + t);
+    var head = EAR_OBJ[m[1]] || (new Array(m[1].length).join("big ") + EAR_MARK[MARKS.indexOf(m[1][0])]);
+    var rest = m[3], words = [];
+    var pm = rest.match(/^@(\d)(.*)$/);
+    if (pm) return head + " face " + DIGIT[pm[1]] + (pm[2] ? " " + earRuns(pm[2].split("").map(function (c) { return EAR_DIR[c]; })) : "");
+    if (/^[+−]/.test(rest)) return head + " " + rest.match(/[+−]\d+/g).map(function (x) { return (x[0] === "+" ? "up " : "down ") + x.slice(1); }).join(" ");
+    if (/^\d/.test(rest)) words = rest.split("").map(function (c) { return DIGIT[c]; });
+    else if (rest) words = rest.split("").map(function (c) { return EAR_OP[c]; });
+    return words.length ? head + " " + earRuns(words) : head;
+  }
+  /** A line of compact code, spoken. */
+  function ear(line) {
+    line = String(line);
+    var m;
+    if ((m = line.match(/^mod (\d+)$/))) return "mod " + m[1];
+    if (line === "∃?") return "Possible?";
+    if ((m = line.match(/^\|([RBGOVW])−([RBGOVW])\|([₁∞]?)\?$/))) return EAR_OBJ[m[1]] + " to " + EAR_OBJ[m[2]] + (m[3] === "₁" ? ", grid" : m[3] === "∞" ? ", king" : "") + "?";
+    if ((m = line.match(/^([≡≅])(\d+)\?$/))) return "Same as " + m[2] + " back" + (m[1] === "≅" ? ", any turn" : "") + "?";
+    if ((m = line.match(/^⊢(\d+)\/(\d+)$/))) return "Hold, " + m[1] + " of " + m[2];
+    var q = /\?$/.test(line), sides = line.replace(/\?$/, "").split("=");
+    if (sides.length !== 2) throw new Error("not a line: " + line);
+    if (q) { var r = earTerm(sides[1]); return "Is " + earTerm(sides[0]) + " " + r + "?"; }
+    return earTerm(sides[0]) + " is " + earTerm(sides[1]);
+  }
   /* Mark letters: none an object's letter, none an operation's. */
   var MARKS = "PSTUXYZACEFJKLN";
   /**
@@ -860,7 +929,7 @@
       out.push(join([L, { t: "=", s: "is" }, R, codeTok(G, p.r)]));
     });
     var lines = out.map(function (x) { return x.t; });
-    lines.spoken = out.map(function (x) { return x.s; });
+    lines.spoken = lines.map(ear);
     return lines;
   }
   /** The meaning of a relation, X = v·Y, in code. */
@@ -875,7 +944,7 @@
       q = "|" + LETTER[t.X] + "−" + LETTER[t.Y] + "|" + mk + "?";
       sp = "distance " + t.X + " " + t.Y + (G === space ? (metric === "king" ? ", king" : ", grid") : "") + "?";
     }
-    var r = new String(q); r.spoken = sp; return r;
+    var r = new String(q); r.spoken = ear(q); return r;
   }
 
   return {
@@ -883,6 +952,6 @@
     render: render, meaning: meaning, solve: solve, consistent: consistent, lures: lures, rel: rel,
     chainValue: chainValue, toFrame: toFrame, fromFrame: fromFrame,
     questionTrial: questionTrial, possibleTrial: possibleTrial, howfarTrial: howfarTrial, nbackRound: nbackRound,
-    code: code, renderCompact: renderCompact, cMeaning: cMeaning, cQuestion: cQuestion, LETTER: LETTER, MARKS: MARKS,
+    code: code, ear: ear, EAR_MARK: EAR_MARK, renderCompact: renderCompact, cMeaning: cMeaning, cQuestion: cQuestion, LETTER: LETTER, MARKS: MARKS,
   };
 });

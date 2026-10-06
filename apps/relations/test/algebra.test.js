@@ -114,5 +114,63 @@ for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 2
   const [qL, qR] = cq.split("=");
   ok(G.eq(evalTerm(G, qL, q.world, {}), evalTerm(G, qR, q.world, {})) === (q.answer === "yes" || (q.answer === "cant" && G.eq(q.asked, q.truth))), `${name}: compact question means what it asks: ${cq}`);
 }
+/* ---- the ear code: every spoken line reads back to its written line ---- */
+const DIGITW = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const RUNW = { double: 2, triple: 3, quad: 4 };
+const OBJW = Object.fromEntries(Object.entries(OBJ).map(([k, v]) => [v, k]));
+const OPW = { right: "q", left: "Q", half: "h", mirror: "m", flip: "M", rise: "d", fall: "D" };
+const DIRW = { front: "^", back: "v", left: "<", right: ">" };
+function unRuns(words, map) {
+  let out = "";
+  for (let i = 0; i < words.length; i++) {
+    let n = 1;
+    if (RUNW[words[i]]) n = RUNW[words[i++]];
+    else if (words[i + 1] === "times") { n = DIGITW.indexOf(words[i]); i += 2; }
+    const c = map(words[i]); assert.ok(c != null, "unknown word " + words[i]); out += c.repeat(n);
+  }
+  return out;
+}
+function unTerm(t) {
+  const w = t.split(" "); let big = 0;
+  while (w[0] === "big") { big++; w.shift(); }
+  const head = OBJW[w[0]] || A.MARKS[A.EAR_MARK.indexOf(w[0])].repeat(big + 1);
+  assert.ok(head && (OBJW[w[0]] || A.EAR_MARK.includes(w[0])), "unknown head " + t);
+  const rest = w.slice(1);
+  if (!rest.length) return head;
+  if (rest[0] === "face") return head + "@" + DIGITW.indexOf(rest[1]) + unRuns(rest.slice(2), (x) => DIRW[x]);
+  if (rest[0] === "up" || rest[0] === "down") { let o = ""; for (let i = 0; i < rest.length; i += 2) o += (rest[i] === "up" ? "+" : "−") + rest[i + 1]; return head + o; }
+  if (DIGITW.includes(rest[0]) && rest[1] !== "times" || RUNW[rest[0]] && DIGITW.includes(rest[1]) || rest[1] === "times" && DIGITW.includes(rest[2]))
+    return head + unRuns(rest, (x) => { const d = DIGITW.indexOf(x); return d > 0 ? String(d) : null; });
+  return head + unRuns(rest, (x) => OPW[x]);
+}
+function unEar(s) {
+  let m;
+  if ((m = /^mod (\d+)$/.exec(s))) return s;
+  if (s === "Possible?") return "∃?";
+  if ((m = /^(\w+) to (\w+)(, grid|, king)?\?$/.exec(s))) return "|" + OBJW[m[1]] + "−" + OBJW[m[2]] + "|" + (m[3] === ", grid" ? "₁" : m[3] === ", king" ? "∞" : "") + "?";
+  if ((m = /^Same as (\d+) back(, any turn)?\?$/.exec(s))) return (m[2] ? "≅" : "≡") + m[1] + "?";
+  if ((m = /^Hold, (\d+) of (\d+)$/.exec(s))) return "⊢" + m[1] + "/" + m[2];
+  if ((m = /^Is (.+)\?$/.exec(s))) {
+    /* "Is <term> <term>?": the second term starts at the second head word. */
+    const w = m[1].split(" "); let k = 1;
+    while (k < w.length && !(OBJW[w[k]] || A.EAR_MARK.includes(w[k]) || w[k] === "big")) k++;
+    return unTerm(w.slice(0, k).join(" ")) + "=" + unTerm(w.slice(k).join(" ")) + "?";
+  }
+  const [L, R] = s.split(" is ");
+  return unTerm(L) + "=" + unTerm(R);
+}
+for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 20; level += 1) for (let seed = 0; seed < 15; seed++) {
+  const rng = A.Rng(level * 104729 + seed), o = A.difficulty(level), style = ["inline", "marks", "mixed"][seed % 3];
+  const q = A.questionTrial(G, rng, o), lines = A.renderCompact(G, o, q.premises, style, rng);
+  lines.forEach((l, i) => ok(unEar(lines.spoken[i]) === l, `${name} L${level}: spoken reads back: "${lines.spoken[i]}" -> ${l}`));
+  const cq = A.cQuestion(q, G, seed % 2 ? "king" : "manhattan");
+  ok(unEar(cq.spoken) === String(cq), `${name}: spoken question reads back: ${cq.spoken}`);
+  if (G.metric) { const h = A.howfarTrial(G, rng, o, seed % 2 ? "king" : "manhattan"); if (h) { const hq = A.cQuestion(h, G, seed % 2 ? "king" : "manhattan"); ok(unEar(hq.spoken) === String(hq), `${name}: spoken distance reads back: ${hq.spoken}`); } }
+}
+for (const l of ["≡3?", "≅2?", "⊢1/3", "∃?", "PP=R66666", "SSS=Pq", "W=B@4vvv>>>"]) ok(unEar(A.ear(l)) === l, "spoken reads back: " + l);
+/* No word of the ear code means two things in one material. */
+const vocab = [...Object.values(OBJ), ...A.EAR_MARK, "big", "is", "up", "down", "face", "double", "triple", "quad", "times", "mod"];
+ok(new Set(vocab).size === vocab.length && !vocab.some((w) => DIGITW.includes(w) || OPW[w] || DIRW[w]), "ear words are distinct");
+
 console.log(checks + " checks passed");
 console.log(JSON.stringify(tally));

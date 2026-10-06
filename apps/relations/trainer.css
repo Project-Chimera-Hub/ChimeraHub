@@ -30,3 +30,20 @@
 .ra-code .ra-premises p { font-size: 1.25rem; margin-bottom: .45rem; }
 .ra-code .ra-q { font-size: 1.3rem; }
 .ra-round .ra-q { border-top: 0; padding-top: 0; }
+/* Eyes closed: the answer keys fill the screen below the bar. Two answers are
+   the left and right halves; three are left, middle, right; four are the
+   quarters, 1 2 above 3 4; one is the whole screen. The pause veil stays
+   on top. */
+.ra-ears .h-pad {
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--ra-top, 72px); z-index: 5;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0;
+}
+.ra-ears .h-pad[data-n="1"] { grid-template-columns: 1fr; }
+.ra-ears .h-pad[data-n="3"] { grid-template-columns: 1fr 1fr 1fr; }
+.ra-ears .h-pad[data-n="4"] { grid-template-rows: 1fr 1fr; }
+.ra-ears .h-key {
+  width: auto; height: auto; min-height: 0; max-width: none; margin: 0; border-radius: 0;
+  background: transparent; border: 1px solid var(--h-line-soft); color: var(--h-dim);
+}
+.ra-ears .h-key span { font-size: .85rem; }
+.ra-ears .h-stage { opacity: .5; }

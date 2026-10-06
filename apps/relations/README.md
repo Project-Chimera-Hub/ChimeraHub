@@ -167,13 +167,78 @@ After a mistake (or always, if you set it), the answer is worked through:
 **Feedback sound** (a high tone when right, a low one when wrong) can be
 turned off in Settings.
 
-**Read aloud** reads the premises; in compact notation it reads the code
-with the colours named (`G=V699` is "Green is Violet six nine nine"). It uses the most natural voice the device has:
-voices named Natural or Neural first, then Premium or Enhanced, then
-Google's, then the default. On Windows that means Edge's or Windows'
-natural voices, on Apple devices any Enhanced or Premium voice you have
-downloaded in the system's speech settings, and on Android the Google voices.
-It can hide the text while reading, so the premises have to be held by ear.
+**Play** sets how a trial reaches you:
+
+- **On screen:** read it.
+- **On screen, read aloud:** read it and hear it.
+- **Eyes closed (audio only):** hear it, and answer without looking (below).
+
+## Eyes closed
+
+Every premise and question is spoken in the spoken code (below), and the
+whole screen under the bar becomes the answer pad:
+
+| Answers | Pad | Keys |
+| --- | --- | --- |
+| 1 (go on) | anywhere | Space |
+| 2 | left half, right half | F, J |
+| 3 | left, middle, right: yes, can't tell, no | F, K, J |
+| 4 | quarters: 1 2 above 3 4 | 1–4 |
+
+- The phone buzzes on every touch, and the screen is kept on while the
+  session runs.
+- Two soft rising notes mean the question comes next. The answer is timed
+  from the end of the question.
+- How far? says its choices after the question, smallest first, in pad order.
+- Each round opens with its number, task and material ("Round 3. n-back,
+  days, 2 back."). It closes with the score, the level and the minutes left,
+  then goes straight on.
+- Mistakes are explained in a few words: "Wrong. No. Red is Blue nine. Trap:
+  one step off." Set Explain to *Always* to hear every answer explained.
+  With Feedback sound off and Explain on *After mistakes*, a right answer is
+  silent.
+- **Speech rate** (0.8× to 1.75×) and **Silence between premises** (none to
+  1.5 s) set the pace.
+- Escape or Pause stops the voice. Resuming says the interrupted line again.
+
+The voice is the most natural one the device has: voices named Natural or
+Neural first, then Premium or Enhanced, then Google's, then the default.
+On Windows that means Edge's or Windows' natural voices. On Apple devices,
+download an Enhanced or Premium voice in the system's speech settings. On
+Android, the Google voices are used. Without any speech engine, the trial
+is shown on screen instead.
+
+## The spoken code
+
+The compact code said word for word, with words that are hard to mix up
+by ear. Every spoken line stands for exactly one written line; the tests read
+each one back.
+
+| Written | Spoken |
+| --- | --- |
+| `=` | is |
+| `R B G O V W` | Red, Blue, Green, Gold, Violet, White |
+| space digits | the digit as a word; a run of 2 is *double*, 3 *triple*, 4 *quad*, more "*n* times" |
+| `@4` | face four |
+| `^ v < >` | front, back, left, right (runs as above) |
+| `+n`, `−n` | up *n*, down *n* |
+| `q Q h` | right, left, half |
+| `m M d D` | mirror, flip, rise, fall |
+| `mod 12` | mod 12 |
+| marks `P S T U X Y Z A C E F J K L N` | Fox, Jar, Key, Lamp, Moon, Nest, Oak, Pond, Rope, Sun, Tent, Cup, Drum, Hat, Kite; a doubled letter adds *big* (`PP` is "big Fox") |
+| `R=B6?` | Is Red Blue six? |
+| `∃?` | Possible? |
+| `\|R−B\|₁?`, `\|R−B\|∞?` | Red to Blue, grid? / king? (numbers: "Red to Blue?") |
+| `≡2?`, `≅2?` | Same as 2 back? / Same as 2 back, any turn? |
+| `⊢1/2` | Hold, 1 of 2 |
+
+Examples:
+
+- `W1166=B666944` is "White double one double six is Blue triple six nine
+  double four".
+- `V=W@6vvv<<<` is "Violet is White face six triple back triple left".
+- `W+5=O+1−5` is "White up 5 is Gold up 1 down 5".
+- `R=BQdmm` is "Red is Blue left rise double mirror".
 
 ## The mathematics, and what each part does here
 
@@ -236,11 +301,12 @@ It can hide the text while reading, so the premises have to be held by ear.
 - `algebra.js`: the engine. Groups, terms, premises, the solver, lures and
   tasks; no page code.
 - `test/algebra.test.js`: `node apps/relations/test/algebra.test.js`. About
-  84,000 checks across every material and level:
+  97,000 checks across every material and level:
   - the group laws;
   - every premise solves to the truth;
   - every answer and n-back target is right;
   - every sentence is clean;
-  - every line of compact notation, parsed back, is true of the world.
+  - every line of compact notation, parsed back, is true of the world;
+  - every spoken line reads back to its written line.
 - `trainer.js`: the page, on the hub's harness: rounds, checkpoints,
   explanations and drawings.
