@@ -450,6 +450,13 @@
      * the number that was true when you left the trainer.
      */
     Pause.setFrameHidden($("frame"), true);
+    /* Said outright as well, for the trainers that keep playing while the page
+       is hidden (audio-only ones, which are meant to run with the screen
+       locked): this, not visibility, is their signal that the player left. */
+    try {
+      $("frame").contentWindow.postMessage({ type: "chimera:leave" },
+        location.origin === "null" ? "*" : location.origin);   /* "null": opened from disk */
+    } catch (e) { /* no trainer open */ }
     wallTick();
     wallSave();
     $("stage").hidden = true;

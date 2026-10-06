@@ -1,0 +1,49 @@
+/* Chimera Hub's look: old gold on near-black, one monospace face, square
+   corners. No webfont, so nothing is fetched. */
+:root {
+  --bg: #0a0906;
+  --panel: #18140b;
+  --panel-2: #221c10;
+  --ink: #eadfc2;
+  --ink-strong: #f8f0da;
+  --dim: #a48f60;
+  --gold: #d4af37;
+  --gold-2: #f0d27a;
+  --button: #6b5414;
+  --line: rgba(212, 175, 55, .3);
+  --font: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); }
+.wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 16px 3rem; }
+h1 { margin: 0 0 .3rem; font-size: 1.7rem; font-weight: 600; color: var(--gold-2); letter-spacing: .03em; }
+.sub { margin: 0 0 1.4rem; color: var(--dim); }
+.panel { background: var(--panel); border: 1px solid var(--line); padding: 1.2rem; }
+.how { margin-bottom: 1rem; background: var(--panel-2); border: 1px solid var(--line); padding: .6rem .8rem; }
+.how summary { cursor: pointer; color: var(--gold); font-weight: 600; }
+.how p { font-size: .9rem; margin: .6rem 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem 1rem; }
+label { display: flex; flex-direction: column; gap: .3rem; font-size: .78rem; color: var(--gold); }
+select {
+  font: inherit; font-size: .9rem; color: var(--ink-strong); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 0; padding: .55rem .6rem;
+}
+button {
+  font: inherit; font-weight: 600; color: var(--ink-strong); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 0; padding: .8rem 1.2rem; cursor: pointer; min-height: 44px;
+}
+button.primary { background: var(--button); border-color: var(--gold); }
+button:disabled { opacity: .5; cursor: wait; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+#start { width: 100%; margin-top: 1rem; }
+.note { min-height: 1.2em; margin: .8rem 0 0; font-size: .82rem; color: var(--gold-2); }
+.tip { font-size: .78rem; color: var(--dim); margin: .8rem 0 0; }
+.desc { margin: 0 0 1rem; color: var(--gold-2); font-weight: 600; }
+.bar { height: 6px; background: var(--panel-2); border: 1px solid var(--line); margin-bottom: .8rem; }
+#fill { height: 100%; width: 0; background: var(--gold); }
+.status { margin: 0 0 1rem; color: var(--ink); }
+.row { display: flex; gap: .8rem; }
+.row button { flex: 1; }
+footer { margin-top: 1.5rem; font-size: .75rem; color: var(--dim); }
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }

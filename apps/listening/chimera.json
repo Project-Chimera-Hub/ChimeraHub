@@ -1,0 +1,11 @@
+{
+  "id": "listening",
+  "name": "Listening Integration",
+  "what": "Relations between spoken numbers, places and pitches, by ear, no input",
+  "categories": ["rrt", "nback"],
+  "unit": "n",
+  "audioOnly": true,
+  "license": "MIT (code); voices: see LICENSE",
+  "maintainer": "Project-Chimera-Hub",
+  "build": null
+}

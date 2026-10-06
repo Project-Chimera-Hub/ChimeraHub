@@ -95,6 +95,12 @@ accepted without them, but it's better with them.
 11. **Must: pause when the page is hidden.** The hub hides a trainer's frame
     when the player goes back to the menu, and the trainer must stop
     presenting trials and stop counting time (`visibilitychange`).
+    **The one exception: audio-only trainers.** One that needs no input and
+    is meant to keep playing with the screen locked sets `"audioOnly": true`
+    in its manifest. It ignores visibility and stops instead on the hub's
+    `chimera:leave` message (posted when the player goes back to the menu)
+    and on `pagehide`. It counts only the time its audio actually played.
+    Listening Integration is the example.
 12. **Must: stay in its frame.** Don't touch `top` or `parent`, and don't use
     `target="_top"`. Don't read or write another app's storage.
 13. **Should: namespace your own storage keys** as `chimera.<id>.…`, so they

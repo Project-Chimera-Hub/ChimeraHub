@@ -224,9 +224,19 @@ const usesHarness = code.some(({ file, text }) => !inHarness(file) && /\bHarness
  * Behaviour inside the hub                                            *
  * ------------------------------------------------------------------ */
 
-check("pause", "must", "it pauses when the page is hidden",
-  usesHarness || grep(/visibilitychange|visibilityState|document\.hidden/).length ? [] :
-    ["nothing listens for `visibilitychange`: the hub hides a trainer's frame when the player goes back to the menu, and its time must stop"]);
+/* The one exception: an audio-only trainer (`"audioOnly": true` in its
+   manifest) is meant to keep playing with the screen locked, which hides the
+   page. It must stop instead on the hub's "chimera:leave" message, posted when
+   the player goes back to the menu, and count only the time it played. */
+if (manifest && manifest.audioOnly === true) {
+  check("pause", "must", "it stops when the player leaves (audio-only: on the hub's \"chimera:leave\")",
+    grep(/chimera:leave/).length ? [] :
+      ["`audioOnly` is set but nothing handles the hub's `chimera:leave` message: it would keep playing after the player went back to the menu"]);
+} else {
+  check("pause", "must", "it pauses when the page is hidden",
+    usesHarness || grep(/visibilitychange|visibilityState|document\.hidden/).length ? [] :
+      ["nothing listens for `visibilitychange`: the hub hides a trainer's frame when the player goes back to the menu, and its time must stop"]);
+}
 
 check("frame", "must", "it stays in its frame", [
   ...grep(/\b(window\.)?(top|parent)\.location\b/),

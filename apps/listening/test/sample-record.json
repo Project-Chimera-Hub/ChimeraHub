@@ -1,0 +1,345 @@
+{
+  "format": "chimera-record",
+  "version": 1,
+  "app": "listening",
+  "units": {
+    "level": "n"
+  },
+  "sessions": [
+    {
+      "id": "1791296761786-yv9c",
+      "start": 1791296761786,
+      "end": 1791296799046,
+      "activeSeconds": 37,
+      "completed": true,
+      "mode": "space/number step",
+      "modalities": [
+        "audio"
+      ],
+      "level": 1,
+      "levelEnd": 1,
+      "trials": 15,
+      "input": null,
+      "settings": {
+        "gapMs": 2000,
+        "answerToneMs": 1800,
+        "numbers": [
+          1,
+          5
+        ],
+        "places": 5,
+        "pitchSteps": 5,
+        "semitonesPerStep": 2,
+        "voice": "alt",
+        "earlierPair": "space",
+        "laterPair": "number",
+        "relation": "step"
+      },
+      "extra": {
+        "types": {
+          "plain": 2,
+          "match": 7,
+          "near": 6
+        },
+        "note": "no responses: the listener answers silently and hears the answer tone"
+      },
+      "trialLog": [
+        {
+          "i": 2,
+          "t": 5600,
+          "stimulus": {
+            "number": 3,
+            "place": 0,
+            "pitch": 0
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "plain"
+          }
+        },
+        {
+          "i": 3,
+          "t": 7600,
+          "stimulus": {
+            "number": 2,
+            "place": -1,
+            "pitch": 1
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 4,
+          "t": 9600,
+          "stimulus": {
+            "number": 1,
+            "place": 2,
+            "pitch": 0
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 5,
+          "t": 11600,
+          "stimulus": {
+            "number": 5,
+            "place": 1,
+            "pitch": 1
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 6,
+          "t": 13600,
+          "stimulus": {
+            "number": 4,
+            "place": -2,
+            "pitch": -2
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 7,
+          "t": 15600,
+          "stimulus": {
+            "number": 2,
+            "place": 0,
+            "pitch": 1
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 8,
+          "t": 17600,
+          "stimulus": {
+            "number": 5,
+            "place": -2,
+            "pitch": 2
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 9,
+          "t": 19600,
+          "stimulus": {
+            "number": 3,
+            "place": 0,
+            "pitch": 1
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 10,
+          "t": 21600,
+          "stimulus": {
+            "number": 4,
+            "place": -1,
+            "pitch": -2
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 11,
+          "t": 23600,
+          "stimulus": {
+            "number": 1,
+            "place": 1,
+            "pitch": -1
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "plain"
+          }
+        },
+        {
+          "i": 12,
+          "t": 25600,
+          "stimulus": {
+            "number": 4,
+            "place": 2,
+            "pitch": -2
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 13,
+          "t": 27600,
+          "stimulus": {
+            "number": 5,
+            "place": -1,
+            "pitch": 2
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 14,
+          "t": 29600,
+          "stimulus": {
+            "number": 2,
+            "place": 2,
+            "pitch": 1
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        },
+        {
+          "i": 15,
+          "t": 31600,
+          "stimulus": {
+            "number": 4,
+            "place": -1,
+            "pitch": 2
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "near"
+          }
+        },
+        {
+          "i": 16,
+          "t": 33600,
+          "stimulus": {
+            "number": 1,
+            "place": 2,
+            "pitch": -2
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        }
+      ]
+    },
+    {
+      "id": "1791296799347-dvjk",
+      "start": 1791296799347,
+      "end": 1791296807356,
+      "activeSeconds": 8,
+      "completed": false,
+      "mode": "space/number step",
+      "modalities": [
+        "audio"
+      ],
+      "level": 1,
+      "levelEnd": 1,
+      "trials": 2,
+      "input": null,
+      "settings": {
+        "gapMs": 2000,
+        "answerToneMs": 1800,
+        "numbers": [
+          1,
+          5
+        ],
+        "places": 5,
+        "pitchSteps": 5,
+        "semitonesPerStep": 2,
+        "voice": "alt",
+        "earlierPair": "space",
+        "laterPair": "number",
+        "relation": "step"
+      },
+      "extra": {
+        "types": {
+          "partner": 1,
+          "match": 1
+        },
+        "note": "no responses: the listener answers silently and hears the answer tone"
+      },
+      "trialLog": [
+        {
+          "i": 2,
+          "t": 5600,
+          "stimulus": {
+            "number": 2,
+            "place": -2,
+            "pitch": 2
+          },
+          "target": false,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "partner"
+          }
+        },
+        {
+          "i": 3,
+          "t": 7600,
+          "stimulus": {
+            "number": 1,
+            "place": 2,
+            "pitch": 1
+          },
+          "target": true,
+          "response": null,
+          "correct": null,
+          "extra": {
+            "type": "match"
+          }
+        }
+      ]
+    }
+  ],
+  "appVersion": "1.0.0"
+}

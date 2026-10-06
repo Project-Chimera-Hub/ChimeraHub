@@ -113,6 +113,9 @@ var CATALOG = {
     { id: "rit", name: "Relational Integration", path: "rit/", colour: "#79c0ff",
       categories: ["rrt", "nback"], folder: "relational-nback", counted: true,
       what: "Compare two differences across a stream of numbers, n back" },
+    { id: "listening", name: "Listening Integration", path: "listening/", colour: "#7ee787",
+      categories: ["rrt", "nback"], folder: "relational-nback", counted: true,
+      what: "Relations between spoken numbers, places and pitches, by ear, no input" },
   ],
 
   /* Where "submit one" goes. A link the player follows, not a request the

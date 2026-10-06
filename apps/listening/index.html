@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listening Integration</title>
+  <link rel="stylesheet" href="listening.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Listening Integration</h1>
+      <p class="sub">Relational integration by ear. No buttons during a round: listen, decide silently, then hear the answer.</p>
+    </header>
+
+    <section id="setup" class="panel">
+      <details class="how">
+        <summary>How it works</summary>
+        <p>You hear a stream of spoken numbers. Each one also has a <strong>place</strong> (left to right in your headphones) and a <strong>pitch</strong> (lower to higher).</p>
+        <p>From the (n+2)th sound on, compare two relations: the one between the <em>previous</em> sound and the sound <em>n+1 back</em>, and the one between the <em>current</em> sound and the sound <em>n back</em>. Decide silently: same relation or not?</p>
+        <p>After a short silence a tone gives the answer: two rising notes for a match, one low note for different. Some non-matches are built to sound right: off by one, right with the wrong partner, or the right size the wrong way.</p>
+        <p>The other two qualities keep changing at random. Ignore them, unless the round compares across them.</p>
+      </details>
+
+      <div class="grid">
+        <label>Depth (n)
+          <select id="n"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+        </label>
+        <label>Sounds per round
+          <select id="trials"><option>15</option><option selected>30</option><option>45</option><option>60</option></select>
+        </label>
+        <label>Earlier pair (previous vs n+1 back)
+          <select id="dimB"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option></select>
+        </label>
+        <label>Later pair (current vs n back)
+          <select id="dimA"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option></select>
+        </label>
+        <label>Relation
+          <select id="rel"><option value="step" selected>Step (how far and which way)</option><option value="distance">Distance (how far apart)</option><option value="sum">Sum (numbers only)</option></select>
+        </label>
+        <label>Numbers
+          <select id="range"><option value="5">1 to 5</option><option value="9" selected>1 to 9</option><option value="19">1 to 19</option></select>
+        </label>
+        <label>Time between sounds
+          <select id="gap"><option value="2">2.0 s</option><option value="2.5">2.5 s</option><option value="3" selected>3.0 s</option><option value="4">4.0 s</option><option value="5">5.0 s</option></select>
+        </label>
+        <label>Answer tone after
+          <select id="window"><option value="1">1.0 s</option><option value="1.5">1.5 s</option><option value="1.8" selected>1.8 s</option><option value="2.5">2.5 s</option><option value="off">No answer tones</option></select>
+        </label>
+        <label>Places
+          <select id="places"><option value="3">3 (left, centre, right)</option><option value="5" selected>5</option></select>
+        </label>
+        <label>Pitch steps
+          <select id="pitches"><option value="3">3 steps</option><option value="5" selected>5 steps</option></select>
+        </label>
+        <label>Pitch interval
+          <select id="semis"><option value="1">1 semitone</option><option value="2" selected>2 semitones</option><option value="3">3 semitones</option></select>
+        </label>
+        <label>Voice
+          <select id="voice"><option value="alt" selected>Alternate Amy and Bryce</option><option value="en">Amy</option><option value="en_bryce">Bryce</option></select>
+        </label>
+      </div>
+      <p id="note" class="note"></p>
+      <button id="start" class="primary">Start round</button>
+      <p class="tip">Headphones needed for place. Once it plays, the screen can be locked; it stops when you leave it through the hub.</p>
+    </section>
+
+    <section id="player" class="panel" hidden>
+      <p id="round-desc" class="desc"></p>
+      <div class="bar"><div id="fill"></div></div>
+      <p id="status" class="status">Preparing the round…</p>
+      <div class="row">
+        <button id="toggle" class="primary" disabled>Play</button>
+        <button id="stop">End round</button>
+      </div>
+      <audio id="audio" preload="auto"></audio>
+    </section>
+
+    <footer>Voices recorded for Relational Integration Training by Dark.</footer>
+  </main>
+
+  <script src="audio/en.js"></script>
+  <script src="audio/en_bryce.js"></script>
+  <script src="listening.js"></script>
+</body>
+</html>
