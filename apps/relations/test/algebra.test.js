@@ -81,5 +81,38 @@ for (const [name, G] of Object.entries(A.GROUPS)) {
     }
   }
 }
+
+/* ---- the compact notation, parsed back and checked against the world ---- */
+const KEY = { 8: [0, 1], 9: [1, 1], 6: [1, 0], 3: [1, -1], 2: [0, -1], 1: [-1, -1], 4: [-1, 0], 7: [-1, 1] };
+const D4 = { q: [1, 0], h: [2, 0], Q: [3, 0], m: [0, 1], M: [2, 1], d: [1, 1], D: [3, 1] };
+const OBJ = { R: "Red", B: "Blue", G: "Green", O: "Gold", V: "Violet", W: "White" };
+function evalTerm(G, str, world, marks) {
+  const m = OBJ[str[0]] ? [null, str[0], str.slice(1)] : /^(([PSTUXYZACEFJKLN])\2*)(.*)$/.exec(str).filter((_, i) => i !== 2); let base = m[1], rest = m[2];
+  let v = OBJ[base] ? world.vals[OBJ[base]] : marks[base];
+  assert.ok(v !== undefined, "unknown term start " + str);
+  if (G.name === "space") {
+    const at = /^@(\d)([\^v<>]*)$/.exec(rest);
+    if (at) { const f = [0, 0]; for (const c of at[2]) { if (c === "^") f[1]++; if (c === "v") f[1]--; if (c === ">") f[0]++; if (c === "<") f[0]--; }
+      const h = { 8: 0, 6: 2, 2: 4, 4: 6 }[at[1]]; const w = A.fromFrame(f, h); return G.op(w, v); }
+    for (const c of rest) v = G.op(KEY[c], v);
+  } else if (G.name === "square") { for (const c of rest) v = G.op(D4[c], v); }
+  else { for (const t of rest.match(/[+−]\d+/g) || []) v = G.op((t[0] === "+" ? 1 : -1) * +t.slice(1), v); }
+  return v;
+}
+for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 20; level += 1) for (let seed = 0; seed < 15; seed++) {
+  const rng = A.Rng(level * 7919 + seed), o = A.difficulty(level), style = ["inline", "marks", "mixed"][seed % 3];
+  const q = A.questionTrial(G, rng, o), lines = A.renderCompact(G, o, q.premises, style, rng), marks = {};
+  ok(lines.spoken.length === lines.length && lines.every((l) => !BAD.test(l)) && lines.spoken.every((l) => !BAD.test(l)), `${name}: compact text clean`);
+  for (const line of lines) {
+    if (/^mod /.test(line)) continue;
+    const [L, R] = line.split("=");
+    const rv = evalTerm(G, R, q.world, marks);
+    if (!OBJ[L[0]] && /^([PSTUXYZACEFJKLN])\1*$/.test(L)) { marks[L] = rv; continue; }          /* a mark's definition */
+    ok(G.eq(evalTerm(G, L, q.world, marks), rv), `${name} L${level}: compact premise holds: ${line}`);
+  }
+  const cq = String(A.cQuestion(q, G, "manhattan")).replace(/\?$/, "");
+  const [qL, qR] = cq.split("=");
+  ok(G.eq(evalTerm(G, qL, q.world, {}), evalTerm(G, qR, q.world, {})) === (q.answer === "yes" || (q.answer === "cant" && G.eq(q.asked, q.truth))), `${name}: compact question means what it asks: ${cq}`);
+}
 console.log(checks + " checks passed");
 console.log(JSON.stringify(tally));

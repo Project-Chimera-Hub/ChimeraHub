@@ -774,10 +774,115 @@
     return { task: "nback", material: G.name, n: n, names: names, items: items, upToRotation: !!upToRotation };
   }
 
+  /* ------------------------------------------------------------------ *
+   * Compact notation                                                     *
+   * ------------------------------------------------------------------ */
+  /*
+   * The shortest form of every sentence, learned from the guide rather than
+   * read off: objects are letters (Gold is O, for "or"), a premise is the
+   * equation a·X = r·b·Y written as "Xa=Ybr", and every element is written
+   * in its group's shortest code:
+   *
+   *   space    keypad digits, one per step: 8 N, 9 NE, 6 E, 3 SE, 2 S, 1 SW,
+   *            4 W, 7 NW. "R6=B4488": one east of Red is two west and two
+   *            north of Blue. Diagonals first, then straight steps.
+   *            Perspective: "R=B@2<<" from B facing 2 (south), R is two to the
+   *            left; ^ ahead, v behind, < left, > right.
+   *   numbers  signed steps: "R+2=B-7+5".
+   *   notes, days, headings  the same, mod 12, 7 or 8 (a heading step is
+   *            45°, clockwise positive); each wraps to its shortest value.
+   *   square   one letter per operation, applied left to right: q a quarter
+   *            right, Q a quarter left, h half way, m mirror left-right,
+   *            M mirror top-bottom, d the rising diagonal, D the falling one.
+   *            "R=Bmq": Red is Blue mirrored, then turned a quarter right.
+   */
+  var LETTER = { Red: "R", Blue: "B", Green: "G", Gold: "O", Violet: "V", White: "W" };
+  var KEYPAD = { "0,1": "8", "1,1": "9", "1,0": "6", "1,-1": "3", "0,-1": "2", "-1,-1": "1", "-1,0": "4", "-1,1": "7" };
+  var D4_LETTER = { "1,0": "q", "2,0": "h", "3,0": "Q", "0,1": "m", "2,1": "M", "1,1": "d", "3,1": "D", "0,0": "" };
+  var MODS = { notes: 12, days: 7, compass: 8 };
+  var DIGIT = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+  var D4_SPOKEN = { q: "quarter", Q: "quarter back", h: "half", m: "mirror", M: "flip", d: "diagonal", D: "other diagonal" };
+  /* Code and its spoken form, built together from the same pieces. */
+  function code(G, g) { return codeTok(G, g).t; }
+  function codeTok(G, g) {
+    if (G === space) {
+      var x = g[0], y = g[1], sx = Math.sign(x), sy = Math.sign(y), d = Math.min(Math.abs(x), Math.abs(y)), out = "";
+      for (var i = 0; i < d; i++) out += KEYPAD[sx + "," + sy];
+      for (i = 0; i < Math.abs(x) - d; i++) out += KEYPAD[sx + ",0"];
+      for (i = 0; i < Math.abs(y) - d; i++) out += KEYPAD["0," + sy];
+      return { t: out, s: out.split("").map(function (c) { return DIGIT[c]; }).join(" ") };
+    }
+    if (G === square) { var l = D4_LETTER[g[0] + "," + g[1]]; return { t: l, s: l ? D4_SPOKEN[l] : "" }; }
+    var n = MODS[G.name], v = g;
+    if (n) { v = mod(v, n); if (v > n / 2) v -= n; }
+    if (!v) return { t: "", s: "" };
+    return { t: (v > 0 ? "+" : "−") + Math.abs(v), s: (v > 0 ? "plus " : "minus ") + Math.abs(v) };
+  }
+  function obj(name) { return { t: LETTER[name] || name, s: name }; }
+  function join(parts) {
+    return { t: parts.map(function (p) { return p.t; }).join(""), s: parts.map(function (p) { return p.s; }).filter(Boolean).join(" ") };
+  }
+  function cTermTok(G, name, chain) { return join([obj(name)].concat(chain.map(function (c) { return codeTok(G, c); }))); }
+  function cHeader(G) { return MODS[G.name] ? "mod " + MODS[G.name] : null; }
+  /* Mark letters: none an object's letter, none an operation's. */
+  var MARKS = "PSTUXYZACEFJKLN";
+  /**
+   * The description in code. Returns the lines; `.spoken` holds the same
+   * lines as they are read aloud.
+   */
+  function renderCompact(G, o, premises, style, rng) {
+    var out = [], markNo = 0;
+    var h = cHeader(G); if (h) out.push({ t: h, s: "mod " + MODS[G.name] });
+    /* After the fifteenth, letters double (PP, SS, …): never a digit, which
+       would read as a step. */
+    function nextMark() { var k = markNo++; return new Array(Math.floor(k / MARKS.length) + 2).join(MARKS[k % MARKS.length]); }
+    function term(name, chain, useMarks) {
+      if (!useMarks || chain.length < 2) return cTermTok(G, name, chain);
+      var cur = obj(name);
+      chain.forEach(function (c) {
+        var m = nextMark();
+        out.push(join([{ t: m, s: m }, { t: "=", s: "is" }, cur, codeTok(G, c)]));
+        cur = { t: m, s: m };
+      });
+      return cur;
+    }
+    premises.forEach(function (p) {
+      var useMarks = style === "marks" || (style === "mixed" && rng.next() < 0.5);
+      if (p.kind === "perspective") {
+        var f = p.frame, t = "", sp = [];
+        for (var i = 0; i < Math.abs(f[1]); i++) { t += f[1] > 0 ? "^" : "v"; sp.push(f[1] > 0 ? "ahead" : "back"); }
+        for (i = 0; i < Math.abs(f[0]); i++) { t += f[0] > 0 ? ">" : "<"; sp.push(f[0] > 0 ? "right" : "left"); }
+        var k = KEYPAD[COMPASS[p.facing].v[0] + "," + COMPASS[p.facing].v[1]];
+        out.push(join([obj(p.X), { t: "=", s: "is" }, obj(p.Y), { t: "@" + k, s: "facing " + DIGIT[k] }, { t: t, s: sp.join(" ") }]));
+        return;
+      }
+      var L = term(p.X, p.a, useMarks), R = term(p.Y, p.b, useMarks);
+      out.push(join([L, { t: "=", s: "is" }, R, codeTok(G, p.r)]));
+    });
+    var lines = out.map(function (x) { return x.t; });
+    lines.spoken = out.map(function (x) { return x.s; });
+    return lines;
+  }
+  /** The meaning of a relation, X = v·Y, in code. */
+  function cMeaning(G, X, v, Y) { return (LETTER[X] || X) + "=" + (LETTER[Y] || Y) + code(G, v); }
+  /** The question in code, with `.spoken`. */
+  function cQuestion(t, G, metric) {
+    var q, sp;
+    if (t.task === "question") { var j = join([obj(t.X), { t: "=", s: "is" }, obj(t.Y), codeTok(G, t.asked)]); q = j.t + "?"; sp = j.s + "?"; }
+    else if (t.task === "possible") { q = "∃?"; sp = "possible?"; }
+    else if (t.task === "howfar") {
+      var mk = G === space ? (metric === "king" ? "∞" : "₁") : "";
+      q = "|" + LETTER[t.X] + "−" + LETTER[t.Y] + "|" + mk + "?";
+      sp = "distance " + t.X + " " + t.Y + (G === space ? (metric === "king" ? ", king" : ", grid") : "") + "?";
+    }
+    var r = new String(q); r.spoken = sp; return r;
+  }
+
   return {
     GROUPS: GROUPS, NAMES: NAMES, Rng: Rng, difficulty: difficulty,
     render: render, meaning: meaning, solve: solve, consistent: consistent, lures: lures, rel: rel,
     chainValue: chainValue, toFrame: toFrame, fromFrame: fromFrame,
     questionTrial: questionTrial, possibleTrial: possibleTrial, howfarTrial: howfarTrial, nbackRound: nbackRound,
+    code: code, renderCompact: renderCompact, cMeaning: cMeaning, cQuestion: cQuestion, LETTER: LETTER, MARKS: MARKS,
   };
 });

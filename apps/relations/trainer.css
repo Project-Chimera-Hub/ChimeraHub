@@ -25,3 +25,8 @@
 .ra-tile { width: 4.2rem; height: 4.2rem; border: 2px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ra-tile span { display: inline-block; font: 700 1.9rem/1 var(--h-font); }
 .ra-tile small { font-size: .62rem; color: var(--h-dim); margin-top: .2rem; }
+/* Compact notation: monospaced, so codes line up and every symbol is distinct. */
+.ra-code .ra-premises p, .ra-code .ra-q, .ra-code .ra-decode li { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; letter-spacing: .04em; }
+.ra-code .ra-premises p { font-size: 1.25rem; margin-bottom: .45rem; }
+.ra-code .ra-q { font-size: 1.3rem; }
+.ra-round .ra-q { border-top: 0; padding-top: 0; }
