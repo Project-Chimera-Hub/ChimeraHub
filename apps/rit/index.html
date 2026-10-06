@@ -1439,6 +1439,9 @@ const detectDefaultLanguage = () => {
 // Shared defaults, reused by initial state, reset, and import/export so
 // there's exactly one place that defines what "factory settings" means.
 const CONFIG_DEFAULTS = {
+  // Chimera Hub: 'integration' (rotating relations, built lures) or 'classic' (Dark's original rounds).
+  program: 'integration',
+  relationRule: 'rotate',
   level: 3,
   range: [1, 5],
   // Value Complexity: 'basic' (off, unchanged numbers) | 'novice' | 'advanced' | 'expert' | 'krazy'.
@@ -1732,6 +1735,43 @@ const COMPLEXITY_EXPLAINERS = {
   expert: 'Three operations, now also drawing on factorials, e.g. 9 could appear as "3\u00B2\u2212(50% of (7\u22127))".',
   krazy: 'Up to four operations chained together, e.g. 6 could appear as "25% of (75% of ((46\u221210)\u22124))" \u2013 genuinely hard to decode at a glance.'
 };
+
+// Chimera Hub: the Integration program. Each round asks about one relation
+// between two numbers, a (the later) and b (the earlier): is the relation
+// between the current number and the one n back the same as the relation
+// between the number before it and the one n+1 back? That is an analogy,
+// A:B :: C:D, built fresh on every trial. Rounds rotate through the three
+// relations so that no single arithmetic shortcut carries the training.
+const RELATIONS = {
+  distance: { label: 'Distance', formula: '|a − b|', of: (a, b) => Math.abs(a - b), bars: true, op: '−',
+    show: v => String(v), explain: 'how far apart, either way: 4 and 7 are 3 apart' },
+  step: { label: 'Step', formula: 'a − b', of: (a, b) => a - b, bars: false, op: '−',
+    show: v => v > 0 ? '+' + v : v < 0 ? '−' + -v : '0', explain: 'how far and which way: 4 then 7 is +3, 7 then 4 is −3' },
+  sum: { label: 'Sum', formula: 'a + b', of: (a, b) => a + b, bars: false, op: '+',
+    show: v => String(v), explain: 'the two together: 4 and 7 make 11' }
+};
+const RELATION_ORDER = ['distance', 'step', 'sum'];
+// "Different" trials built to look right, each needing a different check:
+// near miss (the relation is off by one, so a rough sense of size is not
+// enough), wrong partner (the relation holds, but with a neighbour of the
+// number n back, so it must be bound to the right position), wrong
+// direction (Step only: the right size, the other way).
+const LURE_LABELS = { near: 'near miss', partner: 'wrong partner', direction: 'wrong direction' };
+// Sensitivity, with the log-linear correction so that a perfect round still
+// has a finite value. Acklam's approximation of the inverse normal.
+const inverseNormal = p => {
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  const lo = 0.02425;
+  if (p < lo) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+  if (p > 1 - lo) { const q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+  const q = p - 0.5, r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+};
+const dPrimeOf = (hits, misses, falseAlarms, correctRejections) =>
+  Math.round((inverseNormal((hits + 0.5) / (hits + misses + 1)) - inverseNormal((falseAlarms + 0.5) / (falseAlarms + correctRejections + 1))) * 100) / 100;
 
 const loadPersisted = (key, defaults) => {
   try {
@@ -2371,12 +2411,13 @@ const NBackTrainer = () => {
   const renderDelta = (a, b, repTypeA, repTypeB) => {
     const typeA = config.calculationUsesOriginalType ? repTypeA || 'arabic' : 'arabic';
     const typeB = config.calculationUsesOriginalType ? repTypeB || 'arabic' : 'arabic';
+    const relation = RELATIONS[game.rule] || RELATIONS.distance;
     if (typeA === 'arabic' && typeB === 'arabic') {
-      return `|${a} - ${b}|`;
+      return relation.bars ? `|${a} \u2212 ${b}|` : `${a} ${relation.op} ${b}`;
     }
     return /*#__PURE__*/React.createElement("span", {
       style: { display: 'inline-flex', alignItems: 'center', gap: '5px' }
-    }, /*#__PURE__*/React.createElement("span", null, "|"), renderMiniRep(a, typeA), /*#__PURE__*/React.createElement("span", null, "\u2212"), renderMiniRep(b, typeB), /*#__PURE__*/React.createElement("span", null, "|"));
+    }, relation.bars && /*#__PURE__*/React.createElement("span", null, "|"), renderMiniRep(a, typeA), /*#__PURE__*/React.createElement("span", null, relation.op), renderMiniRep(b, typeB), relation.bars && /*#__PURE__*/React.createElement("span", null, "|"));
   };
   // Numbers are pre-rendered, real audio clips (embedded above as base64),
   // one full set of 1-99 per language. Playing a number is just scheduling
@@ -2598,9 +2639,93 @@ const NBackTrainer = () => {
     }
     return seq;
   };
+  // Chimera Hub: an Integration round. The first n+1 numbers are drawn as in
+  // Classic; after that each number is chosen to be a match (40%), a lure
+  // (35%, split among the kinds that are possible on that trial) or a plain
+  // non-match (25%). When a match or a lure can't be made from the numbers
+  // in play (Step drifts toward the ends of the range), the shortfall is
+  // carried and made up on the trials after, so a round keeps its rates. The
+  // label is read back from the number chosen, so it is always what the
+  // number actually is.
+  const createIntegrationSequence = rule => {
+    const rel = RELATIONS[rule].of;
+    const [min, max] = effectiveRange;
+    const level = config.level;
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const seq = [];
+    const types = [];
+    for (let i = 0; i <= level; i++) {
+      let num;
+      let attempts = 0;
+      do {
+        num = min + Math.floor(Math.random() * (max - min + 1));
+        attempts++;
+      } while (attempts < 50 && (i === 1 && num === seq[0] || i >= level && num === seq[i - level]));
+      seq.push(num);
+      types.push(null);
+    }
+    const values = [];
+    for (let v = min; v <= max; v++) values.push(v);
+    const made = { match: 0, lure: 0 };
+    const owed = (rate, have, done) => Math.min(0.95, Math.max(0.05, rate + (rate * (done + 1) - have) * 0.5));
+    for (let i = level + 1; i < level + 1 + config.trials; i++) {
+      const done = i - level - 1;
+      const nBack = seq[i - level];
+      const target = rel(seq[i - 1], seq[i - level - 1]);
+      // Never the same number in the same place twice running (as in Classic).
+      const allowed = values.filter(v => v !== nBack);
+      const matches = allowed.filter(v => rel(v, nBack) === target);
+      const others = allowed.filter(v => rel(v, nBack) !== target);
+      const partners = [i - level - 1].concat(level >= 2 ? [i - level + 1] : []);
+      const lures = {
+        near: others.filter(v => Math.abs(rel(v, nBack) - target) === 1),
+        partner: others.filter(v => partners.some(j => rel(v, seq[j]) === target)),
+        // At 1-back a wrong-direction lure is always the number two back
+        // (A, B, A): a give-away pattern, not a lure, so none there.
+        direction: rule === 'step' && level >= 2 ? others.filter(v => rel(v, nBack) === -target) : []
+      };
+      const kinds = Object.keys(lures).filter(k => lures[k].length);
+      const pMatch = owed(0.4, made.match, done);
+      const pLure = owed(0.35, made.lure, done);
+      const roll = Math.random();
+      let pool;
+      if (roll < pMatch && matches.length) pool = matches;
+      else if (roll < pMatch + pLure && kinds.length) pool = lures[pick(kinds)];
+      else {
+        const plain = others.filter(v => !kinds.some(k => lures[k].includes(v)));
+        pool = plain.length ? plain : others.length ? others : allowed;
+      }
+      // Each number also sets the next trial's relation. Prefer one that
+      // leaves the next trial a possible match, or Step runs off the end of
+      // the range and stays there.
+      const nextOpen = v => {
+        const nextBack = level === 1 ? v : seq[i + 1 - level];
+        const nextTarget = rel(v, nBack);
+        return values.some(x => x !== nextBack && rel(x, nextBack) === nextTarget);
+      };
+      const open = pool.filter(nextOpen);
+      const v = pick(open.length ? open : pool);
+      const type = rel(v, nBack) === target ? 'match' : kinds.find(k => lures[k].includes(v)) || 'plain';
+      if (type === 'match') made.match++;
+      else if (type !== 'plain') made.lure++;
+      seq.push(v);
+      types.push(type);
+    }
+    return { seq, types };
+  };
+  const nextRotatingRule = () => {
+    let k = 0;
+    try { k = parseInt(localStorage.getItem('chimera.rit.rotation'), 10) || 0; } catch (e) {}
+    try { localStorage.setItem('chimera.rit.rotation', String(k + 1)); } catch (e) {}
+    return RELATION_ORDER[(k % RELATION_ORDER.length + RELATION_ORDER.length) % RELATION_ORDER.length];
+  };
   const begin = () => {
     try {
-      const seq = createSequence();
+      const rule = config.program === 'classic' ? 'distance'
+        : config.relationRule === 'rotate' ? nextRotatingRule()
+        : RELATIONS[config.relationRule] ? config.relationRule : 'distance';
+      const built = config.program === 'classic' ? { seq: createSequence(), types: null } : createIntegrationSequence(rule);
+      const seq = built.seq;
       const repTypes = config.numberDisplayType === 'diverse' ? seq.map(n => pickDiverseRepType(n, config.diverseEnabledTypes)) : seq.map(() => config.numberDisplayType);
       // Value Complexity: rolled independently per number rather than
       // forcing an exact count, so the actual share drifts around the
@@ -2620,6 +2745,8 @@ const NBackTrainer = () => {
       }
       setGame({
         numbers: seq,
+        rule,
+        trialTypes: built.types,
         repTypes,
         complexityExprs,
         range: effectiveRange,
@@ -2667,8 +2794,9 @@ const NBackTrainer = () => {
       const nBack = seq[old_pos - config.level];
       const prev = seq[old_pos - 1];
       const nPlusOne = seq[old_pos - config.level - 1];
-      const deltaA = Math.abs(curr - nBack);
-      const deltaB = Math.abs(prev - nPlusOne);
+      const rel = (RELATIONS[game.rule] || RELATIONS.distance).of;
+      const deltaA = rel(curr, nBack);
+      const deltaB = rel(prev, nPlusOne);
       const answer = deltaA === deltaB;
       setGame(prev => prev.responded ? prev : ({
         ...prev,
@@ -2716,8 +2844,9 @@ const NBackTrainer = () => {
     const nBack = game.numbers[game.position - config.level];
     const prevNumber = game.numbers[game.position - 1];
     const nPlusOne = game.numbers[game.position - config.level - 1];
-    const deltaA = Math.abs(curr - nBack);
-    const deltaB = Math.abs(prevNumber - nPlusOne);
+    const rel = (RELATIONS[game.rule] || RELATIONS.distance).of;
+    const deltaA = rel(curr, nBack);
+    const deltaB = rel(prevNumber, nPlusOne);
     const answer = deltaA === deltaB;
     const match = choice === answer;
     const responseTime = Date.now() - trialStartTimeRef.current;
@@ -2767,6 +2896,26 @@ const NBackTrainer = () => {
   // Chimera Hub: the Chimera record format (shared/harness/FORMAT.md), so the
   // hub counts this trainer's minutes and the archive keeps every round.
   const RECORD_KEY = 'chimera.rit.record.v1';
+  // Signal detection over a round, and how each kind of lure fared.
+  const summarizeRound = g => {
+    const firstScored = config.level + 1;
+    const seen = new Set();
+    const rows = g.responses.filter(r => r.position >= firstScored && !seen.has(r.position) && seen.add(r.position));
+    let hits = 0, misses = 0, falseAlarms = 0, correctRejections = 0;
+    const lures = {};
+    rows.forEach(r => {
+      const yes = r.playerChoice === true;
+      if (r.correctAnswer) yes ? hits++ : misses++;
+      else yes ? falseAlarms++ : correctRejections++;
+      const kind = g.trialTypes && g.trialTypes[r.position];
+      if (LURE_LABELS[kind]) {
+        lures[kind] = lures[kind] || { total: 0, rejected: 0 };
+        lures[kind].total++;
+        if (r.playerChoice === false) lures[kind].rejected++;
+      }
+    });
+    return { hits, misses, falseAlarms, correctRejections, dPrime: dPrimeOf(hits, misses, falseAlarms, correctRejections), lures };
+  };
   const saveSession = (g, completed) => {
     const round = roundRef.current;
     if (!round) return;
@@ -2794,7 +2943,7 @@ const NBackTrainer = () => {
       end,
       activeSeconds: Math.max(0, Math.round((end - round.start - round.pausedMs) / 1000)),
       completed,
-      mode: config.numberDisplayType + (complex ? ' \u00b7 ' + config.valueComplexity : ''),
+      mode: (config.program === 'classic' ? 'classic' : g.rule || 'distance') + (config.numberDisplayType !== 'arabic' ? ' \u00b7 ' + config.numberDisplayType : '') + (complex ? ' \u00b7 ' + config.valueComplexity : ''),
       modalities: soundEnabled && config.valueComplexity === 'basic' ? ['visual', 'audio'] : ['visual'],
       level: config.level,
       levelEnd: config.level,
@@ -2802,6 +2951,7 @@ const NBackTrainer = () => {
       correct,
       accuracy: rows.length ? Math.round(correct / rows.length * 1000) / 1000 : null,
       hits, misses, falseAlarms, correctRejections,
+      dPrime: dPrimeOf(hits, misses, falseAlarms, correctRejections),
       rtMeanMs: rts.length ? Math.round(rts.reduce((t, x) => t + x, 0) / rts.length) : null,
       rtMedianMs: rts.length ? (rts.length % 2 ? rts[half] : Math.round((rts[half - 1] + rts[half]) / 2)) : null,
       input: inputRef.current,
@@ -2809,13 +2959,15 @@ const NBackTrainer = () => {
         displayMs: round.displayMs,
         blankMs: round.blankMs,
         range: round.range,
+        program: config.program,
+        relation: g.rule || 'distance',
         numberDisplayType: config.numberDisplayType,
         valueComplexity: config.valueComplexity,
         complexityFrequency: config.complexityFrequency,
         adaptive: adaptiveConfig.enabled,
         sound: soundEnabled
       },
-      extra: { displayMs: round.displayMs, blankMs: round.blankMs, rangeMax: round.range[1], badSleepMode: adaptiveConfig.badSleepMode },
+      extra: { relation: g.rule || 'distance', lures: summarizeRound(g).lures, displayMs: round.displayMs, blankMs: round.blankMs, rangeMax: round.range[1], badSleepMode: adaptiveConfig.badSleepMode },
       trialLog: rows.map(r => ({
         i: r.position,
         t: onsetsRef.current[r.position] ?? null,
@@ -2828,7 +2980,8 @@ const NBackTrainer = () => {
           deltaA: r.deltaA,
           deltaB: r.deltaB,
           shownAs: g.repTypes ? g.repTypes[r.position] : null,
-          expression: g.complexityExprs && g.complexityExprs[r.position] || null
+          expression: g.complexityExprs && g.complexityExprs[r.position] || null,
+          trialType: g.trialTypes ? g.trialTypes[r.position] : null
         }
       }))
     };
@@ -2912,8 +3065,9 @@ const NBackTrainer = () => {
         const nBack = prev.numbers[prev.position - config.level];
         const before = prev.numbers[prev.position - 1];
         const nPlusOne = prev.numbers[prev.position - config.level - 1];
-        const deltaA = Math.abs(curr - nBack);
-        const deltaB = Math.abs(before - nPlusOne);
+        const rel = (RELATIONS[prev.rule] || RELATIONS.distance).of;
+        const deltaA = rel(curr, nBack);
+        const deltaB = rel(before, nPlusOne);
         newGame = {
           ...newGame,
           attempts: prev.attempts + 1,
@@ -2984,6 +3138,14 @@ const NBackTrainer = () => {
   }, /*#__PURE__*/React.createElement("span", null, "Training Instructions"), /*#__PURE__*/React.createElement("span", null, instructionsOpen ? '▲' : '▼')), instructionsOpen && /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 text-[#2a5050] mt-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-[#006a9a]"
+  }, "The idea"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs mt-1"
+  }, "Compare two relations: the one between the current number and the number n back, and the one between the number before it and the number n+1 back. Same relation \u2192 Match."), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs mt-1"
+  }, "Each round names its relation: Distance |a \u2212 b| (how far apart), Step a \u2212 b (how far and which way), or Sum a + b. Classic rounds are always Distance."), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs mt-1"
+  }, "Some Different trials are built to look right: off by one, right but with the wrong partner, or the right size the wrong way. Work it out exactly. The examples below use Distance.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     className: "font-semibold text-[#006a9a]"
   }, "1-Back Mode:"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs mt-1"
@@ -3057,6 +3219,31 @@ const NBackTrainer = () => {
   }, "Configuration"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-6"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-3"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-semibold text-[#006060]"
+  }, "Training Program"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => confirmReset(() => setConfig(c => ({ ...c, program: CONFIG_DEFAULTS.program, relationRule: CONFIG_DEFAULTS.relationRule }))),
+    className: "text-xs text-[#3a6060] hover:text-[#006060] underline"
+  }, "Reset to default")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 mb-2"
+  }, [['integration', 'Integration'], ['classic', 'Classic']].map(([v, l]) => /*#__PURE__*/React.createElement("button", {
+    key: v,
+    onClick: () => setConfig(c => ({ ...c, program: v })),
+    className: `py-3 rounded-xl font-bold transition ${config.program === v ? 'bg-green-600 text-[#002020]' : 'bg-[#90cccc] hover:bg-[#78baba] border border-[#009090]/30'}`
+  }, l))), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-[#3a6060] mb-3"
+  }, config.program === 'classic' ? "Dark's original rounds: always Distance, and the non-matches are random." : "Rounds rotate through three relations, and about a third of the trials are lures built to look like a match: off by one, right with the wrong partner, or (Step) the right size the wrong way."), config.program !== 'classic' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-[#006060] block mb-1 font-semibold"
+  }, "Relation"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, [['rotate', 'Rotate each round'], ['distance', 'Distance |a \u2212 b|'], ['step', 'Step a \u2212 b'], ['sum', 'Sum a + b']].map(([v, l]) => /*#__PURE__*/React.createElement("button", {
+    key: v,
+    onClick: () => setConfig(c => ({ ...c, relationRule: v })),
+    className: `py-3 rounded-xl font-bold transition ${config.relationRule === v ? 'bg-green-600 text-[#002020]' : 'bg-[#90cccc] hover:bg-[#78baba] border border-[#009090]/30'}`
+  }, l))), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-[#3a6060] mt-2"
+  }, config.relationRule === 'rotate' ? "Distance, then Step, then Sum, round after round, so no single shortcut carries the training." : RELATIONS[config.relationRule] ? RELATIONS[config.relationRule].label + ': ' + RELATIONS[config.relationRule].explain + '.' : ''))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between mb-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-[#006060]"
@@ -3662,7 +3849,9 @@ const NBackTrainer = () => {
     className: "text-2xl font-bold text-center mb-6 text-[#005a8a]"
   }, "Initial Numbers"), /*#__PURE__*/React.createElement("p", {
     className: "text-center text-[#2a5050] mb-6"
-  }, "Memorize these ", config.level, " numbers before training begins"), /*#__PURE__*/React.createElement("div", {
+  }, "Memorize these ", config.level, " numbers before training begins"), game.rule && /*#__PURE__*/React.createElement("p", {
+    className: "text-center text-[#005a8a] font-semibold mb-6"
+  }, "This round: ", RELATIONS[game.rule].label, " (", RELATIONS[game.rule].formula, ") \u2013 ", RELATIONS[game.rule].explain), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-4 mb-8"
   }, game.numbers.slice(0, config.level).map((num, idx) => {
     const color = getColorByLevel(idx, config.level);
@@ -3859,7 +4048,9 @@ const NBackTrainer = () => {
     className: "text-sm"
   }, ""), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-[#3a6060] font-semibold"
-  }, "Exit")), /*#__PURE__*/React.createElement("div", {
+  }, "Exit")), game.rule && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-sm font-semibold text-[#005a8a] mb-3"
+  }, "Relation: ", RELATIONS[game.rule].label, "  ", RELATIONS[game.rule].formula), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-3 mb-6"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-[#90cccc]/60 rounded-xl p-3 text-center border border-[#009090]/20"
@@ -4198,7 +4389,20 @@ const NBackTrainer = () => {
     className: "text-sm text-[#006060] mb-2"
   }, "Performance"), /*#__PURE__*/React.createElement("div", {
     className: "text-4xl font-bold text-[#005a8a]"
-  }, game.correct, "/", config.trials))), /*#__PURE__*/React.createElement("div", {
+  }, game.correct, "/", config.trials))), game.trialTypes && (() => {
+    const sum = summarizeRound(game);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-[#90cccc]/60 rounded-2xl p-4 mb-6 border border-[#009090]/20 text-sm text-[#2a5050]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-bold text-[#005a8a] mb-2"
+    }, RELATIONS[game.rule].label, "  ", RELATIONS[game.rule].formula), /*#__PURE__*/React.createElement("div", null, "Sensitivity d\u2032: ", /*#__PURE__*/React.createElement("strong", {
+      className: "text-[#005a8a]"
+    }, sum.dPrime.toFixed(2)), " (0 is guessing; about 2 is solid)"), Object.keys(sum.lures).map(k => /*#__PURE__*/React.createElement("div", {
+      key: k
+    }, "Lures, ", LURE_LABELS[k], ": ", /*#__PURE__*/React.createElement("strong", {
+      className: "text-[#005a8a]"
+    }, sum.lures[k].rejected, "/", sum.lures[k].total), " seen through")));
+  })(), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#90cccc]/60 rounded-2xl p-4 mb-6 border border-[#009090]/20"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-sm text-[#2a5050]"
@@ -4253,9 +4457,9 @@ const NBackTrainer = () => {
     className: "p-2 text-left"
   }, "Number"), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-left"
-  }, "ΔB (|prev - n+1 back|)"), /*#__PURE__*/React.createElement("th", {
+  }, (RELATIONS[game.rule] || RELATIONS.distance).label + " B (prev, n+1 back)"), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-left"
-  }, "ΔA (|curr - n back|)"), /*#__PURE__*/React.createElement("th", {
+  }, (RELATIONS[game.rule] || RELATIONS.distance).label + " A (curr, n back)"), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-left"
   }, "Correct"), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-left"
@@ -4375,7 +4579,8 @@ const NBackTrainer = () => {
     const deltaAPosition = idx; // position of "curr"
     const deltaBColor = getColorByLevel(deltaBPosition, config.level);
     const deltaAColor = getColorByLevel(deltaAPosition, config.level);
-    const correctText = res.correctAnswer ? 'Match' : 'Different';
+    const lure = game.trialTypes && LURE_LABELS[game.trialTypes[idx]];
+    const correctText = res.correctAnswer ? 'Match' : 'Different' + (lure ? ' (' + lure + ')' : '');
     let yourText = '';
     if (res.playerChoice === null) {
       yourText = 'Missed ✗';
@@ -4396,14 +4601,14 @@ const NBackTrainer = () => {
       style: {
         color: deltaBColor
       }
-    }, res.deltaB)), /*#__PURE__*/React.createElement("td", {
+    }, (RELATIONS[game.rule] || RELATIONS.distance).show(res.deltaB))), /*#__PURE__*/React.createElement("td", {
       className: "p-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "font-bold",
       style: {
         color: deltaAColor
       }
-    }, res.deltaA)), /*#__PURE__*/React.createElement("td", {
+    }, (RELATIONS[game.rule] || RELATIONS.distance).show(res.deltaA))), /*#__PURE__*/React.createElement("td", {
       className: "p-2"
     }, correctText), /*#__PURE__*/React.createElement("td", {
       className: "p-2 text-[#006060]"
