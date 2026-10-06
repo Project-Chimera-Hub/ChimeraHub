@@ -288,7 +288,7 @@
        then turned a quarter right". */
     wrap: function (off, inner, innerIsBase) { return inner + (innerIsBase ? " " : ", then ") + off; },
     premise: function (L, rel, R, rIsBase) { return L + " is " + square.wrap(rel, R, rIsBase); },
-    same: function (L, R) { return L + " is " + R + " exactly"; },
+    same: function (L, R) { return L + " is exactly " + R; },
     question: function (X, rel, Y) { return "Is " + X + " " + Y + " " + rel + "?"; },
     markWord: "the tile",
     unit: [1, 0],
