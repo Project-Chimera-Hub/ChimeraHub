@@ -1,0 +1,27 @@
+/* Relation Algebra: what the harness's look doesn't already cover. */
+.ra-card { max-width: 46rem; margin: 0 auto; text-align: left; padding: .4rem .2rem; }
+.ra-premises p { margin: 0 0 .7rem; font-size: 1.02rem; line-height: 1.55; color: var(--h-ink-strong); }
+.ra-q { margin: 1.2rem 0 0; padding-top: .9rem; border-top: 1px solid var(--h-line-soft); font-size: 1.08rem; color: var(--h-accent-2); }
+.ra-listen { color: var(--h-dim); font-style: italic; }
+.ra-explain p { margin: 0 0 .6rem; line-height: 1.5; }
+.ra-verdict { font-weight: 700; font-size: 1.1rem; }
+.ra-verdict.ok { color: var(--h-ok); }
+.ra-verdict.bad { color: #e5534b; }
+.ra-decode { margin: .6rem 0 .8rem; }
+.ra-decode summary { cursor: pointer; color: var(--h-accent); }
+.ra-decode ul { margin: .5rem 0 0; padding-left: 1.2rem; }
+.ra-decode li { margin-bottom: .35rem; }
+.ra-tag { font-size: .7rem; color: var(--h-dim); border: 1px solid var(--h-line); padding: 0 .3rem; margin-left: .3rem; }
+.ra-draw { display: block; margin: .6rem 0; max-width: 100%; height: auto; }
+.ra-grid { stroke: var(--h-line-soft); stroke-width: 1; }
+.ra-ring { fill: none; stroke: var(--h-line); stroke-width: 1; }
+.ra-tick { fill: var(--h-dim); }
+.ra-lbl { font: 700 8px var(--h-font); fill: #0a0906; text-anchor: middle; }
+.ra-lbl2 { font: 700 10px var(--h-font); fill: var(--h-ink); text-anchor: middle; }
+.ra-n { font: 10px var(--h-font); fill: var(--h-dim); }
+.ra-pair { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.ra-pair small { color: var(--h-dim); }
+.ra-tiles { display: flex; gap: .7rem; flex-wrap: wrap; margin: .6rem 0; }
+.ra-tile { width: 4.2rem; height: 4.2rem; border: 2px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ra-tile span { display: inline-block; font: 700 1.9rem/1 var(--h-font); }
+.ra-tile small { font-size: .62rem; color: var(--h-dim); margin-top: .2rem; }

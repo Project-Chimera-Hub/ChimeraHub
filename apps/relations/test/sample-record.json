@@ -1,0 +1,165 @@
+{
+  "format": "chimera-record",
+  "version": 1,
+  "app": "relations",
+  "units": {
+    "level": "level"
+  },
+  "sessions": [
+    {
+      "id": "1791304302000-splm0t",
+      "start": 1791304302000,
+      "end": 1791304307272,
+      "activeSeconds": 5.3,
+      "completed": true,
+      "input": "mouse",
+      "mode": "mixed space",
+      "modalities": [
+        "visual"
+      ],
+      "level": 1,
+      "trials": 6,
+      "correct": 2,
+      "accuracy": 0.3333333333333333,
+      "hits": 1,
+      "misses": 2,
+      "falseAlarms": 0,
+      "correctRejections": 1,
+      "dPrime": 0.356,
+      "rtMeanMs": 110,
+      "rtMedianMs": 100,
+      "rtSdMs": 64,
+      "settings": {
+        "task": "mixed",
+        "material": "space",
+        "phrasing": "mixed",
+        "perspective": true,
+        "matchRule": "exact",
+        "metric": "manhattan",
+        "trials": 6,
+        "timeLimit": 0,
+        "explain": "never",
+        "aloud": false,
+        "hideText": false
+      },
+      "extra": {
+        "material": "space",
+        "task": "mixed",
+        "lures": {}
+      },
+      "trialLog": [
+        {
+          "target": true,
+          "response": null,
+          "correct": false,
+          "rtMs": 214,
+          "extra": {
+            "task": "question",
+            "material": "space",
+            "answer": "yes",
+            "said": "cant",
+            "lure": null,
+            "path": 2,
+            "premises": 2,
+            "nested": 0
+          },
+          "i": 0,
+          "t": 218
+        },
+        {
+          "target": false,
+          "response": null,
+          "correct": true,
+          "rtMs": 68,
+          "extra": {
+            "task": "possible",
+            "material": "space",
+            "answer": "impossible",
+            "said": "impossible",
+            "lure": null,
+            "path": null,
+            "premises": 3,
+            "nested": 0
+          },
+          "i": 1,
+          "t": 1189
+        },
+        {
+          "response": "4",
+          "correct": false,
+          "rtMs": 139,
+          "extra": {
+            "task": "howfar",
+            "material": "space",
+            "answer": "2",
+            "said": "4",
+            "lure": null,
+            "path": null,
+            "premises": 2,
+            "nested": 0
+          },
+          "i": 2,
+          "t": 1830
+        },
+        {
+          "target": true,
+          "response": null,
+          "correct": false,
+          "rtMs": 50,
+          "extra": {
+            "task": "question",
+            "material": "space",
+            "answer": "yes",
+            "said": "no",
+            "lure": null,
+            "path": 2,
+            "premises": 2,
+            "nested": 0
+          },
+          "i": 3,
+          "t": 2782
+        },
+        {
+          "target": true,
+          "response": "possible",
+          "correct": true,
+          "rtMs": 55,
+          "extra": {
+            "task": "possible",
+            "material": "space",
+            "answer": "possible",
+            "said": "possible",
+            "lure": null,
+            "path": null,
+            "premises": 3,
+            "nested": 0
+          },
+          "i": 4,
+          "t": 3738
+        },
+        {
+          "response": "3",
+          "correct": false,
+          "rtMs": 131,
+          "extra": {
+            "task": "howfar",
+            "material": "space",
+            "answer": "2",
+            "said": "3",
+            "lure": null,
+            "path": null,
+            "premises": 2,
+            "nested": 0
+          },
+          "i": 5,
+          "t": 4371
+        }
+      ],
+      "levelEnd": 1
+    }
+  ],
+  "appVersion": "1.0.0",
+  "state": {
+    "level": 1
+  }
+}
