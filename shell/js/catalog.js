@@ -110,6 +110,9 @@ var CATALOG = {
     { id: "earshot", name: "Earshot", path: "more/earshot/", colour: "#56d4dd",
       categories: ["mot"], counted: false,
       what: "Track moving sounds by ear" },
+    { id: "rit", name: "Relational Integration", path: "rit/", colour: "#79c0ff",
+      categories: ["rrt", "nback"], folder: "relational-nback", counted: true,
+      what: "Compare two differences across a stream of numbers, n back" },
   ],
 
   /* Where "submit one" goes. A link the player follows, not a request the

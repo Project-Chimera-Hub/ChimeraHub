@@ -9,10 +9,10 @@
     // immediately - no flash of the wrong theme while React boots up.
     (function () {
       try {
-        var t = localStorage.getItem('cav_rit_theme') || 'dark';
+        var t = localStorage.getItem('cav_rit_theme') || 'chimera';
         document.documentElement.setAttribute('data-theme', t);
       } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.setAttribute('data-theme', 'chimera');
       }
     })();
     </script>
@@ -1088,6 +1088,7 @@
 [data-theme="dark"] [class~="bg-[#aa3030]/80"] { background-color: oklch(50.5% 0.213 27.518) !important; }
 [data-theme="dark"] [class~="text-[#8a6500]"] { color: oklch(85.2% 0.199 91.936) !important; }
 </style>
+    <link rel="stylesheet" href="chimera-hub.css">
     <script>/**
  * @license React
  * react.production.min.js
@@ -1795,7 +1796,9 @@ const NBackTrainer = () => {
     // so an off day lands on a gentler step instead of a harsher one -
     // carries the same leniency the old threshold-2 gave, into the new
     // per-score lookup.
-    const lookupCorrect = finalCorrect + (adaptiveConfig.badSleepMode ? 2 : 0);
+    // Chimera Hub: the steps are counts out of 20, so a round of any other
+    // length is scaled to 20 first (at the default 20 trials nothing changes).
+    const lookupCorrect = Math.round(finalCorrect * 20 / config.trials) + (adaptiveConfig.badSleepMode ? 2 : 0);
     const sortedSteps = [...adaptiveConfig.progressionSteps].sort((a, b) => a.minCorrect - b.minCorrect);
     let matchedStep = sortedSteps[0];
     for (const step of sortedSteps) {
@@ -1825,7 +1828,7 @@ const NBackTrainer = () => {
       let event = null;
       let streakSpent = false;
       if (fastStreak >= 5) {
-        rangeMax = adaptiveConfig.currentRangeMax + 1;
+        rangeMax = Math.min(99, adaptiveConfig.currentRangeMax + 1); // 99: the last number with a recording
         event = 'up';
         streakSpent = true;
       } else if (slowStreak >= 5) {
@@ -1899,7 +1902,7 @@ const NBackTrainer = () => {
     setAlternatingFemaleVoice(AUDIO_SETTINGS_DEFAULTS.alternatingFemaleVoice);
     setAlternatingMaleVoice(AUDIO_SETTINGS_DEFAULTS.alternatingMaleVoice);
     setAlternatingFirstIsMale(AUDIO_SETTINGS_DEFAULTS.alternatingFirstIsMale);
-    setTheme('dark');
+    setTheme('chimera');
   });
   const exportAllSettings = () => {
     const payload = {
@@ -1952,6 +1955,14 @@ const NBackTrainer = () => {
   const timerRef = useRef(null);
   const hideTimerRef = useRef(null);
   const trialStartTimeRef = useRef(0);
+  // Chimera Hub: the round being played (for its record), when each number
+  // appeared, whether the round is paused, and how the player is answering.
+  const roundRef = useRef(null);
+  const onsetsRef = useRef({});
+  const pausedAtRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const inputRef = useRef(null);
+  const submitRef = useRef(null);
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -2396,9 +2407,9 @@ const NBackTrainer = () => {
   const [audioReady, setAudioReady] = useState(false);
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('cav_rit_theme') || 'dark';
+      return localStorage.getItem('cav_rit_theme') || 'chimera';
     } catch (e) {
-      return 'dark';
+      return 'chimera';
     }
   });
   useEffect(() => {
@@ -2629,6 +2640,17 @@ const NBackTrainer = () => {
     }
   };
   const startGame = () => {
+    roundRef.current = {
+      start: Date.now(),
+      pausedMs: 0,
+      displayMs: Math.round(effectiveDisplayTime * 1000),
+      blankMs: Math.round(effectiveBlankTime * 1000),
+      range: game.range || effectiveRange,
+      saved: false
+    };
+    onsetsRef.current = {};
+    pausedAtRef.current = null;
+    setPaused(false);
     setScreen('game');
     setTimeout(() => displayNext(game.numbers, config.level), 100);
   };
@@ -2637,7 +2659,9 @@ const NBackTrainer = () => {
       finish();
       return;
     }
-    if (pos > 0 && pos - 1 >= config.level + 1 && !game.responded) {
+    // Chimera Hub: `responded` is read from the latest state below, not from
+    // this closure's `game` (the round's first render, where it is always false).
+    if (pos > 0 && pos - 1 >= config.level + 1) {
       const old_pos = pos - 1;
       const curr = seq[old_pos];
       const nBack = seq[old_pos - config.level];
@@ -2646,7 +2670,7 @@ const NBackTrainer = () => {
       const deltaA = Math.abs(curr - nBack);
       const deltaB = Math.abs(prev - nPlusOne);
       const answer = deltaA === deltaB;
-      setGame(prev => ({
+      setGame(prev => prev.responded ? prev : ({
         ...prev,
         attempts: prev.attempts + 1,
         responses: [...prev.responses, {
@@ -2661,6 +2685,7 @@ const NBackTrainer = () => {
       }));
     }
     trialStartTimeRef.current = Date.now();
+    if (roundRef.current) onsetsRef.current[pos] = Date.now() - roundRef.current.start;
     setGame(prev => ({
       ...prev,
       position: pos,
@@ -2739,61 +2764,188 @@ const NBackTrainer = () => {
       // If feedbackDuration === 0, it stays shown until next number (cleared by displayNext)
     }
   };
+  // Chimera Hub: the Chimera record format (shared/harness/FORMAT.md), so the
+  // hub counts this trainer's minutes and the archive keeps every round.
+  const RECORD_KEY = 'chimera.rit.record.v1';
+  const saveSession = (g, completed) => {
+    const round = roundRef.current;
+    if (!round) return;
+    const firstScored = config.level + 1;
+    const seen = new Set();
+    const rows = g.responses
+      .filter(r => r.position >= firstScored && !seen.has(r.position) && seen.add(r.position))
+      .sort((x, y) => x.position - y.position);
+    const answered = rows.filter(r => r.playerChoice != null);
+    if (!completed && answered.length === 0) return;
+    let hits = 0, misses = 0, falseAlarms = 0, correctRejections = 0;
+    rows.forEach(r => {
+      const yes = r.playerChoice === true;
+      if (r.correctAnswer) yes ? hits++ : misses++;
+      else yes ? falseAlarms++ : correctRejections++;
+    });
+    const rts = answered.map(r => r.responseTime).sort((x, y) => x - y);
+    const half = Math.floor(rts.length / 2);
+    const correct = rows.filter(r => r.match).length;
+    const end = round.end || Date.now();
+    const complex = config.numberDisplayType === 'arabic' && config.valueComplexity !== 'basic';
+    const session = {
+      id: round.start + '-' + Math.random().toString(36).slice(2, 6),
+      start: round.start,
+      end,
+      activeSeconds: Math.max(0, Math.round((end - round.start - round.pausedMs) / 1000)),
+      completed,
+      mode: config.numberDisplayType + (complex ? ' \u00b7 ' + config.valueComplexity : ''),
+      modalities: soundEnabled && config.valueComplexity === 'basic' ? ['visual', 'audio'] : ['visual'],
+      level: config.level,
+      levelEnd: config.level,
+      trials: rows.length,
+      correct,
+      accuracy: rows.length ? Math.round(correct / rows.length * 1000) / 1000 : null,
+      hits, misses, falseAlarms, correctRejections,
+      rtMeanMs: rts.length ? Math.round(rts.reduce((t, x) => t + x, 0) / rts.length) : null,
+      rtMedianMs: rts.length ? (rts.length % 2 ? rts[half] : Math.round((rts[half - 1] + rts[half]) / 2)) : null,
+      input: inputRef.current,
+      settings: {
+        displayMs: round.displayMs,
+        blankMs: round.blankMs,
+        range: round.range,
+        numberDisplayType: config.numberDisplayType,
+        valueComplexity: config.valueComplexity,
+        complexityFrequency: config.complexityFrequency,
+        adaptive: adaptiveConfig.enabled,
+        sound: soundEnabled
+      },
+      extra: { displayMs: round.displayMs, blankMs: round.blankMs, rangeMax: round.range[1], badSleepMode: adaptiveConfig.badSleepMode },
+      trialLog: rows.map(r => ({
+        i: r.position,
+        t: onsetsRef.current[r.position] ?? null,
+        stimulus: g.numbers[r.position],
+        target: r.correctAnswer,
+        response: r.playerChoice == null ? null : (r.playerChoice ? 'match' : 'different'),
+        correct: r.match,
+        rtMs: r.responseTime ?? null,
+        extra: {
+          deltaA: r.deltaA,
+          deltaB: r.deltaB,
+          shownAs: g.repTypes ? g.repTypes[r.position] : null,
+          expression: g.complexityExprs && g.complexityExprs[r.position] || null
+        }
+      }))
+    };
+    let rec = null;
+    try { rec = JSON.parse(localStorage.getItem(RECORD_KEY)); } catch (e) {}
+    if (!rec || rec.format !== 'chimera-record' || !Array.isArray(rec.sessions)) {
+      rec = { format: 'chimera-record', version: 1, app: 'rit', units: { level: 'n' }, sessions: [] };
+    }
+    rec.appVersion = 'v37';
+    rec.sessions.push(session);
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(rec)); } catch (e) { console.warn('Could not save the session:', e); }
+  };
+  useEffect(() => {
+    if (screen === 'results' && !game.active && roundRef.current && !roundRef.current.saved) {
+      roundRef.current.saved = true;
+      saveSession(game, true);
+    }
+  }, [screen, game]);
+
+  // Chimera Hub: stop the round when the page is hidden (the hub hides a
+  // trainer's frame when the player goes back to the menu), and leave the
+  // hidden time out of the round's training time. Resuming moves on to the
+  // next number; the one that was showing counts as unanswered.
+  const pauseRound = () => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    stopSpeaking();
+    pausedAtRef.current = Date.now();
+    setPaused(true);
+    setGame(prev => ({ ...prev, visible: false }));
+  };
+  const resumeRound = () => {
+    if (roundRef.current && pausedAtRef.current) roundRef.current.pausedMs += Date.now() - pausedAtRef.current;
+    pausedAtRef.current = null;
+    setPaused(false);
+    displayNext(game.numbers, game.position + 1);
+  };
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden && screen === 'game' && !pausedAtRef.current) pauseRound();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [screen]);
+
+  // Chimera Hub: keys for Match and Different, and the input the record names.
+  submitRef.current = submitAnswer;
+  useEffect(() => {
+    if (screen !== 'game') return;
+    const onKey = e => {
+      if (pausedAtRef.current || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'arrowleft' || k === 'f') { e.preventDefault(); submitRef.current(true); }
+      else if (k === 'arrowright' || k === 'j') { e.preventDefault(); submitRef.current(false); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [screen]);
+  useEffect(() => {
+    const onPointer = e => { inputRef.current = e.pointerType === 'mouse' ? 'mouse' : 'touch'; };
+    const onKeyInput = () => { inputRef.current = 'keyboard'; };
+    window.addEventListener('pointerdown', onPointer);
+    window.addEventListener('keydown', onKeyInput);
+    return () => {
+      window.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('keydown', onKeyInput);
+    };
+  }, []);
+
   const finish = () => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (timerRef.current) clearTimeout(timerRef.current);
     stopSpeaking();
-    if (game.position >= config.level + 1 && !game.responded) {
-      const curr = game.numbers[game.position];
-      const nBack = game.numbers[game.position - config.level];
-      const prev = game.numbers[game.position - 1];
-      const nPlusOne = game.numbers[game.position - config.level - 1];
-      const deltaA = Math.abs(curr - nBack);
-      const deltaB = Math.abs(prev - nPlusOne);
-      const answer = deltaA === deltaB;
-      setGame(prev => {
-        const newGame = {
-          ...prev,
+    if (roundRef.current) roundRef.current.end = Date.now();
+    // Chimera Hub: the round's last state comes from the updater, not from
+    // this closure's `game`, which is the round's first render.
+    setGame(prev => {
+      let newGame = { ...prev, active: false };
+      if (prev.position >= config.level + 1 && !prev.responded) {
+        const curr = prev.numbers[prev.position];
+        const nBack = prev.numbers[prev.position - config.level];
+        const before = prev.numbers[prev.position - 1];
+        const nPlusOne = prev.numbers[prev.position - config.level - 1];
+        const deltaA = Math.abs(curr - nBack);
+        const deltaB = Math.abs(before - nPlusOne);
+        newGame = {
+          ...newGame,
           attempts: prev.attempts + 1,
           responses: [...prev.responses, {
-            position: game.position,
+            position: prev.position,
             deltaA,
             deltaB,
-            correctAnswer: answer,
+            correctAnswer: deltaA === deltaB,
             playerChoice: null,
             match: false,
             responseTime: null
-          }],
-          active: false
+          }]
         };
-        // Calculate accuracy and update session history
-        const accuracy = Math.round(newGame.correct / config.trials * 100);
-        setSessionHistory(prevHistory => {
-          const newHistory = [accuracy, ...prevHistory].slice(0, 10);
-          return newHistory;
-        });
-        applyAdaptiveAdjustment(newGame.correct);
-        return newGame;
-      });
-    } else {
-      setGame(prev => {
-        // Calculate accuracy and update session history
-        const accuracy = Math.round(prev.correct / config.trials * 100);
-        setSessionHistory(prevHistory => {
-          const newHistory = [accuracy, ...prevHistory].slice(0, 10);
-          return newHistory;
-        });
-        applyAdaptiveAdjustment(prev.correct);
-        return {
-          ...prev,
-          active: false
-        };
-      });
-    }
+      }
+      // Calculate accuracy and update session history
+      const accuracy = Math.round(newGame.correct / config.trials * 100);
+      setSessionHistory(prevHistory => [accuracy, ...prevHistory].slice(0, 10));
+      applyAdaptiveAdjustment(newGame.correct);
+      return newGame;
+    });
     setReviewOpen(false);
     setScreen('results');
   };
   const restart = () => {
+    if (screen === 'game' && roundRef.current && !roundRef.current.saved) {
+      roundRef.current.saved = true;
+      roundRef.current.end = Date.now();
+      if (pausedAtRef.current) roundRef.current.pausedMs += Date.now() - pausedAtRef.current;
+      saveSession(game, false);
+    }
+    pausedAtRef.current = null;
+    setPaused(false);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (timerRef.current) clearTimeout(timerRef.current);
     stopSpeaking();
@@ -2821,7 +2973,10 @@ const NBackTrainer = () => {
     className: "text-4xl font-black text-center mb-2 text-[#005a8a]"
   }, "🧠 Relational Integration Training"), /*#__PURE__*/React.createElement("p", {
     className: "text-center text-[#006060] mb-6 font-medium"
-  }, "Strengthen Your Cognitive Capacity"), /*#__PURE__*/React.createElement("div", {
+  }, "Strengthen Your Cognitive Capacity"), /*#__PURE__*/React.createElement("p", {
+    className: "text-center text-xs text-[#4a7070]",
+    style: { marginTop: '-1rem', marginBottom: '1.5rem' }
+  }, "Made by Dark"), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#90cccc]/60 rounded-2xl p-4 mb-6 text-sm border border-[#009090]/20"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setInstructionsOpen(prev => !prev),
@@ -3365,7 +3520,7 @@ const NBackTrainer = () => {
     value: audioLang,
     onChange: e => setAudioLang(e.target.value),
     className: "w-full bg-[#90cccc] border border-[#009090]/40 rounded-xl py-2 px-3 text-[#002020] font-semibold"
-  }, Object.keys(LANGUAGE_NAMES).map(code => /*#__PURE__*/React.createElement("option", {
+  }, Object.keys(LANGUAGE_NAMES).filter(code => AUDIO_B64[code]).map(code => /*#__PURE__*/React.createElement("option", {
     key: code,
     value: code
   }, LANGUAGE_NAMES[code])))), audioLang === 'en' && /*#__PURE__*/React.createElement("div", {
@@ -3454,6 +3609,8 @@ const NBackTrainer = () => {
     onChange: e => setTheme(e.target.value),
     className: "w-full bg-[#90cccc] border border-[#009090]/40 rounded-xl py-2 px-3 text-[#002020] font-semibold"
   }, /*#__PURE__*/React.createElement("option", {
+    value: "chimera"
+  }, "Chimera Hub - Gold"), /*#__PURE__*/React.createElement("option", {
     value: "cyan"
   }, "Scientific - Cyan"), /*#__PURE__*/React.createElement("option", {
     value: "dark"
@@ -3677,7 +3834,17 @@ const NBackTrainer = () => {
   }, "✓ Ready - Begin Training"), /*#__PURE__*/React.createElement("button", {
     onClick: restart,
     className: "w-full bg-[#78baba] hover:bg-gray-600 text-[#002020] font-bold py-3 rounded-2xl transition"
-  }, "✕ Cancel Round"))), screen === 'game' && /*#__PURE__*/React.createElement("div", {
+  }, "✕ Cancel Round"))), screen === 'game' && paused && /*#__PURE__*/React.createElement("div", {
+    className: "rit-paused",
+    style: { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '1.5rem', textAlign: 'center', background: 'rgba(0, 0, 0, 0.88)', color: '#fff' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '1.5rem', fontWeight: 900 }
+  }, "Paused"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: '0.875rem', opacity: 0.8, maxWidth: '20rem' }
+  }, "The round stopped while the page was hidden. Resume moves on to the next number."), /*#__PURE__*/React.createElement("button", {
+    onClick: resumeRound,
+    className: "bg-[#007a7a] hover:bg-[#009090] text-[#002020] font-bold py-3 px-8 rounded-2xl"
+  }, "\u25B6 Resume")), screen === 'game' && /*#__PURE__*/React.createElement("div", {
     className: "max-w-md mx-auto",
     style: {
       touchAction: 'none',

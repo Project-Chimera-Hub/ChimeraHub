@@ -1,0 +1,67 @@
+/*
+ * Chimera Hub's look for Relational Integration Training: the "Chimera Hub -
+ * Gold" theme, which is the default here. Dark's two themes (Scientific - Cyan
+ * and Legacy - Dark) are untouched and still in the theme menu.
+ *
+ * Built the way the app's own dark theme is: the same class selectors, with the
+ * hub's colours, old gold on near-black, in place of the greys, greens and
+ * purples. Reds keep their meaning (wrong, different) and stay red, as do the
+ * colours of the positions, which are part of the task. One monospace face and
+ * square corners, as everywhere on the hub; the stimulus shapes are SVG and
+ * keep their curves. No webfont, so nothing is fetched.
+ */
+
+[data-theme="chimera"] body {
+  background: #0a0906;
+  font-family: ui-monospace, "JetBrains Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+[data-theme="chimera"] [class*="rounded"] { border-radius: 0 !important; }
+[data-theme="chimera"] [class*="shadow"] { box-shadow: none !important; }
+[data-theme="chimera"] h1 { letter-spacing: .04em; }
+
+/* The app's own colour classes, one by one. */
+[data-theme="chimera"] [class~="bg-[#cce8e8]"] { background-color: rgb(10 9 6) !important; }
+[data-theme="chimera"] [class~="bg-[#a8d8d8]/90"] { background-color: rgb(24 20 11) !important; }
+[data-theme="chimera"] [class~="bg-[#a8d8d8]/95"] { background-color: rgb(24 20 11) !important; }
+[data-theme="chimera"] [class~="bg-[#90cccc]"] { background-color: rgb(34 28 16) !important; }
+[data-theme="chimera"] [class~="bg-[#90cccc]/40"] { background-color: rgb(34 28 16) !important; }
+[data-theme="chimera"] [class~="bg-[#90cccc]/60"] { background-color: rgb(34 28 16) !important; }
+[data-theme="chimera"] [class~="bg-[#90cccc]/80"] { background-color: rgb(34 28 16) !important; }
+[data-theme="chimera"] [class~="bg-[#78baba]"] { background-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#78baba]/60"]:hover { background-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="text-[#002020]"] { color: rgb(234 223 194) !important; }
+[data-theme="chimera"] [class~="text-[#002020]/60"] { color: rgb(234 223 194) !important; }
+[data-theme="chimera"] [class~="text-[#2a5050]"] { color: rgb(201 184 143) !important; }
+[data-theme="chimera"] [class~="text-[#3a6060]"] { color: rgb(201 184 143) !important; }
+[data-theme="chimera"] [class~="text-[#4a7070]"] { color: rgb(164 143 96) !important; }
+[data-theme="chimera"] [class~="text-[#006060]"] { color: rgb(212 175 55) !important; }
+[data-theme="chimera"] [class~="bg-[#006868]"] { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="bg-[#007a7a]"] { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="bg-[#007a7a]/80"] { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="bg-[#008080]"] { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#008080]"]:hover { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#009090]"]:hover { background-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#78baba]"]:hover { background-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="accent-[#006868]"] { accent-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="accent-[#007a7a]"] { accent-color: rgb(107 84 20) !important; }
+[data-theme="chimera"] [class~="border-[#006868]/20"] { border-color: rgb(212 175 55 / 20%) !important; }
+[data-theme="chimera"] [class~="border-[#006868]/30"] { border-color: rgb(212 175 55 / 30%) !important; }
+[data-theme="chimera"] [class~="border-[#007a7a]/40"] { border-color: rgb(212 175 55 / 40%) !important; }
+[data-theme="chimera"] [class~="border-[#009090]/20"] { border-color: rgb(212 175 55 / 20%) !important; }
+[data-theme="chimera"] [class~="border-[#009090]/30"] { border-color: rgb(212 175 55 / 30%) !important; }
+[data-theme="chimera"] [class~="border-[#009090]/40"] { border-color: rgb(212 175 55 / 40%) !important; }
+[data-theme="chimera"] [class~="text-[#005a8a]"] { color: rgb(240 210 122) !important; }
+[data-theme="chimera"] [class~="text-[#006a9a]"] { color: rgb(240 210 122) !important; }
+[data-theme="chimera"] [class~="bg-[#0055aa]"] { background-color: rgb(92 74 20) !important; }
+[data-theme="chimera"] [class~="bg-[#0077cc]"] { background-color: rgb(92 74 20) !important; }
+[data-theme="chimera"] [class~="hover:bg-[#0066bb]"]:hover { background-color: rgb(92 74 20) !important; }
+[data-theme="chimera"] [class~="border-[#70aaaa]"] { border-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="border-[#70aaaa]/40"] { border-color: rgb(64 53 26 / 40%) !important; }
+[data-theme="chimera"] [class~="border-[#80baba]"] { border-color: rgb(64 53 26) !important; }
+[data-theme="chimera"] [class~="text-[#993030]"] { color: oklch(70.4% 0.191 22.216) !important; }
+[data-theme="chimera"] [class~="bg-[#aa3030]/80"] { background-color: oklch(50.5% 0.213 27.518) !important; }
+[data-theme="chimera"] [class~="text-[#8a6500]"] { color: rgb(240 210 122) !important; }
+
+/* The round's progress bar: bright gold, not the dark gold of the buttons,
+   which would vanish against its track. */
+[data-theme="chimera"] [class~="h-full"][class~="bg-[#008080]"] { background-color: #d4af37 !important; }

@@ -540,7 +540,7 @@ test("the home screen is a tree every trainer is in, once", () => {
   const rnf = folders.find((f) => f.id === "relational-nback");
   assert.ok(rnf, "the Relational N-back folder is gone");
   assert.deepStrictEqual(CATALOG.trainers.filter((t) => t.folder === "relational-nback").map((t) => t.id).sort(),
-    ["relational", "rnb"]);
+    ["relational", "rit", "rnb"]);
 });
 
 test("the page loads the catalog before the shell", () => {

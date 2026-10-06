@@ -1,0 +1,10 @@
+{
+  "id": "rit",
+  "name": "Relational Integration",
+  "what": "Compare two differences across a stream of numbers, n back",
+  "categories": ["rrt", "nback"],
+  "unit": "n",
+  "license": "All rights reserved by Dark, shipped with permission (licence to be confirmed)",
+  "maintainer": "Dark",
+  "build": null
+}

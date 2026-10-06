@@ -1,0 +1,236 @@
+{
+  "format": "chimera-record",
+  "version": 1,
+  "app": "rit",
+  "units": {
+    "level": "n"
+  },
+  "sessions": [
+    {
+      "id": "1791278894814-koz8",
+      "start": 1791278894814,
+      "end": 1791278906135,
+      "activeSeconds": 10,
+      "completed": true,
+      "mode": "arabic",
+      "modalities": [
+        "visual",
+        "audio"
+      ],
+      "level": 2,
+      "levelEnd": 2,
+      "trials": 8,
+      "correct": 5,
+      "accuracy": 0.625,
+      "hits": 3,
+      "misses": 2,
+      "falseAlarms": 1,
+      "correctRejections": 2,
+      "rtMeanMs": 75,
+      "rtMedianMs": 67,
+      "input": "keyboard",
+      "settings": {
+        "displayMs": 400,
+        "blankMs": 800,
+        "range": [
+          1,
+          5
+        ],
+        "numberDisplayType": "arabic",
+        "valueComplexity": "basic",
+        "complexityFrequency": 50,
+        "adaptive": true,
+        "sound": true
+      },
+      "extra": {
+        "displayMs": 400,
+        "blankMs": 800,
+        "rangeMax": 5,
+        "badSleepMode": false
+      },
+      "trialLog": [
+        {
+          "i": 3,
+          "t": 1303,
+          "stimulus": 4,
+          "target": true,
+          "response": "match",
+          "correct": true,
+          "rtMs": 12,
+          "extra": {
+            "deltaA": 1,
+            "deltaB": 1,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 4,
+          "t": 2505,
+          "stimulus": 2,
+          "target": true,
+          "response": "different",
+          "correct": false,
+          "rtMs": 69,
+          "extra": {
+            "deltaA": 1,
+            "deltaB": 1,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 5,
+          "t": 3708,
+          "stimulus": 3,
+          "target": true,
+          "response": "match",
+          "correct": true,
+          "rtMs": 10,
+          "extra": {
+            "deltaA": 1,
+            "deltaB": 1,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 6,
+          "t": 5312,
+          "stimulus": 1,
+          "target": true,
+          "response": "different",
+          "correct": false,
+          "rtMs": 131,
+          "extra": {
+            "deltaA": 1,
+            "deltaB": 1,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 7,
+          "t": 6513,
+          "stimulus": 5,
+          "target": false,
+          "response": "match",
+          "correct": false,
+          "rtMs": 63,
+          "extra": {
+            "deltaA": 2,
+            "deltaB": 1,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 8,
+          "t": 7715,
+          "stimulus": 5,
+          "target": false,
+          "response": "different",
+          "correct": true,
+          "rtMs": 126,
+          "extra": {
+            "deltaA": 4,
+            "deltaB": 2,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 9,
+          "t": 8918,
+          "stimulus": 1,
+          "target": true,
+          "response": "match",
+          "correct": true,
+          "rtMs": 64,
+          "extra": {
+            "deltaA": 4,
+            "deltaB": 4,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        },
+        {
+          "i": 10,
+          "t": 10120,
+          "stimulus": 3,
+          "target": false,
+          "response": "different",
+          "correct": true,
+          "rtMs": 122,
+          "extra": {
+            "deltaA": 2,
+            "deltaB": 4,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "1791278906760-iol0",
+      "start": 1791278906760,
+      "end": 1791278908828,
+      "activeSeconds": 2,
+      "completed": false,
+      "mode": "arabic",
+      "modalities": [
+        "visual",
+        "audio"
+      ],
+      "level": 2,
+      "levelEnd": 2,
+      "trials": 1,
+      "correct": 1,
+      "accuracy": 1,
+      "hits": 1,
+      "misses": 0,
+      "falseAlarms": 0,
+      "correctRejections": 0,
+      "rtMeanMs": 433,
+      "rtMedianMs": 433,
+      "input": "mouse",
+      "settings": {
+        "displayMs": 400,
+        "blankMs": 800,
+        "range": [
+          1,
+          5
+        ],
+        "numberDisplayType": "arabic",
+        "valueComplexity": "basic",
+        "complexityFrequency": 50,
+        "adaptive": true,
+        "sound": true
+      },
+      "extra": {
+        "displayMs": 400,
+        "blankMs": 800,
+        "rangeMax": 5,
+        "badSleepMode": false
+      },
+      "trialLog": [
+        {
+          "i": 3,
+          "t": 1301,
+          "stimulus": 4,
+          "target": true,
+          "response": "match",
+          "correct": true,
+          "rtMs": 433,
+          "extra": {
+            "deltaA": 2,
+            "deltaB": 2,
+            "shownAs": "arabic",
+            "expression": null
+          }
+        }
+      ]
+    }
+  ],
+  "appVersion": "v37"
+}
