@@ -17,6 +17,8 @@
  *   compass  ℤ₈   a heading, in 45° steps
  *   square   D₄   a tile's orientation; order matters ("turned, then mirrored"
  *                 is not "mirrored, then turned")
+ *   pose     ℤ² ⋊ D₄  a place, a facing and a handedness together; every
+ *                 relation is a walk from the other object, in its frame
  *
  * ── Nested terms ──
  *
@@ -35,6 +37,8 @@
  * ── The tasks ──
  *
  *   question   Several premises, then "Is X r of Y?" Yes / No / Can't tell.
+ *              From level 21 some premises are either/or, and the answer is
+ *              what every reading that holds together agrees on.
  *              The premises form a tree over the objects; the question's two
  *              objects are linked through a path of premises, whose relations
  *              must be combined (path length = integration depth). "Can't
@@ -299,17 +303,100 @@
     metric: null,
   };
 
-  var GROUPS = { space: space, numbers: numbers, notes: notes, days: days, compass: compass, square: square };
+  /* Poses: a place, a facing and a handedness together, ℤ² ⋊ D₄ (the grid's
+     own symmetries). An element [x, y, r, f] is a pose seen from a reference
+     pose: x steps to its right, y steps ahead, facing turned r quarters right
+     of it, mirrored if f. Every relation is read from the other object's
+     point of view, so a premise is a little walk: "Red is Blue stepped two
+     ahead and one left, then turned a quarter right".
+
+     Composition is the walk: op(a, b) is b, then a taken from where b ends
+     (in b's frame), so that rel(X, Y) = X · Y⁻¹ is X seen from Y, and a
+     nested term "the pose c of X" is c taken from X. In code the walk reads
+     left to right: ^ v < > a step ahead, back, left, right; q Q h a turn;
+     m M d D a mirror. */
+  function d4apply(L, v) {
+    var x = L[1] ? -v[0] : v[0], y = v[1];
+    for (var i = 0; i < L[0]; i++) { var t = x; x = y; y = -t; }
+    return [x, y];
+  }
+  function poseSteps(x, y) {
+    var parts = [];
+    var n = function (k) { return k === 1 ? "one" : nw(k); };
+    if (y) parts.push(n(Math.abs(y)) + (y > 0 ? " ahead" : " back"));
+    if (x) parts.push(n(Math.abs(x)) + (x > 0 ? " right" : " left"));
+    return parts.length ? "stepped " + parts.join(" and ") : "";
+  }
+  function posePhrase(g) {
+    var steps = poseSteps(g[0], g[1]), turn = D4_NAMES[g[2] + "," + g[3]] || "";
+    return steps && turn ? steps + " and " + turn : steps || turn;
+  }
+  var pose = {
+    name: "pose", label: "Poses", abelian: false, leftNesting: true,
+    op: function (a, b) {
+      var p = d4apply([b[2], b[3]], [a[0], a[1]]), L = square.op([b[2], b[3]], [a[2], a[3]]);
+      return [b[0] + p[0], b[1] + p[1], L[0], L[1]];
+    },
+    inv: function (a) {
+      var L = square.inv([a[2], a[3]]), p = d4apply(L, [a[0], a[1]]);
+      return [-p[0], -p[1], L[0], L[1]];
+    },
+    id: function () { return [0, 0, 0, 0]; },
+    eq: function (a, b) { return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3]; },
+    key: function (a) { return a.join(","); },
+    random: function (rng, o) { var r = 2 + o.maxDist; return [int(rng, -r, r), int(rng, -r, r), int(rng, 0, 3), o.twoPart ? int(rng, 0, 1) : 0]; },
+    /* Sayable moves: steps in one direction; a turn (a mirror with
+       compounds); with compounds a short step and a turn together; with
+       two-part moves, steps in two directions. */
+    offsets: function (o) {
+      var out = [], k, turns = [[1, 0], [2, 0], [3, 0]].concat(o.compounds ? [[0, 1]] : []);
+      for (k = 1; k <= o.maxDist; k++) out.push([0, k, 0, 0], [0, -k, 0, 0], [k, 0, 0, 0], [-k, 0, 0, 0]);
+      turns.forEach(function (t) { out.push([0, 0, t[0], t[1]]); });
+      if (o.compounds) [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(function (s) {
+        [[1, 0], [3, 0]].forEach(function (t) { out.push([s[0], s[1], t[0], t[1]]); });
+      });
+      if (o.twoPart) [1, -1].forEach(function (x) { [1, -1].forEach(function (y) { out.push([x, y, 0, 0]); }); });
+      return out;
+    },
+    say: function (g, o) {
+      var x = g[0], y = g[1], moved = x || y, turned = g[2] || g[3];
+      if (!moved && !turned) return null;
+      if (Math.abs(x) > o.maxDist || Math.abs(y) > o.maxDist) return null;
+      if (x && y && !o.twoPart) return null;
+      if (g[3] && !o.compounds) return null;
+      if (g[3] && g[2] % 2 && !o.twoPart) return null;          /* the diagonal flips */
+      if (moved && turned && !o.compounds) return null;
+      return posePhrase(g);
+    },
+    sayAny: function (g) { return posePhrase(g) || "in the same pose"; },
+    base: function (name) { return name; },
+    wrap: function (off, inner, innerIsBase) { return inner + (innerIsBase ? " " : ", then ") + off; },
+    premise: function (L, rel, R, rIsBase) { return L + " is " + pose.wrap(rel, R, rIsBase); },
+    same: function (L, R) { return L + " is exactly where " + R + " is, facing the same way"; },
+    question: function (X, rel, Y) { return "Is " + X + " " + Y + " " + rel + "?"; },
+    markWord: "the pose",
+    unit: [0, 1, 0, 0],
+    symmetries: [
+      { id: "inverse", label: "seen from the other side", f: function (g) { return pose.inv(g); } },
+      { id: "conjugate", label: "left and right swapped", f: function (g) { var M = [0, 0, 0, 1]; return pose.op(pose.op(M, g), M); } },
+      { id: "noTurn", label: "the turn left out", f: function (g) { return [g[0], g[1], 0, 0]; } },
+      { id: "turnFirst", label: "turned before stepping", f: function (g) { var p = d4apply([g[2], g[3]], [g[0], g[1]]); return [p[0], p[1], g[2], g[3]]; } },
+    ],
+    metric: function (g, which) { return which === "king" ? Math.max(Math.abs(g[0]), Math.abs(g[1])) : Math.abs(g[0]) + Math.abs(g[1]); },
+  };
+
+  var GROUPS = { space: space, numbers: numbers, notes: notes, days: days, compass: compass, square: square, pose: pose };
 
   /* ------------------------------------------------------------------ *
    * Difficulty                                                           *
    * ------------------------------------------------------------------ */
 
-  /** Level 1..20 → what a description may contain. */
+  /** Level 1..30 → what a description may contain. Levels 21 to 30 are
+      level 20 plus either/or premises (and loops that can settle them). */
   function difficulty(level, task) {
-    var L = Math.max(1, Math.min(20, Math.round(level)));
+    var L30 = Math.max(1, Math.min(30, Math.round(level))), L = Math.min(20, L30);
     var d = {
-      level: L,
+      level: L30,
       objects: Math.min(6, 3 + Math.floor((L - 1) / 5)),          /* 3 … 6 */
       depth: L <= 2 ? 0 : L <= 6 ? 1 : L <= 12 ? 2 : 3,            /* nesting per side */
       maxDist: L <= 3 ? 1 : L <= 9 ? 2 : 3,
@@ -318,7 +405,9 @@
       bothSides: L >= 4,                                           /* offsets on both sides */
       nestShare: L <= 2 ? 0 : Math.min(0.9, 0.35 + L * 0.03),     /* share of premises nested */
       perspectiveShare: L >= 3 ? 0.35 : 0,
-      n: 1 + Math.floor((L - 1) / 5),                              /* n-back depth 1 … 4 */
+      n: Math.min(5, 1 + Math.floor((L30 - 1) / 5)),               /* n-back depth 1 … 5 */
+      either: L30 <= 20 ? 0 : 1 + Math.floor((L30 - 21) / 3),     /* either/or premises: 1 … 4 */
+      loops: L30 <= 20 ? 0 : L30 <= 25 ? 1 : 2,                   /* extra links that may settle them */
     };
     if (task === "nback") d.objects = L < 8 ? 3 : 4;
     return d;
@@ -444,9 +533,12 @@
         return;
       }
       var L = term(p.X, p.a, useMarks), R = term(p.Y, p.b, useMarks);
-      var sentence;
-      if (G.eq(p.r, G.id())) sentence = G.same(L, R);
-      else sentence = G.premise(L, G.say(p.r, o) || G.sayAny(p.r), R, !p.b.length || (useMarks && p.b.length));
+      var sentence, sayR = function (r) { return G.say(r, o) || G.sayAny(r); };
+      if (p.r2) {
+        var alt = p.flip ? [p.r2, p.r] : [p.r, p.r2];
+        sentence = G.premise(L, "either " + sayR(alt[0]) + " or " + sayR(alt[1]), R, !p.b.length || (useMarks && p.b.length));
+      } else if (G.eq(p.r, G.id())) sentence = G.same(L, R);
+      else sentence = G.premise(L, sayR(p.r), R, !p.b.length || (useMarks && p.b.length));
       lines.push(sentence.charAt(0).toUpperCase() + sentence.slice(1) + ".");
     });
     return lines;
@@ -598,6 +690,149 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Either/or premises                                                   *
+   * ------------------------------------------------------------------ */
+  /*
+   * "Red is either one step east or one step north of Blue": a premise with
+   * two readings, the true one and a decoy (r2, meaning v2), shown in either
+   * order. What the premises then say about X and Y is everything that
+   * follows in some reading where every loop closes. A loop can settle an
+   * either/or: only one of its readings fits the rest.
+   */
+  function copyPremise(p) { var q = {}; for (var k in p) q[k] = p[k]; return q; }
+  /** The same premise, made either/or with a decoy, or null. */
+  function eitherOf(G, rng, o, p) {
+    if (p.kind === "perspective") return null;
+    var A = chainValue(G, p.a), B = chainValue(G, p.b), cands = [];
+    if (G.unit) cands.push(G.op(G.unit, p.v), G.op(G.inv(G.unit), p.v));
+    (G.symmetries || []).forEach(function (sym) { cands.push(sym.f(p.v)); });
+    G.offsets(o).forEach(function (c) { cands.push(G.op(c, p.v)); });
+    cands = shuffle(rng, cands);
+    if (G.eq(p.r, G.id())) return null;
+    for (var i = 0; i < cands.length; i++) {
+      var v2 = cands[i];
+      if (G.eq(v2, p.v)) continue;
+      var r2 = G.op(G.op(A, v2), G.inv(B));
+      if (G.eq(r2, G.id()) || G.eq(r2, p.r) || !G.say(r2, o)) continue;
+      var q = copyPremise(p);
+      q.r2 = r2; q.v2 = v2; q.flip = rng.next() < 0.5;
+      return q;
+    }
+    return null;
+  }
+  /** Every exact reading of a list of premises: one per choice in each either/or. */
+  function readings(premises) {
+    var out = [[]];
+    premises.forEach(function (p) {
+      var opts = [p];
+      if (p.r2) { var d = copyPremise(p); d.r = p.r2; d.v = p.v2; delete d.r2; delete d.v2; opts = [p, d]; }
+      var next = [];
+      out.forEach(function (prefix) { opts.forEach(function (q) { next.push(prefix.concat([q])); }); });
+      out = next;
+    });
+    return out;
+  }
+  /** What the premises allow X·Y⁻¹ to be: one entry per reading that holds
+      together (null where X and Y are not linked in it). */
+  function outcomes(G, premises, names, X, Y) {
+    return readings(premises).filter(function (ps) { return consistent(G, ps, names); })
+      .map(function (ps) { return solve(G, ps, X, Y); });
+  }
+  /** "yes" (must be), "no" (can't be) or "cant" (not settled) for asked. */
+  function judge(G, premises, names, X, Y, asked) {
+    var outs = outcomes(G, premises, names, X, Y);
+    if (!outs.length) return null;
+    if (outs.some(function (v) { return v === null; })) return "cant";
+    var hits = outs.filter(function (v) { return G.eq(v, asked); }).length;
+    return hits === outs.length ? "yes" : hits ? "cant" : "no";
+  }
+  function distinct(G, vs) {
+    var out = [];
+    vs.forEach(function (v) { if (v !== null && !out.some(function (u) { return G.eq(u, v); })) out.push(v); });
+    return out;
+  }
+
+  /**
+   * A question with either/or premises (levels 21 to 30). The answer is
+   * whatever holds in every reading that fits: "yes" when every reading gives
+   * the asked relation (the either/or is off the path, or a loop settles it),
+   * "cant" when some readings do and some don't, "no" when none does.
+   */
+  function eitherQuestion(G, rng, o) {
+    return attempt(function () {
+      var unlinkedCase = rng.next() < 0.15;
+      var w = treeWorld(G, rng, o, shuffle(rng, NAMES).slice(0, Math.max(4, o.objects))), edges = w.edges, extra = [];
+      var linked = function (a, b) { return edges.concat(extra).some(function (e) { return (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a); }); };
+      for (var k = 0; k < o.loops; k++) {
+        if (rng.next() < 0.3) continue;
+        var pairs = [];
+        w.names.forEach(function (a) { w.names.forEach(function (b) { if (a < b && !linked(a, b)) pairs.push([a, b]); }); });
+        if (pairs.length) extra.push(pick(rng, pairs));
+      }
+      var premises = premisesFor(G, rng, o, w, edges).concat(premisesFor(G, rng, o, w, extra, true));
+      if (premises.some(function (p) { return !p; })) return null;
+      var best = null;
+      w.names.forEach(function (a) { w.names.forEach(function (b) {
+        if (a === b) return;
+        var d = pathLength(edges, a, b);
+        if (!best || d > best.d || (d === best.d && rng.next() < 0.5)) best = { a: a, b: b, d: d };
+      }); });
+      var X = best.a, Y = best.b, truth = rel(G, w, X, Y);
+      /* Make some premises either/or, those on the X–Y path first. */
+      var onPath = function (i) {
+        if (i >= edges.length) return false;
+        return pathLength(edges.filter(function (_, j) { return j !== i; }), X, Y) === null;
+      };
+      var order = shuffle(rng, premises.map(function (_, i) { return i; }));
+      order.sort(function (i, j) { return (onPath(j) ? 1 : 0) - (onPath(i) ? 1 : 0); });
+      if (rng.next() < 0.35) order = shuffle(rng, order);
+      var made = 0;
+      for (var t = 0; t < order.length && made < o.either; t++) {
+        var e = eitherOf(G, rng, o, premises[order[t]]);
+        if (e) { premises[order[t]] = e; made++; }
+      }
+      if (!made) return null;
+      var shown = premises;
+      if (unlinkedCase) {
+        var all = edges.concat(extra);
+        var cut = premises.map(function (_, i) { return i; }).filter(function (i) {
+          if (premises[i].r2) return false;
+          var rest = all.filter(function (_, j) { return j !== i; });
+          if (pathLength(rest, X, Y) !== null) return false;
+          var sideX = w.names.filter(function (n) { return pathLength(rest, X, n) !== null; }).length;
+          return sideX >= 2 && w.names.length - sideX >= 2;
+        });
+        if (!cut.length) return null;
+        var drop = pick(rng, cut);
+        shown = premises.filter(function (_, j) { return j !== drop; });
+      }
+      var outs = outcomes(G, shown, w.names, X, Y);
+      var unlinked = outs.some(function (v) { return v === null; }), S = distinct(G, outs);
+      var roll = rng.next(), answer, asked, lureKind = null;
+      if (unlinked || (S.length > 1 && roll < 0.45)) {
+        answer = "cant";
+        var ls = unlinked ? lures(G, o, w, premises, X, Y) : [];
+        asked = ls.length && rng.next() < 0.4 ? pick(rng, ls).v : pick(rng, S.length ? S : [truth]);
+      } else if (roll < 0.7 && S.length === 1) {
+        answer = "yes"; asked = truth;
+      } else {
+        var lsN = lures(G, o, w, shown, X, Y).filter(function (l) { return !S.some(function (v) { return G.eq(v, l.v); }); });
+        if (!lsN.length) return null;
+        var l = pick(rng, lsN);
+        answer = "no"; asked = l.v; lureKind = l.kind;
+      }
+      if (judge(G, shown, w.names, X, Y, asked) !== answer) return null;
+      var phrase = G.say(asked, o) || (G.sayAny && G.sayAny(asked));
+      if (!phrase) return null;
+      return {
+        task: "question", material: G.name, world: w, premises: shuffle(rng, shown), X: X, Y: Y,
+        truth: truth, asked: asked, answer: answer, lure: lureKind, either: true, possible: S, unlinked: unlinked,
+        pathLength: best.d, question: G.question(G.base(X), phrase, G.base(Y)),
+      };
+    }, 400);
+  }
+
+  /* ------------------------------------------------------------------ *
    * Tasks                                                                *
    * ------------------------------------------------------------------ */
 
@@ -609,6 +844,7 @@
    * About 40% yes, 40% no (a lure where one exists), 20% can't tell.
    */
   function questionTrial(G, rng, o) {
+    if (o.either) return eitherQuestion(G, rng, o);
     return attempt(function () {
       var cantTell = rng.next() < 0.2;
       var w = treeWorld(G, rng, o, shuffle(rng, NAMES).slice(0, cantTell ? Math.max(4, o.objects) : o.objects)), edges = w.edges;
@@ -691,6 +927,19 @@
         premises[i] = wrong; altered = i;
         if (consistent(G, premises, w.names)) return null;   /* the change must break a loop */
       } else if (!consistent(G, premises, w.names)) return null;
+      /* Levels 21 to 30: some premises either/or. Possible now means some
+         choice of readings makes every loop close. */
+      if (o.either) {
+        var made = 0, idx = shuffle(rng, premises.map(function (_, j) { return j; }));
+        for (var t = 0; t < idx.length && made < o.either; t++) {
+          if (idx[t] === altered) continue;
+          var e = eitherOf(G, rng, o, premises[idx[t]]);
+          if (e) { premises[idx[t]] = e; made++; }
+        }
+        if (!made) return null;
+        var fits = readings(premises).some(function (ps) { return consistent(G, ps, w.names); });
+        if (fits !== possible) return null;
+      }
       return { task: "possible", material: G.name, world: w, premises: shuffle(rng, premises), answer: possible ? "possible" : "impossible", altered: altered };
     });
   }
@@ -698,8 +947,9 @@
   /** How many steps apart? Space (Manhattan or king's moves) and numbers. */
   function howfarTrial(G, rng, o, metric) {
     if (!G.metric) return null;
+    var exact = copyPremise(o); exact.either = 0;      /* a distance needs an exact answer */
     return attempt(function () {
-      var q = questionTrial(G, rng, o);
+      var q = questionTrial(G, rng, exact);
       if (!q || q.answer === "cant") return null;
       var d = G.metric(q.truth, metric);
       if (!d) return null;
@@ -709,7 +959,7 @@
       if (options.length < 3) return null;
       return { task: "howfar", material: G.name, world: q.world, premises: q.premises, X: q.X, Y: q.Y, truth: q.truth,
         answer: String(d), options: shuffle(rng, options).map(String), metric: metric,
-        question: G === space
+        question: G === space || G === pose
           ? "How many " + (metric === "king" ? "king's moves (diagonal steps count as one)" : "steps along the grid (no diagonals)") + " apart are " + q.X + " and " + q.Y + "?"
           : "How far apart are " + q.X + " and " + q.Y + "?" };
     });
@@ -795,6 +1045,10 @@
    *            right, Q a quarter left, h half way, m mirror left-right,
    *            M mirror top-bottom, d the rising diagonal, D the falling one.
    *            "R=Bmq": Red is Blue mirrored, then turned a quarter right.
+   *   pose     a walk, in the walker's frame: ^ v < > a step ahead, back,
+   *            left, right, and the square's letters to turn or mirror.
+   *            "R=B^^<q": from Blue, two ahead, one left, turn right.
+   *   either/or  the two readings of r in brackets: "R=B4(6|9)".
    */
   var LETTER = { Red: "R", Blue: "B", Green: "G", Gold: "O", Violet: "V", White: "W" };
   var KEYPAD = { "0,1": "8", "1,1": "9", "1,0": "6", "1,-1": "3", "0,-1": "2", "-1,-1": "1", "-1,0": "4", "-1,1": "7" };
@@ -813,6 +1067,11 @@
       return { t: out, s: out.split("").map(function (c) { return DIGIT[c]; }).join(" ") };
     }
     if (G === square) { var l = D4_LETTER[g[0] + "," + g[1]]; return { t: l, s: l ? D4_SPOKEN[l] : "" }; }
+    if (G === pose) {
+      var w = "", rep = function (c, k) { return new Array(Math.abs(k) + 1).join(c); };
+      w += rep(g[1] > 0 ? "^" : "v", g[1]) + rep(g[0] > 0 ? ">" : "<", g[0]) + D4_LETTER[g[2] + "," + g[3]];
+      return { t: w, s: w };
+    }
     var n = MODS[G.name], v = g;
     if (n) { v = mod(v, n); if (v > n / 2) v -= n; }
     if (!v) return { t: "", s: "" };
@@ -853,7 +1112,7 @@
    */
   var EAR_OBJ = { R: "Red", B: "Blue", G: "Green", O: "Gold", V: "Violet", W: "White" };
   var EAR_MARK = ["Fox", "Jar", "Key", "Lamp", "Moon", "Nest", "Oak", "Pond", "Rope", "Sun", "Tent", "Cup", "Drum", "Hat", "Kite"];
-  var EAR_OP = { q: "right", Q: "left", h: "half", m: "mirror", M: "flip", d: "rise", D: "fall" };
+  var EAR_OP = { q: "clock", Q: "counter", h: "half", m: "mirror", M: "flip", d: "rise", D: "fall" };
   var EAR_DIR = { "^": "front", v: "back", "<": "left", ">": "right" };
   var EAR_RUN = ["", "", "double", "triple", "quad"];
   function earRuns(words) {
@@ -866,18 +1125,25 @@
     }
     return out.join(" ");
   }
-  /** One side of a premise, "W1166" or "PP99" or "O+1−5", as spoken. */
+  /** Moves without their object: "1166", "+1−5", "^^<q", as spoken. */
+  function earMoves(rest) {
+    if (!rest) return "";
+    if (/^[+−]/.test(rest)) return rest.match(/[+−]\d+/g).map(function (x) { return (x[0] === "+" ? "up " : "down ") + x.slice(1); }).join(" ");
+    if (/^\d/.test(rest)) return earRuns(rest.split("").map(function (c) { return DIGIT[c]; }));
+    return earRuns(rest.split("").map(function (c) { return EAR_DIR[c] || EAR_OP[c]; }));
+  }
+  /** One side of a premise, "W1166" or "PP99" or "O+1−5" or "B4(6|9)", as spoken. */
   function earTerm(t) {
     var m = t.match(/^([RBGOVW]|([PSTUXYZACEFJKLN])\2*)(.*)$/);
     if (!m) throw new Error("not a term: " + t);
     var head = EAR_OBJ[m[1]] || (new Array(m[1].length).join("big ") + EAR_MARK[MARKS.indexOf(m[1][0])]);
-    var rest = m[3], words = [];
+    var rest = m[3];
     var pm = rest.match(/^@(\d)(.*)$/);
     if (pm) return head + " face " + DIGIT[pm[1]] + (pm[2] ? " " + earRuns(pm[2].split("").map(function (c) { return EAR_DIR[c]; })) : "");
-    if (/^[+−]/.test(rest)) return head + " " + rest.match(/[+−]\d+/g).map(function (x) { return (x[0] === "+" ? "up " : "down ") + x.slice(1); }).join(" ");
-    if (/^\d/.test(rest)) words = rest.split("").map(function (c) { return DIGIT[c]; });
-    else if (rest) words = rest.split("").map(function (c) { return EAR_OP[c]; });
-    return words.length ? head + " " + earRuns(words) : head;
+    var em = rest.match(/^(.*)\((.*)\|(.*)\)$/);
+    if (em) return [head, earMoves(em[1]), "either", earMoves(em[2]), "or", earMoves(em[3])].filter(Boolean).join(" ");
+    var said = earMoves(rest);
+    return said ? head + " " + said : head;
   }
   /** A line of compact code, spoken. */
   function ear(line) {
@@ -926,6 +1192,11 @@
         return;
       }
       var L = term(p.X, p.a, useMarks), R = term(p.Y, p.b, useMarks);
+      if (p.r2) {
+        var alt = p.flip ? [p.r2, p.r] : [p.r, p.r2];
+        out.push(join([L, { t: "=", s: "is" }, R, { t: "(" + code(G, alt[0]) + "|" + code(G, alt[1]) + ")", s: "" }]));
+        return;
+      }
       out.push(join([L, { t: "=", s: "is" }, R, codeTok(G, p.r)]));
     });
     var lines = out.map(function (x) { return x.t; });
@@ -940,7 +1211,7 @@
     if (t.task === "question") { var j = join([obj(t.X), { t: "=", s: "is" }, obj(t.Y), codeTok(G, t.asked)]); q = j.t + "?"; sp = j.s + "?"; }
     else if (t.task === "possible") { q = "∃?"; sp = "possible?"; }
     else if (t.task === "howfar") {
-      var mk = G === space ? (metric === "king" ? "∞" : "₁") : "";
+      var mk = G === space || G === pose ? (metric === "king" ? "∞" : "₁") : "";
       q = "|" + LETTER[t.X] + "−" + LETTER[t.Y] + "|" + mk + "?";
       sp = "distance " + t.X + " " + t.Y + (G === space ? (metric === "king" ? ", king" : ", grid") : "") + "?";
     }
@@ -952,6 +1223,7 @@
     render: render, meaning: meaning, solve: solve, consistent: consistent, lures: lures, rel: rel,
     chainValue: chainValue, toFrame: toFrame, fromFrame: fromFrame,
     questionTrial: questionTrial, possibleTrial: possibleTrial, howfarTrial: howfarTrial, nbackRound: nbackRound,
+    readings: readings, outcomes: outcomes, judge: judge, eitherOf: eitherOf,
     code: code, ear: ear, EAR_MARK: EAR_MARK, renderCompact: renderCompact, cMeaning: cMeaning, cQuestion: cQuestion, LETTER: LETTER, MARKS: MARKS,
   };
 });

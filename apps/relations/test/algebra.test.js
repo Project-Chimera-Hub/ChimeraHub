@@ -24,11 +24,20 @@ for (const [name, G] of Object.entries(A.GROUPS)) {
 }
 { const S = A.GROUPS.square;   /* order matters in D4 */
   ok(!S.eq(S.op([1, 0], [0, 1]), S.op([0, 1], [1, 0])), "square: turn∘mirror ≠ mirror∘turn"); }
+{ /* Poses walk: from Blue facing north, two ahead then a right turn is (0, 2)
+     facing east; one more step ahead from there is (1, 2). Seen from Blue
+     facing east, the same walk is the same relation. */
+  const P = A.GROUPS.pose, m = [0, 2, 1, 0];
+  ok(P.eq(P.op(m, [0, 0, 0, 0]), [0, 2, 1, 0]), "pose: the walk from the origin");
+  ok(P.eq(P.op([0, 1, 0, 0], [0, 2, 1, 0]), [1, 2, 1, 0]), "pose: a step ahead after turning right goes east");
+  ok(P.eq(P.op(P.op(m, [3, 1, 1, 0]), P.inv([3, 1, 1, 0])), m), "pose: a relation is the same from any frame");
+  ok(P.eq(P.op([0, 1, 0, 0], [0, 0, 0, 1]), [0, 1, 0, 1]) && P.eq(P.op([1, 0, 0, 0], [0, 0, 0, 1]), [-1, 0, 0, 1]), "pose: a mirrored frame swaps left and right only");
+  ok(!P.eq(P.op([0, 1, 0, 0], [0, 0, 1, 0]), P.op([0, 0, 1, 0], [0, 1, 0, 0])), "pose: step-then-turn ≠ turn-then-step"); }
 
 const tally = {};
 for (const [name, G] of Object.entries(A.GROUPS)) {
-  for (let level = 1; level <= 20; level++) {
-    for (let seed = 0; seed < 40; seed++) {
+  for (let level = 1; level <= 30; level++) {
+    for (let seed = 0; seed < (level > 20 ? 25 : 40); seed++) {
       const rng = A.Rng(level * 1000 + seed + name.length * 77);
       const o = A.difficulty(level);
       const style = ["inline", "marks", "mixed"][seed % 3];
@@ -40,7 +49,27 @@ for (const [name, G] of Object.entries(A.GROUPS)) {
         ok(G.eq(v, A.rel(G, q.world, p.X, p.Y)), `${name} L${level}: premise ${p.kind} solves to the truth`);
       }
       const solved = A.solve(G, q.premises, q.X, q.Y);
-      if (q.answer === "cant") ok(solved === null, `${name}: can't tell means unlinked`);
+      if (q.either) {
+        /* Either/or: brute force over every reading, independently of the engine's judge. */
+        const eps = q.premises.filter((p) => p.r2);
+        ok(eps.length >= 1 && eps.length <= o.either, `${name} L${level}: either/or premises within the level`);
+        for (const p of eps) {
+          const d = Object.assign({}, p, { r: p.r2 }); delete d.r2;
+          ok(!G.eq(A.solve(G, [d], p.X, p.Y), A.rel(G, q.world, p.X, p.Y)), `${name}: the decoy reading is false`);
+        }
+        let reads = [[]];
+        for (const p of q.premises) {
+          const alts = p.r2 ? [p, Object.assign({}, p, { r: p.r2, r2: undefined })] : [p];
+          reads = reads.flatMap((pre) => alts.map((x) => pre.concat([x])));
+        }
+        const fit = reads.filter((ps) => A.consistent(G, ps, q.world.names)).map((ps) => A.solve(G, ps, q.X, q.Y));
+        ok(fit.length >= 1, `${name}: the true reading fits`);
+        const hits = fit.filter((v) => v !== null && G.eq(v, q.asked)).length;
+        const want = fit.some((v) => v === null) ? "cant" : hits === fit.length ? "yes" : hits ? "cant" : "no";
+        ok(want === q.answer, `${name} L${level}: either/or answer by brute force (${want} vs ${q.answer})`);
+        if (q.answer === "yes") ok(G.eq(q.asked, q.truth), `${name}: must-be is the truth`);
+        if (q.answer === "no") ok(!G.eq(q.asked, q.truth), `${name}: can't-be is not the truth`);
+      } else if (q.answer === "cant") ok(solved === null, `${name}: can't tell means unlinked`);
       else {
         ok(solved !== null && G.eq(solved, q.truth), `${name}: shown premises determine the truth`);
         ok((q.answer === "yes") === G.eq(q.asked, q.truth), `${name}: yes iff asked is the truth`);
@@ -48,12 +77,13 @@ for (const [name, G] of Object.entries(A.GROUPS)) {
       const lines = A.render(G, o, q.premises, style, rng);
       ok(lines.length >= q.premises.length && lines.every((l) => !BAD.test(l)), `${name}: sentences are clean: ${lines.join(" ")}`);
       ok(!BAD.test(q.question), `${name}: question clean: ${q.question}`);
-      tally[name + ":" + q.answer] = (tally[name + ":" + q.answer] || 0) + 1;
+      tally[name + (q.either ? "/either:" : ":") + q.answer] = (tally[name + (q.either ? "/either:" : ":") + q.answer] || 0) + 1;
       if (q.lure) tally["lure:" + q.lure] = (tally["lure:" + q.lure] || 0) + 1;
 
       const pt = A.possibleTrial(G, rng, o);
       ok(pt, `${name} L${level}: a possible/impossible item was made`);
-      ok(A.consistent(G, pt.premises, pt.world.names) === (pt.answer === "possible"), `${name}: possible iff every loop closes`);
+      ok(A.readings(pt.premises).some((ps) => A.consistent(G, ps, pt.world.names)) === (pt.answer === "possible"), `${name}: possible iff some reading closes every loop`);
+      if (level > 20) ok(pt.premises.some((p) => p.r2), `${name} L${level}: possible? has an either/or`);
       ok(A.render(G, o, pt.premises, style, rng).every((l) => !BAD.test(l)), `${name}: possible sentences clean`);
 
       if (G.metric) {
@@ -96,19 +126,26 @@ function evalTerm(G, str, world, marks) {
       const h = { 8: 0, 6: 2, 2: 4, 4: 6 }[at[1]]; const w = A.fromFrame(f, h); return G.op(w, v); }
     for (const c of rest) v = G.op(KEY[c], v);
   } else if (G.name === "square") { for (const c of rest) v = G.op(D4[c], v); }
+  else if (G.name === "pose") {
+    const STEP = { "^": [0, 1, 0, 0], v: [0, -1, 0, 0], "<": [-1, 0, 0, 0], ">": [1, 0, 0, 0] };
+    for (const c of rest) v = G.op(STEP[c] || [0, 0].concat(D4[c]), v);
+  }
   else { for (const t of rest.match(/[+−]\d+/g) || []) v = G.op((t[0] === "+" ? 1 : -1) * +t.slice(1), v); }
   return v;
 }
-for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 20; level += 1) for (let seed = 0; seed < 15; seed++) {
+for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 30; level += 1) for (let seed = 0; seed < 15; seed++) {
   const rng = A.Rng(level * 7919 + seed), o = A.difficulty(level), style = ["inline", "marks", "mixed"][seed % 3];
   const q = A.questionTrial(G, rng, o), lines = A.renderCompact(G, o, q.premises, style, rng), marks = {};
   ok(lines.spoken.length === lines.length && lines.every((l) => !BAD.test(l)) && lines.spoken.every((l) => !BAD.test(l)), `${name}: compact text clean`);
   for (const line of lines) {
     if (/^mod /.test(line)) continue;
     const [L, R] = line.split("=");
-    const rv = evalTerm(G, R, q.world, marks);
-    if (!OBJ[L[0]] && /^([PSTUXYZACEFJKLN])\1*$/.test(L)) { marks[L] = rv; continue; }          /* a mark's definition */
-    ok(G.eq(evalTerm(G, L, q.world, marks), rv), `${name} L${level}: compact premise holds: ${line}`);
+    /* "B4(6|9)": either/or, exactly one reading true */
+    const em = /^(.*)\((.*)\|(.*)\)$/.exec(R);
+    const rvs = em ? [em[1] + em[2], em[1] + em[3]].map((t) => evalTerm(G, t, q.world, marks)) : [evalTerm(G, R, q.world, marks)];
+    if (!em && !OBJ[L[0]] && /^([PSTUXYZACEFJKLN])\1*$/.test(L) && !(L in marks)) { marks[L] = rvs[0]; continue; }   /* a mark's definition */
+    const lv = evalTerm(G, L, q.world, marks);
+    ok(rvs.filter((v) => G.eq(lv, v)).length === 1, `${name} L${level}: compact premise holds${em ? " in exactly one reading" : ""}: ${line}`);
   }
   const cq = String(A.cQuestion(q, G, "manhattan")).replace(/\?$/, "");
   const [qL, qR] = cq.split("=");
@@ -118,17 +155,24 @@ for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 2
 const DIGITW = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 const RUNW = { double: 2, triple: 3, quad: 4 };
 const OBJW = Object.fromEntries(Object.entries(OBJ).map(([k, v]) => [v, k]));
-const OPW = { right: "q", left: "Q", half: "h", mirror: "m", flip: "M", rise: "d", fall: "D" };
+const OPW = { clock: "q", counter: "Q", half: "h", mirror: "m", flip: "M", rise: "d", fall: "D" };
 const DIRW = { front: "^", back: "v", left: "<", right: ">" };
 function unRuns(words, map) {
   let out = "";
   for (let i = 0; i < words.length; i++) {
     let n = 1;
     if (RUNW[words[i]]) n = RUNW[words[i++]];
-    else if (words[i + 1] === "times") { n = DIGITW.indexOf(words[i]); i += 2; }
+    else if (words[i + 1] === "times") { n = DIGITW.includes(words[i]) ? DIGITW.indexOf(words[i]) : +words[i]; i += 2; }
     const c = map(words[i]); assert.ok(c != null, "unknown word " + words[i]); out += c.repeat(n);
   }
   return out;
+}
+function unMoves(rest) {
+  if (!rest.length) return "";
+  if (rest[0] === "up" || rest[0] === "down") { let o = ""; for (let i = 0; i < rest.length; i += 2) o += (rest[i] === "up" ? "+" : "−") + rest[i + 1]; return o; }
+  if (DIGITW.includes(rest[0]) && rest[1] !== "times" || RUNW[rest[0]] && DIGITW.includes(rest[1]) || rest[1] === "times" && DIGITW.includes(rest[2]))
+    return unRuns(rest, (x) => { const d = DIGITW.indexOf(x); return d > 0 ? String(d) : null; });
+  return unRuns(rest, (x) => OPW[x] || DIRW[x]);
 }
 function unTerm(t) {
   const w = t.split(" "); let big = 0;
@@ -138,10 +182,9 @@ function unTerm(t) {
   const rest = w.slice(1);
   if (!rest.length) return head;
   if (rest[0] === "face") return head + "@" + DIGITW.indexOf(rest[1]) + unRuns(rest.slice(2), (x) => DIRW[x]);
-  if (rest[0] === "up" || rest[0] === "down") { let o = ""; for (let i = 0; i < rest.length; i += 2) o += (rest[i] === "up" ? "+" : "−") + rest[i + 1]; return head + o; }
-  if (DIGITW.includes(rest[0]) && rest[1] !== "times" || RUNW[rest[0]] && DIGITW.includes(rest[1]) || rest[1] === "times" && DIGITW.includes(rest[2]))
-    return head + unRuns(rest, (x) => { const d = DIGITW.indexOf(x); return d > 0 ? String(d) : null; });
-  return head + unRuns(rest, (x) => OPW[x]);
+  const e = rest.indexOf("either");
+  if (e >= 0) { const o = rest.indexOf("or", e); return head + unMoves(rest.slice(0, e)) + "(" + unMoves(rest.slice(e + 1, o)) + "|" + unMoves(rest.slice(o + 1)) + ")"; }
+  return head + unMoves(rest);
 }
 function unEar(s) {
   let m;
@@ -159,7 +202,7 @@ function unEar(s) {
   const [L, R] = s.split(" is ");
   return unTerm(L) + "=" + unTerm(R);
 }
-for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 20; level += 1) for (let seed = 0; seed < 15; seed++) {
+for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 30; level += 1) for (let seed = 0; seed < 15; seed++) {
   const rng = A.Rng(level * 104729 + seed), o = A.difficulty(level), style = ["inline", "marks", "mixed"][seed % 3];
   const q = A.questionTrial(G, rng, o), lines = A.renderCompact(G, o, q.premises, style, rng);
   lines.forEach((l, i) => ok(unEar(lines.spoken[i]) === l, `${name} L${level}: spoken reads back: "${lines.spoken[i]}" -> ${l}`));
@@ -169,7 +212,7 @@ for (const [name, G] of Object.entries(A.GROUPS)) for (let level = 1; level <= 2
 }
 for (const l of ["≡3?", "≅2?", "⊢1/3", "∃?", "PP=R66666", "SSS=Pq", "W=B@4vvv>>>"]) ok(unEar(A.ear(l)) === l, "spoken reads back: " + l);
 /* No word of the ear code means two things in one material. */
-const vocab = [...Object.values(OBJ), ...A.EAR_MARK, "big", "is", "up", "down", "face", "double", "triple", "quad", "times", "mod"];
+const vocab = [...Object.values(OBJ), ...A.EAR_MARK, "big", "is", "up", "down", "face", "double", "triple", "quad", "times", "mod", "either", "or"];
 ok(new Set(vocab).size === vocab.length && !vocab.some((w) => DIGITW.includes(w) || OPW[w] || DIRW[w]), "ear words are distinct");
 
 console.log(checks + " checks passed");

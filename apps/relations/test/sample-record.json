@@ -7,10 +7,10 @@
  },
  "sessions": [
   {
-   "id": "1791306544528-8zalzt",
-   "start": 1791306544528,
-   "end": 1791306546139,
-   "activeSeconds": 643.8,
+   "id": "1791385952262-ed7r6p",
+   "start": 1791385952262,
+   "end": 1791385953821,
+   "activeSeconds": 623,
    "completed": true,
    "input": "mouse",
    "mode": "rounds",
@@ -18,17 +18,17 @@
     "visual"
    ],
    "level": 1,
-   "trials": 11,
-   "correct": 2,
-   "accuracy": 0.18181818181818182,
+   "trials": 10,
+   "correct": 3,
+   "accuracy": 0.3,
    "hits": 0,
-   "misses": 5,
-   "falseAlarms": 4,
-   "correctRejections": 2,
-   "dPrime": -1.749,
-   "rtMeanMs": 25993,
-   "rtMedianMs": 26320,
-   "rtSdMs": 1395,
+   "misses": 2,
+   "falseAlarms": 3,
+   "correctRejections": 5,
+   "dPrime": -0.685,
+   "rtMeanMs": 27744,
+   "rtMedianMs": 26440,
+   "rtSdMs": 3198,
    "settings": {
     "notation": "compact",
     "play": "screen",
@@ -61,20 +61,25 @@
       "task": "possible",
       "material": "numbers",
       "trials": 4,
-      "correct": 2,
+      "correct": 3,
       "from": 1,
       "to": 1
      },
      {
       "task": "question",
       "material": "notes",
-      "trials": 3,
+      "trials": 2,
       "correct": 0,
       "from": 1,
       "to": 1
      }
     ],
-    "lures": {},
+    "lures": {
+     "rotate270": {
+      "shown": 2,
+      "caught": 0
+     }
+    },
     "notation": "compact",
     "play": "screen"
    },
@@ -83,7 +88,7 @@
      "target": true,
      "response": null,
      "correct": false,
-     "rtMs": 22080,
+     "rtMs": 35840,
      "extra": {
       "task": "question",
       "material": "space",
@@ -96,32 +101,32 @@
       "nested": 0
      },
      "i": 0,
-     "t": 24280
+     "t": 38480
     },
     {
-     "target": true,
-     "response": null,
+     "target": false,
+     "response": "yes",
      "correct": false,
-     "rtMs": 26920,
+     "rtMs": 25800,
      "extra": {
       "task": "question",
       "material": "space",
-      "answer": "yes",
-      "said": "cant",
-      "lure": null,
+      "answer": "no",
+      "said": "yes",
+      "lure": "rotate270",
       "level": 1,
       "path": 2,
       "premises": 2,
       "nested": 0
      },
      "i": 1,
-     "t": 84480
+     "t": 103280
     },
     {
      "target": true,
      "response": null,
      "correct": false,
-     "rtMs": 26440,
+     "rtMs": 26680,
      "extra": {
       "task": "question",
       "material": "space",
@@ -134,32 +139,32 @@
       "nested": 0
      },
      "i": 2,
-     "t": 137360
+     "t": 156840
     },
     {
-     "target": true,
+     "target": false,
      "response": null,
      "correct": false,
-     "rtMs": 26440,
+     "rtMs": 26760,
      "extra": {
       "task": "question",
       "material": "space",
-      "answer": "yes",
-      "said": "no",
-      "lure": null,
+      "answer": "no",
+      "said": "cant",
+      "lure": "rotate270",
       "level": 1,
       "path": 2,
       "premises": 2,
       "nested": 0
      },
      "i": 3,
-     "t": 190600
+     "t": 209800
     },
     {
      "target": false,
      "response": "possible",
      "correct": false,
-     "rtMs": 26120,
+     "rtMs": 26160,
      "extra": {
       "task": "possible",
       "material": "numbers",
@@ -172,13 +177,13 @@
       "nested": 0
      },
      "i": 4,
-     "t": 270760
+     "t": 289640
     },
     {
      "target": false,
      "response": null,
      "correct": true,
-     "rtMs": 25360,
+     "rtMs": 26120,
      "extra": {
       "task": "possible",
       "material": "numbers",
@@ -191,13 +196,13 @@
       "nested": 0
      },
      "i": 5,
-     "t": 323520
+     "t": 343440
     },
     {
      "target": false,
      "response": null,
      "correct": true,
-     "rtMs": 26760,
+     "rtMs": 26200,
      "extra": {
       "task": "possible",
       "material": "numbers",
@@ -210,18 +215,18 @@
       "nested": 0
      },
      "i": 6,
-     "t": 376960
+     "t": 396080
     },
     {
      "target": false,
-     "response": "possible",
-     "correct": false,
-     "rtMs": 27320,
+     "response": null,
+     "correct": true,
+     "rtMs": 27560,
      "extra": {
       "task": "possible",
       "material": "numbers",
       "answer": "impossible",
-      "said": "possible",
+      "said": "impossible",
       "lure": null,
       "level": 1,
       "path": null,
@@ -229,13 +234,13 @@
       "nested": 0
      },
      "i": 7,
-     "t": 431200
+     "t": 450600
     },
     {
      "target": false,
      "response": "yes",
      "correct": false,
-     "rtMs": 26080,
+     "rtMs": 30680,
      "extra": {
       "task": "question",
       "material": "notes",
@@ -248,18 +253,18 @@
       "nested": 0
      },
      "i": 8,
-     "t": 511120
+     "t": 536200
     },
     {
      "target": false,
-     "response": "yes",
+     "response": null,
      "correct": false,
-     "rtMs": 26320,
+     "rtMs": 25640,
      "extra": {
       "task": "question",
       "material": "notes",
       "answer": "cant",
-      "said": "yes",
+      "said": "no",
       "lure": null,
       "level": 1,
       "path": 3,
@@ -267,32 +272,13 @@
       "nested": 0
      },
      "i": 9,
-     "t": 563680
-    },
-    {
-     "target": true,
-     "response": null,
-     "correct": false,
-     "rtMs": 26080,
-     "extra": {
-      "task": "question",
-      "material": "notes",
-      "answer": "yes",
-      "said": "no",
-      "lure": null,
-      "level": 1,
-      "path": 2,
-      "premises": 2,
-      "nested": 0
-     },
-     "i": 10,
-     "t": 617000
+     "t": 596440
     }
    ],
    "levelEnd": 1
   }
  ],
- "appVersion": "1.2.0",
+ "appVersion": "1.3.0",
  "state": {
   "level": 1
  }

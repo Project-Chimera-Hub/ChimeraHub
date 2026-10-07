@@ -12,7 +12,7 @@
 
 (function () {
   var A = window.Algebra;
-  var G_ORDER = ["space", "numbers", "notes", "days", "compass", "square"];
+  var G_ORDER = ["space", "numbers", "notes", "days", "compass", "square", "pose"];
   var T_ORDER = ["question", "possible", "howfar", "nback"];
   var COLOURS = { Red: "#e5534b", Blue: "#539bf5", Green: "#57ab5a", Gold: "#d4af37", Violet: "#b083f0", White: "#e6edf3" };
   var LETTER_COLOURS = { R: "Red", B: "Blue", G: "Green", O: "Gold", V: "Violet", W: "White" };
@@ -22,13 +22,14 @@
     step: ["one step off", "±1"], rotate90: ["turned a quarter", "↻"], rotate180: ["turned half way", "↻↻"],
     rotate270: ["turned a quarter back", "↺"], mirrorEW: ["mirrored east-west", "⇋"], mirrorNS: ["mirrored north-south", "⇅"],
     diagonal: ["flipped on a diagonal", "⤡"], reverse: ["reversed", "−"], conjugate: ["seen in a mirror", "m·m"],
+    noTurn: ["the turn left out", "∅q"], turnFirst: ["turned before stepping", "q→"],
     inverse: ["undone instead of done", "⁻¹"], swap: ["two objects swapped", "⇆"], plain: ["a new arrangement", "≠"],
   };
   var LEVEL_KEY = "chimera.relations.level.v1";
   var CHECKPOINT_KEY = "chimera.relations.checkpoint.v1";
   var RECORD_KEY = "chimera.relations.record.v1";
   var ROTATION_KEY = "chimera.relations.rotation";
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -117,6 +118,26 @@
   function tag(n) { return useLetters ? A.LETTER[n] : n.slice(0, 2); }
   function drawing(G, world) {
     var names = world.names, v = world.vals;
+    if (G.name === "pose") {
+      /* Each object at its place, with a pointer for its facing; a dashed
+         ring when it is mirrored (its left and right swapped). */
+      var px = names.map(function (n) { return v[n][0]; }), py = names.map(function (n) { return v[n][1]; });
+      var a0 = Math.min.apply(null, px) - 1, a1 = Math.max.apply(null, px) + 1, b0 = Math.min.apply(null, py) - 1, b1 = Math.max.apply(null, py) + 1;
+      var cp = 30, PW = (a1 - a0) * cp, PH = (b1 - b0) * cp, o2 = '<svg class="ra-draw" viewBox="0 0 ' + PW + " " + PH + '" width="' + Math.min(PW, 320) + '">';
+      for (var gx = a0; gx <= a1; gx++) o2 += '<line x1="' + (gx - a0) * cp + '" y1="0" x2="' + (gx - a0) * cp + '" y2="' + PH + '" class="ra-grid"/>';
+      for (var gy = b0; gy <= b1; gy++) o2 += '<line x1="0" y1="' + (b1 - gy) * cp + '" x2="' + PW + '" y2="' + (b1 - gy) * cp + '" class="ra-grid"/>';
+      var DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];        /* screen: north is up */
+      var at = {};                                          /* objects sharing a square sit side by side */
+      names.forEach(function (n) {
+        var k = v[n][0] + "," + v[n][1], i = at[k] = (at[k] || 0) + 1, shift = (i - 1) * 9 - (names.filter(function (m) { return v[m][0] + "," + v[m][1] === k; }).length - 1) * 4.5;
+        var cx = (v[n][0] - a0) * cp + shift, cy = (b1 - v[n][1]) * cp + shift, d = DIRS[v[n][2]];
+        o2 += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + d[0] * 15) + '" y2="' + (cy + d[1] * 15) + '" stroke="' + COLOURS[n] + '" stroke-width="3"/>'
+          + '<circle cx="' + (cx + d[0] * 15) + '" cy="' + (cy + d[1] * 15) + '" r="2.5" fill="' + COLOURS[n] + '"/>';
+        if (v[n][3]) o2 += '<circle cx="' + cx + '" cy="' + cy + '" r="12" fill="none" stroke="' + COLOURS[n] + '" stroke-dasharray="3 2"/>';
+        o2 += '<circle cx="' + cx + '" cy="' + cy + '" r="9" fill="' + COLOURS[n] + '"/><text x="' + cx + '" y="' + (cy + 4) + '" class="ra-lbl">' + tag(n) + "</text>";
+      });
+      return o2 + '<text x="4" y="12" class="ra-n">N↑</text></svg>';
+    }
     if (G.name === "space") {
       var xs = names.map(function (n) { return v[n][0]; }), ys = names.map(function (n) { return v[n][1]; });
       var x0 = Math.min.apply(null, xs) - 1, x1 = Math.max.apply(null, xs) + 1, y0 = Math.min.apply(null, ys) - 1, y1 = Math.max.apply(null, ys) + 1;
@@ -161,11 +182,14 @@
     + "<b>Perspective</b>: <code>R=B@2&lt;&lt;</code>: standing at B facing 2 (south), R is two to the left. ^ ahead, v behind, &lt; left, &gt; right.</p>"
     + "<p><b>Numbers</b>: signed steps, <code>R+2=B−7+5</code>. <b>Notes, days, headings</b>: the same, wrapping at the modulus in the first line (mod 12, 7, 8); a heading step is 45°, clockwise positive.</p>"
     + "<p><b>Orientations</b>: one letter per operation, applied left to right. q a quarter right, Q a quarter left, h half way, m mirror left-right, M mirror top-bottom, d the rising diagonal, D the falling one. <code>R=Bmq</code>: Red is Blue mirrored, then turned a quarter right.</p>"
+    + "<p><b>Poses</b>: each object stands somewhere, faces some way, and may be mirrored (its left and right swapped). A relation is a walk from the other object, read left to right in the walker’s own frame: ^ a step ahead, v back, &lt; left, &gt; right, and the orientation letters to turn or mirror the walker. "
+    + "<code>R=B^^&lt;q</code>: start at Blue, two steps ahead, one left, turn a quarter right: that is Red. Every turn changes what “ahead” means for the steps after it.</p>"
+    + "<p><b>Either/or</b> (levels 21 to 30): <code>R=B(6|9)</code>: Red is one east or one north-east of Blue, and only one of them is true. Another route through the premises can settle which.</p>"
     + "<p><b>Marks</b> are names for places: <code>P=R6</code> then <code>B=P88</code>. Mark letters are P S T U X Y Z A C E F J K L N, doubled after the fifteenth (PP…).</p>"
-    + "<p><b>Questions</b>: <code>R=B6?</code> (true? answer <b>=</b>, <b>≠</b>, or <b>?</b> when nothing links them); <code>∃?</code> (can all of it be true?: ∃ yes, ∅ no); "
+    + "<p><b>Questions</b>: <code>R=B6?</code> (answer <b>=</b> it must be, <b>≠</b> it can’t be, or <b>?</b> not settled: nothing links them, or it depends on how an either/or is read); <code>∃?</code> (can all of it be true?: ∃ yes, ∅ no); "
     + "<code>|R−B|₁?</code> steps along the grid, <code>|R−B|∞?</code> king's moves; <code>≡3?</code> the same arrangement as 3 back (≡ same, ≢ different), <code>≅3?</code> the same up to rotation. "
     + "While building the first n of an n-back round: <code>⊢k/n</code>, go on with ».</p>"
-    + "<p><b>Traps</b> in explanations: ∅n nesting ignored, −L / −R one side's offsets dropped, ± wrong sign, ⇄ wrong order, @8 perspective read facing north, ±1 one step off, ↻ ↺ turned, ⇋ ⇅ mirrored, ⤡ diagonal, ⁻¹ undone, ⇆ two swapped.</p>";
+    + "<p><b>Traps</b> in explanations: ∅n nesting ignored, −L / −R one side's offsets dropped, ± wrong sign, ⇄ wrong order, @8 perspective read facing north, ±1 one step off, ↻ ↺ turned, ⇋ ⇅ mirrored, ⤡ diagonal, ⁻¹ undone (in poses: seen from the other side), ∅q the turn left out, q→ turned before stepping, ⇆ two swapped.</p>";
 
   var EAR_GUIDE =
     "<h3>Eyes closed</h3>"
@@ -180,7 +204,9 @@
     + "<li><b>Space</b>: the keypad digit as a word; two in a row are <i>double</i>, three <i>triple</i>, four <i>quad</i>. <code>R666944</code>: “Red triple six nine double four”.</li>"
     + "<li><b>Perspective</b>: <i>face</i> and a digit, then <i>front, back, left, right</i>. <code>R=B@4vvv&gt;&gt;&gt;</code>: “Red is Blue face four triple back triple right”.</li>"
     + "<li><b>Numbers, notes, days, headings</b>: <i>up</i> and <i>down</i>. <code>W+5=O+1−5</code>: “White up 5 is Gold up 1 down 5”. The modulus is said first: “mod 12”.</li>"
-    + "<li><b>Orientations</b>: q <i>right</i>, Q <i>left</i>, h <i>half</i>, m <i>mirror</i>, M <i>flip</i>, d <i>rise</i>, D <i>fall</i>.</li>"
+    + "<li><b>Orientations</b>: q <i>clock</i>, Q <i>counter</i>, h <i>half</i>, m <i>mirror</i>, M <i>flip</i>, d <i>rise</i>, D <i>fall</i>.</li>"
+    + "<li><b>Poses</b>: the walk word for word: <i>front, back, left, right</i> for steps, the orientation words for turns. <code>R=B^^&lt;q</code>: “Red is Blue double front left clock”.</li>"
+    + "<li><b>Either/or</b>: <code>R=B(6|9)</code>: “Red is Blue either six or nine”.</li>"
     + "<li><b>Marks</b> P S T U X Y Z A C E F J K L N are Fox, Jar, Key, Lamp, Moon, Nest, Oak, Pond, Rope, Sun, Tent, Cup, Drum, Hat, Kite; a doubled letter is “big”: PP is “big Fox”.</li>"
     + "<li><b>Questions</b>: “Is Red Blue six?”; “Possible?”; “Red to Blue, grid?” or “king?”, then the choices, smallest first; “Same as 2 back?” (“, any turn” up to rotation); “Hold, 1 of 2”.</li></ul>"
     + "<p><b>Speech rate</b> and <b>Silence between premises</b> set the pace. The voice is the most natural one the device has.</p>";
@@ -191,7 +217,7 @@
     version: VERSION,
     what: "Nested relations in space, numbers, notes, days, headings and orientations",
     unit: "level",
-    level: { start: 1, min: 1, max: 20 },
+    level: { start: 1, min: 1, max: 30 },
 
     instructions:
       "<p>Each trial describes some objects by how they relate: places on a grid, numbers, notes, days, headings, or a tile’s orientation. Combine the relations to answer.</p>"
@@ -221,7 +247,7 @@
       { key: "material", label: "Material", type: "select", default: "rotate", options: [
         { value: "rotate", label: "A different material each round" }, { value: "space", label: "Space (grid)" }, { value: "numbers", label: "Numbers" },
         { value: "notes", label: "Notes (mod 12)" }, { value: "days", label: "Days (mod 7)" }, { value: "compass", label: "Headings (mod 8)" },
-        { value: "square", label: "Orientations (order matters)" }] },
+        { value: "square", label: "Orientations (order matters)" }, { value: "pose", label: "Poses (place, facing and side together)" }] },
       { key: "phrasing", label: "Nested places", type: "select", default: "mixed", options: [
         { value: "inline", label: "Inline" }, { value: "marks", label: "Marks" }, { value: "mixed", label: "Both, mixed" }] },
       { key: "perspective", label: "Perspective premises (space)", type: "boolean", default: true },
@@ -338,6 +364,7 @@
       function trapWords(kind) { return (TRAP[kind] || [kind])[0]; }
       function decode(G, premises) {
         return '<details class="ra-decode"><summary>' + (compact ? "⇒" : "What each premise says") + "</summary><ul>" + premises.map(function (p) {
+          if (p.r2) return "<li>" + meaning(G, p.X, p.v, p.Y) + " ✓ " + (compact ? "| " : "or ") + meaning(G, p.X, p.v2, p.Y) + " ✗</li>";
           return "<li>" + meaning(G, p.X, p.v, p.Y) + "</li>";
         }).join("") + "</ul></details>";
       }
@@ -420,7 +447,16 @@
           });
           s.feedback(good);
           var why = "", heard = [];
-          if (kind === "question") {
+          if (kind === "question" && trial.either && !trial.unlinked) {
+            /* Either/or: what the premises allow, over every reading that fits. */
+            var ansE = { yes: compact ? "=" : "Must be", no: compact ? "≠" : "Can't be", cant: compact ? "?" : "Not settled" }[trial.answer];
+            var allowed = trial.possible.map(function (v) { return meaning(G, trial.X, v, trial.Y); });
+            why += "<p><b>" + ansE + "</b> · " + allowed.join(compact ? " | " : " or ") + "</p>";
+            if (trial.lure) why += "<p>" + (compact ? "" : "Trap: ") + esc(trapText(trial.lure)) + "</p>";
+            heard = [{ yes: "Must be.", no: "Can't be.", cant: "Not settled." }[trial.answer],
+              (trial.possible.length > 1 ? "It could be " : "It is ") + trial.possible.map(function (v) { return heardMeaning(G, trial.X, v, trial.Y); }).join(", or ") + "."]
+              .concat(trial.lure ? ["Trap: " + trapWords(trial.lure) + "."] : []);
+          } else if (kind === "question") {
             var ans = { yes: compact ? "=" : "Yes", no: compact ? "≠" : "No", cant: compact ? "?" : "Can't tell" }[trial.answer];
             why += "<p><b>" + ans + "</b>" + (trial.answer !== "cant" ? " · " + meaning(G, trial.X, trial.truth, trial.Y) : "") + "</p>";
             if (trial.answer === "cant") why += "<p>" + (compact ? "∅ " + esc(A.LETTER[trial.X]) + "…" + esc(A.LETTER[trial.Y]) : "Nothing links " + paint(trial.X) + "’s group to " + paint(trial.Y) + "’s.") + "</p>";
@@ -428,8 +464,10 @@
             heard = trial.answer === "cant" ? ["Can't tell: nothing links " + trial.X + " and " + trial.Y + "."]
               : [{ yes: "Yes.", no: "No." }[trial.answer], heardMeaning(G, trial.X, trial.truth, trial.Y) + "."].concat(trial.lure ? ["Trap: " + trapWords(trial.lure) + "."] : []);
           } else if (kind === "possible") {
-            why += "<p><b>" + (trial.answer === "possible" ? (compact ? "∃" : "Possible") : (compact ? "∅" : "Impossible: one premise breaks a loop")) + "</b></p>";
-            heard = [trial.answer === "possible" ? "Possible." : "Impossible: one premise breaks a loop."];
+            var eo = trial.premises.some(function (p) { return p.r2; });
+            var no = eo ? "Impossible: no choice of readings closes every loop" : "Impossible: one premise breaks a loop";
+            why += "<p><b>" + (trial.answer === "possible" ? (compact ? "∃" : "Possible") : (compact ? "∅" : no)) + "</b></p>";
+            heard = [trial.answer === "possible" ? "Possible." : no + "."];
           } else {
             why += "<p>" + meaning(G, trial.X, trial.truth, trial.Y) + " · <b>" + trial.answer + "</b></p>";
             heard = [heardMeaning(G, trial.X, trial.truth, trial.Y) + ".", trial.answer + " apart."];
@@ -441,19 +479,19 @@
 
       /* ---- the rounds ---- */
       /* Round r's task and material. The material steps every round; the task
-       * steps every round too, and once more after each pass through the
-       * materials, so all 24 pairings come up within 24 rounds (stepping both
-       * by one would only ever pair even with even). How far needs a distance,
-       * so in a material without one it becomes questions. */
+       * is the material's place in the order plus the number of passes made
+       * through the materials, so all 28 pairings come up within 28 rounds.
+       * How far needs a distance, so in a material without one it becomes
+       * questions. */
       function plan(r) {
-        var i = rot + r;
-        var material = set.material === "rotate" ? G_ORDER[i % G_ORDER.length] : set.material;
-        var task = set.task === "rotate" ? T_ORDER[(i + (set.material === "rotate" ? Math.floor(i / G_ORDER.length) : 0)) % T_ORDER.length] : set.task;
+        var i = rot + r, len = G_ORDER.length;
+        var material = set.material === "rotate" ? G_ORDER[i % len] : set.material;
+        var task = set.task === "rotate" ? T_ORDER[(set.material === "rotate" ? i % len + Math.floor(i / len) : i) % T_ORDER.length] : set.task;
         if (task === "howfar" && !A.GROUPS[material].metric) task = "question";
         return { task: task, material: material };
       }
       var TASK_WORDS = { question: "questions", possible: "possible", howfar: "how far", nback: "n-back", mixed: "mixed" };
-      var MATERIAL_WORDS = { space: "space", numbers: "numbers", notes: "notes", days: "days", compass: "headings", square: "tiles" };
+      var MATERIAL_WORDS = { space: "space", numbers: "numbers", notes: "notes", days: "days", compass: "headings", square: "tiles", pose: "poses" };
       try {
         var r = 0, empty = 0;
         while (s.now() < endMs) {
@@ -468,7 +506,7 @@
           if (!res.done) { if (++empty >= 3) break; continue; }
           empty = 0;
           var acc = res.right / res.done;
-          if (res.done >= Math.min(4, set.perRound)) level = acc >= 0.8 ? Math.min(20, level + 1) : acc < 0.6 ? Math.max(1, level - 1) : level;
+          if (res.done >= Math.min(4, set.perRound)) level = acc >= 0.8 ? Math.min(30, level + 1) : acc < 0.6 ? Math.max(1, level - 1) : level;
           save(LEVEL_KEY, level);
           hud();
           roundsDone.push({ task: task, material: material, trials: res.done, correct: res.right, from: from, to: level });
