@@ -26,14 +26,17 @@
         <label>Depth (n)
           <select id="n"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
         </label>
+        <label>Session length
+          <select id="session"><option value="0" selected>One round</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option></select>
+        </label>
         <label>Sounds per round
           <select id="trials"><option>15</option><option selected>30</option><option>45</option><option>60</option></select>
         </label>
         <label>Earlier pair (previous vs n+1 back)
-          <select id="dimB"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option></select>
+          <select id="dimB"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option><option value="any">Any of the three</option></select>
         </label>
         <label>Later pair (current vs n back)
-          <select id="dimA"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option></select>
+          <select id="dimA"><option value="number" selected>Number</option><option value="space">Place</option><option value="pitch">Pitch</option><option value="any">Any of the three</option></select>
         </label>
         <label>Relation
           <select id="rel"><option value="step" selected>Step (how far and which way)</option><option value="distance">Distance (how far apart)</option><option value="sum">Sum (numbers only)</option></select>
@@ -61,7 +64,7 @@
         </label>
       </div>
       <p id="note" class="note"></p>
-      <button id="start" class="primary">Start round</button>
+      <button id="start" class="primary">Start</button>
       <p class="tip">Headphones needed for place. Once it plays, the screen can be locked; it stops when you leave it through the hub.</p>
     </section>
 
